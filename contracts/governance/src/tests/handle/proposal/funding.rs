@@ -1,15 +1,7 @@
-use crate::tests::{
-    admin_only_governance,
-    get_assemblies,
-    get_proposals,
-    gov_generic_proposal,
-    gov_msg_proposal,
-    handle::proposal::init_funding_token,
-    init_chain,
-};
+use crate::tests::{get_proposals, handle::proposal::init_funding_token, init_chain};
 use shade_multi_test::multi::{governance::Governance, snip20::Snip20};
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, ContractInfo, StdResult, Uint128},
+    c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::{
@@ -22,7 +14,7 @@ use shade_protocol::{
         snip20,
     },
     governance::AssemblyInit,
-    multi_test::{App, BasicApp},
+    multi_test::App,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
@@ -157,7 +149,7 @@ pub fn init_funding_governance_with_proposal()
 
 #[test]
 fn assembly_to_funding_transition() {
-    let (mut chain, gov, _snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::SetProfile {
         id: 1,
@@ -333,7 +325,7 @@ fn fake_funding_token() {
 }
 #[test]
 fn funding_proposal_without_msg() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
         snip20::ExecuteMsg::Send {
@@ -356,7 +348,7 @@ fn funding_proposal_without_msg() {
 }
 #[test]
 fn funding_proposal() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -401,7 +393,7 @@ fn funding_proposal() {
 }
 #[test]
 fn funding_proposal_after_deadline() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
@@ -426,7 +418,7 @@ fn funding_proposal_after_deadline() {
 }
 #[test]
 fn update_while_funding() {
-    let (mut chain, gov, _snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
         governance::ExecuteMsg::Update {
@@ -439,7 +431,7 @@ fn update_while_funding() {
 }
 #[test]
 fn update_when_fully_funded() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -491,7 +483,7 @@ fn update_when_fully_funded() {
 }
 #[test]
 fn update_after_failed_funding() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -528,7 +520,7 @@ fn update_after_failed_funding() {
 }
 #[test]
 fn claim_when_not_finished() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.into(),
@@ -561,7 +553,7 @@ fn claim_when_not_finished() {
 }
 #[test]
 fn claim_after_failing() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -615,7 +607,7 @@ fn claim_after_failing() {
 }
 #[test]
 fn claim_after_passing() {
-    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -763,7 +755,7 @@ fn init_funding_governance_with_proposal_with_privacy()
 
 #[test]
 fn funding_privacy() {
-    let (mut chain, gov, snip20, auth) =
+    let (mut chain, gov, snip20, _auth) =
         init_funding_governance_with_proposal_with_privacy().unwrap();
 
     snip20::ExecuteMsg::Send {

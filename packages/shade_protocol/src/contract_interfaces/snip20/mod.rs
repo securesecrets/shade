@@ -1,29 +1,49 @@
-pub mod manager; //TODO: fragment this so it doesnt import useless stuff in interface
 pub mod batch;
-pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
+pub mod manager;
+pub mod transaction_history;
 
-use cosmwasm_std::{MessageInfo, Api};
-use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
-use crate::query_authentication::permit::Permit;
+use crate::{
+    c_std::{Addr, Binary, Env, StdResult, Storage},
+    query_authentication::permit::Permit,
+};
+use cosmwasm_std::{Api, MessageInfo};
 
-use serde::Serialize;
-use crate::utils::crypto::sha_256;
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
-use crate::c_std::Uint128;
-use crate::Contract;
-use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
-use crate::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
-use crate::contract_interfaces::snip20::transaction_history::{RichTx, Tx};
-use crate::contract_interfaces::query_auth::QueryPermit as AuthQueryPermit;
 #[cfg(feature = "snip20-impl")]
 use crate::contract_interfaces::snip20::transaction_history::store_mint;
-use crate::snip20::manager::QueryAuth;
-use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::ItemStorage;
+use crate::{
+    c_std::Uint128,
+    contract_interfaces::{
+        query_auth::QueryPermit as AuthQueryPermit,
+        snip20::{
+            errors::{invalid_decimals, invalid_name_format, invalid_symbol_format},
+            manager::{
+                Admin,
+                Balance,
+                CoinInfo,
+                Config,
+                ContractStatusLevel,
+                Minters,
+                RandSeed,
+                TotalSupply,
+            },
+            transaction_history::{RichTx, Tx},
+        },
+    },
+    snip20::manager::QueryAuth,
+    utils::{
+        crypto::sha_256,
+        generic_response::ResponseStatus,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
+    },
+    Contract,
+};
+use cosmwasm_schema::cw_serde;
 
 pub const VERSION: &str = "SNIP24";
 
@@ -42,7 +62,7 @@ pub struct InstantiateMsg {
     pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
-    pub query_auth: Option<Contract>
+    pub query_auth: Option<Contract>,
 }
 
 fn is_valid_name(name: &str) -> bool {
@@ -59,7 +79,13 @@ fn is_valid_symbol(symbol: &str) -> bool {
 
 #[cfg(feature = "snip20-impl")]
 impl InstantiateMsg {
-    pub fn save(&self, storage: &mut dyn Storage, api: &dyn Api, env: Env, info: MessageInfo) -> StdResult<()> {
+    pub fn save(
+        &self,
+        storage: &mut dyn Storage,
+        api: &dyn Api,
+        env: Env,
+        info: MessageInfo,
+    ) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
         }
@@ -78,8 +104,9 @@ impl InstantiateMsg {
         CoinInfo {
             name: self.name.clone(),
             symbol: self.symbol.clone(),
-            decimals: self.decimals
-        }.save(storage)?;
+            decimals: self.decimals,
+        }
+        .save(storage)?;
 
         let admin_addr;
         if let Some(admin) = &self.admin {
@@ -93,7 +120,7 @@ impl InstantiateMsg {
 
         let mut total_supply = Uint128::zero();
 
-        if let Some(initial_balances) = &self.initial_balances{
+        if let Some(initial_balances) = &self.initial_balances {
             for balance in initial_balances.iter() {
                 let address = api.addr_validate(balance.address.as_str())?;
                 Balance::set(storage, balance.amount.clone(), &address)?;
@@ -106,7 +133,7 @@ impl InstantiateMsg {
                     balance.amount,
                     self.symbol.clone(),
                     Some("Initial Balance".to_string()),
-                    &env.block
+                    &env.block,
                 )?;
             }
         }
@@ -155,7 +182,7 @@ impl Default for InitConfig {
             enable_redeem: None,
             enable_mint: None,
             enable_burn: None,
-            enable_transfer: None
+            enable_transfer: None,
         }
     }
 }
@@ -169,25 +196,32 @@ impl InitConfig {
             enable_redeem: self.redeem_enabled(),
             enable_mint: self.mint_enabled(),
             enable_burn: self.burn_enabled(),
-            enable_transfer: self.transfer_enabled()
-        }.save(storage)?;
+            enable_transfer: self.transfer_enabled(),
+        }
+        .save(storage)?;
         Ok(())
     }
+
     pub fn public_total_supply(&self) -> bool {
         self.public_total_supply.unwrap_or(false)
     }
+
     pub fn deposit_enabled(&self) -> bool {
         self.enable_deposit.unwrap_or(false)
     }
+
     pub fn redeem_enabled(&self) -> bool {
         self.enable_redeem.unwrap_or(false)
     }
+
     pub fn mint_enabled(&self) -> bool {
         self.enable_mint.unwrap_or(false)
     }
+
     pub fn burn_enabled(&self) -> bool {
         self.enable_burn.unwrap_or(false)
     }
+
     pub fn transfer_enabled(&self) -> bool {
         self.enable_transfer.unwrap_or(true)
     }
@@ -333,7 +367,7 @@ pub enum ExecuteMsg {
     },
     // Updated the auth setting
     UpdateQueryAuth {
-        auth: Option<Contract>
+        auth: Option<Contract>,
     },
 
     // Permit
@@ -370,12 +404,12 @@ impl ReceiverHandleMsg {
         memo: Option<String>,
         msg: Option<Binary>,
     ) -> Self {
-        Self::Receive(Snip20ReceiveMsg{
+        Self::Receive(Snip20ReceiveMsg {
             sender,
             from,
             amount,
             memo,
-            msg
+            msg,
         })
     }
 }
@@ -559,19 +593,10 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryWithPermit {
-    Allowance {
-        owner: String,
-        spender: String,
-    },
+    Allowance { owner: String, spender: String },
     Balance {},
-    TransferHistory {
-        page: Option<u32>,
-        page_size: u32,
-    },
-    TransactionHistory {
-        page: Option<u32>,
-        page_size: u32,
-    },
+    TransferHistory { page: Option<u32>, page_size: u32 },
+    TransactionHistory { page: Option<u32>, page_size: u32 },
 }
 
 #[cw_serde]

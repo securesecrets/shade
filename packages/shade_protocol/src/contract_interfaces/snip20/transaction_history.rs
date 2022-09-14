@@ -1,11 +1,13 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
-use cosmwasm_schema::{cw_serde};
 
-use crate::c_std::{
-    Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage, BlockInfo
+use crate::{
+    c_std::{Addr, BlockInfo, Coin, StdError, StdResult, Storage, Uint128},
+    contract_interfaces::snip20::errors::{
+        legacy_cannot_convert_from_tx,
+        tx_code_invalid_conversion,
+    },
 };
-use crate::c_std::Uint128;
-use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
 
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::{ItemStorage, MapStorage};
@@ -52,8 +54,7 @@ impl Tx {
                     total += 1;
                     if total >= (start_index + page_size as u64) {
                         break;
-                    }
-                    else if total >= start_index {
+                    } else if total >= start_index {
                         txs.push(tx);
                     }
                 }
@@ -113,8 +114,7 @@ impl RichTx {
         let size: u64;
         if (start_index + page_size as u64) > id {
             size = id;
-        }
-        else {
+        } else {
             size = page_size as u64 + start_index;
         }
 
@@ -175,6 +175,7 @@ impl StoredTxAction {
             address3: Some(recipient),
         }
     }
+
     fn mint(minter: Addr, recipient: Addr) -> Self {
         Self {
             tx_type: TxCode::Mint.to_u8(),
@@ -183,6 +184,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn burn(owner: Addr, burner: Addr) -> Self {
         Self {
             tx_type: TxCode::Burn.to_u8(),
@@ -191,6 +193,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn deposit() -> Self {
         Self {
             tx_type: TxCode::Deposit.to_u8(),
@@ -199,6 +202,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn redeem() -> Self {
         Self {
             tx_type: TxCode::Redeem.to_u8(),
@@ -208,7 +212,7 @@ impl StoredTxAction {
         }
     }
 
-    fn into_humanized<>(self) -> StdResult<TxAction> {
+    fn into_humanized(self) -> StdResult<TxAction> {
         let transfer_addr_err = || {
             StdError::generic_err(
                 "Missing address in stored Transfer transaction. Storage is corrupt",
@@ -300,10 +304,9 @@ impl StoredRichTx {
                 coins: self.coins,
                 memo: self.memo,
                 block_time: Some(self.block_time),
-                block_height: Some(self.block_height)
+                block_height: Some(self.block_height),
             })
-        }
-        else {
+        } else {
             Err(legacy_cannot_convert_from_tx())
         }
     }
@@ -341,7 +344,9 @@ impl UserTXTotal {
         for_address: &Addr,
         tx: &StoredRichTx,
     ) -> StdResult<()> {
-        let id = UserTXTotal::may_load(storage, for_address.clone())?.unwrap_or(UserTXTotal(0)).0;
+        let id = UserTXTotal::may_load(storage, for_address.clone())?
+            .unwrap_or(UserTXTotal(0))
+            .0;
         UserTXTotal(id + 1).save(storage, for_address.clone())?;
         tx.save(storage, (for_address.clone(), id))?;
 
@@ -367,13 +372,16 @@ pub fn store_transfer(
     block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let tx = StoredRichTx::new(
         id,
         StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
-        block
+        block,
     );
 
     // Write to the owners history if it's different from the other two addresses
@@ -404,13 +412,15 @@ pub fn store_mint(
     block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::mint(minter.clone(), recipient.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
     if minter != recipient {
         UserTXTotal::append(storage, recipient, &tx)?;
-
     }
     UserTXTotal::append(storage, minter, &tx)?;
 
@@ -428,7 +438,10 @@ pub fn store_burn(
     block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::burn(owner.clone(), burner.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -449,7 +462,10 @@ pub fn store_deposit(
     block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::deposit();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 
@@ -467,7 +483,10 @@ pub fn store_redeem(
     block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::redeem();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 

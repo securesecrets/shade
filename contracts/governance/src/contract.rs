@@ -25,24 +25,19 @@ use crate::{
 };
 use shade_protocol::{
     c_std::{
-        from_binary,
         shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Reply,
         Response,
         StdError,
         StdResult,
-        Storage,
         SubMsg,
-        Uint128,
     },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
@@ -54,8 +49,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, MigrationDataAsk, QueryData, RuntimeState},
-    query_auth,
+    governance::{AuthQuery, QueryData, RuntimeState},
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
     utils::{
@@ -63,11 +57,7 @@ use shade_protocol::{
         flexible_msg::FlexibleMsg,
         pad_handle_result,
         pad_query_result,
-        storage::{
-            default::{BucketStorage, SingletonStorage},
-            plus::ItemStorage,
-        },
-        Query,
+        storage::plus::ItemStorage,
     },
 };
 
@@ -78,7 +68,7 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let self_contract = Contract {
@@ -91,7 +81,7 @@ pub fn instantiate(
     if let Some(migrator) = msg.migrator {
         ID::set_assembly(deps.storage, migrator.assembly)?;
         ID::set_profile(deps.storage, migrator.profile)?;
-        ID::set_assembly_msg(deps.storage, migrator.assemblyMsg)?;
+        ID::set_assembly_msg(deps.storage, migrator.assembly_msg)?;
         ID::set_contract(deps.storage, migrator.contract)?;
         migrated_from = Some(migrator.source);
     } else {
@@ -383,7 +373,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::TotalProposals {} => to_binary(&query::total_proposals(deps)?),
@@ -449,7 +439,7 @@ pub fn auth_queries(deps: Deps, msg: AuthQuery, user: Addr) -> StdResult<Binary>
 }
 
 const MIGRATION_REPLY: u64 = 0;
-const PROPOSAL_REPLY: u64 = 1;
+// const PROPOSAL_REPLY: u64 = 1;
 const ADDRESS_ATTRIBUTE: &str = "instantiated-address";
 const CODE_HASH_ATTRIBUTE: &str = "instantiated-code-hash";
 #[shd_entry_point]

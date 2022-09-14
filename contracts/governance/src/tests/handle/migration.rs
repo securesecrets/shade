@@ -4,16 +4,16 @@
 
 use crate::tests::handle::runstate::init_gov;
 use shade_protocol::{
-    c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128},
+    c_std::{Addr, ContractInfo},
     governance,
     governance::{profile::Profile, ExecuteMsg, MigrationDataAsk, QueryAnswer, QueryMsg},
-    multi_test::{App, AppResponse, BasicApp, Executor},
+    multi_test::App,
     utils::{ExecuteCallback, Query},
 };
 
 #[test]
 fn migrate() {
-    let (mut chain, gov, snip20, gov_id) = init_gov().unwrap();
+    let (mut chain, gov, _snip20, gov_id) = init_gov().unwrap();
 
     for i in 0..20 {
         // Generate multiple assemblies to migrate

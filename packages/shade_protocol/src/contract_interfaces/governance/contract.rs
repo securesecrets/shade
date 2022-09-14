@@ -1,5 +1,5 @@
 use crate::{
-    c_std::{StdResult, Storage, Uint128},
+    c_std::{StdResult, Storage},
     contract_interfaces::governance::stored_id::ID,
     utils::asset::Contract,
 };

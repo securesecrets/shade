@@ -1,12 +1,12 @@
-use shade_protocol::admin::helpers::{validate_admin, AdminPermissions};
 use shade_protocol::{
-    c_std::{
-        to_binary, Api, Deps, DepsMut, Env, MessageInfo, Querier, Response, StdError, StdResult,
-        Storage,
-    },
+    admin::helpers::{validate_admin, AdminPermissions},
+    c_std::{to_binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
-        Admin, ContractStatus, HandleAnswer, RngSeed,
+        Admin,
+        ContractStatus,
+        HandleAnswer,
+        RngSeed,
     },
     query_authentication::viewing_keys::ViewingKey,
     utils::{
@@ -17,7 +17,7 @@ use shade_protocol::{
 
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
+fn user_authorized(deps: &Deps, _env: Env, info: &MessageInfo) -> StdResult<()> {
     let contract = Admin::load(deps.storage)?.0;
 
     validate_admin(
@@ -71,7 +71,7 @@ pub fn try_create_viewing_key(
 
 pub fn try_set_viewing_key(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
@@ -82,7 +82,7 @@ pub fn try_set_viewing_key(
 
 pub fn try_block_permit_key(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {

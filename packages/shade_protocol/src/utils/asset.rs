@@ -1,9 +1,7 @@
 use std::vec;
 
 use crate::{
-    c_std::{
-        Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, StdError, StdResult, Uint128,
-    },
+    c_std::{Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, StdResult, Uint128},
     BLOCK_SIZE,
 };
 use cosmwasm_schema::cw_serde;
@@ -186,7 +184,7 @@ pub fn set_allowance(
 ) -> StdResult<Vec<CosmosMsg>> {
     use crate::snip20::helpers::{allowance_query, decrease_allowance_msg, increase_allowance_msg};
 
-    let mut allowance = match cur_allowance {
+    let allowance = match cur_allowance {
         Some(cur) => cur,
         None => {
             allowance_query(

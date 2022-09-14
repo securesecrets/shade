@@ -7,7 +7,7 @@ pub mod stored_id;
 pub mod vote;
 
 use crate::{
-    c_std::{Addr, Binary, Coin, Uint128},
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -66,7 +66,7 @@ pub struct AssemblyInit {
 pub struct MigrationInit {
     pub source: Contract,
     pub assembly: u16,
-    pub assemblyMsg: u16,
+    pub assembly_msg: u16,
     pub profile: u16,
     pub contract: u16,
 }
@@ -122,8 +122,6 @@ pub enum MigrationData {
     Contract { data: Vec<(u16, AllowedContract)> },
 }
 
-// TODO: allow migration, copies all assemblies, contracts and msgs
-// TODO: maybe migration should be done in batches in the case of huge data
 #[cw_serde]
 pub enum ExecuteMsg {
     // Internal config

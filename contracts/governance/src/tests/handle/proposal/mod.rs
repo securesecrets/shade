@@ -11,18 +11,16 @@ use crate::tests::{
 };
 use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, ContractInfo, StdResult, Uint128},
+    c_std::{to_binary, Addr, ContractInfo, StdResult},
     contract_interfaces::{
         governance,
         governance::proposal::{ProposalMsg, Status},
     },
-    multi_test::{App, BasicApp},
+    multi_test::App,
     query_auth,
     snip20::{self, InitialBalance},
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable},
 };
-
-// TODO: update state and retest the relevant functions
 
 pub fn init_funding_token(
     chain: &mut App,

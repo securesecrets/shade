@@ -1,18 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        Api,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,
@@ -23,8 +10,8 @@ use shade_protocol::{
 
 pub fn try_add_profile(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     profile: Profile,
 ) -> StdResult<Response> {
     let id = ID::add_profile(deps.storage)?;
@@ -39,8 +26,8 @@ pub fn try_add_profile(
 
 pub fn try_set_profile(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {

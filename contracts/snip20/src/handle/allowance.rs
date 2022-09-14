@@ -1,10 +1,16 @@
-use shade_protocol::c_std::{Api, Binary, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
-use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
-use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::handle::transfers::{try_send_impl, try_transfer_impl};
+use shade_protocol::{
+    c_std::{to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdResult, Uint128},
+    contract_interfaces::snip20::{
+        batch,
+        manager::{Allowance, CoinInfo},
+        HandleAnswer,
+    },
+    utils::{
+        generic_response::ResponseStatus::Success,
+        storage::plus::{ItemStorage, MapStorage},
+    },
+};
 
 pub fn try_increase_allowance(
     deps: DepsMut,
@@ -15,10 +21,8 @@ pub fn try_increase_allowance(
     expiration: Option<u64>,
 ) -> StdResult<Response> {
     let owner = info.sender;
-    let mut allowance = Allowance::may_load(
-        deps.storage,
-        (owner.clone(), spender.clone())
-    )?.unwrap_or(Allowance::default());
+    let mut allowance = Allowance::may_load(deps.storage, (owner.clone(), spender.clone()))?
+        .unwrap_or(Allowance::default());
 
     // Reset allowance if its expired
     if allowance.is_expired(&env.block) {
@@ -27,7 +31,7 @@ pub fn try_increase_allowance(
     } else {
         allowance.amount = match allowance.amount.checked_add(amount) {
             Ok(amount) => amount,
-            Err(_) => Uint128::MAX
+            Err(_) => Uint128::MAX,
         }
     }
 
@@ -37,11 +41,13 @@ pub fn try_increase_allowance(
 
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
-        spender,
-        owner,
-        allowance: allowance.amount
-    })?))
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+            spender,
+            owner,
+            allowance: allowance.amount,
+        })?),
+    )
 }
 
 pub fn try_decrease_allowance(
@@ -62,7 +68,7 @@ pub fn try_decrease_allowance(
     } else {
         allowance.amount = match allowance.amount.checked_sub(amount) {
             Ok(amount) => amount,
-            Err(_) => Uint128::zero()
+            Err(_) => Uint128::zero(),
         }
     }
 
@@ -72,11 +78,13 @@ pub fn try_decrease_allowance(
 
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
-        spender,
-        owner,
-        allowance: allowance.amount
-    })?))
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+            spender,
+            owner,
+            allowance: allowance.amount,
+        })?),
+    )
 }
 
 pub fn try_transfer_from(
@@ -97,7 +105,7 @@ pub fn try_transfer_from(
         amount,
         memo,
         denom,
-        &env.block
+        &env.block,
     )?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::TransferFrom { status: Success })?))
@@ -120,13 +128,15 @@ pub fn try_batch_transfer_from(
             action.amount,
             action.memo,
             denom.clone(),
-            block
+            block,
         )?;
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransferFrom {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::BatchTransferFrom {
             status: Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_send_from(
@@ -153,20 +163,19 @@ pub fn try_send_from(
         memo,
         msg,
         denom,
-        &env.block
+        &env.block,
     )?;
 
     Ok(Response::new()
         .set_data(to_binary(&HandleAnswer::SendFrom { status: Success })?)
-        .add_submessages(messages)
-    )
+        .add_submessages(messages))
 }
 
 pub fn try_batch_send_from(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    actions: Vec<batch::SendFromAction>
+    actions: Vec<batch::SendFromAction>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = info.sender;
@@ -184,12 +193,11 @@ pub fn try_batch_send_from(
             action.memo,
             action.msg,
             denom.clone(),
-            &env.block
+            &env.block,
         )?;
     }
 
     Ok(Response::new()
         .set_data(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?)
-        .add_submessages(messages)
-    )
+        .add_submessages(messages))
 }

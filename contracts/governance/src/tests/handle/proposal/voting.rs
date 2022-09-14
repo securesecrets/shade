@@ -1,5 +1,5 @@
 use crate::tests::{get_proposals, handle::proposal::init_funding_token, init_chain};
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_multi_test::multi::{governance::Governance, snip20::Snip20};
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
@@ -11,13 +11,11 @@ use shade_protocol::{
             InstantiateMsg,
         },
         snip20,
-        staking::snip20_staking,
     },
     governance::AssemblyInit,
     multi_test::{App, AppResponse},
     query_auth,
-    query_auth::ContractStatus::Default,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
     AnyResult,
 };
 
@@ -26,7 +24,7 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
     let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = init_funding_token(
+    let _snip20 = init_funding_token(
         &mut chain,
         Some(vec![
             snip20::InitialBalance {
@@ -46,7 +44,6 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
     )
     .unwrap();
 
-    let stkd_tkn = "staked_token";
     // Fake init token so it has a valid codehash
     let stkd_tkn = snip20::InstantiateMsg {
         name: "token".to_string(),
@@ -178,7 +175,7 @@ pub fn vote(
 
 #[test]
 fn voting() {
-    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, _auth) = init_voting_governance_with_proposal().unwrap();
 
     let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
@@ -195,7 +192,7 @@ fn voting() {
 
 #[test]
 fn update_before_deadline() {
-    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, _gov, _, auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         governance::ExecuteMsg::Update {
@@ -209,7 +206,7 @@ fn update_before_deadline() {
 
 #[test]
 fn update_after_deadline() {
-    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, _auth) = init_voting_governance_with_proposal().unwrap();
 
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
@@ -226,7 +223,7 @@ fn update_after_deadline() {
 
 #[test]
 fn invalid_vote() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -251,7 +248,7 @@ fn invalid_vote() {
 
 #[test]
 fn vote_after_deadline() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
@@ -278,7 +275,7 @@ fn vote_after_deadline() {
 
 #[test]
 fn vote_yes() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -320,7 +317,7 @@ fn vote_yes() {
 
 #[test]
 fn vote_abstain() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -362,7 +359,7 @@ fn vote_abstain() {
 
 #[test]
 fn vote_no() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -404,7 +401,7 @@ fn vote_no() {
 
 #[test]
 fn vote_veto() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -446,7 +443,7 @@ fn vote_veto() {
 
 #[test]
 fn vote_passed() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -512,7 +509,7 @@ fn vote_passed() {
 
 #[test]
 fn vote_abstained() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -572,7 +569,7 @@ fn vote_abstained() {
 
 #[test]
 fn vote_rejected() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -632,7 +629,7 @@ fn vote_rejected() {
 
 #[test]
 fn vote_vetoed() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -692,7 +689,7 @@ fn vote_vetoed() {
 
 #[test]
 fn vote_no_quorum() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -752,7 +749,7 @@ fn vote_no_quorum() {
 
 #[test]
 fn vote_total() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -832,7 +829,7 @@ fn vote_total() {
 
 #[test]
 fn update_vote() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -901,7 +898,7 @@ fn update_vote() {
 
 #[test]
 fn vote_count() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -962,7 +959,7 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(

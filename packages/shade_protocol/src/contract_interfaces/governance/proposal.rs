@@ -10,7 +10,7 @@ use crate::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
-use secret_storage_plus::{Json, Map};
+use secret_storage_plus::Map;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::plus::{MapStorage, NaiveMapStorage};
@@ -212,7 +212,6 @@ impl Proposal {
     }
 
     pub fn funding(storage: &dyn Storage, id: u32, user: &Addr) -> StdResult<Funding> {
-        let key = id.to_string() + "-" + user.as_str();
         Funding::load(storage, (id, user.clone()))
     }
 

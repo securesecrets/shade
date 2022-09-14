@@ -3,48 +3,53 @@ pub mod burning;
 pub mod minting;
 pub mod transfers;
 
-use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{
-    MessageInfo,
-    to_binary,
-    Api,
-    BankMsg,
-    Coin,
-    CosmosMsg,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::{Contract, contract_interfaces::snip20::{
-    batch,
-    manager::{
-        Admin,
-        Balance,
-        CoinInfo,
-        Config,
-        ContractStatusLevel,
-        HashedKey,
-        Key,
-        Minters,
-        PermitKey,
-        RandSeed,
-        ReceiverHash,
-        TotalSupply,
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        BankMsg,
+        Coin,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Uint128,
     },
-    transaction_history::{store_deposit, store_mint, store_redeem},
-    HandleAnswer,
-}, utils::{
-    generic_response::ResponseStatus::Success,
-    storage::plus::{ItemStorage, MapStorage},
-}};
-use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
-use shade_protocol::snip20::manager::QueryAuth;
+    contract_interfaces::snip20::{
+        errors::{
+            deposit_disabled,
+            no_tokens_received,
+            not_admin,
+            not_enough_tokens,
+            redeem_disabled,
+            unsupported_token,
+        },
+        manager::{
+            Admin,
+            Balance,
+            CoinInfo,
+            Config,
+            ContractStatusLevel,
+            HashedKey,
+            Key,
+            PermitKey,
+            RandSeed,
+            ReceiverHash,
+            TotalSupply,
+        },
+        transaction_history::{store_deposit, store_redeem},
+        HandleAnswer,
+    },
+    query_authentication::viewing_keys::ViewingKey,
+    snip20::manager::QueryAuth,
+    utils::{
+        generic_response::ResponseStatus::Success,
+        storage::plus::{ItemStorage, MapStorage},
+    },
+    Contract,
+};
 
 pub fn try_redeem(
     deps: DepsMut,
@@ -79,17 +84,15 @@ pub fn try_redeem(
 
     store_redeem(deps.storage, &sender, amount, denom, &env.block)?;
 
-    Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
-        to_address: sender.into(),
-        amount: withdrawal_coins,
-    })).set_data(to_binary(&HandleAnswer::Redeem { status: Success })?))
+    Ok(Response::new()
+        .add_message(CosmosMsg::Bank(BankMsg::Send {
+            to_address: sender.into(),
+            amount: withdrawal_coins,
+        }))
+        .set_data(to_binary(&HandleAnswer::Redeem { status: Success })?))
 }
 
-pub fn try_deposit(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-) -> StdResult<Response> {
+pub fn try_deposit(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let sender = info.sender;
     let mut amount = Uint128::zero();
     for coin in &info.funds {
@@ -125,7 +128,7 @@ pub fn try_deposit(
 
 pub fn try_change_admin(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     address: Addr,
 ) -> StdResult<Response> {
@@ -140,7 +143,7 @@ pub fn try_change_admin(
 
 pub fn try_update_query_auth(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     auth: Option<Contract>,
 ) -> StdResult<Response> {
@@ -150,17 +153,20 @@ pub fn try_update_query_auth(
 
     if let Some(auth) = auth {
         QueryAuth(auth).save(deps.storage)?;
-    }
-    else {
+    } else {
         QueryAuth::remove(deps.storage);
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateQueryAuth { status: Success })?))
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::UpdateQueryAuth {
+            status: Success,
+        })?),
+    )
 }
 
 pub fn try_set_contract_status(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
@@ -170,21 +176,25 @@ pub fn try_set_contract_status(
 
     status_level.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetContractStatus {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetContractStatus {
             status: Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_register_receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     code_hash: String,
 ) -> StdResult<Response> {
     ReceiverHash(code_hash).save(deps.storage, info.sender)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterReceive {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::RegisterReceive {
             status: Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_create_viewing_key(
@@ -204,11 +214,12 @@ pub fn try_create_viewing_key(
 
 pub fn try_set_viewing_key(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
-    let seed = RandSeed::load(deps.storage)?.0;
+    // TODO: review this
+    //let seed = RandSeed::load(deps.storage)?.0;
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
@@ -217,7 +228,7 @@ pub fn try_set_viewing_key(
 
 pub fn try_revoke_permit(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     permit_name: String,
 ) -> StdResult<Response> {
