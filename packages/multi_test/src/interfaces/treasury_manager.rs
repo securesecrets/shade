@@ -1,18 +1,15 @@
 use crate::{
     interfaces::{
-        snip20,
         treasury,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{admin::init_admin_auth, mock_adapter::MockAdapter, treasury_manager::TreasuryManager},
+    multi::{admin::init_admin_auth, treasury_manager::TreasuryManager},
 };
-use mock_adapter;
 use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
-    contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},
+    contract_interfaces::dao::{manager, treasury_manager},
     multi_test::App,
     utils::{
-        self,
         asset::{Contract, RawContract},
         storage::plus::period_storage::Period,
         ExecuteCallback,

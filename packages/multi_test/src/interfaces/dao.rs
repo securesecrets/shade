@@ -153,18 +153,18 @@ pub fn system_balance_reserves(
     let mut i = 0;
     let mut j;
     let mut offset = 0;
-    while true {
+    loop {
         let mut manager_tuple = (Uint128::zero(), vec![]);
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = match (treasury_manager::reserves_query(
+            manager_tuple.0 = match treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
                 SupportedContracts::Treasury,
-            )) {
+            ) {
                 Ok(bal) => bal,
                 Err(_) => {
                     i += 1;
@@ -172,7 +172,7 @@ pub fn system_balance_reserves(
                 }
             };
             j = 0;
-            while true {
+            loop {
                 if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
                     offset += j + 1;
                     break;
@@ -206,18 +206,18 @@ pub fn system_balance_unbondable(
     let mut i = 0;
     let mut j;
     let mut offset = 0;
-    while true {
+    loop {
         let mut manager_tuple = (Uint128::zero(), vec![]);
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = match (treasury_manager::reserves_query(
+            manager_tuple.0 = match treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
                 SupportedContracts::Treasury,
-            )) {
+            ) {
                 Ok(bal) => bal,
                 Err(_) => {
                     i += 1;
@@ -225,7 +225,7 @@ pub fn system_balance_unbondable(
                 }
             };
             j = 0;
-            while true {
+            loop {
                 if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
                     offset += j + 1;
                     break;

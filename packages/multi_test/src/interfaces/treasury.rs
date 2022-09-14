@@ -48,14 +48,15 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) ->
 }
 
 pub fn config_query(chain: &App, contracts: &DeployedContracts) -> StdResult<treasury::Config> {
-    match (treasury::QueryMsg::Config {}.test_query(
+    let res = treasury::QueryMsg::Config {}.test_query(
         &contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Config { config } => Ok(config),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -67,7 +68,7 @@ pub fn allowance_query(
     snip20_symbol: &str,
     spender: SupportedContracts,
 ) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Allowance {
+    let res = treasury::QueryMsg::Allowance {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -83,7 +84,8 @@ pub fn allowance_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Allowance { amount } => Ok(amount),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -94,7 +96,7 @@ pub fn allowances_query(
     contracts: &DeployedContracts,
     snip20_symbol: &str,
 ) -> StdResult<Vec<treasury::AllowanceMeta>> {
-    match (treasury::QueryMsg::Allowances {
+    let res = treasury::QueryMsg::Allowances {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -109,21 +111,23 @@ pub fn allowances_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Allowances { allowances } => Ok(allowances),
         _ => Err(StdError::generic_err("query failed")),
     }
 }
 
 pub fn assets_query(chain: &App, contracts: &DeployedContracts) -> StdResult<Vec<Addr>> {
-    match (treasury::QueryMsg::Assets {}.test_query(
+    let res = treasury::QueryMsg::Assets {}.test_query(
         &contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Assets { assets } => Ok(assets),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -134,7 +138,7 @@ pub fn reserves_query(
     contracts: &DeployedContracts,
     snip20_symbol: &str,
 ) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Reserves {
+    let res = treasury::QueryMsg::Reserves {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -149,7 +153,8 @@ pub fn reserves_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -160,7 +165,7 @@ pub fn balance_query(
     contracts: &DeployedContracts,
     snip20_symbol: &str,
 ) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Balance {
+    let res = treasury::QueryMsg::Balance {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -175,7 +180,8 @@ pub fn balance_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -185,14 +191,15 @@ pub fn run_level_query(
     chain: &App,
     contracts: &DeployedContracts,
 ) -> StdResult<treasury::RunLevel> {
-    match (treasury::QueryMsg::RunLevel {}.test_query(
+    let res = treasury::QueryMsg::RunLevel {}.test_query(
         &contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::RunLevel { run_level } => Ok(run_level),
         _ => Err(StdError::generic_err("query failed")),
     }
@@ -205,7 +212,7 @@ pub fn metrics_query(
     epoch: Option<Uint128>,
     period: Period,
 ) -> StdResult<Vec<treasury::Metric>> {
-    match (treasury::QueryMsg::Metrics {
+    let res = treasury::QueryMsg::Metrics {
         date,
         epoch,
         period,
@@ -217,7 +224,8 @@ pub fn metrics_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         treasury::QueryAnswer::Metrics { metrics } => Ok(metrics),
         _ => Err(StdError::generic_err("query failed")),
     }

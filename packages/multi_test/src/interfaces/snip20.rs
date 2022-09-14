@@ -167,7 +167,7 @@ pub fn balance_query(
     snip20_symbol: &str,
     key: String,
 ) -> StdResult<Uint128> {
-    match (snip20::QueryMsg::Balance {
+    let res = snip20::QueryMsg::Balance {
         address: sender.to_string(),
         key,
     }
@@ -178,7 +178,8 @@ pub fn balance_query(
             .clone()
             .into(),
         chain,
-    )?) {
+    )?;
+    match res {
         snip20::QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err("SetViewingKey failed")),
     }
