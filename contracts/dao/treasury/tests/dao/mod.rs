@@ -71,7 +71,6 @@ pub fn dao_int_test(
             expected_allowance[i],
             treasury::allowance_query(
                 &app,
-                "admin",
                 &contracts,
                 snip20_symbol,
                 SupportedContracts::TreasuryManager(i)

@@ -73,7 +73,7 @@ pub enum QueryAnswer {
     Adapter(adapter::SubQueryMsg),
 }
 
-const viewing_key: &str = "jUsTfOrTeStInG";
+const VIEWING_KEY: &str = "jUsTfOrTeStInG";
 
 const CONFIG: Item<Config> = Item::new("config");
 const ADDRESS: Item<Addr> = Item::new("address");
@@ -83,7 +83,12 @@ const UNBONDING: Item<Uint128> = Item::new("unbonding");
 const CLAIMABLE: Item<Uint128> = Item::new("claimable");
 
 #[shd_entry_point]
-pub fn instantiate(deps: DepsMut, env: Env, _info: MessageInfo, msg: Config) -> StdResult<Response> {
+pub fn instantiate(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    msg: Config,
+) -> StdResult<Response> {
     CONFIG.save(deps.storage, &msg)?;
     ADDRESS.save(deps.storage, &env.contract.address)?;
     //BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
@@ -93,13 +98,18 @@ pub fn instantiate(deps: DepsMut, env: Env, _info: MessageInfo, msg: Config) -> 
     REWARDS.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new().add_messages(vec![
-        set_viewing_key_msg(viewing_key.to_string(), None, &msg.token.clone())?,
+        set_viewing_key_msg(VIEWING_KEY.to_string(), None, &msg.token.clone())?,
         register_receive(env.contract.code_hash.clone(), None, &msg.token.clone())?,
     ]))
 }
 
 #[shd_entry_point]
-pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     //BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
 
@@ -148,7 +158,7 @@ pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> 
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
-                    viewing_key.to_string(),
+                    VIEWING_KEY.to_string(),
                     &config.token.clone(),
                 )?;
 
@@ -242,7 +252,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
-                    viewing_key.to_string(),
+                    VIEWING_KEY.to_string(),
                     &config.token.clone(),
                 )?;
 
@@ -276,7 +286,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
-                    viewing_key.to_string(),
+                    VIEWING_KEY.to_string(),
                     &config.token.clone(),
                 )?;
 
@@ -294,7 +304,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                         balance_query(
                             &deps.querier,
                             ADDRESS.load(deps.storage)?,
-                            viewing_key.to_string(),
+                            VIEWING_KEY.to_string(),
                             &config.token.clone(),
                         )? - (UNBONDING.load(deps.storage)? + CLAIMABLE.load(deps.storage)?)
                     }

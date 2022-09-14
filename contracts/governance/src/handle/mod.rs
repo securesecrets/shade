@@ -1,14 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-    },
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg},
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     snip20::helpers::register_receive,
     utils::{
@@ -17,7 +8,6 @@ use shade_protocol::{
         storage::default::SingletonStorage,
     },
 };
-use shade_protocol::c_std::SubMsg;
 
 pub mod assembly;
 pub mod assembly_msg;
@@ -69,11 +59,11 @@ pub fn try_set_config(
     }
 
     config.save(deps.storage)?;
-    Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?).add_submessages(messages),
-    )
+        })?)
+        .add_submessages(messages))
 }
 
 pub fn try_set_runtime_state(
@@ -83,9 +73,9 @@ pub fn try_set_runtime_state(
     _state: RuntimeState,
 ) -> StdResult<Response> {
     todo!();
-    Ok(
+    /*Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
         })?),
-    )
+    )*/
 }

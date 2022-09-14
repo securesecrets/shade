@@ -80,7 +80,6 @@ pub fn query() {
     assert!(
         !treasury::allowance_query(
             &app,
-            "admin",
             &contracts,
             "SHD",
             SupportedContracts::TreasuryManager(0)

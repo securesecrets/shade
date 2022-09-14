@@ -150,20 +150,21 @@ pub fn system_balance_reserves(
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
     let mut ret_struct = (Uint128::zero(), vec![]);
     ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
-    let (mut i, mut j) = (0, 0);
+    let mut i = 0;
+    let mut j;
     let mut offset = 0;
-    while true {
+    loop {
         let mut manager_tuple = (Uint128::zero(), vec![]);
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = match (treasury_manager::reserves_query(
+            manager_tuple.0 = match treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
                 SupportedContracts::Treasury,
-            )) {
+            ) {
                 Ok(bal) => bal,
                 Err(_) => {
                     i += 1;
@@ -171,7 +172,7 @@ pub fn system_balance_reserves(
                 }
             };
             j = 0;
-            while true {
+            loop {
                 if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
                     offset += j + 1;
                     break;
@@ -202,20 +203,21 @@ pub fn system_balance_unbondable(
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
     let mut ret_struct = (Uint128::zero(), vec![]);
     ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
-    let (mut i, mut j) = (0, 0);
+    let mut i = 0;
+    let mut j;
     let mut offset = 0;
-    while true {
+    loop {
         let mut manager_tuple = (Uint128::zero(), vec![]);
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = match (treasury_manager::reserves_query(
+            manager_tuple.0 = match treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
                 SupportedContracts::Treasury,
-            )) {
+            ) {
                 Ok(bal) => bal,
                 Err(_) => {
                     i += 1;
@@ -223,7 +225,7 @@ pub fn system_balance_unbondable(
                 }
             };
             j = 0;
-            while true {
+            loop {
                 if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
                     offset += j + 1;
                     break;

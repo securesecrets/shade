@@ -13,7 +13,6 @@ use shade_protocol::{
         shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Deps,
         DepsMut,
         Env,
