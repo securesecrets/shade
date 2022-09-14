@@ -8,7 +8,7 @@ use crate::utils::storage::plus::NaiveMapStorage;
 #[cw_serde]
 pub struct ReceiveBalanceMsg {
     pub vote: Vote,
-    pub proposal: Uint128,
+    pub proposal: u32,
 }
 
 #[cw_serde]

@@ -65,10 +65,10 @@ pub struct AssemblyInit {
 #[cw_serde]
 pub struct MigrationInit {
     pub source: Contract,
-    pub assembly: Uint128,
-    pub assemblyMsg: Uint128,
-    pub profile: Uint128,
-    pub contract: Uint128,
+    pub assembly: u16,
+    pub assemblyMsg: u16,
+    pub profile: u16,
+    pub contract: u16,
 }
 
 #[cw_serde]
@@ -96,7 +96,7 @@ pub enum RuntimeState {
     // Run like normal
     Normal,
     // Allow only specific assemblies and admin
-    SpecificAssemblies { assemblies: Vec<Uint128> },
+    SpecificAssemblies { assemblies: Vec<u16> },
     // Migrated - points to the new version
     Migrated,
 }
@@ -116,18 +116,10 @@ pub enum MigrationDataAsk {
 
 #[cw_serde]
 pub enum MigrationData {
-    Assembly {
-        data: Vec<(Uint128, Assembly)>,
-    },
-    AssemblyMsg {
-        data: Vec<(Uint128, AssemblyMsg)>,
-    },
-    Profile {
-        data: Vec<(Uint128, Profile)>,
-    },
-    Contract {
-        data: Vec<(Uint128, AllowedContract)>,
-    },
+    Assembly { data: Vec<(u16, Assembly)> },
+    AssemblyMsg { data: Vec<(u16, AssemblyMsg)> },
+    Profile { data: Vec<(u16, Profile)> },
+    Contract { data: Vec<(u16, AllowedContract)> },
 }
 
 // TODO: allow migration, copies all assemblies, contracts and msgs
@@ -151,20 +143,20 @@ pub enum ExecuteMsg {
     /// Triggers the proposal when the MSG is approved
     Trigger {
         //TODO: Must be deprecated for v1
-        proposal: Uint128,
+        proposal: u32,
         padding: Option<String>,
     },
     /// Cancels the proposal if the msg keeps failing
     Cancel {
         //TODO: Must be deprecated for v1
-        proposal: Uint128,
+        proposal: u32,
         padding: Option<String>,
     },
     /// Forces a proposal update,
     /// proposals automatically update on interaction
     /// but this is a cheaper alternative
     Update {
-        proposal: Uint128,
+        proposal: u32,
         padding: Option<String>,
     },
     /// Funds a proposal, msg is a prop ID
@@ -177,11 +169,11 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     ClaimFunding {
-        id: Uint128,
+        id: u32,
     },
     /// Votes on a assembly vote
     AssemblyVote {
-        proposal: Uint128,
+        proposal: u32,
         vote: Vote,
         padding: Option<String>,
     },
@@ -196,7 +188,7 @@ pub enum ExecuteMsg {
     // Assemblies
     /// Creates a proposal under a assembly
     AssemblyProposal {
-        assembly: Uint128,
+        assembly: u16,
         title: String,
         metadata: String,
 
@@ -210,16 +202,16 @@ pub enum ExecuteMsg {
         name: String,
         metadata: String,
         members: Vec<Addr>,
-        profile: Uint128,
+        profile: u16,
         padding: Option<String>,
     },
     /// Edits an existing assembly
     SetAssembly {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         metadata: Option<String>,
         members: Option<Vec<Addr>>,
-        profile: Option<Uint128>,
+        profile: Option<u16>,
         padding: Option<String>,
     },
 
@@ -228,20 +220,20 @@ pub enum ExecuteMsg {
     AddAssemblyMsg {
         name: String,
         msg: String,
-        assemblies: Vec<Uint128>,
+        assemblies: Vec<u16>,
         padding: Option<String>,
     },
     /// Edits an existing assembly msg
     SetAssemblyMsg {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         msg: Option<String>,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     AddAssemblyMsgAssemblies {
-        id: Uint128,
-        assemblies: Vec<Uint128>,
+        id: u16,
+        assemblies: Vec<u16>,
     },
 
     // Profiles
@@ -252,7 +244,7 @@ pub enum ExecuteMsg {
     },
     /// Edits an already existing profile and the assemblys using the profile
     SetProfile {
-        id: Uint128,
+        id: u16,
         profile: UpdateProfile,
         padding: Option<String>,
     },
@@ -262,21 +254,21 @@ pub enum ExecuteMsg {
         name: String,
         metadata: String,
         contract: Contract,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     SetContract {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         metadata: Option<String>,
         contract: Option<Contract>,
         disable_assemblies: bool,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     AddContractAssemblies {
-        id: Uint128,
-        assemblies: Vec<Uint128>,
+        id: u16,
+        assemblies: Vec<u16>,
     },
     // Migrations
     // Export total numeric IDs
@@ -295,7 +287,7 @@ pub enum ExecuteMsg {
     },
     MigrateData {
         data: MigrationDataAsk,
-        total: u64,
+        total: u16,
     },
     ReceiveMigrationData {
         data: MigrationData,
@@ -335,8 +327,8 @@ pub enum HandleAnswer {
 
 #[cw_serde]
 pub struct Pagination {
-    pub page: u64,
-    pub amount: u64,
+    pub page: u16,
+    pub amount: u32,
 }
 
 #[cw_serde]
@@ -358,36 +350,36 @@ pub enum QueryMsg {
     TotalProposals {},
 
     Proposals {
-        start: Uint128,
-        end: Uint128,
+        start: u32,
+        end: u32,
     },
 
     TotalAssemblies {},
 
     Assemblies {
-        start: Uint128,
-        end: Uint128,
+        start: u16,
+        end: u16,
     },
 
     TotalAssemblyMsgs {},
 
     AssemblyMsgs {
-        start: Uint128,
-        end: Uint128,
+        start: u16,
+        end: u16,
     },
 
     TotalProfiles {},
 
     Profiles {
-        start: Uint128,
-        end: Uint128,
+        start: u16,
+        end: u16,
     },
 
     TotalContracts {},
 
     Contracts {
-        start: Uint128,
-        end: Uint128,
+        start: u16,
+        end: u16,
     },
 
     WithVK {
@@ -408,7 +400,7 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub struct ResponseWithID<T> {
-    pub prop_id: Uint128,
+    pub prop_id: u32,
     pub data: T,
 }
 
@@ -439,26 +431,26 @@ pub enum QueryAnswer {
     },
 
     Total {
-        total: Uint128,
+        total: u32,
     },
 
     UserProposals {
         props: Vec<ResponseWithID<Proposal>>,
-        total: Uint128,
+        total: u32,
     },
 
     UserAssemblyVotes {
         votes: Vec<ResponseWithID<Vote>>,
-        total: Uint128,
+        total: u32,
     },
 
     UserFunding {
         funds: Vec<ResponseWithID<Funding>>,
-        total: Uint128,
+        total: u32,
     },
 
     UserVotes {
         votes: Vec<ResponseWithID<Vote>>,
-        total: Uint128,
+        total: u32,
     },
 }

@@ -23,7 +23,7 @@ pub fn try_add_contract(
     name: String,
     metadata: String,
     contract: Contract,
-    assemblies: Option<Vec<Uint128>>,
+    assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
     let id = ID::add_contract(deps.storage)?;
 
@@ -42,7 +42,7 @@ pub fn try_add_contract(
         contract,
         assemblies,
     }
-    .save(deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddContract {
@@ -55,18 +55,18 @@ pub fn try_set_contract(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: Uint128,
+    id: u16,
     name: Option<String>,
     metadata: Option<String>,
     contract: Option<Contract>,
     disable_assemblies: bool,
-    assemblies: Option<Vec<Uint128>>,
+    assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::load(deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::load(deps.storage, id)?;
 
     if let Some(name) = name {
         allowed_contract.name = name;
@@ -94,7 +94,7 @@ pub fn try_set_contract(
         }
     }
 
-    allowed_contract.save(deps.storage, &id)?;
+    allowed_contract.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddContract {
@@ -107,14 +107,14 @@ pub fn try_add_contract_assemblies(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: Uint128,
-    assemblies: Vec<Uint128>,
+    id: u16,
+    assemblies: Vec<u16>,
 ) -> StdResult<Response> {
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::data(deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::data(deps.storage, id)?;
 
     if let Some(mut old_assemblies) = allowed_contract.assemblies {
         let assembly_id = ID::assembly(deps.storage)?;
@@ -130,7 +130,7 @@ pub fn try_add_contract_assemblies(
         ));
     }
 
-    AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
+    AllowedContract::save_data(deps.storage, id, allowed_contract)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddContractAssemblies {

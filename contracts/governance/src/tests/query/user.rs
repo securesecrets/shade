@@ -71,7 +71,7 @@ fn proposals() {
         .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -95,14 +95,14 @@ fn proposals() {
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(props.len(), 1);
         }
         _ => assert!(false),
     }
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -126,7 +126,7 @@ fn proposals() {
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::new(1));
+            assert_eq!(total, 1);
             assert_eq!(props.len(), 2);
         }
         _ => assert!(false),
@@ -151,7 +151,7 @@ fn assembly_votes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-        proposal: Uint128::new(0),
+        proposal: 0,
         vote: Vote {
             yes: Uint128::new(1),
             no: Uint128::zero(),
@@ -178,7 +178,7 @@ fn assembly_votes() {
 
     match query {
         QueryAnswer::UserAssemblyVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),
@@ -193,7 +193,7 @@ fn funding() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(100),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -215,7 +215,7 @@ fn funding() {
 
     match query {
         QueryAnswer::UserFunding { funds, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(funds.len(), 1);
         }
         _ => assert!(false),
@@ -239,7 +239,7 @@ fn votes() {
                     no_with_veto: Default::default(),
                     abstain: Default::default(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -261,7 +261,7 @@ fn votes() {
 
     match query {
         QueryAnswer::UserVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),

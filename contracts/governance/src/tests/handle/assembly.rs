@@ -13,7 +13,7 @@ fn add_assembly() {
         name: "Other assembly".to_string(),
         metadata: "some data".to_string(),
         members: vec![],
-        profile: Uint128::new(1),
+        profile: 1,
         padding: None,
     }
     .test_exec(
@@ -25,7 +25,7 @@ fn add_assembly() {
     )
     .unwrap();
 
-    let assemblies = get_assemblies(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap();
+    let assemblies = get_assemblies(&mut chain, &gov, 0, 2).unwrap();
 
     assert_eq!(assemblies.len(), 3);
 }
@@ -39,7 +39,7 @@ fn unauthorised_add_assembly() {
             name: "Other assembly".to_string(),
             metadata: "some data".to_string(),
             members: vec![],
-            profile: Uint128::new(1),
+            profile: 1,
             padding: None,
         }
         .test_exec(
@@ -57,11 +57,10 @@ fn unauthorised_add_assembly() {
 fn set_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    let old_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let old_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetAssembly {
-        id: Uint128::new(1),
+        id: 1,
         name: Some("Random name".to_string()),
         metadata: Some("data".to_string()),
         members: None,
@@ -77,8 +76,7 @@ fn set_assembly() {
     )
     .unwrap();
 
-    let new_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let new_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
     assert_ne!(new_assembly.name, old_assembly.name);
     assert_ne!(new_assembly.metadata, old_assembly.metadata);
@@ -92,7 +90,7 @@ fn unauthorised_set_assembly() {
 
     assert!(
         governance::ExecuteMsg::SetAssembly {
-            id: Uint128::new(1),
+            id: 1,
             name: Some("Random name".to_string()),
             metadata: Some("data".to_string()),
             members: None,

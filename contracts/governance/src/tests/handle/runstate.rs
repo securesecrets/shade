@@ -114,11 +114,7 @@ pub fn init_gov() -> StdResult<(App, ContractInfo, ContractInfo, u64)> {
     Ok((chain, gov, snip20, stored_code.code_id))
 }
 
-fn update_proposal(
-    chain: &mut App,
-    gov: &ContractInfo,
-    proposal: Uint128,
-) -> AnyResult<AppResponse> {
+fn update_proposal(chain: &mut App, gov: &ContractInfo, proposal: u32) -> AnyResult<AppResponse> {
     governance::ExecuteMsg::Update {
         proposal,
         padding: None,
@@ -126,11 +122,7 @@ fn update_proposal(
     .test_exec(&gov, chain, Addr::unchecked("beta"), &[])
 }
 
-fn create_proposal(
-    chain: &mut App,
-    gov: &ContractInfo,
-    assembly: Uint128,
-) -> AnyResult<AppResponse> {
+fn create_proposal(chain: &mut App, gov: &ContractInfo, assembly: u16) -> AnyResult<AppResponse> {
     governance::ExecuteMsg::AssemblyProposal {
         assembly,
         title: "Title".to_string(),
@@ -141,7 +133,7 @@ fn create_proposal(
     .test_exec(&gov, chain, Addr::unchecked("alpha"), &[])
 }
 
-fn assembly_vote(chain: &mut App, gov: &ContractInfo, proposal: Uint128) -> AnyResult<AppResponse> {
+fn assembly_vote(chain: &mut App, gov: &ContractInfo, proposal: u32) -> AnyResult<AppResponse> {
     governance::ExecuteMsg::AssemblyVote {
         proposal,
         vote: Vote {
@@ -159,7 +151,7 @@ fn fund_proposal(
     chain: &mut App,
     gov: &ContractInfo,
     snip20: &ContractInfo,
-    proposal: Uint128,
+    proposal: u32,
 ) -> AnyResult<AppResponse> {
     snip20::ExecuteMsg::Send {
         recipient: gov.address.clone().into(),
@@ -181,10 +173,10 @@ fn fund_proposal(
 // Use RS test to run all the expected functions under all of the states
 #[rstest]
 #[case(RuntimeState::Normal, 1, true)]
-#[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 2, false)]
-#[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 1, true)]
+#[case(RuntimeState::SpecificAssemblies { assemblies: vec![1] }, 2, false)]
+#[case(RuntimeState::SpecificAssemblies { assemblies: vec![1] }, 1, true)]
 #[case(RuntimeState::Migrated, 1, false)]
-fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] expect: bool) {
+fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u16, #[case] expect: bool) {
     let (mut chain, gov, snip20, gov_id) = init_gov().unwrap();
 
     governance::ExecuteMsg::AddAssembly {
@@ -195,7 +187,7 @@ fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] 
             Addr::unchecked("beta"),
             Addr::unchecked("charlie"),
         ],
-        profile: Uint128::new(1),
+        profile: 1,
         padding: None,
     }
     .test_exec(
@@ -208,21 +200,21 @@ fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] 
     .unwrap();
 
     // Proposal for claiming funding
-    create_proposal(&mut chain, &gov, Uint128::new(assembly)).unwrap();
-    assembly_vote(&mut chain, &gov, Uint128::new(0)).unwrap();
+    create_proposal(&mut chain, &gov, assembly).unwrap();
+    assembly_vote(&mut chain, &gov, 0).unwrap();
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
-    update_proposal(&mut chain, &gov, Uint128::new(0)).unwrap();
-    fund_proposal(&mut chain, &gov, &snip20, Uint128::new(0)).unwrap();
+    update_proposal(&mut chain, &gov, 0).unwrap();
+    fund_proposal(&mut chain, &gov, &snip20, 0).unwrap();
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
-    update_proposal(&mut chain, &gov, Uint128::new(0)).unwrap();
+    update_proposal(&mut chain, &gov, 0).unwrap();
 
     // Proposal for updating state
-    create_proposal(&mut chain, &gov, Uint128::new(assembly)).unwrap();
-    assembly_vote(&mut chain, &gov, Uint128::new(1)).unwrap();
+    create_proposal(&mut chain, &gov, assembly).unwrap();
+    assembly_vote(&mut chain, &gov, 1).unwrap();
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     // Proposal for voting
-    create_proposal(&mut chain, &gov, Uint128::new(assembly)).unwrap();
+    create_proposal(&mut chain, &gov, assembly).unwrap();
 
     match state {
         RuntimeState::Normal => {}
@@ -252,30 +244,19 @@ fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] 
     }
 
     // try to create proposal
-    assert_eq!(
-        expect,
-        create_proposal(&mut chain, &gov, Uint128::new(assembly)).is_ok()
-    );
+    assert_eq!(expect, create_proposal(&mut chain, &gov, assembly).is_ok());
 
     // Claim funding TODO: should this get halted?
     assert_eq!(
         true,
-        governance::ExecuteMsg::ClaimFunding {
-            id: Uint128::new(0)
-        }
-        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
-        .is_ok()
+        governance::ExecuteMsg::ClaimFunding { id: 0 }
+            .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+            .is_ok()
     );
 
-    assert_eq!(
-        expect,
-        update_proposal(&mut chain, &gov, Uint128::new(1)).is_ok()
-    );
+    assert_eq!(expect, update_proposal(&mut chain, &gov, 1).is_ok());
 
-    assert_eq!(
-        expect,
-        assembly_vote(&mut chain, &gov, Uint128::new(2)).is_ok()
-    );
+    assert_eq!(expect, assembly_vote(&mut chain, &gov, 2).is_ok());
 
     // TODO: not working but progress to user voting
 }

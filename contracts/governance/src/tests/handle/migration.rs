@@ -25,7 +25,7 @@ fn migrate() {
                 Addr::unchecked("beta"),
                 Addr::unchecked("charlie"),
             ],
-            profile: Uint128::new(1),
+            profile: 1,
             padding: None,
         }
         .test_exec(
@@ -195,10 +195,7 @@ fn assert_migrated_items(
     should_equal: bool,
 ) {
     ///////// ASSEMBLIES
-    let query = QueryMsg::Assemblies {
-        start: Uint128::new(0),
-        end: Uint128::new(25),
-    };
+    let query = QueryMsg::Assemblies { start: 0, end: 25 };
     let query1 = query.test_query(&gov1, &chain).unwrap();
     let query2_try = query.test_query(&gov2, &chain);
 
@@ -228,10 +225,7 @@ fn assert_migrated_items(
     }
 
     ///////// ASSEMBLY MSGS
-    let query = QueryMsg::AssemblyMsgs {
-        start: Uint128::new(0),
-        end: Uint128::new(25),
-    };
+    let query = QueryMsg::AssemblyMsgs { start: 0, end: 25 };
     let query1 = query.test_query(&gov1, &chain).unwrap();
     let query2_try = query.test_query(&gov2, &chain);
 
@@ -255,10 +249,7 @@ fn assert_migrated_items(
     }
 
     ///////// PROFILES
-    let query = QueryMsg::Profiles {
-        start: Uint128::new(0),
-        end: Uint128::new(25),
-    };
+    let query = QueryMsg::Profiles { start: 0, end: 25 };
     let query1 = query.test_query(&gov1, &chain).unwrap();
     let query2_try = query.test_query(&gov2, &chain);
 
@@ -288,10 +279,7 @@ fn assert_migrated_items(
     }
 
     ///////// CONTRACTS
-    let query = QueryMsg::Contracts {
-        start: Uint128::new(0),
-        end: Uint128::new(25),
-    };
+    let query = QueryMsg::Contracts { start: 0, end: 25 };
     let query1 = query.test_query(&gov1, &chain).unwrap();
     let query2_try = query.test_query(&gov2, &chain);
 

@@ -28,7 +28,7 @@ fn add_contract() {
     )
     .unwrap();
 
-    let contracts = get_contract(&mut chain, &gov, Uint128::zero(), Uint128::new(1)).unwrap();
+    let contracts = get_contract(&mut chain, &gov, 0, 1).unwrap();
 
     assert_eq!(contracts.len(), 2);
 }
@@ -80,11 +80,10 @@ fn set_contract() {
     )
     .unwrap();
 
-    let old_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetContract {
-        id: Uint128::new(1),
+        id: 1,
         name: Some("New name".to_string()),
         metadata: Some("New desc".to_string()),
         contract: Some(Contract {
@@ -104,8 +103,7 @@ fn set_contract() {
     )
     .unwrap();
 
-    let new_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_ne!(old_contract.name, new_contract.name);
     assert_ne!(old_contract.metadata, new_contract.metadata);
@@ -127,7 +125,7 @@ fn disable_contract_assemblies() {
             address: Addr::unchecked("contract"),
             code_hash: "hash".to_string(),
         },
-        assemblies: Some(vec![Uint128::zero()]),
+        assemblies: Some(vec![0]),
         padding: None,
     }
     .test_exec(
@@ -139,11 +137,10 @@ fn disable_contract_assemblies() {
     )
     .unwrap();
 
-    let old_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetContract {
-        id: Uint128::new(1),
+        id: 1,
         name: Some("New name".to_string()),
         metadata: Some("New desc".to_string()),
         contract: Some(Contract {
@@ -163,8 +160,7 @@ fn disable_contract_assemblies() {
     )
     .unwrap();
 
-    let new_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_ne!(old_contract.name, new_contract.name);
     assert_ne!(old_contract.metadata, new_contract.metadata);
@@ -199,11 +195,10 @@ fn enable_contract_assemblies() {
     )
     .unwrap();
 
-    let old_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetContract {
-        id: Uint128::new(1),
+        id: 1,
         name: Some("New name".to_string()),
         metadata: Some("New desc".to_string()),
         contract: Some(Contract {
@@ -211,7 +206,7 @@ fn enable_contract_assemblies() {
             code_hash: "other hash".to_string(),
         }),
         disable_assemblies: false,
-        assemblies: Some(vec![Uint128::zero()]),
+        assemblies: Some(vec![0]),
         padding: None,
     }
     .test_exec(
@@ -223,8 +218,7 @@ fn enable_contract_assemblies() {
     )
     .unwrap();
 
-    let new_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_ne!(old_contract.name, new_contract.name);
     assert_ne!(old_contract.metadata, new_contract.metadata);
@@ -242,7 +236,7 @@ fn unauthorised_set_contract() {
 
     assert!(
         governance::ExecuteMsg::SetContract {
-            id: Uint128::new(1),
+            id: 1,
             name: Some("New name".to_string()),
             metadata: Some("New desc".to_string()),
             contract: Some(Contract {
@@ -274,7 +268,7 @@ fn add_contract_assemblies() {
             address: Addr::unchecked("contract"),
             code_hash: "hash".to_string(),
         },
-        assemblies: Some(vec![Uint128::zero()]),
+        assemblies: Some(vec![0]),
         padding: None,
     }
     .test_exec(
@@ -286,12 +280,11 @@ fn add_contract_assemblies() {
     )
     .unwrap();
 
-    let old_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::AddContractAssemblies {
-        id: Uint128::new(1),
-        assemblies: vec![Uint128::new(1)],
+        id: 1,
+        assemblies: vec![1],
     }
     .test_exec(
         // Sender is self
@@ -302,8 +295,7 @@ fn add_contract_assemblies() {
     )
     .unwrap();
 
-    let new_contract =
-        get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_contract = get_contract(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_ne!(old_contract.assemblies, new_contract.assemblies);
 }

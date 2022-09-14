@@ -19,12 +19,12 @@ pub struct Assembly {
     // List of members in assembly
     pub members: Vec<Addr>,
     // Selected profile
-    pub profile: Uint128,
+    pub profile: u16,
 }
 
 #[cfg(feature = "governance-impl")]
 impl Assembly {
-    pub fn load(storage: &dyn Storage, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: u16) -> StdResult<Self> {
         let desc = Self::description(storage, id)?;
         let data = Self::data(storage, id)?;
 
@@ -36,47 +36,47 @@ impl Assembly {
         })
     }
 
-    pub fn may_load(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Self>> {
-        if id > &ID::assembly(storage)? {
+    pub fn may_load(storage: &dyn Storage, id: u16) -> StdResult<Option<Self>> {
+        if id > ID::assembly(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: u16) -> StdResult<()> {
         AssemblyData {
             members: self.members.clone(),
             profile: self.profile,
         }
-        .save(storage, id.u128())?;
+        .save(storage, id)?;
 
         AssemblyDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
         }
-        .save(storage, id.u128())?;
+        .save(storage, id)?;
 
         Ok(())
     }
 
-    pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyData> {
-        AssemblyData::load(storage, id.u128())
+    pub fn data(storage: &dyn Storage, id: u16) -> StdResult<AssemblyData> {
+        AssemblyData::load(storage, id)
     }
 
-    pub fn save_data(storage: &mut dyn Storage, id: &Uint128, data: AssemblyData) -> StdResult<()> {
-        data.save(storage, id.u128())
+    pub fn save_data(storage: &mut dyn Storage, id: u16, data: AssemblyData) -> StdResult<()> {
+        data.save(storage, id)
     }
 
-    pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyDescription> {
-        AssemblyDescription::load(storage, id.u128())
+    pub fn description(storage: &dyn Storage, id: u16) -> StdResult<AssemblyDescription> {
+        AssemblyDescription::load(storage, id)
     }
 
     pub fn save_description(
         storage: &mut dyn Storage,
-        id: &Uint128,
+        id: u16,
         desc: AssemblyDescription,
     ) -> StdResult<()> {
-        desc.save(storage, id.u128())
+        desc.save(storage, id)
     }
 }
 
@@ -84,12 +84,12 @@ impl Assembly {
 #[cw_serde]
 pub struct AssemblyData {
     pub members: Vec<Addr>,
-    pub profile: Uint128,
+    pub profile: u16,
 }
 
 #[cfg(feature = "governance-impl")]
-impl MapStorage<'static, u128> for AssemblyData {
-    const MAP: Map<'static, u128, Self> = Map::new("assembly_data-");
+impl MapStorage<'static, u16> for AssemblyData {
+    const MAP: Map<'static, u16, Self> = Map::new("assembly_data-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -100,22 +100,22 @@ pub struct AssemblyDescription {
 }
 
 #[cfg(feature = "governance-impl")]
-impl MapStorage<'static, u128> for AssemblyDescription {
-    const MAP: Map<'static, u128, Self> = Map::new("assembly_description-");
+impl MapStorage<'static, u16> for AssemblyDescription {
+    const MAP: Map<'static, u16, Self> = Map::new("assembly_description-");
 }
 
 #[cw_serde] // A generic msg is created at init, its a black msg where the variable is the start
 pub struct AssemblyMsg {
     pub name: String,
     // Assemblies allowed to call this msg
-    pub assemblies: Vec<Uint128>,
+    pub assemblies: Vec<u16>,
     // ExecuteMsg template
     pub msg: FlexibleMsg,
 }
 
 #[cfg(feature = "governance-impl")]
 impl AssemblyMsg {
-    pub fn load(storage: &dyn Storage, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: u16) -> StdResult<Self> {
         let desc = Self::description(storage, id)?;
         let data = Self::data(storage, id)?;
 
@@ -126,60 +126,52 @@ impl AssemblyMsg {
         })
     }
 
-    pub fn may_load(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Self>> {
-        if id > &ID::assembly_msg(storage)? {
+    pub fn may_load(storage: &dyn Storage, id: u16) -> StdResult<Option<Self>> {
+        if id > ID::assembly_msg(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: u16) -> StdResult<()> {
         AssemblyMsgData {
             assemblies: self.assemblies.clone(),
             msg: self.msg.clone(),
         }
-        .save(storage, id.u128())?;
+        .save(storage, id)?;
 
-        AssemblyMsgDescription(self.name.clone()).save(storage, id.u128())?;
+        AssemblyMsgDescription(self.name.clone()).save(storage, id)?;
 
         Ok(())
     }
 
-    pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyMsgData> {
-        AssemblyMsgData::load(storage, id.u128())
+    pub fn data(storage: &dyn Storage, id: u16) -> StdResult<AssemblyMsgData> {
+        AssemblyMsgData::load(storage, id)
     }
 
-    pub fn save_data(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        data: AssemblyMsgData,
-    ) -> StdResult<()> {
-        data.save(storage, id.u128())
+    pub fn save_data(storage: &mut dyn Storage, id: u16, data: AssemblyMsgData) -> StdResult<()> {
+        data.save(storage, id)
     }
 
-    pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<String> {
-        Ok(AssemblyMsgDescription::load(storage, id.u128())?.0)
+    pub fn description(storage: &dyn Storage, id: u16) -> StdResult<String> {
+        Ok(AssemblyMsgDescription::load(storage, id)?.0)
     }
 
-    pub fn save_description(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        desc: String,
-    ) -> StdResult<()> {
-        AssemblyMsgDescription(desc).save(storage, id.u128())
+    pub fn save_description(storage: &mut dyn Storage, id: u16, desc: String) -> StdResult<()> {
+        AssemblyMsgDescription(desc).save(storage, id)
     }
 }
 
 #[cfg(feature = "governance-impl")]
 #[cw_serde]
 pub struct AssemblyMsgData {
-    pub assemblies: Vec<Uint128>,
+    pub assemblies: Vec<u16>,
     pub msg: FlexibleMsg,
 }
 
 #[cfg(feature = "governance-impl")]
-impl MapStorage<'static, u128> for AssemblyMsgData {
-    const MAP: Map<'static, u128, Self> = Map::new("assembly_msg_data-");
+impl MapStorage<'static, u16> for AssemblyMsgData {
+    const MAP: Map<'static, u16, Self> = Map::new("assembly_msg_data-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -187,6 +179,6 @@ impl MapStorage<'static, u128> for AssemblyMsgData {
 struct AssemblyMsgDescription(pub String);
 
 #[cfg(feature = "governance-impl")]
-impl MapStorage<'static, u128> for AssemblyMsgDescription {
-    const MAP: Map<'static, u128, Self> = Map::new("assembly_msg_description-");
+impl MapStorage<'static, u16> for AssemblyMsgDescription {
+    const MAP: Map<'static, u16, Self> = Map::new("assembly_msg_description-");
 }

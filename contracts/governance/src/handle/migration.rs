@@ -83,7 +83,7 @@ pub fn try_migrate_data(
     env: Env,
     info: MessageInfo,
     data: MigrationDataAsk,
-    total: u128,
+    total: u16,
 ) -> StdResult<Response> {
     let res = Response::new();
 
@@ -104,32 +104,29 @@ pub fn try_migrate_data(
                         let mut assemblies = vec![];
 
                         // Get the next id to pick
-                        let current_id = ID::assembly_migration(deps.storage)?.u128();
-                        let last_id = min(current_id + total, ID::assembly(deps.storage)?.u128());
+                        let current_id = ID::assembly_migration(deps.storage)?;
+                        let last_id = min(current_id + total, ID::assembly(deps.storage)?);
 
                         // iterate from next over to last
                         for i in current_id..=last_id {
-                            let id = Uint128::new(i);
-                            assemblies.push((id.clone(), Assembly::load(deps.storage, &id)?));
+                            assemblies.push((i, Assembly::load(deps.storage, i)?));
                         }
 
-                        ID::set_assembly_migration(deps.storage, Uint128::new(last_id))?;
+                        ID::set_assembly_migration(deps.storage, last_id)?;
 
                         res_data = MigrationData::Assembly { data: assemblies };
                     }
                     MigrationDataAsk::AssemblyMsg => {
                         let mut assembly_msgs = vec![];
 
-                        let current_id = ID::assembly_msg_migration(deps.storage)?.u128();
-                        let last_id =
-                            min(current_id + total, ID::assembly_msg(deps.storage)?.u128());
+                        let current_id = ID::assembly_msg_migration(deps.storage)?;
+                        let last_id = min(current_id + total, ID::assembly_msg(deps.storage)?);
 
                         for i in current_id..=last_id {
-                            let id = Uint128::new(i);
-                            assembly_msgs.push((id.clone(), AssemblyMsg::load(deps.storage, &id)?));
+                            assembly_msgs.push((i, AssemblyMsg::load(deps.storage, i)?));
                         }
 
-                        ID::set_assembly_msg_migration(deps.storage, Uint128::new(last_id))?;
+                        ID::set_assembly_msg_migration(deps.storage, last_id)?;
 
                         res_data = MigrationData::AssemblyMsg {
                             data: assembly_msgs,
@@ -138,30 +135,28 @@ pub fn try_migrate_data(
                     MigrationDataAsk::Profile => {
                         let mut profiles = vec![];
 
-                        let current_id = ID::profile_migration(deps.storage)?.u128();
-                        let last_id = min(current_id + total, ID::profile(deps.storage)?.u128());
+                        let current_id = ID::profile_migration(deps.storage)?;
+                        let last_id = min(current_id + total, ID::profile(deps.storage)?);
 
                         for i in current_id..=last_id {
-                            let id = Uint128::new(i);
-                            profiles.push((id.clone(), Profile::load(deps.storage, &id)?));
+                            profiles.push((i, Profile::load(deps.storage, i)?));
                         }
 
-                        ID::set_profile_migration(deps.storage, Uint128::new(last_id))?;
+                        ID::set_profile_migration(deps.storage, last_id)?;
 
                         res_data = MigrationData::Profile { data: profiles };
                     }
                     MigrationDataAsk::Contract => {
                         let mut contracts = vec![];
 
-                        let current_id = ID::contract_migration(deps.storage)?.u128();
-                        let last_id = min(current_id + total, ID::contract(deps.storage)?.u128());
+                        let current_id = ID::contract_migration(deps.storage)?;
+                        let last_id = min(current_id + total, ID::contract(deps.storage)?);
 
                         for i in current_id..=last_id {
-                            let id = Uint128::new(i);
-                            contracts.push((id.clone(), AllowedContract::load(deps.storage, &id)?));
+                            contracts.push((i, AllowedContract::load(deps.storage, i)?));
                         }
 
-                        ID::set_contract_migration(deps.storage, Uint128::new(last_id))?;
+                        ID::set_contract_migration(deps.storage, last_id)?;
 
                         res_data = MigrationData::Contract { data: contracts };
                     }
@@ -199,22 +194,22 @@ pub fn try_receive_migration_data(
         match data {
             MigrationData::Assembly { data } => {
                 for item in data {
-                    item.1.save(deps.storage, &item.0)?;
+                    item.1.save(deps.storage, item.0)?;
                 }
             }
             MigrationData::AssemblyMsg { data } => {
                 for item in data {
-                    item.1.save(deps.storage, &item.0)?;
+                    item.1.save(deps.storage, item.0)?;
                 }
             }
             MigrationData::Profile { data } => {
                 for item in data {
-                    item.1.save(deps.storage, &item.0)?;
+                    item.1.save(deps.storage, item.0)?;
                 }
             }
             MigrationData::Contract { data } => {
                 for item in data {
-                    item.1.save(deps.storage, &item.0)?;
+                    item.1.save(deps.storage, item.0)?;
                 }
             }
         }
