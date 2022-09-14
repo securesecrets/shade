@@ -95,7 +95,6 @@ pub fn non_manager_allowances() {
         Uint128::zero(),
         treasury::allowance_query(
             &app,
-            "admin",
             &contracts,
             "SSCRT",
             SupportedContracts::TreasuryManager(5)
@@ -181,7 +180,6 @@ pub fn non_manager_allowances() {
         Uint128::new(50),
         treasury::allowance_query(
             &app,
-            "admin",
             &contracts,
             "SSCRT",
             SupportedContracts::TreasuryManager(5)

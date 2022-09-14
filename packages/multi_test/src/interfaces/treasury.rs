@@ -63,7 +63,6 @@ pub fn config_query(chain: &App, contracts: &DeployedContracts) -> StdResult<tre
 
 pub fn allowance_query(
     chain: &App,
-    sender: &str,
     contracts: &DeployedContracts,
     snip20_symbol: &str,
     spender: SupportedContracts,
@@ -424,7 +423,7 @@ pub fn set_config(
         &[],
     )) {
         Ok(_) => Ok(()),
-        Err(e) => Err(StdError::generic_err("Set config execute failed")),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }
 

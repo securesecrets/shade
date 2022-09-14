@@ -90,7 +90,7 @@ pub fn set_viewing_key_exec(
         &[],
     )) {
         Ok(_) => Ok(()),
-        Err(e) => Err(StdError::generic_err("SetViewingKey failed")),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }
 
