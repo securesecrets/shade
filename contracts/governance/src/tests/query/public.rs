@@ -25,7 +25,7 @@ fn query_total_assembly_msg() {
         _ => 0,
     };
 
-    assert_eq!(total, Uint128::new(1));
+    assert_eq!(total, 1);
 }
 
 #[test]
@@ -66,7 +66,7 @@ fn query_total_contracts() {
         _ => 0,
     };
 
-    assert_eq!(total, Uint128::new(1));
+    assert_eq!(total, 1);
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn query_total_profiles() {
         _ => 0,
     };
 
-    assert_eq!(total, Uint128::new(2));
+    assert_eq!(total, 2);
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn query_total_assemblies() {
         _ => 0,
     };
 
-    assert_eq!(total, Uint128::new(2));
+    assert_eq!(total, 2);
 }
 
 #[test]

@@ -173,8 +173,8 @@ fn fund_proposal(
 // Use RS test to run all the expected functions under all of the states
 #[rstest]
 #[case(RuntimeState::Normal, 1, true)]
-#[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 2, false)]
-#[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 1, true)]
+#[case(RuntimeState::SpecificAssemblies { assemblies: vec![1] }, 2, false)]
+#[case(RuntimeState::SpecificAssemblies { assemblies: vec![1] }, 1, true)]
 #[case(RuntimeState::Migrated, 1, false)]
 fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u16, #[case] expect: bool) {
     let (mut chain, gov, snip20, gov_id) = init_gov().unwrap();

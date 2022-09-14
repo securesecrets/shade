@@ -95,7 +95,7 @@ fn proposals() {
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(props.len(), 1);
         }
         _ => assert!(false),
@@ -178,7 +178,7 @@ fn assembly_votes() {
 
     match query {
         QueryAnswer::UserAssemblyVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),
@@ -193,7 +193,7 @@ fn funding() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(100),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -215,7 +215,7 @@ fn funding() {
 
     match query {
         QueryAnswer::UserFunding { funds, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(funds.len(), 1);
         }
         _ => assert!(false),
@@ -261,7 +261,7 @@ fn votes() {
 
     match query {
         QueryAnswer::UserVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),

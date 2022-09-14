@@ -12,6 +12,7 @@ use shade_protocol::{
     governance::{stored_id::UserID, Pagination, ResponseWithID},
     utils::storage::{default::SingletonStorage, plus::ItemStorage},
 };
+use std::cmp::min;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -27,18 +28,13 @@ pub fn total_proposals(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn proposals(deps: Deps, start: u32, end: u32) -> StdResult<QueryAnswer> {
     let mut items = vec![];
-    let mut end = end;
     let total = ID::proposal(deps.storage)?;
 
     if start > total {
         return Err(StdError::generic_err("Proposal not found"));
     }
 
-    if end > total {
-        end = total;
-    }
-
-    for i in start..=end {
+    for i in start..=min(end, total) {
         items.push(Proposal::load(deps.storage, i)?);
     }
 
@@ -53,19 +49,14 @@ pub fn total_profiles(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn profiles(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let mut items = vec![];
-    let mut end = end;
     let total = ID::profile(deps.storage)?;
 
     if start > total {
         return Err(StdError::generic_err("Profile not found"));
     }
 
-    if end > total {
-        end = total;
-    }
-
-    for i in start..=end {
-        items.push(Profile::load(deps.storage, i).unwrap());
+    for i in start..=min(end, total) {
+        items.push(Profile::load(deps.storage, i)?);
     }
 
     Ok(QueryAnswer::Profiles { profiles: items })
@@ -79,19 +70,14 @@ pub fn total_assemblies(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn assemblies(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let mut items = vec![];
-    let mut end = end;
     let total = ID::assembly(deps.storage)?;
 
     if start > total {
         return Err(StdError::generic_err("Assembly not found"));
     }
 
-    if end > total {
-        end = total;
-    }
-
-    for i in start..=end {
-        items.push(Assembly::load(deps.storage, i).unwrap());
+    for i in start..=min(end, total) {
+        items.push(Assembly::load(deps.storage, i)?);
     }
 
     Ok(QueryAnswer::Assemblies { assemblies: items })
@@ -105,19 +91,14 @@ pub fn total_assembly_msgs(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn assembly_msgs(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let mut items = vec![];
-    let mut end = end;
     let total = ID::assembly_msg(deps.storage)?;
 
     if start > total {
         return Err(StdError::generic_err("AssemblyMsg not found"));
     }
 
-    if end > total {
-        end = total;
-    }
-
-    for i in start..=end {
-        items.push(AssemblyMsg::load(deps.storage, i).unwrap());
+    for i in start..=min(end, total) {
+        items.push(AssemblyMsg::load(deps.storage, i)?);
     }
 
     Ok(QueryAnswer::AssemblyMsgs { msgs: items })
@@ -131,19 +112,14 @@ pub fn total_contracts(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn contracts(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let mut items = vec![];
-    let mut end = end;
     let total = ID::contract(deps.storage)?;
 
     if start > total {
         return Err(StdError::generic_err("Contract not found"));
     }
 
-    if end > total {
-        end = total;
-    }
-
-    for i in start..=end {
-        items.push(AllowedContract::load(deps.storage, i).unwrap());
+    for i in start..=min(end, total) {
+        items.push(AllowedContract::load(deps.storage, i)?);
     }
 
     Ok(QueryAnswer::Contracts { contracts: items })

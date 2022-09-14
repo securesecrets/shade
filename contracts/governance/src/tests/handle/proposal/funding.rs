@@ -115,7 +115,7 @@ pub fn init_funding_governance_with_proposal()
     .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text only proposal".to_string(),
         msgs: None,
@@ -153,7 +153,7 @@ fn assembly_to_funding_transition() {
     let (mut chain, gov, _snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -188,7 +188,7 @@ fn assembly_to_funding_transition() {
     .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text only proposal".to_string(),
         msgs: None,
@@ -198,7 +198,7 @@ fn assembly_to_funding_transition() {
     .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-        proposal: Uint128::new(1),
+        proposal: 1,
         vote: Vote {
             yes: Uint128::new(1),
             no: Uint128::zero(),
@@ -211,7 +211,7 @@ fn assembly_to_funding_transition() {
     .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-        proposal: Uint128::new(1),
+        proposal: 1,
         vote: Vote {
             yes: Uint128::new(1),
             no: Uint128::zero(),
@@ -226,19 +226,18 @@ fn assembly_to_funding_transition() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::new(1),
+        proposal: 1,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
     assert_eq!(prop.proposer, Addr::unchecked("alpha"));
-    assert_eq!(prop.assembly, Uint128::new(1));
+    assert_eq!(prop.assembly, 1);
 
     // Check that history works
     match prop.status_history[0] {
@@ -386,8 +385,7 @@ fn funding_proposal() {
     )
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Funding { amount, .. } => assert_eq!(amount, Uint128::new(200)),
@@ -425,7 +423,7 @@ fn update_while_funding() {
 
     assert!(
         governance::ExecuteMsg::Update {
-            proposal: Uint128::zero(),
+            proposal: 0,
             padding: None
         }
         .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
@@ -471,14 +469,13 @@ fn update_when_fully_funded() {
     .unwrap();
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -509,14 +506,13 @@ fn update_after_failed_funding() {
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Expired {} => assert!(true),
@@ -545,17 +541,15 @@ fn claim_when_not_finished() {
     .unwrap();
 
     assert!(
-        governance::ExecuteMsg::ClaimFunding {
-            id: Uint128::new(0)
-        }
-        .test_exec(
-            // Sender is self
-            &snip20,
-            &mut chain,
-            Addr::unchecked("alpha"),
-            &[]
-        )
-        .is_err()
+        governance::ExecuteMsg::ClaimFunding { id: 0 }
+            .test_exec(
+                // Sender is self
+                &snip20,
+                &mut chain,
+                Addr::unchecked("alpha"),
+                &[]
+            )
+            .is_err()
     );
 }
 #[test]
@@ -582,23 +576,21 @@ fn claim_after_failing() {
     chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    governance::ExecuteMsg::ClaimFunding {
-        id: Uint128::new(0),
-    }
-    .test_exec(
-        // Sender is self
-        &gov,
-        &mut chain,
-        Addr::unchecked("alpha"),
-        &[],
-    )
-    .unwrap();
+    governance::ExecuteMsg::ClaimFunding { id: 0 }
+        .test_exec(
+            // Sender is self
+            &gov,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[],
+        )
+        .unwrap();
 
     let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
         address: "alpha".into(),
@@ -636,26 +628,23 @@ fn claim_after_passing() {
     .unwrap();
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    governance::ExecuteMsg::ClaimFunding {
-        id: Uint128::new(0),
-    }
-    .test_exec(
-        // Sender is self
-        &gov,
-        &mut chain,
-        Addr::unchecked("alpha"),
-        &[],
-    )
-    .unwrap();
+    governance::ExecuteMsg::ClaimFunding { id: 0 }
+        .test_exec(
+            // Sender is self
+            &gov,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[],
+        )
+        .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(
         prop.funders.unwrap()[0],
@@ -753,7 +742,7 @@ fn init_funding_governance_with_proposal_with_privacy()
     .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text only proposal".to_string(),
         msgs: None,
@@ -787,8 +776,7 @@ fn funding_privacy() {
     )
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert!(prop.funders.is_none());
 }
