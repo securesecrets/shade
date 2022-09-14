@@ -1,4 +1,4 @@
-use crate::c_std::{StdResult, Storage, Uint128};
+use crate::c_std::{StdResult, Uint128};
 
 use cosmwasm_schema::cw_serde;
 

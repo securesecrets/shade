@@ -1,11 +1,11 @@
 use crate::{
-    c_std::{Addr, StdResult, Storage, Uint128},
+    c_std::{Addr, StdResult, Storage},
     contract_interfaces::governance::stored_id::ID,
     utils::flexible_msg::FlexibleMsg,
 };
 
 use cosmwasm_schema::cw_serde;
-use secret_storage_plus::{Json, Map};
+use secret_storage_plus::Map;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::plus::MapStorage;

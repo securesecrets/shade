@@ -1,9 +1,6 @@
 use crate::{
-    c_std::{StdResult, Storage, Uint128},
-    utils::storage::{
-        default::NaiveSingletonStorage,
-        plus::{NaiveItemStorage, NaiveMapStorage},
-    },
+    c_std::{StdResult, Storage},
+    utils::storage::plus::{NaiveItemStorage, NaiveMapStorage},
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;

@@ -81,7 +81,7 @@ pub fn instantiate(
     if let Some(migrator) = msg.migrator {
         ID::set_assembly(deps.storage, migrator.assembly)?;
         ID::set_profile(deps.storage, migrator.profile)?;
-        ID::set_assembly_msg(deps.storage, migrator.assemblyMsg)?;
+        ID::set_assembly_msg(deps.storage, migrator.assembly_msg)?;
         ID::set_contract(deps.storage, migrator.contract)?;
         migrated_from = Some(migrator.source);
     } else {

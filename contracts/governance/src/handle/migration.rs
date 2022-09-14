@@ -54,7 +54,7 @@ pub fn try_migrate(
                         code_hash: env.contract.code_hash,
                     },
                     assembly: ID::assembly(deps.storage)?,
-                    assemblyMsg: ID::assembly_msg(deps.storage)?,
+                    assembly_msg: ID::assembly_msg(deps.storage)?,
                     profile: ID::profile(deps.storage)?,
                     contract: ID::contract(deps.storage)?,
                 }),

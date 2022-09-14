@@ -1,15 +1,7 @@
-use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
-use serde::{
-    de::{self, DeserializeOwned},
-    ser,
-    Deserialize,
-    Serialize,
-};
-use std::{
-    marker::PhantomData,
-    ops::{Add, AddAssign, Index, Sub, SubAssign},
-};
+use cosmwasm_std::{to_binary, StdError, StdResult, Storage};
+use secret_storage_plus::{KeyDeserialize, Map, Prefixer, PrimaryKey};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::ops::{Add, AddAssign, Sub};
 
 pub trait Increment {
     fn one() -> Self;
@@ -63,13 +55,12 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     storage: Map<'a, (K, Vec<u8>), T>,
     id_storage: Map<'a, K, IterKey<N>>,
 }
 
-const PREFIX: &str = "iter-map-size-namespace-";
+// const PREFIX: &str = "iter-map-size-namespace-";
 
 impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
@@ -82,7 +73,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     // TODO: gotta figure this out
     // pub const fn new(namespace: &'a str) -> Self {
@@ -108,7 +98,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     pub fn set(&self, store: &mut dyn Storage, key: K, id: N, data: &T) -> StdResult<()> {
         self.storage
@@ -200,7 +189,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     iter_map: &'a IterMap<'a, K, T, N>,
     storage: &'a dyn Storage,
@@ -219,7 +207,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     fn next_index(&mut self) {
         self.index += N::one();
@@ -237,7 +224,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     type Item = T;
 
