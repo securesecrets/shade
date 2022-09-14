@@ -24,6 +24,7 @@ use shade_protocol::{
     },
 };
 
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,

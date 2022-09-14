@@ -1,9 +1,8 @@
 [package]
-name = "liability_mint"
+name = "mock_adapter"
 version = "0.1.0"
 authors = [
-  "Guy Garcia <guysebastiangarcia@gmail.com>",
-  "Jackson Swenson <jacksonswenson22@gmail.com>",
+  "Jack Swenson <jacksonswenson22@gmail.com>",
 ]
 edition = "2018"
 
@@ -26,14 +25,13 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "mint", "liability_mint", "snip20", "storage_plus", "chrono" ] }
-schemars = "0.7"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "adapter",
+  "storage_plus",
+  "dao",
+  "snip20",
+] }
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
-shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop" }
-
-[dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
-  "liability_mint", 
-  "snip20" 
-] }
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+schemars = "0.8.9"
