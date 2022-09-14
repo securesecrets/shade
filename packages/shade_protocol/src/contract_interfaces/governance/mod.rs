@@ -122,8 +122,6 @@ pub enum MigrationData {
     Contract { data: Vec<(u16, AllowedContract)> },
 }
 
-// TODO: allow migration, copies all assemblies, contracts and msgs
-// TODO: maybe migration should be done in batches in the case of huge data
 #[cw_serde]
 pub enum ExecuteMsg {
     // Internal config

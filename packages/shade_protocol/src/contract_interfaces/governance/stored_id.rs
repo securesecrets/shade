@@ -156,7 +156,6 @@ impl ID {
 
 #[cw_serde]
 // Used for ease of querying
-// TODO: use u64 instead for cheaper storage
 pub struct UserID(u32);
 
 impl NaiveMapStorage<'static> for UserID {}

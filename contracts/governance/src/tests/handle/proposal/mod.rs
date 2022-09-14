@@ -22,8 +22,6 @@ use shade_protocol::{
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-// TODO: update state and retest the relevant functions
-
 pub fn init_funding_token(
     chain: &mut App,
     initial_balances: Option<Vec<InitialBalance>>,
