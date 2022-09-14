@@ -27,20 +27,15 @@ use shade_protocol::{
         Uint128,
         Validator,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
-};
-use shade_protocol::{
     contract_interfaces::{
         dao::{
-            //adapter,
-            //manager,
-            //mock_adapter,
             treasury,
             treasury::{Allowance, AllowanceType, RunLevel},
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
+    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
     utils::{
         asset::Contract,
         cycle::{utc_from_timestamp, Cycle},
