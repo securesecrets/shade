@@ -1,13 +1,8 @@
 use crate::utils::storage::plus::iter_map::{Increment, IterKey};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use secret_storage_plus::{Item, Map};
-use serde::{
-    de::{DeserializeOwned},
-    Serialize,
-};
-use std::{
-    ops::{Add, AddAssign, Index, Sub},
-};
+use serde::{de::DeserializeOwned, Serialize};
+use std::ops::{Add, AddAssign, Sub};
 
 pub struct IterItem<'a, T, N>
 where
@@ -24,7 +19,7 @@ where
     id_storage: Item<'a, IterKey<N>>,
 }
 
-const PREFIX: &str = "iter-map-size-namespace-";
+//const PREFIX: &str = "iter-map-size-namespace-";
 
 impl<'a, T, N> IterItem<'a, T, N>
 where
@@ -213,17 +208,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::utils::storage::plus::iter_item::IterItem;
-    use cosmwasm_std::{
-        testing::{MockStorage},
-        CustomQuery,
-        Storage,
-        Uint64,
-    };
-    use serde::{
-        Deserialize,
-        Serialize,
-    };
-    
+    use cosmwasm_std::{testing::MockStorage, CustomQuery, Storage, Uint64};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;

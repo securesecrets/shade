@@ -1,16 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        entry_point,
-        to_binary,
-        Api,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdResult,
-    },
+    c_std::{entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
     dao::{
         adapter,
         stkd_scrt::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},

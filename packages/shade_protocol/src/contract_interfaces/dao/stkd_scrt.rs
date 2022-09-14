@@ -1,9 +1,5 @@
 use crate::{
-    c_std::{
-        Addr,
-        Binary,
-        Uint128,
-    },
+    c_std::{Addr, Binary, Uint128},
     cosmwasm_schema::cw_serde,
     utils::{
         asset::{Contract, RawContract},
@@ -90,21 +86,10 @@ pub enum QueryAnswer {
 // TODO move to common location
 pub mod staking_derivatives {
     use crate::{
-        c_std::{
-            Addr,
-            Coin,
-            CosmosMsg,
-            QuerierWrapper,
-            StdResult,
-            Uint128,
-        },
+        c_std::{Addr, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128},
         cosmwasm_schema::cw_serde,
-        utils::{
-            asset::{Contract},
-        },
+        utils::asset::Contract,
     };
-
-    
 
     use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 

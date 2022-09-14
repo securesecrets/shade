@@ -102,7 +102,6 @@ pub fn execute_error() {
         &mut app,
         "admin",
         &contracts,
-        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         "holder",
     )
@@ -165,7 +164,6 @@ pub fn execute_error() {
             &mut app,
             "admin",
             &contracts,
-            "SSCRT",
             SupportedContracts::TreasuryManager(0),
             "holder",
         )
@@ -176,7 +174,6 @@ pub fn execute_error() {
             &mut app,
             "admin",
             &contracts,
-            "SSCRT",
             SupportedContracts::TreasuryManager(0),
             "not_a_holdler"
         )

@@ -1,12 +1,24 @@
 use shade_protocol::c_std::{
-    entry_point, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    entry_point,
+    to_binary,
+    Addr,
+    Binary,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Response,
+    StdResult,
 };
 
 use shade_protocol::contract_interfaces::dao::rewards_emission::{
-    Config, ExecuteMsg, InstantiateMsg, QueryMsg,
+    Config,
+    ExecuteMsg,
+    InstantiateMsg,
+    QueryMsg,
 };
 
-use shade_protocol::snip20::helpers::{fetch_snip20};
+use shade_protocol::snip20::helpers::fetch_snip20;
 //use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{execute, query, storage::*};
@@ -39,7 +51,7 @@ pub fn instantiate(
     TOKEN.save(
         deps.storage,
         &fetch_snip20(&msg.token.into_valid(deps.api)?, &deps.querier)?,
-    );
+    )?;
 
     Ok(Response::new())
 }

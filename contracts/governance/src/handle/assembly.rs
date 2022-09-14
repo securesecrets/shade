@@ -22,7 +22,7 @@ use shade_protocol::{
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    utils::generic_response::ResponseStatus,
 };
 
 pub fn try_assembly_vote(

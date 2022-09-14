@@ -2,7 +2,6 @@ use shade_protocol::{
     c_std::{
         entry_point,
         to_binary,
-        Api,
         Binary,
         Deps,
         DepsMut,

@@ -28,7 +28,6 @@ use shade_protocol::{
         shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
@@ -98,7 +97,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
     pad_handle_result(
         match msg {
-            ExecuteMsg::Redeem { amount, denom: _, .. } => try_redeem(deps, env, info, amount),
+            ExecuteMsg::Redeem {
+                amount, denom: _, ..
+            } => try_redeem(deps, env, info, amount),
 
             ExecuteMsg::Deposit { .. } => try_deposit(deps, env, info),
 

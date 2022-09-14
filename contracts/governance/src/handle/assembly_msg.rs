@@ -1,25 +1,12 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{
-        flexible_msg::FlexibleMsg,
-        generic_response::ResponseStatus,
-        storage::default::BucketStorage,
-    },
+    utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
 pub fn try_add_assembly_msg(

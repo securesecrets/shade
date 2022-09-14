@@ -1,11 +1,14 @@
-use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, StdResult, Storage, to_binary, MessageInfo};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
-use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
-use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, TotalSupply};
-use shade_protocol::contract_interfaces::snip20::transaction_history::{store_mint};
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
-use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
+use shade_protocol::{
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Uint128},
+    contract_interfaces::snip20::{
+        batch,
+        errors::{minting_disabled, not_admin, not_minter},
+        manager::{Admin, Balance, CoinInfo, Config, Minters, TotalSupply},
+        transaction_history::store_mint,
+        HandleAnswer,
+    },
+    utils::{generic_response::ResponseStatus::Success, storage::plus::ItemStorage},
+};
 
 fn try_mint_impl(
     storage: &mut dyn Storage,
@@ -31,18 +34,26 @@ pub fn try_mint(
 ) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(deps.storage)? {
-        return Err(minting_disabled())
+        return Err(minting_disabled());
     }
     // User is minter
     if !Minters::load(deps.storage)?.0.contains(&info.sender) {
-        return Err(not_minter(&info.sender))
+        return Err(not_minter(&info.sender));
     }
     // Inc total supply
     TotalSupply::add(deps.storage, amount)?;
     let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(deps.storage)?.symbol;
-    try_mint_impl(deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
+    try_mint_impl(
+        deps.storage,
+        &sender,
+        &recipient,
+        amount,
+        denom,
+        memo,
+        &block,
+    )?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint { status: Success })?))
 }
@@ -55,11 +66,11 @@ pub fn try_batch_mint(
 ) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(deps.storage)? {
-        return Err(minting_disabled())
+        return Err(minting_disabled());
     }
     // User is minter
     if !Minters::load(deps.storage)?.0.contains(&info.sender) {
-        return Err(not_minter(&info.sender))
+        return Err(not_minter(&info.sender));
     }
 
     let sender = info.sender;
@@ -75,7 +86,7 @@ pub fn try_batch_mint(
             action.amount,
             denom.clone(),
             action.memo,
-            &block
+            &block,
         )?;
     }
     supply.save(deps.storage)?;
@@ -87,14 +98,14 @@ pub fn try_add_minters(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    new_minters: Vec<Addr>
+    new_minters: Vec<Addr>,
 ) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(deps.storage)? {
-        return Err(minting_disabled())
+        return Err(minting_disabled());
     }
     if Admin::load(deps.storage)?.0 != info.sender {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     let mut minters = Minters::load(deps.storage)?;
@@ -108,14 +119,14 @@ pub fn try_remove_minters(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    minters_to_remove: Vec<Addr>
+    minters_to_remove: Vec<Addr>,
 ) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(deps.storage)? {
-        return Err(minting_disabled())
+        return Err(minting_disabled());
     }
     if Admin::load(deps.storage)?.0 != info.sender {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     let mut minters = Minters::load(deps.storage)?;
@@ -131,14 +142,14 @@ pub fn try_set_minters(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    minters: Vec<Addr>
+    minters: Vec<Addr>,
 ) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(deps.storage)? {
-        return Err(minting_disabled())
+        return Err(minting_disabled());
     }
     if Admin::load(deps.storage)?.0 != info.sender {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     Minters(minters).save(deps.storage)?;

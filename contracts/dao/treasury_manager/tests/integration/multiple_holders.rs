@@ -92,7 +92,6 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         HOLDER,
     )
@@ -181,7 +180,6 @@ pub fn multiple_holders(
         &mut app,
         "rando",
         &contracts,
-        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         HOLDER.clone(),
     ) {
@@ -192,7 +190,6 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         HOLDER.clone(),
     )
@@ -201,7 +198,6 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         &contracts[&SupportedContracts::Treasury].address.to_string(),
     ) {

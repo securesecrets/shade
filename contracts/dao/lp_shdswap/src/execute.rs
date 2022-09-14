@@ -1,3 +1,4 @@
+use crate::storage::*;
 use shade_protocol::{
     c_std::{
         to_binary,
@@ -11,26 +12,13 @@ use shade_protocol::{
         StdResult,
         Uint128,
     },
-    contract_interfaces::{
-        dao::{
-            adapter,
-            lp_shdswap::{
-                get_supported_asset,
-                is_supported_asset,
-                Config,
-                ExecuteAnswer,
-                SplitMethod,
-            },
-        },
+    contract_interfaces::dao::{
+        adapter,
+        lp_shdswap::{get_supported_asset, is_supported_asset, Config, ExecuteAnswer, SplitMethod},
     },
-    snip20::helpers::{balance_query},
-    utils::{
-        asset::{Contract},
-        generic_response::ResponseStatus,
-    },
+    snip20::helpers::balance_query,
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-
-use crate::{storage::*};
 
 pub fn receive(
     deps: DepsMut,
@@ -57,8 +45,10 @@ pub fn receive(
 
     if info.sender == config.token_a.address {
         desired_token = config.token_a;
+        println!("{}", desired_token.address);
     } else if info.sender == config.token_b.address {
         desired_token = config.token_b;
+        println!("{}", desired_token.address);
     } else if info.sender == config.liquidity_token.address {
         // TODO: stake lp tokens & exit
     } else {
@@ -70,17 +60,17 @@ pub fn receive(
         Some(split) => {
             match split {
                 SplitMethod::Conversion { contract: _ } => {} /*
-                                                           SplitMethod::Conversion { mint } => {
-                                                               // TODO: get exchange rate
-                                                               mint::QueryMsg::Mint {
-                                                                   offer_asset: desired_token.address.clone(),
-                                                                   amount: Uint128(1u128.pow(desired_token.decimals)),
-                                                               }.query(
-                                                               );
-                                                           },
-                                                           */
-                                                           //SplitMethod::Market { contract } => { }
-                                                           //SplitMethod::Lend { contract } => { }
+                                                              SplitMethod::Conversion { mint } => {
+                                                                  // TODO: get exchange rate
+                                                                  mint::QueryMsg::Mint {
+                                                                      offer_asset: desired_token.address.clone(),
+                                                                      amount: Uint128(1u128.pow(desired_token.decimals)),
+                                                                  }.query(
+                                                                  );
+                                                              },
+                                                              */
+                                                              //SplitMethod::Market { contract } => { }
+                                                              //SplitMethod::Lend { contract } => { }
             }
         }
         None => {}

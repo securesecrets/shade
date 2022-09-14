@@ -1,6 +1,5 @@
-use shade_protocol::c_std::{Uint128, Deps};
-use shade_protocol::c_std::{Addr,  StdResult, Storage};
 use shade_protocol::{
+    c_std::{Addr, Deps, StdResult, Uint128},
     contract_interfaces::snip20::{
         manager::{
             Allowance,
@@ -17,9 +16,7 @@ use shade_protocol::{
     utils::storage::plus::{ItemStorage, MapStorage},
 };
 
-pub fn token_info(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn token_info(deps: Deps) -> StdResult<QueryAnswer> {
     let info = CoinInfo::load(deps.storage)?;
 
     let total_supply = match Config::public_total_supply(deps.storage)? {
@@ -35,9 +32,7 @@ pub fn token_info(
     })
 }
 
-pub fn token_config(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn token_config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::TokenConfig {
         // TODO: show the other addrd config items
         public_total_supply: Config::public_total_supply(deps.storage)?,
@@ -49,17 +44,13 @@ pub fn token_config(
     })
 }
 
-pub fn contract_status(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn contract_status(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ContractStatus {
         status: ContractStatusLevel::load(deps.storage)?,
     })
 }
 
-pub fn exchange_rate(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn exchange_rate(deps: Deps) -> StdResult<QueryAnswer> {
     let decimals = CoinInfo::load(deps.storage)?.decimals;
     if Config::deposit_enabled(deps.storage)? || Config::redeem_enabled(deps.storage)? {
         let rate: Uint128;
@@ -87,15 +78,9 @@ pub fn minters(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn allowance(
-    deps: Deps,
-    owner: Addr,
-    spender: Addr,
-) -> StdResult<QueryAnswer> {
-    let allowance = Allowance::may_load(
-        deps.storage,
-        (owner.clone(), spender.clone())
-    )?.unwrap_or_default();
+pub fn allowance(deps: Deps, owner: Addr, spender: Addr) -> StdResult<QueryAnswer> {
+    let allowance =
+        Allowance::may_load(deps.storage, (owner.clone(), spender.clone()))?.unwrap_or_default();
 
     //panic!("allowance {}", allowance.amount);
 
@@ -107,12 +92,11 @@ pub fn allowance(
     })
 }
 
-pub fn balance(
-    deps: Deps,
-    account: Addr,
-) -> StdResult<QueryAnswer> {
+pub fn balance(deps: Deps, account: Addr) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Balance {
-        amount: Balance::may_load(deps.storage, account)?.unwrap_or(Balance(Uint128::zero())).0,
+        amount: Balance::may_load(deps.storage, account)?
+            .unwrap_or(Balance(Uint128::zero()))
+            .0,
     })
 }
 
