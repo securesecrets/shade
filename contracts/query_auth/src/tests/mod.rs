@@ -6,8 +6,8 @@ use shade_protocol::{
     admin::{self, helpers::AdminPermissions},
     c_std::{Addr, Binary, ContractInfo, StdError, StdResult},
     contract_interfaces::query_auth::{self, PermitData, QueryPermit},
-    multi_test::{App, Executor},
-    query_auth::{ContractStatus, ExecuteMsg},
+    multi_test::{App},
+    query_auth::{ContractStatus},
     query_authentication::transaction::{PermitSignature, PubKey},
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };

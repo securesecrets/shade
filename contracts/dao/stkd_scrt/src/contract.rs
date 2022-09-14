@@ -1,20 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        entry_point,
-        to_binary,
-        Api,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-    },
+    c_std::{entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
     dao::{
         adapter,
         stkd_scrt::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -29,7 +14,7 @@ use crate::{execute, query, storage::*};
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
@@ -74,7 +59,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 let asset = deps.api.addr_validate(&asset)?;
                 execute::claim(deps, env, info, asset)
             }
-            adapter::SubExecuteMsg::Update { asset } => Ok(Response::new().set_data(to_binary(
+            adapter::SubExecuteMsg::Update { asset: _ } => Ok(Response::new().set_data(to_binary(
                 &adapter::ExecuteAnswer::Update {
                     status: ResponseStatus::Success,
                 },

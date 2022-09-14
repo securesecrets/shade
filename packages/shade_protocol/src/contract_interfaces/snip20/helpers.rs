@@ -1,10 +1,10 @@
-use super::{batch, manager::Allowance, ExecuteMsg, QueryAnswer, QueryMsg};
+use super::{batch, ExecuteMsg, QueryAnswer, QueryMsg};
 use crate::{
     c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
     utils::{asset::Contract, ExecuteCallback, Query},
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, SubMsg};
+use cosmwasm_std::{Coin};
 
 #[cw_serde]
 pub struct Snip20Asset {
@@ -234,7 +234,7 @@ pub fn increase_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -263,7 +263,7 @@ pub fn decrease_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -301,7 +301,7 @@ pub fn allowance_query(
     owner: Addr,
     spender: Addr,
     key: String,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
 ) -> StdResult<AllowanceResponse> {
     let answer: QueryAnswer = QueryMsg::Allowance {

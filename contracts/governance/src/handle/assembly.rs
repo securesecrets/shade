@@ -3,17 +3,13 @@ use shade_protocol::{
         from_binary,
         to_binary,
         Addr,
-        Api,
         Binary,
-        Coin,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::governance::{
@@ -26,7 +22,7 @@ use shade_protocol::{
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    utils::generic_response::ResponseStatus,
 };
 
 pub fn try_assembly_vote(

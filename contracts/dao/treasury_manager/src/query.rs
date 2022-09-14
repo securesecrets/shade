@@ -1,8 +1,9 @@
 use crate::storage::*;
 use shade_protocol::{
-    c_std::{Addr, Deps, StdError, StdResult, Uint128},
+    c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
     dao::{adapter, manager, treasury_manager},
     snip20::helpers::{allowance_query, balance_query},
+    utils::{cycle::parse_utc_datetime, storage::plus::period_storage::Period},
 };
 
 pub fn config(deps: Deps) -> StdResult<treasury_manager::QueryAnswer> {
@@ -11,12 +12,36 @@ pub fn config(deps: Deps) -> StdResult<treasury_manager::QueryAnswer> {
     })
 }
 
+pub fn metrics(
+    deps: Deps,
+    env: Env,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<treasury_manager::QueryAnswer> {
+    if date.is_some() && epoch.is_some() {
+        return Err(StdError::generic_err("cannot pass both epoch and date"));
+    }
+    let key = {
+        if let Some(d) = date {
+            parse_utc_datetime(&d)?.timestamp() as u64
+        } else if let Some(e) = epoch {
+            e.u128() as u64
+        } else {
+            env.block.time.seconds()
+        }
+    };
+    Ok(treasury_manager::QueryAnswer::Metrics {
+        metrics: METRICS.load_period(deps.storage, key, period)?,
+    })
+}
+
 pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
     let full_asset = match ASSETS.may_load(deps.storage, asset)? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err(""));
+            return Err(StdError::generic_err("Asset not found"));
         }
     };
 
@@ -92,12 +117,7 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     };
     let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
-        None => {
-            return Err(StdError::generic_err(format!(
-                "No allocations for {}",
-                asset
-            )));
-        }
+        None => vec![],
     };
     //TODO claiming needs ordered unbondings so other holders don't get bumped
 

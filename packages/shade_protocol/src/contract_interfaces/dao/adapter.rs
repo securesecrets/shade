@@ -1,24 +1,9 @@
 use crate::{
-    c_std::{
-        Addr,
-        Api,
-        Binary,
-        CosmosMsg,
-        Decimal,
-        Deps,
-        DepsMut,
-        Querier,
-        QuerierWrapper,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-        Validator,
-    },
+    c_std::{Addr, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use crate::utils::{ExecuteCallback, Query};
 use cosmwasm_schema::cw_serde;
 
 #[cw_serde]

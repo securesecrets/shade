@@ -1,5 +1,14 @@
 use mock_adapter;
 use shade_multi_test::{
+    c_std::{to_binary, Addr, Coin, Uint128},
+    contract_interfaces::{
+        dao::{
+            treasury,
+            treasury::{AllowanceType, RunLevel},
+            treasury_manager::{self, Allocation, AllocationType},
+        },
+        snip20,
+    },
     interfaces::{
         self,
         utils::{DeployedContracts, SupportedContracts},
@@ -11,35 +20,10 @@ use shade_multi_test::{
         treasury::Treasury,
         treasury_manager::TreasuryManager,
     },
-};
-use shade_protocol::{
-    c_std::{
-        coins,
-        from_binary,
-        to_binary,
-        Addr,
-        Binary,
-        Coin,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
-        Uint128,
-        Validator,
-    },
-    contract_interfaces::{
-        dao::{
-            treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
-            treasury_manager::{self, Allocation, AllocationType},
-        },
-        snip20,
-    },
     multi_test::{App, BankSudo, StakingSudo, SudoMsg},
     utils::{
         asset::Contract,
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
+        cycle::Cycle,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -63,7 +47,8 @@ fn bonded_adapter_int(
     let mut contracts = DeployedContracts::new();
 
     let admin = Addr::unchecked("admin");
-    let user = Addr::unchecked("user");
+    let admin_auth = init_admin_auth(&mut app, &admin);
+
     let viewing_key = "viewing_key".to_string();
     let symbol = "TKN";
 

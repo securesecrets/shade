@@ -1,16 +1,12 @@
 use shade_protocol::{
     c_std::{
         to_binary,
-        Addr,
-        Api,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::governance::{

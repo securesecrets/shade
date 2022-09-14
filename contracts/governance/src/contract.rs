@@ -24,21 +24,17 @@ use crate::{
 };
 use shade_protocol::{
     c_std::{
-        from_binary,
         shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         SubMsg,
         Uint128,
     },
@@ -53,7 +49,6 @@ use shade_protocol::{
         MSG_VARIABLE,
     },
     governance::{AuthQuery, QueryData},
-    query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
     utils::{
@@ -61,8 +56,7 @@ use shade_protocol::{
         flexible_msg::FlexibleMsg,
         pad_handle_result,
         pad_query_result,
-        storage::default::{BucketStorage, SingletonStorage},
-        Query,
+        storage::default::SingletonStorage,
     },
 };
 
@@ -73,7 +67,7 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // Setup config
@@ -332,7 +326,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::TotalProposals {} => to_binary(&query::total_proposals(deps)?),

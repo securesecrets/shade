@@ -4,14 +4,14 @@ pub mod query;
 use shade_multi_test::multi::{admin::Admin, query_auth::QueryAuth, snip20::Snip20};
 use shade_protocol::{
     admin,
-    c_std::{Addr, Binary, ContractInfo, StdResult},
+    c_std::{Addr, Binary, ContractInfo},
     contract_interfaces::{
         query_auth,
         snip20,
         snip20::{InitConfig, InitialBalance},
     },
     multi_test::{App, AppResponse, Executor},
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable},
     AnyResult,
     Contract,
 };

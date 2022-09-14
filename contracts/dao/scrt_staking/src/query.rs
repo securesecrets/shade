@@ -1,20 +1,13 @@
 use shade_protocol::{
     c_std::{
         Addr,
-        Api,
-        BankQuery,
         Delegation,
         Deps,
-        DistributionMsg,
-        FullDelegation,
-        Querier,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     dao::{adapter, scrt_staking::QueryAnswer},
-    snip20::helpers::balance_query,
     utils::asset::scrt_balance,
 };
 

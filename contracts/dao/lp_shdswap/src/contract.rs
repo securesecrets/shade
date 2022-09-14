@@ -2,24 +2,20 @@ use shade_protocol::{
     c_std::{
         entry_point,
         to_binary,
-        Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::{
         dao::{
             adapter,
-            lp_shdswap::{is_supported_asset, Config, ExecuteMsg, InstantiateMsg, QueryMsg},
+            lp_shdswap::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
         },
         dex::shadeswap,
     },
@@ -173,7 +169,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {

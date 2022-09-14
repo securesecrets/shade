@@ -1,19 +1,17 @@
 use crate::{
     interfaces::{
-        snip20,
         treasury,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{admin::init_admin_auth, mock_adapter::MockAdapter, treasury_manager::TreasuryManager},
+    multi::{admin::init_admin_auth, treasury_manager::TreasuryManager},
 };
-use mock_adapter;
 use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
-    contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},
+    contract_interfaces::dao::{manager, treasury_manager},
     multi_test::App,
     utils::{
-        self,
         asset::{Contract, RawContract},
+        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -101,17 +99,47 @@ pub fn config_query(
     contracts: &DeployedContracts,
     treasury_manager_contract: SupportedContracts,
 ) -> StdResult<treasury_manager::Config> {
-    match (treasury_manager::QueryMsg::Config {}.test_query(
+    let res = treasury_manager::QueryMsg::Config {}.test_query(
         &contracts
             .get(&treasury_manager_contract)
             .unwrap()
             .clone()
             .into(),
         &chain,
-    )?) {
+    )?;
+    match res {
         treasury_manager::QueryAnswer::Config { config } => Ok(config),
         _ => Err(StdError::generic_err(format!(
             "Failed to.test_query treasury_manager claimable",
+        ))),
+    }
+}
+
+pub fn pending_allowance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+    snip20_symbol: &str,
+) -> StdResult<Uint128> {
+    let res = treasury_manager::QueryMsg::PendingAllowance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?;
+    match res {
+        treasury_manager::QueryAnswer::PendingAllowance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager pending_allowance",
         ))),
     }
 }
@@ -122,17 +150,118 @@ pub fn holding_query(
     treasury_manager_contract: SupportedContracts,
     holder: String,
 ) -> StdResult<treasury_manager::Holding> {
-    match (treasury_manager::QueryMsg::Holding { holder }.test_query(
+    let res = treasury_manager::QueryMsg::Holding { holder }.test_query(
         &contracts
             .get(&treasury_manager_contract)
             .unwrap()
             .clone()
             .into(),
         &chain,
-    )?) {
+    )?;
+    match res {
         treasury_manager::QueryAnswer::Holding { holding } => Ok(holding),
         _ => Err(StdError::generic_err(format!(
             "Failed to.test_query treasury_manager claimable",
+        ))),
+    }
+}
+
+pub fn holders_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+) -> StdResult<Vec<Addr>> {
+    let res = treasury_manager::QueryMsg::Holders {}.test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?;
+    match res {
+        treasury_manager::QueryAnswer::Holders { holders } => Ok(holders),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager holders",
+        ))),
+    }
+}
+
+pub fn assets_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+) -> StdResult<Vec<Addr>> {
+    let res = treasury_manager::QueryMsg::Assets {}.test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?;
+    match res {
+        treasury_manager::QueryAnswer::Assets { assets } => Ok(assets),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager holders",
+        ))),
+    }
+}
+
+pub fn allocations_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+    snip20_symbol: &str,
+) -> StdResult<Vec<treasury_manager::AllocationMeta>> {
+    let res = treasury_manager::QueryMsg::Allocations {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?;
+    match res {
+        treasury_manager::QueryAnswer::Allocations { allocations } => Ok(allocations),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager allocations",
+        ))),
+    }
+}
+
+pub fn metrics_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<Vec<treasury_manager::Metric>> {
+    let res = treasury_manager::QueryMsg::Metrics {
+        date,
+        epoch,
+        period,
+    }
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?;
+    match res {
+        treasury_manager::QueryAnswer::Metrics { metrics } => Ok(metrics),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager metrics",
         ))),
     }
 }
@@ -204,7 +333,7 @@ pub fn reserves_query(
     treasury_manager_contract: SupportedContracts,
     holder: SupportedContracts,
 ) -> StdResult<Uint128> {
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         holder: contracts.get(&holder).unwrap().address.to_string(),
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
@@ -219,8 +348,48 @@ pub fn reserves_query(
             .clone()
             .into(),
         &chain,
-    )?) {
+    )? {
         manager::QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to query treasury_manager reserves",
+        )),
+    }
+}
+
+pub fn batch_balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbols: Vec<&str>,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Vec<Uint128>> {
+    let assets = {
+        let mut vec = vec![];
+        for symbols in snip20_symbols {
+            vec.push(
+                contracts
+                    .get(&SupportedContracts::Snip20(symbols.to_string()))
+                    .unwrap()
+                    .clone()
+                    .address
+                    .to_string(),
+            );
+        }
+        vec
+    };
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::BatchBalance {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        assets,
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        manager::QueryAnswer::BatchBalance { amounts } => Ok(amounts),
         _ => Err(StdError::generic_err(
             "Failed to query treasury_manager reserves",
         )),
@@ -291,7 +460,7 @@ pub fn claim_exec(
     snip20_symbol: &str,
     treasury_manager_contract: SupportedContracts,
 ) -> StdResult<()> {
-    match (treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
+    match treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -308,7 +477,7 @@ pub fn claim_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )) {
+    ) {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
@@ -322,7 +491,7 @@ pub fn unbond_exec(
     treasury_manager_contract: SupportedContracts,
     amount: Uint128,
 ) -> StdResult<()> {
-    match (treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
+    match treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -340,7 +509,7 @@ pub fn unbond_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )) {
+    ) {
         Ok(_) => Ok(()),
         Err(_) => Err(StdError::generic_err("update in treasury manager failed")),
     }
@@ -353,7 +522,7 @@ pub fn update_exec(
     snip20_symbol: &str,
     treasury_manager_contract: SupportedContracts,
 ) -> StdResult<()> {
-    match (treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+    match treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
@@ -370,7 +539,7 @@ pub fn update_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )) {
+    ) {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
@@ -380,7 +549,6 @@ pub fn register_holder_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: &str,
     treasury_manager_contract: SupportedContracts,
     holder: &str,
 ) -> StdResult<()> {
@@ -408,7 +576,6 @@ pub fn remove_holder_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: &str,
     treasury_manager_contract: SupportedContracts,
     holder: &str,
 ) -> StdResult<()> {

@@ -1,19 +1,10 @@
 use cosmwasm_std::{
     Addr,
-    Api,
-    Binary,
     CosmosMsg,
-    Decimal,
-    Delegation,
-    Deps,
-    DepsMut,
-    Querier,
     QuerierWrapper,
     StdError,
     StdResult,
-    Storage,
     Uint128,
-    Validator,
 };
 
 use crate::utils::{asset::Contract, generic_response::ResponseStatus, ExecuteCallback, Query};
@@ -95,11 +86,11 @@ pub fn claimable_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Claimable {
+    match QueryMsg::Manager(SubQueryMsg::Claimable {
         asset: asset.to_string().clone(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -115,11 +106,11 @@ pub fn unbonding_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Unbonding {
+    match QueryMsg::Manager(SubQueryMsg::Unbonding {
         asset: asset.to_string().clone(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -135,11 +126,11 @@ pub fn unbondable_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Unbondable {
+    match QueryMsg::Manager(SubQueryMsg::Unbondable {
         asset: asset.to_string().clone(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -155,11 +146,11 @@ pub fn reserves_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Reserves {
+    match QueryMsg::Manager(SubQueryMsg::Reserves {
         asset: asset.to_string().clone(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -175,11 +166,11 @@ pub fn balance_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Balance {
+    match QueryMsg::Manager(SubQueryMsg::Balance {
         asset: asset.to_string().clone(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager))
+    .query(&querier, &manager)
     {
         Ok(resp) => match resp {
             QueryAnswer::Balance { amount } => Ok(amount),
@@ -204,11 +195,11 @@ pub fn batch_balance_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Vec<Uint128>> {
-    match (QueryMsg::Manager(SubQueryMsg::BatchBalance {
+    match QueryMsg::Manager(SubQueryMsg::BatchBalance {
         assets: assets.iter().map(|a| a.to_string()).collect(),
         holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager))
+    .query(&querier, &manager)
     {
         Ok(resp) => match resp {
             QueryAnswer::BatchBalance { amounts } => Ok(amounts),

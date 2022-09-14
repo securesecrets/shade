@@ -1,25 +1,14 @@
-use shade_protocol::c_std::{MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Uint128},
     contract_interfaces::snip20::{
         batch,
+        errors::burning_disabled,
         manager::{Allowance, Balance, CoinInfo, Config, TotalSupply},
         transaction_history::store_burn,
         HandleAnswer,
     },
     utils::{generic_response::ResponseStatus::Success, storage::plus::ItemStorage},
 };
-use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 
 pub fn try_burn(
     deps: DepsMut,
@@ -112,7 +101,11 @@ pub fn try_batch_burn_from(
             &env.block,
         )?;
 
-        Balance::sub(deps.storage, action.amount, &deps.api.addr_validate(action.owner.as_str())?);
+        Balance::sub(
+            deps.storage,
+            action.amount,
+            &deps.api.addr_validate(action.owner.as_str())?,
+        )?;
 
         // Dec total supply
         supply.0 = supply.0.checked_sub(action.amount)?;

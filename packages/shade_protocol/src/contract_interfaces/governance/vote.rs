@@ -1,5 +1,5 @@
 use crate::c_std::Uint128;
-use crate::c_std::{StdResult, Storage};
+use crate::c_std::{StdResult};
 
 use cosmwasm_schema::{cw_serde};
 

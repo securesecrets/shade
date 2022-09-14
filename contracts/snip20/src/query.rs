@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{to_binary, Addr, Api, Deps, DepsMut, Querier, StdResult, Storage, Uint128},
+    c_std::{Addr, Deps, StdResult, Uint128},
     contract_interfaces::snip20::{
         manager::{
             Allowance,

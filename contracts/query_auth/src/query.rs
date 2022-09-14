@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{Addr, Api, Deps, DepsMut, Querier, StdResult, Storage},
+    c_std::{Addr, Deps, StdResult},
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
         Admin,

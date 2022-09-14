@@ -1,15 +1,7 @@
-use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
-use serde::{
-    de::{self, DeserializeOwned},
-    ser,
-    Deserialize,
-    Serialize,
-};
-use std::{
-    marker::PhantomData,
-    ops::{Add, AddAssign, Index, Sub},
-};
+use cosmwasm_std::{to_binary, StdError, StdResult, Storage};
+use secret_storage_plus::{KeyDeserialize, Map, Prefixer, PrimaryKey};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::ops::{Add, AddAssign, Sub};
 
 pub trait Increment {
     fn one() -> Self;
@@ -63,13 +55,12 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     storage: Map<'a, (K, Vec<u8>), T>,
     id_storage: Map<'a, K, IterKey<N>>,
 }
 
-const PREFIX: &str = "iter-map-size-namespace-";
+//const PREFIX: &str = "iter-map-size-namespace-";
 
 impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
@@ -82,7 +73,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     // TODO: gotta figure this out
     // pub const fn new(namespace: &'a str) -> Self {
@@ -108,7 +98,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     pub fn set(&self, store: &mut dyn Storage, key: K, id: N, data: &T) -> StdResult<()> {
         self.storage
@@ -200,7 +189,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     iter_map: &'a IterMap<'a, K, T, N>,
     storage: &'a dyn Storage,
@@ -219,7 +207,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     fn next_index(&mut self) {
         self.index += N::one();
@@ -237,7 +224,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-
 {
     type Item = T;
 
@@ -258,21 +244,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::utils::storage::plus::iter_map::IterMap;
-    use cosmwasm_std::{
-        testing::{MockApi, MockQuerier, MockStorage},
-        Addr,
-        CustomQuery,
-        OwnedDeps,
-        Storage,
-        Uint64,
-    };
-    use serde::{
-        de::{self, DeserializeOwned},
-        ser,
-        Deserialize,
-        Serialize,
-    };
-    use std::marker::PhantomData;
+    use cosmwasm_std::{testing::MockStorage, Addr, CustomQuery, Storage, Uint64};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
@@ -280,13 +253,13 @@ mod tests {
 
     #[test]
     fn initialization() {
-        let mut storage = MockStorage::new();
+        let _storage = MockStorage::new();
 
-        let iter: IterMap<(Addr), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+        let _iter: IterMap<Addr, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
     }
 
-    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<(String), Uint64, u64> {
-        let iter: IterMap<(String), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<String, Uint64, u64> {
+        let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
 
         for i in 0..size {
             iter.push(storage, "TESTING".to_string(), &Uint64::new(i as u64))

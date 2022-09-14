@@ -5,7 +5,7 @@ pub mod manager; //TODO: fragment this so it doesnt import useless stuff in inte
 pub mod transaction_history;
 
 use crate::{
-    c_std::{Addr, Binary, Env, StdError, StdResult, Storage},
+    c_std::{Addr, Binary, Env, StdResult, Storage},
     query_authentication::permit::Permit,
 };
 use cosmwasm_std::{Api, MessageInfo};

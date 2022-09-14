@@ -1,14 +1,9 @@
 use shade_protocol::{
-    c_std::{Addr, Deps, Querier, StdError, StdResult, Storage, Uint128},
+    c_std::{Addr, Deps, StdError, StdResult, Uint128},
     contract_interfaces::{
         dao::adapter,
-        dex::{
-            dex::pool_take_amount,
-            sienna::{PairInfo, PairInfoResponse, PairQuery, TokenType},
-        },
-        mint::mint::{self, QueryMsg},
         sky::{
-            cycles::{Cycle, Offer},
+            cycles::{Offer},
             Config,
             Cycles,
             QueryAnswer,

@@ -1,16 +1,8 @@
 use shade_protocol::c_std::{
     Addr,
-    Api,
-    BalanceResponse,
-    BankQuery,
-    Delegation,
     Deps,
-    DepsMut,
-    FullDelegation,
-    Querier,
     StdError,
     StdResult,
-    Storage,
     Uint128,
 };
 
@@ -19,7 +11,6 @@ use shade_protocol::{
         adapter,
         lp_shdswap::{get_supported_asset, is_supported_asset, QueryAnswer},
     },
-    utils::asset::scrt_balance,
 };
 
 use shade_protocol::snip20::helpers::balance_query;
@@ -32,7 +23,7 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn rewards(deps: Deps) -> StdResult<Uint128> {
+pub fn rewards(_deps: Deps) -> StdResult<Uint128> {
     //TODO: query pending rewards from rewards contract
     Ok(Uint128::zero())
 }
@@ -47,7 +38,7 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
-    let mut balance = Uint128::zero();
+    let balance = Uint128::zero();
 
     if vec![config.token_a.address, config.token_b.address].contains(&asset) {
         // Determine balance of LP, determine redemption value

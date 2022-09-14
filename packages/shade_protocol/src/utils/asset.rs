@@ -1,5 +1,3 @@
-use std::vec;
-
 use crate::{
     c_std::{
         Addr,
@@ -7,16 +5,17 @@ use crate::{
         BalanceResponse,
         BankQuery,
         ContractInfo,
+        CosmosMsg,
         Deps,
+        DepsMut,
+        Env,
         QuerierWrapper,
-        StdError,
         StdResult,
         Uint128,
     },
     BLOCK_SIZE,
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{CosmosMsg, DepsMut, Env};
 
 /// Validates an optional address.
 pub fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {
@@ -195,7 +194,7 @@ pub fn set_allowance(
 ) -> StdResult<Vec<CosmosMsg>> {
     use crate::snip20::helpers::{allowance_query, decrease_allowance_msg, increase_allowance_msg};
 
-    let mut allowance = match cur_allowance {
+    let allowance = match cur_allowance {
         Some(cur) => cur,
         None => {
             allowance_query(

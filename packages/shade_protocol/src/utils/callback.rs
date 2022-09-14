@@ -15,9 +15,7 @@ use crate::{
         Empty,
         QuerierWrapper,
         QueryRequest,
-        ReplyOn,
         StdResult,
-        SubMsg,
         WasmMsg,
         WasmQuery,
     },
@@ -240,7 +238,7 @@ pub trait MultiTestable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::{to_vec, Binary, Querier, QuerierResult};
+    use cosmwasm_std::{to_vec, Binary, Querier};
     use serde::Deserialize;
 
     #[derive(Serialize)]
@@ -370,10 +368,10 @@ mod tests {
             }
         }
 
-        let querier = MyMockQuerier {};
+        let _querier = MyMockQuerier {};
         let address = "secret1xyzasdf".to_string();
         let hash = "asdf".to_string();
-        let contract = Contract::new(&Addr::unchecked(address), &hash);
+        let _contract = Contract::new(&Addr::unchecked(address), &hash);
 
         // Was getting an error here
         // let response: QueryResponse =

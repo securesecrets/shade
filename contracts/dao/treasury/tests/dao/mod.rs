@@ -5,18 +5,16 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
         update_dao,
     },
-    snip20,
     treasury,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
+    c_std::Uint128,
     contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
@@ -56,7 +54,8 @@ pub fn dao_int_test(
         alloc_tolerance.clone(),
         is_instant_unbond,
         true,
-    );
+    )
+    .unwrap();
     //query assets
     let assets_query_res = treasury::assets_query(&app, &contracts).unwrap();
     assert!(
@@ -73,7 +72,6 @@ pub fn dao_int_test(
             expected_allowance[i],
             treasury::allowance_query(
                 &app,
-                "admin",
                 &contracts,
                 snip20_symbol,
                 SupportedContracts::TreasuryManager(i)
@@ -88,7 +86,6 @@ pub fn dao_int_test(
     } else {
         bals = system_balance_unbondable(&app, &contracts, snip20_symbol);
     }
-    println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
     for (i, manager_tuples) in bals.1.iter().enumerate() {
         assert_eq!(manager_tuples.0, expected_manager[i]);
@@ -108,7 +105,8 @@ pub fn dao_int_test(
             cycle[i].clone(),
             Uint128::zero(),
             allow_tolerance[i].clone(),
-        );
+        )
+        .unwrap();
         for j in 0..alloc_amount[i].len() {
             treasury_manager::allocate_exec(
                 &mut app,
@@ -121,19 +119,19 @@ pub fn dao_int_test(
                 Uint128::zero(),
                 alloc_tolerance[i][j].clone(),
                 i,
-            );
+            )
+            .unwrap();
             k += 1;
         }
         k += 1;
     }
 
-    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
-    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT");
-    println!("{:?}", bals);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
     if !is_instant_unbond {
         k = 0;
         for i in 0..num_managers {
-            for j in 0..alloc_amount[i].len() {
+            for _j in 0..alloc_amount[i].len() {
                 println!("{}", k);
                 mock_adapter_complete_unbonding(
                     &mut app,
@@ -146,15 +144,15 @@ pub fn dao_int_test(
             }
             k += 1;
         }
-        update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
+        update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
         bals = system_balance_unbondable(&app, &contracts, "SSCRT");
     } else {
         bals = system_balance_reserves(&app, &contracts, "SSCRT");
     }
     assert_eq!(bals.0, initial_treasury_bal);
-    for (i, manager_tuples) in bals.1.iter().enumerate() {
+    for (_i, manager_tuples) in bals.1.iter().enumerate() {
         assert_eq!(manager_tuples.0, Uint128::zero());
-        for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
+        for (_j, adapter_bals) in manager_tuples.1.iter().enumerate() {
             assert_eq!(adapter_bals.clone(), Uint128::zero());
         }
     }

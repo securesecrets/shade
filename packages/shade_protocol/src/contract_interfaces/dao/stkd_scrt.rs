@@ -1,16 +1,5 @@
 use crate::{
-    c_std::{
-        Addr,
-        Binary,
-        CosmosMsg,
-        Decimal,
-        Delegation,
-        QuerierWrapper,
-        StdError,
-        StdResult,
-        Uint128,
-        Validator,
-    },
+    c_std::{Addr, Binary, Uint128},
     cosmwasm_schema::cw_serde,
     utils::{
         asset::{Contract, RawContract},
@@ -97,27 +86,10 @@ pub enum QueryAnswer {
 // TODO move to common location
 pub mod staking_derivatives {
     use crate::{
-        c_std::{
-            Addr,
-            Binary,
-            Coin,
-            CosmosMsg,
-            Decimal,
-            Delegation,
-            QuerierWrapper,
-            StdError,
-            StdResult,
-            Uint128,
-            Validator,
-        },
+        c_std::{Addr, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128},
         cosmwasm_schema::cw_serde,
-        utils::{
-            asset::{Contract, RawContract},
-            generic_response::ResponseStatus,
-        },
+        utils::asset::Contract,
     };
-
-    use crate::contract_interfaces::dao::adapter;
 
     use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 
