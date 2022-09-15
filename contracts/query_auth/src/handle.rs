@@ -1,14 +1,6 @@
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
-    c_std::{
-        to_binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdResult,
-    },
+    c_std::{to_binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
         Admin,

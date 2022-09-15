@@ -1,14 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,
@@ -19,16 +10,12 @@ use shade_protocol::{
 
 pub fn try_add_profile(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     profile: Profile,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_profile(deps.storage)?;
-    profile.save(deps.storage, &id)?;
+    profile.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
@@ -39,16 +26,12 @@ pub fn try_add_profile(
 
 pub fn try_set_profile(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: Uint128,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
-    let mut profile = match Profile::may_load(deps.storage, &id)? {
+    let mut profile = match Profile::may_load(deps.storage, id)? {
         None => return Err(StdError::generic_err("Profile not found")),
         Some(p) => p,
     };
@@ -83,7 +66,7 @@ pub fn try_set_profile(
         profile.cancel_deadline = cancel_deadline;
     }
 
-    profile.save(deps.storage, &id)?;
+    profile.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetProfile {

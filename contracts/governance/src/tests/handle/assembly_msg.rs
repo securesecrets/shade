@@ -1,9 +1,5 @@
 use crate::tests::{admin_only_governance, get_assembly_msgs};
-use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::{governance},
-    utils::{ExecuteCallback},
-};
+use shade_protocol::{c_std::Addr, contract_interfaces::governance, utils::ExecuteCallback};
 
 #[test]
 fn add_assembly_msg() {
@@ -12,7 +8,7 @@ fn add_assembly_msg() {
     governance::ExecuteMsg::AddAssemblyMsg {
         name: "Some Assembly name".to_string(),
         msg: "{}".to_string(),
-        assemblies: vec![Uint128::zero()],
+        assemblies: vec![0],
         padding: None,
     }
     .test_exec(
@@ -24,7 +20,7 @@ fn add_assembly_msg() {
     )
     .unwrap();
 
-    let assemblies = get_assembly_msgs(&mut chain, &gov, Uint128::zero(), Uint128::new(1)).unwrap();
+    let assemblies = get_assembly_msgs(&mut chain, &gov, 0, 1).unwrap();
 
     assert_eq!(assemblies.len(), 2);
 }
@@ -37,7 +33,7 @@ fn unauthorised_add_assembly_msg() {
         governance::ExecuteMsg::AddAssemblyMsg {
             name: "Some Assembly name".to_string(),
             msg: "{}".to_string(),
-            assemblies: vec![Uint128::zero()],
+            assemblies: vec![0],
             padding: None,
         }
         .test_exec(
@@ -55,11 +51,10 @@ fn unauthorised_add_assembly_msg() {
 fn set_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    let original_msg =
-        get_assembly_msgs(&mut chain, &gov, Uint128::zero(), Uint128::new(1)).unwrap()[0].clone();
+    let original_msg = get_assembly_msgs(&mut chain, &gov, 0, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetAssemblyMsg {
-        id: Uint128::zero(),
+        id: 0,
         name: Some("New name".to_string()),
         msg: None,
         assemblies: None,
@@ -74,7 +69,7 @@ fn set_assembly_msg() {
     )
     .unwrap();
 
-    let assemblies = get_assembly_msgs(&mut chain, &gov, Uint128::zero(), Uint128::new(1)).unwrap();
+    let assemblies = get_assembly_msgs(&mut chain, &gov, 0, 1).unwrap();
 
     assert_eq!(assemblies.len(), 1);
 
@@ -89,7 +84,7 @@ fn unauthorised_set_assembly_msg() {
 
     assert!(
         governance::ExecuteMsg::SetAssemblyMsg {
-            id: Uint128::zero(),
+            id: 0,
             name: Some("New name".to_string()),
             msg: None,
             assemblies: None,

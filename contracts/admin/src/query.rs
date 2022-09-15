@@ -1,9 +1,6 @@
 use crate::shared::{is_valid_permission, PERMISSIONS, STATUS, SUPER};
 use shade_protocol::{
-    admin::{
-        errors::{unregistered_admin},
-        ValidateAdminPermissionResponse,
-    },
+    admin::{errors::unregistered_admin, ValidateAdminPermissionResponse},
     c_std::{Deps, StdResult},
 };
 

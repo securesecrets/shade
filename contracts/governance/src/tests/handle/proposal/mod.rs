@@ -9,21 +9,65 @@ use crate::tests::{
     gov_generic_proposal,
     gov_msg_proposal,
 };
+use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::{
-    c_std::{to_binary, Addr, Uint128},
+    c_std::{to_binary, Addr, ContractInfo, StdResult},
     contract_interfaces::{
         governance,
         governance::proposal::{ProposalMsg, Status},
     },
-    utils::{ExecuteCallback},
+    multi_test::App,
+    query_auth,
+    snip20::{self, InitialBalance},
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable},
 };
+
+pub fn init_funding_token(
+    chain: &mut App,
+    initial_balances: Option<Vec<InitialBalance>>,
+    query_auth: Option<&ContractInfo>,
+) -> StdResult<ContractInfo> {
+    let snip20 = snip20::InstantiateMsg {
+        name: "funding_token".to_string(),
+        admin: None,
+        symbol: "FND".to_string(),
+        decimals: 6,
+        initial_balances: initial_balances.clone(),
+        prng_seed: Default::default(),
+        config: None,
+        query_auth: None,
+    }
+    .test_init(
+        Snip20::default(),
+        chain,
+        Addr::unchecked("admin"),
+        "funding_token",
+        &[],
+    )
+    .unwrap();
+
+    if let Some(balances) = initial_balances {
+        if let Some(auth) = query_auth {
+            for balance in balances {
+                query_auth::ExecuteMsg::SetViewingKey {
+                    key: "password".to_string(),
+                    padding: None,
+                }
+                .test_exec(&auth, chain, Addr::unchecked(balance.address), &[])
+                .unwrap();
+            }
+        }
+    }
+
+    Ok(snip20)
+}
 
 #[test]
 fn trigger_admin_command() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Proposal metadata".to_string(),
         msgs: None,
@@ -39,7 +83,7 @@ fn unauthorized_trigger_admin_command() {
 
     assert!(
         governance::ExecuteMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
+            assembly: 1,
             title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),
             msgs: None,
@@ -55,7 +99,7 @@ fn text_only_proposal() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text only proposal".to_string(),
         msgs: None,
@@ -64,14 +108,13 @@ fn text_only_proposal() {
     .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.proposer, Addr::unchecked("admin"));
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
     assert_eq!(prop.msgs, None);
-    assert_eq!(prop.assembly, Uint128::new(1));
+    assert_eq!(prop.assembly, 1);
     assert_eq!(prop.assembly_vote_tally, None);
     assert_eq!(prop.public_vote_tally, None);
     match prop.status {
@@ -82,14 +125,13 @@ fn text_only_proposal() {
     assert_eq!(prop.funders, None);
 
     governance::ExecuteMsg::Trigger {
-        proposal: Uint128::new(0),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.status, Status::Success);
     assert_eq!(prop.status_history.len(), 1);
@@ -104,7 +146,7 @@ fn msg_proposal() {
         &gov,
         "admin",
         governance::ExecuteMsg::SetAssembly {
-            id: Uint128::new(1),
+            id: 1,
             name: Some("Random name".to_string()),
             metadata: None,
             members: None,
@@ -114,11 +156,9 @@ fn msg_proposal() {
     )
     .unwrap();
 
-    let old_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let old_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -126,20 +166,18 @@ fn msg_proposal() {
     };
 
     governance::ExecuteMsg::Trigger {
-        proposal: Uint128::new(0),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert!(prop.msgs.is_some());
     assert_eq!(prop.status, Status::Success);
 
-    let new_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let new_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
     assert_ne!(new_assembly.name, old_assembly.name);
 }
@@ -150,11 +188,11 @@ fn multi_msg_proposal() {
 
     gov_msg_proposal(&mut chain, &gov, "admin", vec![
         ProposalMsg {
-            target: Uint128::zero(),
-            assembly_msg: Uint128::zero(),
+            target: 0,
+            assembly_msg: 0,
             msg: to_binary(&vec![
                 serde_json::to_string(&governance::ExecuteMsg::SetAssembly {
-                    id: Uint128::new(1),
+                    id: 1,
                     name: Some("Random name".to_string()),
                     metadata: None,
                     members: None,
@@ -167,11 +205,11 @@ fn multi_msg_proposal() {
             send: vec![],
         },
         ProposalMsg {
-            target: Uint128::zero(),
-            assembly_msg: Uint128::zero(),
+            target: 0,
+            assembly_msg: 0,
             msg: to_binary(&vec![
                 serde_json::to_string(&governance::ExecuteMsg::SetAssembly {
-                    id: Uint128::new(1),
+                    id: 1,
                     name: None,
                     metadata: Some("Random name".to_string()),
                     members: None,
@@ -186,11 +224,9 @@ fn multi_msg_proposal() {
     ])
     .unwrap();
 
-    let old_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let old_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -198,19 +234,17 @@ fn multi_msg_proposal() {
     };
 
     governance::ExecuteMsg::Trigger {
-        proposal: Uint128::new(0),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.status, Status::Success);
 
-    let new_assembly =
-        get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+    let new_assembly = get_assemblies(&mut chain, &gov, 1, 2).unwrap()[0].clone();
 
     assert_ne!(new_assembly.name, old_assembly.name);
     assert_ne!(new_assembly.metadata, old_assembly.metadata);
@@ -225,7 +259,7 @@ fn msg_proposal_invalid_msg() {
         &gov,
         "admin",
         governance::ExecuteMsg::SetAssembly {
-            id: Uint128::new(3),
+            id: 3,
             name: Some("Random name".to_string()),
             metadata: None,
             members: None,
@@ -237,7 +271,7 @@ fn msg_proposal_invalid_msg() {
 
     assert!(
         governance::ExecuteMsg::Trigger {
-            proposal: Uint128::new(0),
+            proposal: 0,
             padding: None
         }
         .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
@@ -247,14 +281,13 @@ fn msg_proposal_invalid_msg() {
     chain.update_block(|block| block.time = block.time.plus_seconds(100000));
 
     governance::ExecuteMsg::Cancel {
-        proposal: Uint128::new(0),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.status, Status::Canceled);
 }

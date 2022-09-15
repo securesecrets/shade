@@ -7,6 +7,7 @@ pub mod stored_id;
 pub mod vote;
 
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -16,16 +17,19 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Coin, Addr};
 
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
-use crate::governance::proposal::Funding;
-use crate::query_auth::QueryPermit;
+use crate::{
+    governance::proposal::Funding,
+    query_auth::QueryPermit,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+};
+use cosmwasm_schema::cw_serde;
+use secret_storage_plus::{Item, Json};
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::SingletonStorage;
+use crate::utils::storage::plus::ItemStorage;
+
+// TODO: add errors
 
 // Admin command variable spot
 pub const MSG_VARIABLE: &str = "{~}";
@@ -38,11 +42,33 @@ pub struct Config {
     pub vote_token: Option<Contract>,
     // When funding is enabled, a funding token is expected
     pub funding_token: Option<Contract>,
+
+    // Migration information
+    pub migrated_from: Option<Contract>,
+    pub migrated_to: Option<Contract>,
 }
 
 #[cfg(feature = "governance-impl")]
-impl SingletonStorage for Config {
-    const NAMESPACE: &'static [u8] = b"config-";
+impl ItemStorage for Config {
+    const ITEM: Item<'static, Self, Json> = Item::new("config-");
+}
+
+// Used for original instantiation
+#[cw_serde]
+pub struct AssemblyInit {
+    pub admin_members: Vec<Addr>,
+    pub admin_profile: Profile,
+    pub public_profile: Profile,
+}
+
+// Used for migration instantiation
+#[cw_serde]
+pub struct MigrationInit {
+    pub source: Contract,
+    pub assembly: u16,
+    pub assembly_msg: u16,
+    pub profile: u16,
+    pub contract: u16,
 }
 
 #[cw_serde]
@@ -51,13 +77,14 @@ pub struct InstantiateMsg {
     pub query_auth: Contract,
 
     // Admin rules
-    pub admin_members: Vec<Addr>,
-    pub admin_profile: Profile,
+    pub assemblies: Option<AssemblyInit>,
 
-    // Public rules
-    pub public_profile: Profile,
+    // Token rules
     pub funding_token: Option<Contract>,
     pub vote_token: Option<Contract>,
+
+    // Migration data
+    pub migrator: Option<MigrationInit>,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -68,17 +95,31 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum RuntimeState {
     // Run like normal
     Normal,
-    // Disable staking
-    DisableVoteToken,
     // Allow only specific assemblies and admin
-    SpecificAssemblies { committees: Vec<Uint128> },
-    // Set as admin only
-    AdminOnly,
+    SpecificAssemblies { assemblies: Vec<u16> },
+    // Migrated - points to the new version
+    Migrated,
 }
 
 #[cfg(feature = "governance-impl")]
-impl SingletonStorage for RuntimeState {
-    const NAMESPACE: &'static [u8] = b"runtime_state-";
+impl ItemStorage for RuntimeState {
+    const ITEM: Item<'static, Self, Json> = Item::new("runtime-state-");
+}
+
+#[cw_serde]
+pub enum MigrationDataAsk {
+    Assembly,
+    AssemblyMsg,
+    Profile,
+    Contract,
+}
+
+#[cw_serde]
+pub enum MigrationData {
+    Assembly { data: Vec<(u16, Assembly)> },
+    AssemblyMsg { data: Vec<(u16, AssemblyMsg)> },
+    Profile { data: Vec<(u16, Profile)> },
+    Contract { data: Vec<(u16, AllowedContract)> },
 }
 
 #[cw_serde]
@@ -96,37 +137,24 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
 
-    // Proposals
-    // Same as AssemblyProposal where assembly is 0 and assembly msg is 0
-    Proposal {
-        title: String,
-        metadata: String,
-
-        // Optionals, if none the proposal is assumed to be a text proposal
-        // Allowed Contract
-        contract: Option<Uint128>,
-        // Msg for tx
-        msg: Option<String>,
-        coins: Option<Vec<Coin>>,
-        padding: Option<String>,
-    },
-
     // Proposal interaction
     /// Triggers the proposal when the MSG is approved
     Trigger {
-        proposal: Uint128,
+        //TODO: Must be deprecated for v1
+        proposal: u32,
         padding: Option<String>,
     },
     /// Cancels the proposal if the msg keeps failing
     Cancel {
-        proposal: Uint128,
+        //TODO: Must be deprecated for v1
+        proposal: u32,
         padding: Option<String>,
     },
     /// Forces a proposal update,
     /// proposals automatically update on interaction
     /// but this is a cheaper alternative
     Update {
-        proposal: Uint128,
+        proposal: u32,
         padding: Option<String>,
     },
     /// Funds a proposal, msg is a prop ID
@@ -139,11 +167,11 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     ClaimFunding {
-        id: Uint128,
+        id: u32,
     },
     /// Votes on a assembly vote
     AssemblyVote {
-        proposal: Uint128,
+        proposal: u32,
         vote: Vote,
         padding: Option<String>,
     },
@@ -158,7 +186,7 @@ pub enum ExecuteMsg {
     // Assemblies
     /// Creates a proposal under a assembly
     AssemblyProposal {
-        assembly: Uint128,
+        assembly: u16,
         title: String,
         metadata: String,
 
@@ -172,16 +200,16 @@ pub enum ExecuteMsg {
         name: String,
         metadata: String,
         members: Vec<Addr>,
-        profile: Uint128,
+        profile: u16,
         padding: Option<String>,
     },
     /// Edits an existing assembly
     SetAssembly {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         metadata: Option<String>,
         members: Option<Vec<Addr>>,
-        profile: Option<Uint128>,
+        profile: Option<u16>,
         padding: Option<String>,
     },
 
@@ -190,20 +218,20 @@ pub enum ExecuteMsg {
     AddAssemblyMsg {
         name: String,
         msg: String,
-        assemblies: Vec<Uint128>,
+        assemblies: Vec<u16>,
         padding: Option<String>,
     },
     /// Edits an existing assembly msg
     SetAssemblyMsg {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         msg: Option<String>,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     AddAssemblyMsgAssemblies {
-        id: Uint128,
-        assemblies: Vec<Uint128>,
+        id: u16,
+        assemblies: Vec<u16>,
     },
 
     // Profiles
@@ -214,7 +242,7 @@ pub enum ExecuteMsg {
     },
     /// Edits an already existing profile and the assemblys using the profile
     SetProfile {
-        id: Uint128,
+        id: u16,
         profile: UpdateProfile,
         padding: Option<String>,
     },
@@ -224,21 +252,43 @@ pub enum ExecuteMsg {
         name: String,
         metadata: String,
         contract: Contract,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     SetContract {
-        id: Uint128,
+        id: u16,
         name: Option<String>,
         metadata: Option<String>,
         contract: Option<Contract>,
         disable_assemblies: bool,
-        assemblies: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<u16>>,
         padding: Option<String>,
     },
     AddContractAssemblies {
-        id: Uint128,
-        assemblies: Vec<Uint128>,
+        id: u16,
+        assemblies: Vec<u16>,
+    },
+    // Migrations
+    // Export total numeric IDs
+    // Committee, msg, profile and contract keys must be exported
+    // Create a struct that stores the last migrated IDs
+    // Enum for migration targets
+    // migrate gives an array of items with their appropriate IDs
+    // Migrate Committee, Msg, Profile and Contract
+    // When receiving migration data, if given ID is greater then ignore
+
+    // Add functions for exporting lists of data into the needed contracts
+    Migrate {
+        id: u64,
+        label: String,
+        code_hash: String,
+    },
+    MigrateData {
+        data: MigrationDataAsk,
+        total: u16,
+    },
+    ReceiveMigrationData {
+        data: MigrationData,
     },
 }
 
@@ -267,12 +317,16 @@ pub enum HandleAnswer {
     SetProfile { status: ResponseStatus },
     AddContract { status: ResponseStatus },
     SetContract { status: ResponseStatus },
+    AddContractAssemblies { status: ResponseStatus },
+    Migrate { status: ResponseStatus },
+    MigrateData { status: ResponseStatus },
+    ReceiveMigrationData { status: ResponseStatus },
 }
 
 #[cw_serde]
 pub struct Pagination {
-    pub page: u64,
-    pub amount: u64
+    pub page: u16,
+    pub amount: u32,
 }
 
 #[cw_serde]
@@ -280,7 +334,7 @@ pub enum AuthQuery {
     Proposals { pagination: Pagination },
     AssemblyVotes { pagination: Pagination },
     Funding { pagination: Pagination },
-    Votes { pagination: Pagination }
+    Votes { pagination: Pagination },
 }
 
 #[remain::sorted]
@@ -289,32 +343,53 @@ pub struct QueryData {}
 
 #[cw_serde]
 pub enum QueryMsg {
-    // TODO: Query individual user vote with VK and permit
     Config {},
 
     TotalProposals {},
 
-    Proposals { start: Uint128, end: Uint128 },
+    Proposals {
+        start: u32,
+        end: u32,
+    },
 
     TotalAssemblies {},
 
-    Assemblies { start: Uint128, end: Uint128 },
+    Assemblies {
+        start: u16,
+        end: u16,
+    },
 
     TotalAssemblyMsgs {},
 
-    AssemblyMsgs { start: Uint128, end: Uint128 },
+    AssemblyMsgs {
+        start: u16,
+        end: u16,
+    },
 
     TotalProfiles {},
 
-    Profiles { start: Uint128, end: Uint128 },
+    Profiles {
+        start: u16,
+        end: u16,
+    },
 
     TotalContracts {},
 
-    Contracts { start: Uint128, end: Uint128 },
+    Contracts {
+        start: u16,
+        end: u16,
+    },
 
-    WithVK { user: Addr, key: String, query: AuthQuery },
+    WithVK {
+        user: Addr,
+        key: String,
+        query: AuthQuery,
+    },
 
-    WithPermit { permit: QueryPermit, query: AuthQuery },
+    WithPermit {
+        permit: QueryPermit,
+        query: AuthQuery,
+    },
 }
 
 impl Query for QueryMsg {
@@ -323,31 +398,57 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub struct ResponseWithID<T> {
-    pub prop_id: Uint128,
-    pub data: T
+    pub prop_id: u32,
+    pub data: T,
 }
 
 #[cw_serde]
 pub enum QueryAnswer {
-    Config { config: Config },
+    Config {
+        config: Config,
+    },
 
-    Proposals { props: Vec<Proposal> },
+    Proposals {
+        props: Vec<Proposal>,
+    },
 
-    Assemblies { assemblies: Vec<Assembly> },
+    Assemblies {
+        assemblies: Vec<Assembly>,
+    },
 
-    AssemblyMsgs { msgs: Vec<AssemblyMsg> },
+    AssemblyMsgs {
+        msgs: Vec<AssemblyMsg>,
+    },
 
-    Profiles { profiles: Vec<Profile> },
+    Profiles {
+        profiles: Vec<Profile>,
+    },
 
-    Contracts { contracts: Vec<AllowedContract> },
+    Contracts {
+        contracts: Vec<AllowedContract>,
+    },
 
-    Total { total: Uint128 },
+    Total {
+        total: u32,
+    },
 
-    UserProposals { props: Vec<ResponseWithID<Proposal>>, total: Uint128 },
+    UserProposals {
+        props: Vec<ResponseWithID<Proposal>>,
+        total: u32,
+    },
 
-    UserAssemblyVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+    UserAssemblyVotes {
+        votes: Vec<ResponseWithID<Vote>>,
+        total: u32,
+    },
 
-    UserFunding { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
+    UserFunding {
+        funds: Vec<ResponseWithID<Funding>>,
+        total: u32,
+    },
 
-    UserVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+    UserVotes {
+        votes: Vec<ResponseWithID<Vote>>,
+        total: u32,
+    },
 }
