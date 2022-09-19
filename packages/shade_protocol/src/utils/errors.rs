@@ -3,6 +3,41 @@ use cosmwasm_schema::cw_serde;
 use schemars::_serde_json::to_string;
 use serde::Serialize;
 
+/// Generates the errors
+/// Macro takes in an array of error name, error msg and error function
+#[macro_export]
+macro_rules! generate_errors {
+    ($Target:tt; $($EnumError:ident, $VerboseError:tt, $Function:ident),+) => {
+        #[cw_serde]
+        #[repr(u8)]
+        pub enum Error { $($EnumError,)+ }
+        impl_into_u8!(Error);
+
+        impl CodeType for Error {
+            fn to_verbose(&self, context: &Vec<&str>) -> String {
+                match self {
+                    $(
+                    Error::$EnumError => {
+                        build_string($VerboseError, context)
+                    }
+                    )+
+                }
+            }
+        }
+
+        const target: &str = $Target ;
+
+        impl Error {
+            $(
+            pub fn $Function(args: Vec<&str>) -> StdError {
+                DetailedError::from_code(target, Error::$EnumError, args).to_error()
+            }
+            )+
+        }
+
+    };
+}
+
 #[macro_export]
 macro_rules! impl_into_u8 {
     ($error:ident) => {
@@ -214,5 +249,17 @@ pub mod tests {
             StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"target\":\"contract\",\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string()),
             _ => assert!(false)
         }
+    }
+
+    generate_errors!("test"; 
+        Test1, "Verb1", Test1Func,
+        Test2, "Ver2", Test2Func,
+        Test3, "Verb3", Test3Func);
+
+    #[test]
+    fn macro_errors() {
+        let test = Error::Test2;
+
+        let test1 = Error::Test1Func(vec![]);
     }
 }
