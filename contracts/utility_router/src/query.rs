@@ -1,10 +1,10 @@
 use shade_protocol::{
     c_std::{Deps, Binary, StdResult, QueryRequest, WasmQuery},
-    contract_interfaces::{utility_router::{*, error::no_contract_found}},
+    contract_interfaces::{utility_router::{*, error::*}},
     utils::{generic_response::ResponseStatus::Success}
 };
 
-use crate::state::{STATUS, CONTRACTS};
+use crate::state::{STATUS, CONTRACTS, ADDRESSES};
 
 pub fn get_status(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Status { contract_status: STATUS.load(deps.storage)?})
@@ -28,5 +28,12 @@ pub fn get_contract(deps: Deps, utility_name: String) -> StdResult<QueryAnswer> 
     match CONTRACTS.may_load(deps.storage, utility_name.clone())? {
         Some(contract) => Ok(QueryAnswer::GetContract {status: Success, contract}),
         None => Err(no_contract_found(utility_name)),
+    }
+}
+
+pub fn get_address(deps: Deps, address_name: String) -> StdResult<QueryAnswer> {
+    match ADDRESSES.may_load(deps.storage, address_name.clone())? {
+        Some(addr) => Ok(QueryAnswer::GetAddress {status: Success, address: addr}),
+        None => Err(no_address_found(address_name))
     }
 }

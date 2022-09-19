@@ -10,7 +10,8 @@ pub enum Error {
     NotUtilityAdmin,
     NoContractFound,
     NoVerificationQueryGiven,
-    CriticalAdminError
+    CriticalAdminError,
+    NoAddressFound
 }
 
 impl_into_u8!(Error);
@@ -29,6 +30,9 @@ impl CodeType for Error {
             }
             Error::CriticalAdminError => {
                 build_string("Admin contract cannot be found, so no users can be trusted. Contract must be redeployed with admin.", context)
+            }
+            Error::NoAddressFound => {
+                build_string("No address found at name {}", context)
             }
         }
     }
@@ -50,4 +54,8 @@ pub fn no_verfication_query_given() -> StdError {
 
 pub fn critical_admin_error() -> StdError {
     DetailedError::from_code(UTIL_ROUTER_TARGET, Error::CriticalAdminError, vec![]).to_error()
+}
+
+pub fn no_address_found(name: String) -> StdError {
+    DetailedError::from_code(UTIL_ROUTER_TARGET, Error::NoAddressFound, vec![name.as_str()]).to_error()
 }

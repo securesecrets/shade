@@ -5,7 +5,7 @@ use shade_protocol::{
 };
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 
-use crate::state::{STATUS, CONTRACTS};
+use crate::state::{STATUS, CONTRACTS, ADDRESSES};
 
 pub fn toggle_status(deps: DepsMut, status: RouterStatus) -> StdResult<Response> {
     STATUS.update(deps.storage, |_| -> StdResult<_> { Ok(status) })?;
@@ -35,6 +35,11 @@ pub fn set_contract(deps: DepsMut, utility_contract_name: String, contract: Cont
             Ok(Response::new().set_data(to_binary(&HandleAnswer::SetContract { status: Success })?))
         }
     }
+}
+
+pub fn set_address(deps: DepsMut, address_name: String, address: String) -> StdResult<Response> {
+    ADDRESSES.save(deps.storage, address_name, &address)?;
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAddress { status: Success })?))
 }
 
 fn verify_with_query(deps: &DepsMut, contract: Contract, query: Binary) -> StdResult<Response> {

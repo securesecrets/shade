@@ -12,6 +12,7 @@ use crate::utils::asset::Contract;
 #[cw_serde]
 pub struct InstantiateMsg{
     pub admin_auth: Contract,
+    pub multisig_address: String
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -36,6 +37,11 @@ pub enum ExecuteMsg {
         query: Option<Binary>,
         padding: Option<String>,
     },
+    SetAddress {
+        address_name: String,
+        address: String,
+        padding: Option<String>
+    }
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -49,6 +55,9 @@ pub enum HandleAnswer {
     },
     SetContract {
         status: ResponseStatus
+    },
+    SetAddress {
+        status: ResponseStatus
     }
 }
 
@@ -60,8 +69,11 @@ pub enum QueryMsg {
         query: Binary
     },
     GetContract {
-        utility_name: String,
+        utility_name: String
     },
+    GetAddress {
+        address_name: String
+    }
 }
 
 impl Query for QueryMsg {
@@ -80,6 +92,10 @@ pub enum QueryAnswer {
     GetContract {
         status: ResponseStatus,
         contract: Contract
+    },
+    GetAddress {
+        status: ResponseStatus,
+        address: String
     }
 }
 
@@ -88,7 +104,6 @@ pub enum UtilityContracts {
     AdminAuth,
     QueryAuth,
     Treasury,
-    TreasuryManager,
     OracleRouter,
 }
 
@@ -101,7 +116,22 @@ impl UtilityContracts {
             UtilityContracts::OracleRouter => "SHADE_ORACLE_ROUTER",
             UtilityContracts::QueryAuth => "SHADE_QUERY_AUTH",
             UtilityContracts::Treasury => "SHADE_TREASURY",
-            UtilityContracts::TreasuryManager => "SHADE_TREASURY_MANAGER",
+        }
+        .to_string()
+    }
+}
+
+#[derive(Clone)]
+pub enum UtilityAddresses {
+    Multisig
+}
+
+// NOTE: SHADE_{ADDR_NAME}
+
+impl UtilityAddresses {
+    pub fn into_string(self) -> String {
+        match self {
+            UtilityAddresses::Multisig => "SHADE_MULTISIG",
         }
         .to_string()
     }

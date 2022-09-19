@@ -15,6 +15,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     CONTRACTS.save(deps.storage, UtilityContracts::AdminAuth.into_string(), &msg.admin_auth)?;
+    ADDRESSES.save(deps.storage, UtilityAddresses::Multisig.into_string(), &msg.multisig_address)?;
     STATUS.save(deps.storage, &RouterStatus::Running)?;
     Ok(Response::new())
 }
@@ -28,6 +29,7 @@ pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> 
             match msg {
                 ExecuteMsg::ToggleStatus { status, ..} => toggle_status(deps, status),
                 ExecuteMsg::SetContract { utility_contract_name, contract, query, .. } => set_contract(deps, utility_contract_name, contract, info.sender, query),
+                ExecuteMsg::SetAddress { address_name, address, .. } => set_address(deps, address_name, address)
             },
             RESPONSE_BLOCK_SIZE,
         )
@@ -45,7 +47,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         to_binary(&match msg {
             QueryMsg::Status {  } => get_status(deps)?,
             QueryMsg::ForwardQuery { utility_name, query } => forward_query(deps, utility_name, query)?,
-            QueryMsg::GetContract { utility_name } => get_contract(deps, utility_name)?
+            QueryMsg::GetContract { utility_name } => get_contract(deps, utility_name)?,
+            QueryMsg::GetAddress { address_name } => get_address(deps, address_name)?
         },
         ),
         RESPONSE_BLOCK_SIZE,
