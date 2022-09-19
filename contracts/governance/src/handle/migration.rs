@@ -29,7 +29,7 @@ pub fn try_migrate(
     env: Env,
     _info: MessageInfo,
     id: u64,
-    label: String,
+    mut label: String,
     code_hash: String,
 ) -> StdResult<Response> {
     // TODO: maybe randomly generate migration label
@@ -38,6 +38,8 @@ pub fn try_migrate(
     let config = Config::load(deps.storage)?;
 
     RuntimeState::Migrated {}.save(deps.storage)?;
+
+    label.push_str(&env.block.time.nanos().to_string());
 
     let res = Response::new();
     Ok(res
