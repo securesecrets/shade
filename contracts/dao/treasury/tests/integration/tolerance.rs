@@ -1,32 +1,12 @@
-
-use shade_multi_test::{
-    multi::{
-        admin::init_admin_auth,
-        snip20::Snip20,
-        treasury::Treasury,
-    },
-};
+use shade_multi_test::multi::{admin::init_admin_auth, snip20::Snip20, treasury::Treasury};
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        Uint128,
-    },
+    c_std::{to_binary, Addr, Uint128},
     contract_interfaces::{
-        dao::{
-            treasury,
-            treasury::{AllowanceType},
-        },
+        dao::{treasury, treasury::AllowanceType},
         snip20,
     },
-    multi_test::{App},
-    utils::{
-        cycle::{Cycle},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
+    multi_test::App,
+    utils::{cycle::Cycle, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 fn underfunded_tolerance(

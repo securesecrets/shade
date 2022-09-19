@@ -1,35 +1,10 @@
-
-use shade_multi_test::{
-    multi::{
-        admin::init_admin_auth,
-        snip20::Snip20,
-        treasury::Treasury,
-    },
-};
+use shade_multi_test::multi::{admin::init_admin_auth, snip20::Snip20, treasury::Treasury};
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        Uint128,
-    },
-    multi_test::{App},
+    c_std::{to_binary, Addr, Uint128},
+    contract_interfaces::{dao::treasury, snip20},
+    multi_test::App,
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
-use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            treasury,
-        },
-        snip20,
-    },
-    utils::{
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
-};
-
-
 
 //TODO test with manager
 // Add other adapters here as they come

@@ -1,27 +1,11 @@
-
-use shade_multi_test::{
-    multi::{
-        admin::init_admin_auth,
-        snip20::Snip20,
-        treasury::Treasury,
-    },
-};
+use shade_multi_test::multi::{admin::init_admin_auth, snip20::Snip20, treasury::Treasury};
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        BlockInfo,
-        Timestamp,
-        Uint128,
-    },
+    c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128},
     contract_interfaces::{
-        dao::{
-            treasury,
-            treasury::{AllowanceType},
-        },
+        dao::{treasury, treasury::AllowanceType},
         snip20,
     },
-    multi_test::{App},
+    multi_test::App,
     utils::{
         cycle::{parse_utc_datetime, Cycle},
         ExecuteCallback,
