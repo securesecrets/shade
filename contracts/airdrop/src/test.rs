@@ -2,8 +2,8 @@
 pub mod tests {
     use crate::handle::inverse_normalizer;
     use shade_protocol::{
+        airdrop::account::{AddressProofMsg, AddressProofPermit, FillerMsg},
         c_std::{from_binary, testing::mock_dependencies, Addr, Binary, Uint128},
-        contract_interfaces::airdrop::account::{AddressProofMsg, AddressProofPermit, FillerMsg},
         query_authentication::{
             permit::bech32_to_canonical,
             transaction::{PermitSignature, PubKey},
