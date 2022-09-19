@@ -13,6 +13,14 @@ use crate::{
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
 use shade_protocol::{
+    airdrop::{
+        claim_info::RequiredTask,
+        errors::{invalid_dates, invalid_task_percentage},
+        Config,
+        ExecuteMsg,
+        InstantiateMsg,
+        QueryMsg,
+    },
     c_std::{
         shd_entry_point,
         to_binary,
@@ -25,14 +33,6 @@ use shade_protocol::{
         StdError,
         StdResult,
         Uint128,
-    },
-    contract_interfaces::airdrop::{
-        claim_info::RequiredTask,
-        errors::{invalid_dates, invalid_task_percentage},
-        Config,
-        ExecuteMsg,
-        InstantiateMsg,
-        QueryMsg,
     },
     utils::{pad_handle_result, pad_query_result},
 };

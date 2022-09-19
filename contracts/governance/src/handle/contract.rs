@@ -1,31 +1,18 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 pub fn try_add_contract(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
     contract: Contract,
-    assemblies: Option<Vec<Uint128>>,
+    assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_contract(deps.storage)?;
 
     if let Some(ref assemblies) = assemblies {
@@ -43,7 +30,7 @@ pub fn try_add_contract(
         contract,
         assemblies,
     }
-    .save(deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddContract {
@@ -54,24 +41,20 @@ pub fn try_add_contract(
 
 pub fn try_set_contract(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: Uint128,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     name: Option<String>,
     metadata: Option<String>,
     contract: Option<Contract>,
     disable_assemblies: bool,
-    assemblies: Option<Vec<Uint128>>,
+    assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::load(deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::load(deps.storage, id)?;
 
     if let Some(name) = name {
         allowed_contract.name = name;
@@ -99,7 +82,7 @@ pub fn try_set_contract(
         }
     }
 
-    allowed_contract.save(deps.storage, &id)?;
+    allowed_contract.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddContract {
@@ -110,20 +93,16 @@ pub fn try_set_contract(
 
 pub fn try_add_contract_assemblies(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: Uint128,
-    assemblies: Vec<Uint128>,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
+    assemblies: Vec<u16>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::data(deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::data(deps.storage, id)?;
 
     if let Some(mut old_assemblies) = allowed_contract.assemblies {
         let assembly_id = ID::assembly(deps.storage)?;
@@ -139,10 +118,10 @@ pub fn try_add_contract_assemblies(
         ));
     }
 
-    AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
+    AllowedContract::save_data(deps.storage, id, allowed_contract)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+        Response::new().set_data(to_binary(&HandleAnswer::AddContractAssemblies {
             status: ResponseStatus::Success,
         })?),
     )

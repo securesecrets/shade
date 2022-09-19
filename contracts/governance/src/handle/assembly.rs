@@ -1,3 +1,4 @@
+use crate::handle::authorize_assembly;
 use shade_protocol::{
     c_std::{
         from_binary,
@@ -29,28 +30,27 @@ pub fn try_assembly_vote(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    proposal: Uint128,
+    proposal: u32,
     vote: Vote,
 ) -> StdResult<Response> {
+    authorize_assembly(
+        deps.storage,
+        &info,
+        Proposal::assembly(deps.storage, proposal)?,
+    )?;
+
     let sender = info.sender;
 
     // Check if proposal in assembly voting
-    if let Status::AssemblyVote { end, .. } = Proposal::status(deps.storage, &proposal)? {
+    if let Status::AssemblyVote { end, .. } = Proposal::status(deps.storage, proposal)? {
         if end <= env.block.time.seconds() {
             return Err(StdError::generic_err("Voting time has been reached"));
         }
     } else {
         return Err(StdError::generic_err("Not in assembly vote phase"));
     }
-    // Check if user in assembly
-    if !Assembly::data(deps.storage, &Proposal::assembly(deps.storage, &proposal)?)?
-        .members
-        .contains(&sender)
-    {
-        return Err(StdError::generic_err("unauthorized"));
-    }
 
-    let mut tally = Proposal::assembly_votes(deps.storage, &proposal)?;
+    let mut tally = Proposal::assembly_votes(deps.storage, proposal)?;
 
     // Assembly votes can only be = 1 uint
     if vote.total_count()? != Uint128::new(1) {
@@ -58,12 +58,12 @@ pub fn try_assembly_vote(
     }
 
     // Check if user voted
-    if let Some(old_vote) = Proposal::assembly_vote(deps.storage, &proposal, &sender)? {
+    if let Some(old_vote) = Proposal::assembly_vote(deps.storage, proposal, &sender)? {
         tally = tally.checked_sub(&old_vote)?;
     }
 
-    Proposal::save_assembly_vote(deps.storage, &proposal, &sender, &vote)?;
-    Proposal::save_assembly_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    Proposal::save_assembly_vote(deps.storage, proposal, &sender, &vote)?;
+    Proposal::save_assembly_votes(deps.storage, proposal, &tally.checked_add(&vote)?)?;
 
     // Save data for user queries
     UserID::add_assembly_vote(deps.storage, sender.clone(), proposal.clone())?;
@@ -79,39 +79,29 @@ pub fn try_assembly_proposal(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    assembly_id: Uint128,
+    assembly_id: u16,
     title: String,
     metadata: String,
     msgs: Option<Vec<ProposalMsg>>,
 ) -> StdResult<Response> {
     // Get assembly
-    let assembly_data = Assembly::data(deps.storage, &assembly_id)?;
-
-    // Check if public; everyone is allowed
-    if assembly_data.profile != Uint128::zero() {
-        if !assembly_data.members.contains(&info.sender) {
-            return Err(StdError::generic_err("unauthorized"));
-        }
-    }
+    let assembly_data = authorize_assembly(deps.storage, &info, assembly_id)?;
 
     // Get profile
     // Check if assembly is enabled
-    let profile = Profile::data(deps.storage, &assembly_data.profile)?;
-    if !profile.enabled {
-        return Err(StdError::generic_err("Assembly is disabled"));
-    }
+    let profile = Profile::data(deps.storage, assembly_data.profile)?;
 
     let status: Status;
 
     // Check if assembly voting
-    if let Some(vote_settings) = Profile::assembly_voting(deps.storage, &assembly_data.profile)? {
+    if let Some(vote_settings) = Profile::assembly_voting(deps.storage, assembly_data.profile)? {
         status = Status::AssemblyVote {
             start: env.block.time.seconds(),
             end: env.block.time.seconds() + vote_settings.deadline,
         }
     }
     // Check if funding
-    else if let Some(fund_settings) = Profile::funding(deps.storage, &assembly_data.profile)? {
+    else if let Some(fund_settings) = Profile::funding(deps.storage, assembly_data.profile)? {
         status = Status::Funding {
             amount: Uint128::zero(),
             start: env.block.time.seconds(),
@@ -119,8 +109,7 @@ pub fn try_assembly_proposal(
         }
     }
     // Check if token voting
-    else if let Some(vote_settings) =
-        Profile::public_voting(deps.storage, &assembly_data.profile)?
+    else if let Some(vote_settings) = Profile::public_voting(deps.storage, assembly_data.profile)?
     {
         status = Status::Voting {
             start: env.block.time.seconds(),
@@ -140,13 +129,13 @@ pub fn try_assembly_proposal(
         let mut new_msgs = vec![];
         for msg in msgs.iter() {
             // Check if msg is allowed in assembly
-            let assembly_msg = AssemblyMsg::data(deps.storage, &msg.assembly_msg)?;
+            let assembly_msg = AssemblyMsg::data(deps.storage, msg.assembly_msg)?;
             if !assembly_msg.assemblies.contains(&assembly_id) {
                 return Err(StdError::generic_err("unauthorized"));
             }
 
             // Check if msg is allowed in contract
-            let contract = AllowedContract::data(deps.storage, &msg.target)?;
+            let contract = AllowedContract::data(deps.storage, msg.target)?;
             if let Some(assemblies) = contract.assemblies {
                 if !assemblies.contains(&msg.target) {
                     return Err(StdError::generic_err("unauthorized"));
@@ -193,17 +182,13 @@ pub fn try_assembly_proposal(
 
 pub fn try_add_assembly(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
     members: Vec<Addr>,
-    profile: Uint128,
+    profile: u16,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_assembly(deps.storage)?;
 
     // Check that profile exists
@@ -217,7 +202,7 @@ pub fn try_add_assembly(
         members,
         profile,
     }
-    .save(deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddAssembly {
@@ -228,19 +213,15 @@ pub fn try_add_assembly(
 
 pub fn try_set_assembly(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: Uint128,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     name: Option<String>,
     metadata: Option<String>,
     members: Option<Vec<Addr>>,
-    profile: Option<Uint128>,
+    profile: Option<u16>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
-    let mut assembly = match Assembly::may_load(deps.storage, &id)? {
+    let mut assembly = match Assembly::may_load(deps.storage, id)? {
         None => return Err(StdError::generic_err("Assembly not found")),
         Some(c) => c,
     };
@@ -265,7 +246,7 @@ pub fn try_set_assembly(
         assembly.profile = profile
     }
 
-    assembly.save(deps.storage, &id)?;
+    assembly.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetAssembly {

@@ -11,14 +11,15 @@ use crate::{
         validate_account_permit,
     },
 };
-use shade_protocol::c_std::{Deps, Uint128};
-use shade_protocol::c_std::{Addr, StdResult};
-use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::contract_interfaces::airdrop::{
-    account::{AccountKey, AccountPermit},
-    claim_info::RequiredTask,
-    errors::invalid_viewing_key,
-    QueryAnswer,
+use shade_protocol::{
+    airdrop::{
+        account::{AccountKey, AccountPermit},
+        claim_info::RequiredTask,
+        errors::invalid_viewing_key,
+        QueryAnswer,
+    },
+    c_std::{Addr, Deps, StdResult, Uint128},
+    query_authentication::viewing_keys::ViewingKey,
 };
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
@@ -27,10 +28,7 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn dates(
-    deps: Deps,
-    current_date: Option<u64>,
-) -> StdResult<QueryAnswer> {
+pub fn dates(deps: Deps, current_date: Option<u64>) -> StdResult<QueryAnswer> {
     let config = config_r(deps.storage).load()?;
     Ok(QueryAnswer::Dates {
         start: config.start_date,
@@ -40,9 +38,7 @@ pub fn dates(
     })
 }
 
-pub fn total_claimed(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_claimed(deps: Deps) -> StdResult<QueryAnswer> {
     let claimed: Uint128;
     let total_claimed = total_claimed_r(deps.storage).load()?;
     if decay_claimed_r(deps.storage).load()? {
@@ -68,8 +64,8 @@ fn account_information(
     let mut unclaimed_percentage = Uint128::zero();
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
-        let state = claim_status_r(deps.storage, index)
-            .may_load(account_address.to_string().as_bytes())?;
+        let state =
+            claim_status_r(deps.storage, index).may_load(account_address.to_string().as_bytes())?;
 
         match state {
             // Ignore if none

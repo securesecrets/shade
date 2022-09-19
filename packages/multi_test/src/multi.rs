@@ -57,7 +57,7 @@ pub mod stkd_scrt {
 pub mod governance {
     use governance;
 
-    multi_derive::implement_multi!(Governance, governance);
+    multi_derive::implement_multi_with_reply!(Governance, governance);
 }
 
 // #[cfg(feature = "snip20_staking")]

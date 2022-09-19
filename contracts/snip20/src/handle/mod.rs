@@ -218,7 +218,8 @@ pub fn try_set_viewing_key(
     info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
-    let _seed = RandSeed::load(deps.storage)?.0;
+    // TODO: review this
+    //let seed = RandSeed::load(deps.storage)?.0;
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 

@@ -4,7 +4,7 @@ use crate::{
     utils::{asset::Contract, ExecuteCallback, Query},
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin};
+use cosmwasm_std::Coin;
 
 #[cw_serde]
 pub struct Snip20Asset {

@@ -1,4 +1,4 @@
-use crate::tests::{get_proposals, init_chain};
+use crate::tests::{get_proposals, handle::proposal::init_funding_token, init_chain};
 use shade_multi_test::multi::{governance::Governance, snip20::Snip20};
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128},
@@ -12,6 +12,7 @@ use shade_protocol::{
         },
         snip20,
     },
+    governance::AssemblyInit,
     multi_test::{App, AppResponse},
     query_auth,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
@@ -23,12 +24,9 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
     let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let _snip20 = snip20::InstantiateMsg {
-        name: "token".to_string(),
-        admin: None,
-        symbol: "TKN".to_string(),
-        decimals: 6,
-        initial_balances: Some(vec![
+    let _snip20 = init_funding_token(
+        &mut chain,
+        Some(vec![
             snip20::InitialBalance {
                 address: "alpha".into(),
                 amount: Uint128::new(20_000_000),
@@ -42,20 +40,10 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
                 amount: Uint128::new(20_000_000),
             },
         ]),
-        prng_seed: to_binary("some seed").unwrap(),
-        config: None,
-        query_auth: None,
-    }
-    .test_init(
-        Snip20::default(),
-        &mut chain,
-        Addr::unchecked("admin"),
-        "token",
-        &[],
+        Some(&auth),
     )
     .unwrap();
 
-    let _stkd_tkn = "staked_token";
     // Fake init token so it has a valid codehash
     let stkd_tkn = snip20::InstantiateMsg {
         name: "token".to_string(),
@@ -105,43 +93,46 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
             address: auth.address.clone(),
             code_hash: auth.code_hash.clone(),
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: None,
-            funding: None,
-            token: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::LiteralCount {
-                    count: Uint128::new(10_000_000),
-                },
-                yes_threshold: Count::LiteralCount {
-                    count: Uint128::new(15_000_000),
-                },
-                veto_threshold: Count::LiteralCount {
-                    count: Uint128::new(15_000_000),
-                },
-            }),
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: None,
+                funding: None,
+                token: Some(VoteProfile {
+                    deadline: 10000,
+                    threshold: Count::LiteralCount {
+                        count: Uint128::new(10_000_000),
+                    },
+                    yes_threshold: Count::LiteralCount {
+                        count: Uint128::new(15_000_000),
+                    },
+                    veto_threshold: Count::LiteralCount {
+                        count: Uint128::new(15_000_000),
+                    },
+                }),
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
         funding_token: None,
         vote_token: Some(Contract {
             address: stkd_tkn.address.clone(),
             code_hash: stkd_tkn.code_hash.clone(),
         }),
+        migrator: None,
     }
     .test_init(
         Governance::default(),
@@ -153,7 +144,7 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
     .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text only proposal".to_string(),
         msgs: None,
@@ -186,13 +177,12 @@ pub fn vote(
 fn voting() {
     let (mut chain, gov, _, _auth) = init_voting_governance_with_proposal().unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
     assert_eq!(prop.proposer, Addr::unchecked("alpha"));
-    assert_eq!(prop.assembly, Uint128::new(1));
+    assert_eq!(prop.assembly, 1);
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -206,7 +196,7 @@ fn update_before_deadline() {
 
     assert!(
         governance::ExecuteMsg::Update {
-            proposal: Uint128::new(0),
+            proposal: 0,
             padding: None
         }
         .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
@@ -214,17 +204,17 @@ fn update_before_deadline() {
     );
 }
 
-//TODO
+// TODO
 /*#[test]
 fn update_after_deadline() {
-    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, _auth) = init_voting_governance_with_proposal().unwrap();
 
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     // TODO: will crash until i get staking back up
     assert!(
         governance::ExecuteMsg::Update {
-            proposal: Uint128::new(0),
+            proposal: 0,
             padding: None
         }
         .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
@@ -236,7 +226,6 @@ fn update_after_deadline() {
 fn invalid_vote() {
     let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
-    // TODO: should work
     assert!(
         vote(
             &gov,
@@ -250,7 +239,7 @@ fn invalid_vote() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -277,7 +266,7 @@ fn vote_after_deadline() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -302,15 +291,14 @@ fn vote_yes() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -345,15 +333,14 @@ fn vote_abstain() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::new(1_000_000)
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -388,15 +375,14 @@ fn vote_no() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -431,15 +417,14 @@ fn vote_veto() {
                     no_with_veto: Uint128::new(1_000_000),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -457,10 +442,10 @@ fn vote_veto() {
     )
 }
 
-//TODO
+// TODO
 /*#[test]
 fn vote_passed() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -475,7 +460,7 @@ fn vote_passed() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -494,7 +479,7 @@ fn vote_passed() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -504,14 +489,13 @@ fn vote_passed() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     // Check that history works
     match prop.status_history[0] {
@@ -527,7 +511,7 @@ fn vote_passed() {
 
 #[test]
 fn vote_abstained() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -542,7 +526,7 @@ fn vote_abstained() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::new(10_000_000)
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -561,7 +545,7 @@ fn vote_abstained() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::new(10_000_000)
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -571,14 +555,13 @@ fn vote_abstained() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Rejected { .. } => assert!(true),
@@ -588,7 +571,7 @@ fn vote_abstained() {
 
 #[test]
 fn vote_rejected() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -603,7 +586,7 @@ fn vote_rejected() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -622,7 +605,7 @@ fn vote_rejected() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -632,14 +615,13 @@ fn vote_rejected() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Rejected { .. } => assert!(true),
@@ -649,7 +631,7 @@ fn vote_rejected() {
 
 #[test]
 fn vote_vetoed() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -664,7 +646,7 @@ fn vote_vetoed() {
                     no_with_veto: Uint128::new(10_000_000),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -683,7 +665,7 @@ fn vote_vetoed() {
                     no_with_veto: Uint128::new(10_000_000),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -693,14 +675,13 @@ fn vote_vetoed() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Vetoed { .. } => assert!(true),
@@ -710,7 +691,7 @@ fn vote_vetoed() {
 
 #[test]
 fn vote_no_quorum() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -725,7 +706,7 @@ fn vote_no_quorum() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -744,7 +725,7 @@ fn vote_no_quorum() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -754,20 +735,19 @@ fn vote_no_quorum() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Expired { .. } => assert!(true),
         _ => assert!(false),
     };
-}*/
+}
 
 #[test]
 fn vote_total() {
@@ -786,7 +766,7 @@ fn vote_total() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -805,7 +785,7 @@ fn vote_total() {
                     no_with_veto: Uint128::new(10_000),
                     abstain: Uint128::zero()
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -824,15 +804,14 @@ fn vote_total() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::new(10_000),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -848,7 +827,7 @@ fn vote_total() {
             abstain: Uint128::new(10_000)
         })
     )
-}
+}*/
 
 #[test]
 fn update_vote() {
@@ -867,15 +846,14 @@ fn update_vote() {
                     no_with_veto: Uint128::new(22_000),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(
         prop.public_vote_tally,
@@ -900,15 +878,14 @@ fn update_vote() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
         .is_ok()
     );
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(
         prop.public_vote_tally,
@@ -921,10 +898,10 @@ fn update_vote() {
     );
 }
 
-//TODO
+// TODO
 /*#[test]
 fn vote_count() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -939,7 +916,7 @@ fn vote_count() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -959,7 +936,7 @@ fn vote_count() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -969,14 +946,13 @@ fn vote_count() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -986,7 +962,7 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         vote(
@@ -1001,7 +977,7 @@ fn vote_count_percentage() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -1021,7 +997,7 @@ fn vote_count_percentage() {
                     no_with_veto: Uint128::zero(),
                     abstain: Uint128::zero(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )
@@ -1031,14 +1007,13 @@ fn vote_count_percentage() {
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-        proposal: Uint128::zero(),
+        proposal: 0,
         padding: None,
     }
     .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
