@@ -1,10 +1,10 @@
 use crate::{
+    c_std::StdError,
     impl_into_u8,
     utils::errors::{build_string, CodeType, DetailedError},
 };
-use crate::c_std::StdError;
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 #[repr(u8)]

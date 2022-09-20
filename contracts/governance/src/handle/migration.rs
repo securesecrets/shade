@@ -1,8 +1,9 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg},
     governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
+        errors::Error,
         profile::Profile,
         stored_id::ID,
         Config,
@@ -83,7 +84,7 @@ pub fn try_migrate_data(
     match RuntimeState::load(deps.storage)? {
         // Fail if not migrating
         RuntimeState::Normal | RuntimeState::SpecificAssemblies { .. } => {
-            return Err(StdError::generic_err("No migration has started"));
+            return Err(Error::migration_not_started(vec![]));
         }
         RuntimeState::Migrated => {
             if let Some(target) = config.migrated_to {
@@ -161,7 +162,7 @@ pub fn try_migrate_data(
                         status: ResponseStatus::Success,
                     })?));
             } else {
-                return Err(StdError::generic_err("No migration target found"));
+                return Err(Error::migration_tartet(vec![]));
             }
         }
     };
@@ -179,7 +180,7 @@ pub fn try_receive_migration_data(
 
     if let Some(from) = config.migrated_from {
         if from.address != info.sender {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(Error::no_migrator(vec![]));
         }
 
         match data {
@@ -205,7 +206,7 @@ pub fn try_receive_migration_data(
             }
         }
     } else {
-        return Err(StdError::generic_err("No target found"));
+        return Err(Error::migration_tartet(vec![]));
     }
 
     Ok(res.set_data(to_binary(&HandleAnswer::ReceiveMigrationData {

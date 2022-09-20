@@ -1,10 +1,11 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,
         HandleAnswer,
     },
+    governance::errors::Error,
     utils::generic_response::ResponseStatus,
 };
 
@@ -32,7 +33,7 @@ pub fn try_set_profile(
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
     let mut profile = match Profile::may_load(deps.storage, id)? {
-        None => return Err(StdError::generic_err("Profile not found")),
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "Profile"])),
         Some(p) => p,
     };
 

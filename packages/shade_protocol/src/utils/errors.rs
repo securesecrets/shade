@@ -1,7 +1,60 @@
 use crate::c_std::StdError;
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Response, StdResult};
 use schemars::_serde_json::to_string;
 use serde::Serialize;
+
+// TODO: make another that auto imports
+
+/// Generates the errors
+/// Macro takes in an array of error name, error msg and error function
+#[macro_export]
+macro_rules! errors {
+    ($Target:tt; $($EnumError:ident, $VerboseError:tt, $Function:ident),+) => {
+        use crate::{
+            c_std::StdError,
+            generate_errors,
+            impl_into_u8,
+            utils::errors::{build_string, CodeType, DetailedError},
+        };
+        use cosmwasm_schema::cw_serde;
+
+        generate_errors!($Target; $($EnumError, $VerboseError, $Function),+);
+    }
+}
+
+#[macro_export]
+macro_rules! generate_errors {
+    ($Target:tt; $($EnumError:ident, $VerboseError:tt, $Function:ident),+) => {
+        #[cw_serde]
+        #[repr(u8)]
+        pub enum Error { $($EnumError,)+ }
+        impl_into_u8!(Error);
+
+        impl CodeType for Error {
+            fn to_verbose(&self, context: &Vec<&str>) -> String {
+                match self {
+                    $(
+                    Error::$EnumError => {
+                        build_string($VerboseError, context)
+                    }
+                    )+
+                }
+            }
+        }
+
+        const TARGET: &str = $Target ;
+
+        impl Error {
+            $(
+            pub fn $Function(args: Vec<&str>) -> StdError {
+                DetailedError::from_code(TARGET, Error::$EnumError, args).to_error()
+            }
+            )+
+        }
+
+    };
+}
 
 #[macro_export]
 macro_rules! impl_into_u8 {
@@ -24,6 +77,10 @@ pub struct DetailedError<T: CodeType> {
 }
 
 impl<T: CodeType + Serialize> DetailedError<T> {
+    pub fn to_full_error(&self) -> StdResult<Response> {
+        Err(self.to_error())
+    }
+
     pub fn to_error(&self) -> StdError {
         StdError::generic_err(self.to_string())
     }
@@ -62,7 +119,7 @@ pub trait CodeType: Into<u8> + Clone {
 #[cfg(test)]
 pub mod tests {
     use crate::{
-        c_std::StdError,
+        c_std::{Response, StdError, StdResult},
         utils::errors::{build_string, CodeType, DetailedError},
     };
 
@@ -214,5 +271,17 @@ pub mod tests {
             StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"target\":\"contract\",\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string()),
             _ => assert!(false)
         }
+    }
+
+    generate_errors!("test"; 
+        Test1, "Verb1", Test1Func,
+        Test2, "Ver2", Test2Func,
+        Test3, "Verb3", Test3Func);
+
+    #[test]
+    fn macro_errors() {
+        let test = Error::Test2;
+
+        let test1 = Error::Test1Func(vec![]);
     }
 }

@@ -35,7 +35,6 @@ use shade_protocol::{
         MessageInfo,
         Reply,
         Response,
-        StdError,
         StdResult,
         SubMsg,
     },
@@ -49,7 +48,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, QueryData, RuntimeState},
+    governance::{errors::Error, AuthQuery, QueryData, RuntimeState},
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
     utils::{
@@ -127,13 +126,13 @@ pub fn instantiate(
 
         if assemblies.public_profile.funding.is_some() {
             if msg.funding_token.is_none() {
-                return Err(StdError::generic_err("Funding token must be set"));
+                return Err(Error::missing_funding_token(vec![]));
             }
         }
 
         if assemblies.public_profile.token.is_some() {
             if msg.vote_token.is_none() {
-                return Err(StdError::generic_err("Voting token must be set"));
+                return Err(Error::missing_voting_token(vec![]));
             }
         }
 
@@ -151,13 +150,13 @@ pub fn instantiate(
 
         if assemblies.admin_profile.funding.is_some() {
             if msg.funding_token.is_none() {
-                return Err(StdError::generic_err("Funding token must be set"));
+                return Err(Error::missing_funding_token(vec![]));
             }
         }
 
         if assemblies.admin_profile.token.is_some() {
             if msg.vote_token.is_none() {
-                return Err(StdError::generic_err("Voting token must be set"));
+                return Err(Error::missing_voting_token(vec![]));
             }
         }
 
@@ -404,7 +403,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 // Query VK info
                 let authenticator = Config::load(deps.storage)?.query;
                 if !authenticate_vk(user.clone(), key, &deps.querier, &authenticator)? {
-                    return Err(StdError::generic_err("Unauthorized"));
+                    return Err(Error::bad_vk(vec![]));
                 }
 
                 auth_queries(deps, query, user)
@@ -417,7 +416,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     authenticate_permit(permit, &deps.querier, authenticator)?;
 
                 if res.revoked {
-                    return Err(StdError::generic_err("Unauthorized"));
+                    return Err(Error::bad_pkey(vec![]));
                 }
 
                 auth_queries(deps, query, res.sender)
@@ -452,20 +451,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 .events
                 .iter()
                 .find(|event| event.ty == "wasm")
-                .ok_or_else(|| StdError::generic_err("No wasm event found"))?;
+                .ok_or_else(|| Error::bad_event(vec![]))?;
             let address = deps.api.addr_validate(
                 &wasm
                     .attributes
                     .iter()
                     .find(|attribute| attribute.key == ADDRESS_ATTRIBUTE)
-                    .ok_or_else(|| StdError::generic_err("No address found for instantiation"))?
+                    .ok_or_else(|| Error::missing_migration_event(vec!["address"]))?
                     .value,
             )?;
             let code_hash = &wasm
                 .attributes
                 .iter()
                 .find(|attribute| attribute.key == CODE_HASH_ATTRIBUTE)
-                .ok_or_else(|| StdError::generic_err("No code-hash found for instantiation"))?
+                .ok_or_else(|| Error::missing_migration_event(vec!["code-hash"]))?
                 .value;
 
             let mut config = Config::load(deps.storage)?;
@@ -476,7 +475,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             config.save(deps.storage)?;
         }
         // TODO: on receiving a response, subtract 1 and update that proposals status to failed
-        _ => return Err(StdError::generic_err("Reply ID not recognized")),
+        _ => return Err(Error::wrong_reply(vec![&msg.id.to_string()])),
     }
 
     Ok(Response::new())
