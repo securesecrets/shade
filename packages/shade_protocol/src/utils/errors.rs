@@ -1,7 +1,10 @@
 use crate::c_std::StdError;
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Response, StdResult};
 use schemars::_serde_json::to_string;
 use serde::Serialize;
+
+// TODO: make another that auto imports
 
 /// Generates the errors
 /// Macro takes in an array of error name, error msg and error function
@@ -59,6 +62,10 @@ pub struct DetailedError<T: CodeType> {
 }
 
 impl<T: CodeType + Serialize> DetailedError<T> {
+    pub fn to_full_error(&self) -> StdResult<Response> {
+        Err(self.to_error())
+    }
+
     pub fn to_error(&self) -> StdError {
         StdError::generic_err(self.to_string())
     }
@@ -97,7 +104,7 @@ pub trait CodeType: Into<u8> + Clone {
 #[cfg(test)]
 pub mod tests {
     use crate::{
-        c_std::StdError,
+        c_std::{Response, StdError, StdResult},
         utils::errors::{build_string, CodeType, DetailedError},
     };
 

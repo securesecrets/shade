@@ -1,5 +1,6 @@
 pub mod assembly;
 pub mod contract;
+pub mod errors;
 pub mod profile;
 pub mod proposal;
 #[cfg(feature = "governance-impl")]

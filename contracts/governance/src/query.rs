@@ -9,7 +9,7 @@ use shade_protocol::{
         Config,
         QueryAnswer,
     },
-    governance::{stored_id::UserID, Pagination, ResponseWithID},
+    governance::{errors::Error, stored_id::UserID, Pagination, ResponseWithID},
     utils::storage::plus::ItemStorage,
 };
 use std::cmp::min;
@@ -31,7 +31,7 @@ pub fn proposals(deps: Deps, start: u32, end: u32) -> StdResult<QueryAnswer> {
     let total = ID::proposal(deps.storage)?;
 
     if start > total {
-        return Err(StdError::generic_err("Proposal not found"));
+        return Err(Error::item_not_found(vec![&start.to_string(), "Proposal"]));
     }
 
     for i in start..=min(end, total) {
@@ -52,7 +52,7 @@ pub fn profiles(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let total = ID::profile(deps.storage)?;
 
     if start > total {
-        return Err(StdError::generic_err("Profile not found"));
+        return Err(Error::item_not_found(vec![&start.to_string(), "Profile"]));
     }
 
     for i in start..=min(end, total) {
@@ -73,7 +73,7 @@ pub fn assemblies(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let total = ID::assembly(deps.storage)?;
 
     if start > total {
-        return Err(StdError::generic_err("Assembly not found"));
+        return Err(Error::item_not_found(vec![&start.to_string(), "Assembly"]));
     }
 
     for i in start..=min(end, total) {
@@ -94,7 +94,10 @@ pub fn assembly_msgs(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer>
     let total = ID::assembly_msg(deps.storage)?;
 
     if start > total {
-        return Err(StdError::generic_err("AssemblyMsg not found"));
+        return Err(Error::item_not_found(vec![
+            &start.to_string(),
+            "AssemblyMsg",
+        ]));
     }
 
     for i in start..=min(end, total) {
@@ -115,7 +118,7 @@ pub fn contracts(deps: Deps, start: u16, end: u16) -> StdResult<QueryAnswer> {
     let total = ID::contract(deps.storage)?;
 
     if start > total {
-        return Err(StdError::generic_err("Contract not found"));
+        return Err(Error::item_not_found(vec![&start.to_string(), "Contract"]));
     }
 
     for i in start..=min(end, total) {
