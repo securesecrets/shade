@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,

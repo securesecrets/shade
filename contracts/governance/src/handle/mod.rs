@@ -1,16 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        SubMsg,
-    },
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, SubMsg},
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     governance::{
         assembly::{Assembly, AssemblyData},

@@ -1,14 +1,14 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
         HandleAnswer,
         MSG_VARIABLE,
     },
+    governance::errors::Error,
     utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
-use shade_protocol::governance::errors::Error;
 
 pub fn try_add_assembly_msg(
     deps: DepsMut,
@@ -23,7 +23,10 @@ pub fn try_add_assembly_msg(
     // Check that assemblys exist
     for assembly in assemblies.iter() {
         if *assembly > ID::assembly(deps.storage)? {
-            return Err(Error::item_not_found(vec![&assembly.to_string(), "Assembly"]));
+            return Err(Error::item_not_found(vec![
+                &assembly.to_string(),
+                "Assembly",
+            ]));
         }
     }
 

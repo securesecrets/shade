@@ -1,8 +1,9 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg},
     governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
+        errors::Error,
         profile::Profile,
         stored_id::ID,
         Config,
@@ -23,7 +24,6 @@ use shade_protocol::{
     Contract,
 };
 use std::cmp::min;
-use shade_protocol::governance::errors::Error;
 
 pub fn try_migrate(
     deps: DepsMut,

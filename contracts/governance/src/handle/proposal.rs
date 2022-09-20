@@ -9,7 +9,6 @@ use shade_protocol::{
         Env,
         MessageInfo,
         Response,
-        StdError,
         StdResult,
         SubMsg,
         Uint128,

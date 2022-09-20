@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{Addr, Deps, StdError, StdResult},
+    c_std::{Addr, Deps, StdResult},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,

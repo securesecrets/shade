@@ -35,7 +35,6 @@ use shade_protocol::{
         MessageInfo,
         Reply,
         Response,
-        StdError,
         StdResult,
         SubMsg,
     },

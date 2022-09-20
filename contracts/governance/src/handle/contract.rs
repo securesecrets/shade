@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
     governance::errors::Error,
     utils::{asset::Contract, generic_response::ResponseStatus},

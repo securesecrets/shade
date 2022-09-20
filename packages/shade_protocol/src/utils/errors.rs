@@ -9,6 +9,21 @@ use serde::Serialize;
 /// Generates the errors
 /// Macro takes in an array of error name, error msg and error function
 #[macro_export]
+macro_rules! errors {
+    ($Target:tt; $($EnumError:ident, $VerboseError:tt, $Function:ident),+) => {
+        use crate::{
+            c_std::StdError,
+            generate_errors,
+            impl_into_u8,
+            utils::errors::{build_string, CodeType, DetailedError},
+        };
+        use cosmwasm_schema::cw_serde;
+
+        generate_errors!($Target; $($EnumError, $VerboseError, $Function),+);
+    }
+}
+
+#[macro_export]
 macro_rules! generate_errors {
     ($Target:tt; $($EnumError:ident, $VerboseError:tt, $Function:ident),+) => {
         #[cw_serde]
@@ -28,12 +43,12 @@ macro_rules! generate_errors {
             }
         }
 
-        const target: &str = $Target ;
+        const TARGET: &str = $Target ;
 
         impl Error {
             $(
             pub fn $Function(args: Vec<&str>) -> StdError {
-                DetailedError::from_code(target, Error::$EnumError, args).to_error()
+                DetailedError::from_code(TARGET, Error::$EnumError, args).to_error()
             }
             )+
         }

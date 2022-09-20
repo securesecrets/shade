@@ -1,12 +1,6 @@
-use crate::{
-    c_std::StdError,
-    generate_errors,
-    impl_into_u8,
-    utils::errors::{build_string, CodeType, DetailedError},
-};
-use cosmwasm_schema::cw_serde;
+use crate::errors;
 
-generate_errors!("governance";
+errors!("governance";
     MissingFundingToken, "Funding token must be set", missing_funding_token,
     MissingVotingToken, "Voting token must be set", missing_voting_token,
     UnauthorizedVK, "Viewing key is invalid", bad_vk,
