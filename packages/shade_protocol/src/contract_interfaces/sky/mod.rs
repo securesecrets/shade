@@ -1,6 +1,9 @@
 #[cfg(feature = "sky-utils")]
 pub mod cycles;
 
+#[cfg(feature = "sky_derivatives")]
+pub mod sky_derivatives;
+
 use crate::{
     contract_interfaces::{dao::adapter, sky::cycles::Cycle},
     utils::{

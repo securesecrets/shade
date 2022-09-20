@@ -1,23 +1,24 @@
 use crate::{
     contract_interfaces::{
-        dex::{dex::Dex, secretswap, shadeswap, sienna},
+        dex::{dex::Dex, dex::DexFees, secretswap, shadeswap, sienna},
         mint::mint,
         snip20::helpers::send_msg,
+        staking_derivative,
     },
-    utils::{asset::Contract, Query},
+    utils::{asset::Contract, ExecuteCallback, Query},
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary,
-    Api,
+    Coin,
     CosmosMsg,
+    Decimal,
     Deps,
     DepsMut,
-    Querier,
     StdError,
     StdResult,
-    Storage,
     Uint128,
+    Uint256,
 };
 
 #[cw_serde]
@@ -103,6 +104,56 @@ impl ArbPair {
                 }
             }
             Dex::Mint => Err(StdError::generic_err("Not available")),
+        }
+    }
+
+    pub fn return_amount(
+        &mut self,
+        deps: Deps,
+        offer: Offer,
+        fees: DexFees,
+    ) -> StdResult<Uint256> {
+        if self.token0_amount == None {
+            self.pool_amounts(deps)?;
+        }
+        match self.dex {
+            Dex::SecretSwap => Ok(Uint256::zero()),
+            Dex::SiennaSwap => {
+                let sienna_commision = offer.amount * fees.sienna_swap;
+                let offer_amount = Uint256::from(offer.amount.checked_sub(sienna_commision)?);
+                let mut offer_pool = Uint256::zero();
+                let mut ask_pool = Uint256::zero();
+                if offer.asset.address == self.token0.address {
+                    offer_pool = if let Some(amount) = self.token0_amount {
+                        Uint256::from(amount)
+                    } else {
+                        Uint256::zero()
+                    };
+                    ask_pool = if let Some(amount) = self.token1_amount {
+                        Uint256::from(amount)
+                    } else {
+                        Uint256::zero()
+                    };
+                } else {
+                    offer_pool = if let Some(amount) = self.token1_amount {
+                        Uint256::from(amount)
+                    } else {
+                        Uint256::zero()
+                    };
+                    ask_pool = if let Some(amount) = self.token0_amount {
+                        Uint256::from(amount)
+                    } else {
+                        Uint256::zero()
+                    };
+                }
+                let total_pool = offer_pool.checked_mul(ask_pool)?;
+                let return_amount = ask_pool
+                    .checked_sub(total_pool.checked_div(offer_pool.checked_add(offer_amount)?)?)?;
+
+                Ok(return_amount)
+            }
+            Dex::ShadeSwap => Ok(Uint256::zero()),
+            Dex::Mint => return Err(StdError::generic_err("Not available")),
         }
     }
 
@@ -266,6 +317,65 @@ impl ArbPair {
 }
 
 #[cw_serde]
+pub enum DerivativeType {
+    StkdScrt,
+}
+
+#[cw_serde]
+pub struct Derivative {
+    pub contract: Contract,
+    pub original_token: Contract,
+    pub staking_type: DerivativeType,
+}
+
+impl Derivative {
+    pub fn unbond_msg(&self, redeem_amount: Uint128) -> StdResult<CosmosMsg> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                staking_derivative::HandleMsg::Unbond {
+                    redeem_amount,
+                }.to_cosmos_msg(
+                    &self.contract.clone(),
+                    vec![],
+                )
+            }
+        }
+    }
+
+    pub fn stake_msg(&self, stake_amount: Uint128) -> StdResult<CosmosMsg> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                staking_derivative::HandleMsg::Stake{}.to_cosmos_msg(
+                    &self.contract.clone(),
+                    vec![Coin::new(stake_amount.u128(), "uscrt")],
+                )
+            }
+        }
+    }
+
+    pub fn query_mint_price(
+        &self, 
+        deps: Deps,
+    ) -> StdResult<Decimal> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                let response = staking_derivative::QueryMsg::StakingInfo {
+                    time: 1660000000,
+                }.query(
+                    &deps.querier,
+                    &self.contract.clone(),
+                )?;
+                match response {
+                    staking_derivative::QueryAnswer::StakingInfo { price, .. } => 
+                        Ok(Decimal::from_ratio(price, Uint128::from(1000000u128))),
+                    _ => Err(StdError::generic_err("Invalid query return for mint cost")),
+                }
+            },
+        }
+    }
+
+}
+#[cw_serde]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
     pub start_addr: Contract,
@@ -314,7 +424,7 @@ impl Cycle {
                 return Err(StdError::generic_err("cycle not complete"));
             }
         }
-        let initial_len = hash_vec.clone().len();
+        /*let initial_len = hash_vec.clone().len();
         // Sorting and dedup ing will remove any dublicates and tell us if there's 2 of the same
         // pair contract included in the cycle
         hash_vec.sort();
@@ -323,7 +433,7 @@ impl Cycle {
             return Err(StdError::generic_err(
                 "cycles should include one copy of each pair",
             ));
-        }
+        }*/
         Ok(true)
     }
 }

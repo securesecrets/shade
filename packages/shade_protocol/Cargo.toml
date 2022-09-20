@@ -80,6 +80,7 @@ snip20           = ["query_auth_impl", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]
 sky              = ["snip20", "dex", "dao"]
+sky_derivatives  = ["sky-utils"]
 dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
@@ -88,6 +89,8 @@ chrono = ["dep:chrono"]
 
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
+
+staking_derivative = []
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts

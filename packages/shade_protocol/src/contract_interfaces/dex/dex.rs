@@ -13,7 +13,7 @@ use crate::c_std::{self, Api, Deps, Querier, StdError, StdResult, Storage};
 
 use cosmwasm_schema::{cw_serde};
 
-use crate::c_std::{Uint128, Uint512};
+use crate::c_std::{Decimal, Uint128, Uint512};
 use std::convert::TryFrom;
 
 #[cw_serde]
@@ -29,6 +29,13 @@ pub struct TradingPair {
     pub dex: Dex,
     pub contract: Contract,
     pub asset: Snip20Asset,
+}
+
+#[cw_serde]
+pub struct DexFees {
+    pub secret_swap: Decimal,
+    pub sienna_swap: Decimal,
+    pub shade_swap: Decimal,
 }
 
 /* give_amount into give_pool
