@@ -1,6 +1,6 @@
 use shade_protocol::{
+    secret_storage_plus::{Item, Map},
     utility_router::RouterStatus,
-    utils::storage::plus::{Item, Map},
     Contract,
 };
 

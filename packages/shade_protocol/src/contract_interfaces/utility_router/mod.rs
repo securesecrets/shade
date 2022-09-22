@@ -1,18 +1,23 @@
 pub mod error;
 
+use crate::{
+    c_std::Binary,
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
+    },
+};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdResult};
 use serde::Serialize;
-use crate::c_std::Binary;
-use crate::utils::{InstantiateCallback, ExecuteCallback, Query};
-use crate::utils::generic_response::ResponseStatus;
-use crate::utils::storage::plus::{ItemStorage, Item};
-use crate::utils::asset::Contract;
 
 #[cw_serde]
-pub struct InstantiateMsg{
+pub struct InstantiateMsg {
     pub admin_auth: Contract,
-    pub multisig_address: String
+    pub multisig_address: String,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -39,8 +44,8 @@ pub enum ExecuteMsg {
     SetAddress {
         address_name: String,
         address: String,
-        padding: Option<String>
-    }
+        padding: Option<String>,
+    },
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -49,15 +54,9 @@ impl ExecuteCallback for ExecuteMsg {
 
 #[cw_serde]
 pub enum HandleAnswer {
-    SetStatus {
-        status: ResponseStatus
-    },
-    SetContract {
-        status: ResponseStatus
-    },
-    SetAddress {
-        status: ResponseStatus
-    }
+    SetStatus { status: ResponseStatus },
+    SetContract { status: ResponseStatus },
+    SetAddress { status: ResponseStatus },
 }
 
 #[cw_serde]
@@ -67,12 +66,8 @@ pub enum QueryMsg {
     //     utility_name: String,
     //     query: Binary
     // },
-    GetContract {
-        utility_name: String
-    },
-    GetAddress {
-        address_name: String
-    }
+    GetContract { utility_name: String },
+    GetAddress { address_name: String },
 }
 
 impl Query for QueryMsg {
@@ -82,7 +77,7 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryAnswer {
     Status {
-        contract_status: RouterStatus
+        contract_status: RouterStatus,
     },
     // ForwardQuery {
     //     status: ResponseStatus,
@@ -90,12 +85,12 @@ pub enum QueryAnswer {
     // },
     GetContract {
         status: ResponseStatus,
-        contract: Contract
+        contract: Contract,
     },
     GetAddress {
         status: ResponseStatus,
-        address: String
-    }
+        address: String,
+    },
 }
 
 #[derive(Clone)]
@@ -122,7 +117,7 @@ impl UtilityContracts {
 
 #[derive(Clone)]
 pub enum UtilityAddresses {
-    Multisig
+    Multisig,
 }
 
 // NOTE: SHADE_{ADDR_NAME}
