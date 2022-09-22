@@ -60,7 +60,15 @@ where
     id_storage: Map<'a, K, IterKey<N>>,
 }
 
-// const PREFIX: &str = "iter-map-size-namespace-";
+#[macro_export]
+macro_rules! new_iter_map {
+    ($StoragePath:tt) => {
+        IterMap::new_override(
+            $StoragePath,
+            concat!("iter-map-size-namespace-", $StoragePath),
+        )
+    };
+}
 
 impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
@@ -74,11 +82,6 @@ where
         + DeserializeOwned
         + Clone,
 {
-    // TODO: gotta figure this out
-    // pub const fn new(namespace: &'a str) -> Self {
-    //     Self::new_override(namespace, PREFIX.as_bytes() + namespace.as_bytes())
-    // }
-
     pub const fn new_override(namespace: &'a str, size_namespace: &'a str) -> Self {
         IterMap {
             storage: Map::new(namespace),
@@ -263,6 +266,8 @@ mod tests {
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
     impl CustomQuery for MyQuery {}
+
+    const MACRO_TEST: IterMap<(Addr), Uint64, u64> = new_iter_map!("MACRO_TEST");
 
     #[test]
     fn initialization() {
