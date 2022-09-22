@@ -1,7 +1,9 @@
 [package]
-name = "rewards_emission"
+name = "mock_adapter"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -23,6 +25,13 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std", features = ["staking"] }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["rewards_emission", "snip20", "dao"] }
-schemars = "0.7"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "adapter",
+  "storage_plus",
+  "dao",
+  "snip20",
+] }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+schemars = "0.8.9"

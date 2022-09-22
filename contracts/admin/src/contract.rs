@@ -8,14 +8,11 @@ use shade_protocol::{
         InstantiateMsg,
         PermissionsResponse,
         QueryMsg,
-        RegistryAction,
-        ValidateAdminPermissionResponse,
     },
     c_std::{
         shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Deps,
         DepsMut,
         Env,
@@ -42,7 +39,7 @@ use crate::{
 
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -62,7 +59,7 @@ pub fn instantiate(
     Ok(res)
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn execute(
     deps: DepsMut,
     _env: Env,
@@ -95,7 +92,7 @@ fn is_super(storage: &dyn Storage, address: &Addr) -> StdResult<()> {
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
     Ok(match msg {
         QueryMsg::GetConfig {} => to_binary(&ConfigResponse {

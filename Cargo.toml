@@ -15,11 +15,9 @@ members = [
   "contracts/snip20",
   "contracts/governance",
   # "contracts/bonds", //TODO: migrate to v1
-  # "contracts/mint", //TODO: delete or migrate
-  # "contracts/liability_mint", //TODO: delete or migrate
-  # "contracts/mint_router", //TODO: migrate to v1
+  # "contracts/liability_mint", //TODO: migrate
   # "contracts/oracle", //TODO: delete or migrate
-  # "contracts/sky", //TODO: migrate to v1
+  "contracts/sky", 
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
@@ -27,20 +25,20 @@ members = [
 
   # DAO
   # - Core
-  # "contracts/treasury", //TODO: migrate to v1
-  # "contracts/treasury_manager", //TODO: migrate to v1
+  # "contracts/dao/treasury", //TODO: migrate to v1
+  # "contracts/dao/treasury_manager", //TODO: migrate to v1
   # - Adapters
-  # "contracts/scrt_staking", //TODO: migrate to v1
-  # "contracts/rewards_emission", //TODO: migrate to v1
-  # "contracts/lp_shade_swap",
+  # "contracts/dao/scrt_staking", //TODO: migrate to v1
+  # "contracts/dao/rewards_emission", //TODO: migrate to v1
+  # "contracts/dao/lp_shade_swap",
 
   # "contracts/snip20_staking", //TODO: migrate to v1
   
   # Mock contracts
-  # "contracts/mock_band", //TODO: migrate to v1
-  # "contracts/mock_secretswap_pair", //TODO: migrate to v1
-  # "contracts/mock_sienna_pair", //TODO: migrate to v1
-  # "contracts/mock_adapter", //TODO: migrate to v1
+  # "contracts/mock/mock_band", //TODO: migrate to v1
+  # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
+  # "contracts/mock/mock_sienna_pair", //TODO: migrate to v1
+  # "contracts/mock/mock_adapter", //TODO: migrate to v1
 
   # Tools
   "tools/doc2book",

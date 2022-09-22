@@ -1,14 +1,10 @@
-use super::{
-    batch,
-    manager::{Allowance, AllowanceResponse},
-    ExecuteMsg, QueryAnswer, QueryMsg,
-};
+use super::{batch, manager::AllowanceResponse, ExecuteMsg, QueryAnswer, QueryMsg};
 use crate::{
     c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
     utils::{asset::Contract, ExecuteCallback, Query},
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, SubMsg};
+use cosmwasm_std::Coin;
 
 #[cw_serde]
 pub struct Snip20Asset {
@@ -67,13 +63,10 @@ pub fn deposit_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
-        contract,
-        vec![Coin {
-            denom: "uscrt".to_string(),
-            amount,
-        }],
-    )
+    ExecuteMsg::Deposit { padding }.to_cosmos_msg(contract, vec![Coin {
+        denom: "uscrt".to_string(),
+        amount,
+    }])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Mint

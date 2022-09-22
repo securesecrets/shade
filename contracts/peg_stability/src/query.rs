@@ -102,10 +102,10 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
         }
     }
     let balance = balance_query(
-        &config.snip20,
-        config.self_addr.clone().to_string(),
-        ViewingKey::load(deps.storage)?,
         &deps.querier,
+        config.self_addr.clone(),
+        ViewingKey::load(deps.storage)?,
+        &config.snip20,
     )?;
     if max_swap_amount > balance {
         max_swap_amount = balance;

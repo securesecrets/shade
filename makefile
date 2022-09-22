@@ -1,4 +1,3 @@
-contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
@@ -41,25 +40,25 @@ compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	(cd ${contracts_dir}/$@; ${build-release})
+	(${build-release} -p $@)
 	@$(MAKE) compress-$(@)
 
 $(PACKAGES):
 	(cd packages/$@; cargo build)
 
 snip20: setup
-	(cd ${contracts_dir}/snip20; ${build-release})
+	(cd contracts/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
 
 snip20_staking: setup
-	(cd ${contracts_dir}/snip20_staking; ${build-release})
+	(cd contracts/snip20_staking; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20_staking)
 
 test:
 	@$(MAKE) $(addprefix test-,$(CONTRACTS))
 
 test-%: %
-	(cd ${contracts_dir}/$*; cargo test)
+	(cargo test -p $*)
 
 setup: $(compiled_dir) $(checksum_dir)
 

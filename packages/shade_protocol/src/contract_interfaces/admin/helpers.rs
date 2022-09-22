@@ -3,7 +3,7 @@ use crate::{
     utils::Query,
     Contract,
 };
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+use cosmwasm_std::{QuerierWrapper, StdResult};
 
 pub fn validate_admin<T: Into<String> + Clone>(
     querier: &QuerierWrapper,
@@ -45,6 +45,7 @@ pub enum AdminPermissions {
     TreasuryAdmin,
     StabilityAdmin,
     UtilityRouterAdmin
+    SkyAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -58,6 +59,7 @@ impl AdminPermissions {
             AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
             AdminPermissions::StabilityAdmin => "SHADE_STABILITY_ADMIN",
             AdminPermissions::UtilityRouterAdmin => "SHADE_UTILITY_ROUTER_ADMIN"
+            AdminPermissions::SkyAdmin => "SHADE_SKY_ADMIN",
         }
         .to_string()
     }

@@ -1,13 +1,32 @@
-use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo, SubMsg};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::Contract;
-use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
-use shade_protocol::contract_interfaces::snip20::errors::transfer_disabled;
-use shade_protocol::contract_interfaces::snip20::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, ReceiverHash};
-use shade_protocol::contract_interfaces::snip20::transaction_history::store_transfer;
-use shade_protocol::utils::ExecuteCallback;
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
-use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Binary,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Storage,
+        SubMsg,
+        Uint128,
+    },
+    contract_interfaces::snip20::{
+        batch,
+        errors::transfer_disabled,
+        manager::{Allowance, Balance, CoinInfo, Config, ReceiverHash},
+        transaction_history::store_transfer,
+        HandleAnswer,
+        ReceiverHandleMsg,
+    },
+    utils::{
+        generic_response::ResponseStatus::Success,
+        storage::plus::{ItemStorage, MapStorage},
+        ExecuteCallback,
+    },
+    Contract,
+};
 
 pub fn try_transfer_impl(
     storage: &mut dyn Storage,
@@ -17,11 +36,10 @@ pub fn try_transfer_impl(
     amount: Uint128,
     memo: Option<String>,
     denom: String,
-    block: &shade_protocol::c_std::BlockInfo
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
-
     if !Config::transfer_enabled(storage)? {
-        return Err(transfer_disabled())
+        return Err(transfer_disabled());
     }
 
     let some_owner = match owner {
@@ -35,14 +53,7 @@ pub fn try_transfer_impl(
     Balance::transfer(storage, amount, some_owner, recipient)?;
 
     store_transfer(
-        storage,
-        some_owner,
-        sender,
-        recipient,
-        amount,
-        denom,
-        memo,
-        block,
+        storage, some_owner, sender, recipient, amount, denom, memo, block,
     )?;
     Ok(())
 }
@@ -53,10 +64,19 @@ pub fn try_transfer(
     info: MessageInfo,
     recipient: Addr,
     amount: Uint128,
-    memo: Option<String>
+    memo: Option<String>,
 ) -> StdResult<Response> {
     let denom = CoinInfo::load(deps.storage)?.symbol;
-    try_transfer_impl(deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
+    try_transfer_impl(
+        deps.storage,
+        &info.sender,
+        None,
+        &recipient,
+        amount,
+        memo,
+        denom,
+        &env.block,
+    )?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Transfer { status: Success })?))
 }
@@ -71,7 +91,16 @@ pub fn try_batch_transfer(
     let block = env.block;
     let denom = CoinInfo::load(deps.storage)?.symbol;
     for action in actions {
-        try_transfer_impl(deps.storage, &sender, None, &deps.api.addr_validate(action.recipient.as_str())?, action.amount, action.memo, denom.clone(), &block)?;
+        try_transfer_impl(
+            deps.storage,
+            &sender,
+            None,
+            &deps.api.addr_validate(action.recipient.as_str())?,
+            action.amount,
+            action.memo,
+            denom.clone(),
+            &block,
+        )?;
     }
     Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransfer { status: Success })?))
 }
@@ -90,17 +119,20 @@ fn try_add_receiver_api_callback(
 ) -> StdResult<()> {
     let receiver_hash = match recipient_code_hash {
         None => ReceiverHash::may_load(storage, recipient.clone())?,
-        Some(hash) => Some(ReceiverHash(hash))
+        Some(hash) => Some(ReceiverHash(hash)),
     };
 
     if let Some(hash) = receiver_hash {
-        messages.push(
-            SubMsg::new(ReceiverHandleMsg::new(sender.to_string(), from.to_string(), amount, memo, msg)
-                .to_cosmos_msg(&Contract{
-                    address: recipient,
-                    code_hash: hash.0
-                }, vec![])?)
-        );
+        messages.push(SubMsg::new(
+            ReceiverHandleMsg::new(sender.to_string(), from.to_string(), amount, memo, msg)
+                .to_cosmos_msg(
+                    &Contract {
+                        address: recipient,
+                        code_hash: hash.0,
+                    },
+                    vec![],
+                )?,
+        ));
     }
     Ok(())
 }
@@ -116,10 +148,18 @@ pub fn try_send_impl(
     memo: Option<String>,
     msg: Option<Binary>,
     denom: String,
-    block: &shade_protocol::c_std::BlockInfo
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
-
-    try_transfer_impl(storage, &sender, owner, &recipient, amount, memo.clone(), denom, block)?;
+    try_transfer_impl(
+        storage,
+        &sender,
+        owner,
+        &recipient,
+        amount,
+        memo.clone(),
+        denom,
+        block,
+    )?;
     try_add_receiver_api_callback(
         storage,
         messages,
@@ -143,7 +183,7 @@ pub fn try_send(
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
-    msg: Option<Binary>
+    msg: Option<Binary>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
     let denom = CoinInfo::load(deps.storage)?.symbol;
@@ -159,21 +199,19 @@ pub fn try_send(
         memo,
         msg,
         denom,
-        &env.block
+        &env.block,
     )?;
 
-    Ok(
-        Response::new()
-            .set_data(to_binary(&HandleAnswer::Send { status: Success })?)
-            .add_submessages(messages)
-    )
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::Send { status: Success })?)
+        .add_submessages(messages))
 }
 
 pub fn try_batch_send(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    actions: Vec<batch::SendAction>
+    actions: Vec<batch::SendAction>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = info.sender;
@@ -191,7 +229,7 @@ pub fn try_batch_send(
             action.memo,
             action.msg,
             denom.clone(),
-            &env.block
+            &env.block,
         )?;
     }
 

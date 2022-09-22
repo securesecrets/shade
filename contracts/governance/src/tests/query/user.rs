@@ -6,15 +6,15 @@ use crate::tests::{
     },
     init_chain,
 };
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_multi_test::multi::governance::Governance;
 use shade_protocol::{
     c_std::{to_binary, Addr, StdResult, Uint128},
     contract_interfaces::{
         governance::{self, profile::Profile, vote::Vote, AuthQuery, Pagination, QueryAnswer},
         query_auth,
         snip20,
-        staking::snip20_staking,
     },
+    governance::AssemblyInit,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
@@ -35,25 +35,28 @@ fn proposals() {
             address: auth.address,
             code_hash: auth.code_hash,
         },
-        admin_members: vec![Addr::unchecked("admin".to_string())],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![Addr::unchecked("admin".to_string())],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
         funding_token: None,
         vote_token: None,
+        migrator: None,
     };
 
     let gov = msg
@@ -67,7 +70,7 @@ fn proposals() {
         .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -77,26 +80,28 @@ fn proposals() {
     .unwrap();
 
     let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("admin"),
-            key: "password".to_string(),
-            query: AuthQuery::Proposals {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("admin"),
+        key: "password".to_string(),
+        query: AuthQuery::Proposals {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain).unwrap();
+        },
+    }
+    .test_query(&gov, &chain)
+    .unwrap();
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(props.len(), 1);
         }
         _ => assert!(false),
     }
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -106,34 +111,37 @@ fn proposals() {
     .unwrap();
 
     let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("admin"),
-            key: "password".to_string(),
-            query: AuthQuery::Proposals {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("admin"),
+        key: "password".to_string(),
+        query: AuthQuery::Proposals {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain).unwrap();
+        },
+    }
+    .test_query(&gov, &chain)
+    .unwrap();
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::new(1));
+            assert_eq!(total, 1);
             assert_eq!(props.len(), 2);
         }
         _ => assert!(false),
     }
 
     let query: StdResult<governance::QueryAnswer> = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("admin"),
-            key: "not_password".to_string(),
-            query: AuthQuery::Proposals {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("admin"),
+        key: "not_password".to_string(),
+        query: AuthQuery::Proposals {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain);
+        },
+    }
+    .test_query(&gov, &chain);
     assert!(query.is_err())
 }
 
@@ -142,7 +150,7 @@ fn assembly_votes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-        proposal: Uint128::new(0),
+        proposal: 0,
         vote: Vote {
             yes: Uint128::new(1),
             no: Uint128::zero(),
@@ -155,19 +163,21 @@ fn assembly_votes() {
     .unwrap();
 
     let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("alpha"),
-            key: "password".to_string(),
-            query: AuthQuery::AssemblyVotes {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("alpha"),
+        key: "password".to_string(),
+        query: AuthQuery::AssemblyVotes {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain).unwrap();
+        },
+    }
+    .test_query(&gov, &chain)
+    .unwrap();
 
     match query {
         QueryAnswer::UserAssemblyVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),
@@ -182,7 +192,7 @@ fn funding() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(100),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -190,19 +200,21 @@ fn funding() {
     .unwrap();
 
     let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("alpha"),
-            key: "password".to_string(),
-            query: AuthQuery::Funding {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("alpha"),
+        key: "password".to_string(),
+        query: AuthQuery::Funding {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain).unwrap();
+        },
+    }
+    .test_query(&gov, &chain)
+    .unwrap();
 
     match query {
         QueryAnswer::UserFunding { funds, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(funds.len(), 1);
         }
         _ => assert!(false),
@@ -213,30 +225,42 @@ fn funding() {
 fn votes() {
     let (mut chain, gov, stkd_tkn, _) = init_voting_governance_with_proposal().unwrap();
 
-    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
-        vote: Vote {
-            yes: Uint128::new(1_000_000),
-            no: Default::default(),
-            no_with_veto: Default::default(),
-            abstain: Default::default(),
-        },
-        proposal: Uint128::zero()
-    }, Uint128::new(20_000_000)).is_ok());
+    assert!(
+        vote(
+            &gov,
+            &mut chain,
+            stkd_tkn.as_str(),
+            "alpha",
+            governance::vote::ReceiveBalanceMsg {
+                vote: Vote {
+                    yes: Uint128::new(1_000_000),
+                    no: Default::default(),
+                    no_with_veto: Default::default(),
+                    abstain: Default::default(),
+                },
+                proposal: 0
+            },
+            Uint128::new(20_000_000)
+        )
+        .is_ok()
+    );
 
     let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
-            user: Addr::unchecked("alpha"),
-            key: "password".to_string(),
-            query: AuthQuery::Votes {
-                pagination: Pagination {
-                    page: 0,
-                    amount: 10,
-                },
+        user: Addr::unchecked("alpha"),
+        key: "password".to_string(),
+        query: AuthQuery::Votes {
+            pagination: Pagination {
+                page: 0,
+                amount: 10,
             },
-        }.test_query(&gov, &chain).unwrap();
+        },
+    }
+    .test_query(&gov, &chain)
+    .unwrap();
 
     match query {
         QueryAnswer::UserVotes { votes, total } => {
-            assert_eq!(total, Uint128::zero());
+            assert_eq!(total, 0);
             assert_eq!(votes.len(), 1);
         }
         _ => assert!(false),

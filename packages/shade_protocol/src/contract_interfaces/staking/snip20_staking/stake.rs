@@ -1,13 +1,11 @@
-use crate::utils::{
-    asset::Contract,
-    storage::default::SingletonStorage,
+use crate::{
+    c_std::{Addr, Uint128},
+    utils::{asset::Contract, storage::default::SingletonStorage},
 };
-use crate::c_std::Uint128;
-use crate::c_std::Addr;
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 use serde::Serialize;
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::cmp::Ordering;
 
 // Configuration file for staking
 #[cw_serde]
@@ -23,7 +21,8 @@ impl SingletonStorage for StakeConfig {
 }
 
 // Unbonding information for the total accross users
-#[cw_serde]#[derive(Eq)]
+#[cw_serde]
+#[derive(Eq)]
 pub struct DailyUnbonding {
     pub unbonding: Uint128,
     pub funded: Uint128,
@@ -143,12 +142,14 @@ pub trait VecQueueMerge {
 
 #[cfg(test)]
 mod tests {
-    use crate::contract_interfaces::staking::snip20_staking::stake::{
-        DailyUnbonding,
-        QueueItem,
-        VecQueue,
+    use crate::{
+        c_std::Uint128,
+        contract_interfaces::staking::snip20_staking::stake::{
+            DailyUnbonding,
+            QueueItem,
+            VecQueue,
+        },
     };
-    use crate::c_std::Uint128;
 
     #[test]
     fn is_funded() {
