@@ -1,4 +1,5 @@
 use shade_protocol::{
+    c_std::Addr,
     secret_storage_plus::{Item, Map},
     utility_router::RouterStatus,
     Contract,
@@ -8,7 +9,7 @@ use shade_protocol::{
 pub const CONTRACTS: Map<String, Contract> = Map::new("contracts");
 
 /// Maps address names to address
-pub const ADDRESSES: Map<String, String> = Map::new("addresses");
+pub const ADDRESSES: Map<String, Addr> = Map::new("addresses");
 
 /// Status of the contract, either Running or UnderMaintenance
 pub const STATUS: Item<RouterStatus> = Item::new("is_active");
