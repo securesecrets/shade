@@ -23,4 +23,4 @@ shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["utility_router", "multi-test", "admin"] }
 
 [dev-dependencies]
-shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = ["utility_router", "query_auth", "admin" ] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = ["utility_router", "query_auth", "admin", "snip20" ] }

@@ -34,7 +34,6 @@ pub enum ExecuteMsg {
     SetContract {
         utility_contract_name: String,
         contract: Contract,
-        query: Option<Binary>,
         padding: Option<String>,
     },
     SetAddress {
@@ -64,10 +63,10 @@ pub enum HandleAnswer {
 #[cw_serde]
 pub enum QueryMsg {
     Status {},
-    ForwardQuery {
-        utility_name: String,
-        query: Binary
-    },
+    // ForwardQuery {
+    //     utility_name: String,
+    //     query: Binary
+    // },
     GetContract {
         utility_name: String
     },
@@ -85,10 +84,10 @@ pub enum QueryAnswer {
     Status {
         contract_status: RouterStatus
     },
-    ForwardQuery {
-        status: ResponseStatus,
-        result: Binary
-    },
+    // ForwardQuery {
+    //     status: ResponseStatus,
+    //     result: Binary
+    // },
     GetContract {
         status: ResponseStatus,
         contract: Contract
@@ -107,7 +106,7 @@ pub enum UtilityContracts {
     OracleRouter,
 }
 
-// NOTE: SHADE_{CONTRACT_NAME}_{POTENTIAL_VERSION}
+// NOTE: SHADE_{CONTRACT_NAME}_{VERSION}
 
 impl UtilityContracts {
     pub fn into_string(self) -> String {

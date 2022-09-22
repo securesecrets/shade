@@ -9,9 +9,9 @@ use cosmwasm_schema::{cw_serde};
 pub enum Error {
     NotUtilityAdmin,
     NoContractFound,
-    NoVerificationQueryGiven,
     CriticalAdminError,
-    NoAddressFound
+    NoAddressFound,
+    UnderMaintenance
 }
 
 impl_into_u8!(Error);
@@ -25,14 +25,14 @@ impl CodeType for Error {
             Error::NoContractFound => {
                 build_string("No contract found at name {}", context)
             }
-            Error::NoVerificationQueryGiven => {
-                build_string("No verification query given, cannot set contract", context)
-            }
             Error::CriticalAdminError => {
                 build_string("Admin contract cannot be found, so no users can be trusted. Contract must be redeployed with admin.", context)
             }
             Error::NoAddressFound => {
                 build_string("No address found at name {}", context)
+            }
+            Error::UnderMaintenance => {
+                build_string("Cannot query for information, as router is under maintenance", context)
             }
         }
     }
@@ -48,14 +48,14 @@ pub fn no_contract_found(name: String) -> StdError {
     DetailedError::from_code(UTIL_ROUTER_TARGET, Error::NoContractFound, vec![name.as_str()]).to_error()
 }
 
-pub fn no_verfication_query_given() -> StdError {
-    DetailedError::from_code(UTIL_ROUTER_TARGET, Error::NoVerificationQueryGiven, vec![]).to_error()
-}
-
 pub fn critical_admin_error() -> StdError {
     DetailedError::from_code(UTIL_ROUTER_TARGET, Error::CriticalAdminError, vec![]).to_error()
 }
 
 pub fn no_address_found(name: String) -> StdError {
     DetailedError::from_code(UTIL_ROUTER_TARGET, Error::NoAddressFound, vec![name.as_str()]).to_error()
+}
+
+pub fn under_maintenance() -> StdError {
+    DetailedError::from_code(UTIL_ROUTER_TARGET, Error::UnderMaintenance, vec![]).to_error()
 }

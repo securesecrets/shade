@@ -1,7 +1,8 @@
-use shade_protocol::Contract;
-use shade_protocol::utility_router::RouterStatus;
-use shade_protocol::utils::storage::plus::{Map, Item};
-
+use shade_protocol::{
+    utility_router::RouterStatus,
+    utils::storage::plus::{Item, Map},
+    Contract,
+};
 
 /// Maps contract name to contract address
 pub const CONTRACTS: Map<String, Contract> = Map::new("contracts");
