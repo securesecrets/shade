@@ -17,7 +17,6 @@ use serde::Serialize;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin_auth: Contract,
-    //pub multisig_address: String,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -51,10 +50,6 @@ pub enum HandleAnswer {
 #[cw_serde]
 pub enum QueryMsg {
     Status {},
-    // ForwardQuery {
-    //     utility_name: String,
-    //     query: Binary
-    // },
     GetContract { key: String },
     GetAddress { key: String },
 }
@@ -68,10 +63,6 @@ pub enum QueryAnswer {
     Status {
         contract_status: RouterStatus,
     },
-    // ForwardQuery {
-    //     status: ResponseStatus,
-    //     result: Binary
-    // },
     GetContract {
         status: ResponseStatus,
         contract: Contract,

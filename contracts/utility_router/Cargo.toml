@@ -1,7 +1,10 @@
 [package]
 name = "utility_router"
 version = "0.1.0"
-authors = ["Kyle Wahlberg <kyle.s.wahlberg@gmail.com>"]
+authors = [
+  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>",
+  "Jackson Swenson <jacksonswenson@securesecrets.com>"
+]
 edition = "2018"
 
 exclude = [
@@ -19,7 +22,6 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "utility_router",
   "multi-test",

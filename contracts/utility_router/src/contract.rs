@@ -33,13 +33,6 @@ pub fn instantiate(
         UtilityContract::AdminAuth.into_string(),
         &msg.admin_auth,
     )?;
-    /*
-    ADDRESSES.save(
-        deps.storage,
-        UtilityAddresses::Multisig.into_string(),
-        &msg.multisig_address,
-    )?;
-    */
     STATUS.save(deps.storage, &RouterStatus::Running)?;
     Ok(Response::new())
 }
@@ -83,10 +76,9 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let status = STATUS.load(deps.storage)?;
     match status {
-        // Do nothing
+        // Continue
         RouterStatus::Running => {}
         // No information queries
-        // This state would likely lock the entire protocol
         RouterStatus::UnderMaintenance => {
             if let QueryMsg::Status { .. } = msg {
             } else {
@@ -98,7 +90,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::Status {} => get_status(deps)?,
-            // QueryMsg::ForwardQuery { utility_name, query } => forward_query(deps, utility_name, query)?,
             QueryMsg::GetContract { key } => get_contract(deps, key)?,
             QueryMsg::GetAddress { key } => get_address(deps, key)?,
         }),

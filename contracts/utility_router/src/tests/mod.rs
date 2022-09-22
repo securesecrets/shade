@@ -18,22 +18,10 @@ use shade_protocol::{
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo, ContractInfo)> {
+pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo)> {
     let mut chain = App::default();
 
     let admin = admin::InstantiateMsg {
-        super_admin: Some("admin".into()),
-    }
-    .test_init(
-        Admin::default(),
-        &mut chain,
-        Addr::unchecked("admin"),
-        "admin_auth",
-        &[],
-    )
-    .unwrap();
-
-    let other_admin = admin::InstantiateMsg {
         super_admin: Some("admin".into()),
     }
     .test_init(
@@ -50,7 +38,6 @@ pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo, ContractIn
             address: admin.address.clone(),
             code_hash: admin.code_hash.clone(),
         },
-        multisig_address: "multisig_address_literal".to_string(),
     }
     .test_init(
         UtilityRouter::default(),
@@ -61,7 +48,7 @@ pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo, ContractIn
     )
     .unwrap();
 
-    Ok((chain, router, admin, other_admin))
+    Ok((chain, router, admin))
 }
 
 pub fn init_query_auth(chain: &mut App, admin: &ContractInfo) -> StdResult<ContractInfo> {
@@ -109,7 +96,7 @@ pub fn init_snip20(chain: &mut App) -> StdResult<ContractInfo> {
 
 pub fn get_contract(chain: &App, router: &ContractInfo, name: String) -> StdResult<Contract> {
     let query: utility_router::QueryAnswer =
-        utility_router::QueryMsg::GetContract { utility_name: name }.test_query(router, chain)?;
+        utility_router::QueryMsg::GetContract { key: name }.test_query(router, chain)?;
 
     match query {
         utility_router::QueryAnswer::GetContract { status, contract } => Ok(contract),
@@ -122,10 +109,10 @@ pub fn get_contract(chain: &App, router: &ContractInfo, name: String) -> StdResu
 
 pub fn get_address(chain: &App, router: &ContractInfo, name: String) -> StdResult<String> {
     let query: utility_router::QueryAnswer =
-        utility_router::QueryMsg::GetAddress { address_name: name }.test_query(router, chain)?;
+        utility_router::QueryMsg::GetAddress { key: name }.test_query(router, chain)?;
 
     match query {
-        utility_router::QueryAnswer::GetAddress { status, address } => Ok(address),
+        utility_router::QueryAnswer::GetAddress { status, address } => Ok(address.to_string()),
         _ => Err(StdError::GenericErr {
             msg: "get_address error".to_string(),
         }),
