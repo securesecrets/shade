@@ -3,7 +3,7 @@ pub mod error;
 use crate::{
     c_std::Binary,
     utils::{
-        asset::Contract,
+        asset::{Contract, RawContract},
         generic_response::ResponseStatus,
         ExecuteCallback,
         InstantiateCallback,
@@ -17,7 +17,7 @@ use serde::Serialize;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin_auth: Contract,
-    pub multisig_address: String,
+    //pub multisig_address: String,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -32,20 +32,9 @@ pub enum RouterStatus {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    ToggleStatus {
-        status: RouterStatus,
-        padding: Option<String>,
-    },
-    SetContract {
-        utility_contract_name: String,
-        contract: Contract,
-        padding: Option<String>,
-    },
-    SetAddress {
-        address_name: String,
-        address: String,
-        padding: Option<String>,
-    },
+    SetStatus { status: RouterStatus },
+    SetContract { key: String, contract: RawContract },
+    SetAddress { key: String, address: String },
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -66,8 +55,8 @@ pub enum QueryMsg {
     //     utility_name: String,
     //     query: Binary
     // },
-    GetContract { utility_name: String },
-    GetAddress { address_name: String },
+    GetContract { key: String },
+    GetAddress { key: String },
 }
 
 impl Query for QueryMsg {
@@ -89,27 +78,25 @@ pub enum QueryAnswer {
     },
     GetAddress {
         status: ResponseStatus,
-        address: String,
+        address: Addr,
     },
 }
 
 #[derive(Clone)]
-pub enum UtilityContracts {
+pub enum UtilityContract {
     AdminAuth,
     QueryAuth,
     Treasury,
     OracleRouter,
 }
 
-// NOTE: SHADE_{CONTRACT_NAME}_{VERSION}
-
-impl UtilityContracts {
+impl UtilityContract {
     pub fn into_string(self) -> String {
         match self {
-            UtilityContracts::AdminAuth => "SHADE_ADMIN_AUTH",
-            UtilityContracts::OracleRouter => "SHADE_ORACLE_ROUTER",
-            UtilityContracts::QueryAuth => "SHADE_QUERY_AUTH",
-            UtilityContracts::Treasury => "SHADE_TREASURY",
+            UtilityContract::AdminAuth => "ADMIN_AUTH",
+            UtilityContract::OracleRouter => "ORACLE_ROUTER",
+            UtilityContract::QueryAuth => "QUERY_AUTH",
+            UtilityContract::Treasury => "TREASURY",
         }
         .to_string()
     }
@@ -120,12 +107,10 @@ pub enum UtilityAddresses {
     Multisig,
 }
 
-// NOTE: SHADE_{ADDR_NAME}
-
 impl UtilityAddresses {
     pub fn into_string(self) -> String {
         match self {
-            UtilityAddresses::Multisig => "SHADE_MULTISIG",
+            UtilityAddresses::Multisig => "MULTISIG",
         }
         .to_string()
     }
