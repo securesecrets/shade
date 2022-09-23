@@ -30,7 +30,7 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     CONTRACTS.save(
         deps.storage,
-        UtilityContract::AdminAuth.into_string(),
+        UtilityContract::AdminAuth.to_string(),
         &msg.admin_auth,
     )?;
     STATUS.save(deps.storage, &RouterStatus::Running)?;
@@ -45,7 +45,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     if let Some(admin_contract) =
-        CONTRACTS.may_load(deps.storage, UtilityContract::AdminAuth.into_string())?
+        CONTRACTS.may_load(deps.storage, UtilityContract::AdminAuth.to_string())?
     {
         validate_admin(
             &deps.querier,
@@ -91,7 +91,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         to_binary(&match msg {
             QueryMsg::Status {} => get_status(deps)?,
             QueryMsg::GetContract { key } => get_contract(deps, key)?,
+            QueryMsg::GetContracts { keys } => get_contracts(deps, keys)?,
             QueryMsg::GetAddress { key } => get_address(deps, key)?,
+            QueryMsg::GetAddresses { keys } => get_addresses(deps, keys)?,
         }),
         RESPONSE_BLOCK_SIZE,
     )

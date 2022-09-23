@@ -13,6 +13,7 @@ use crate::{
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdResult};
 use serde::Serialize;
+use std::fmt;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -51,7 +52,9 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Status {},
     GetContract { key: String },
+    GetContracts { keys: Vec<String> },
     GetAddress { key: String },
+    GetAddresses { keys: Vec<String> },
 }
 
 impl Query for QueryMsg {
@@ -60,17 +63,11 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryAnswer {
-    Status {
-        contract_status: RouterStatus,
-    },
-    GetContract {
-        status: ResponseStatus,
-        contract: Contract,
-    },
-    GetAddress {
-        status: ResponseStatus,
-        address: Addr,
-    },
+    Status { contract_status: RouterStatus },
+    GetContract { contract: Contract },
+    GetContracts { contracts: Vec<Contract> },
+    GetAddress { address: Addr },
+    GetAddresses { addresses: Vec<Addr> },
 }
 
 #[derive(Clone)]
@@ -81,15 +78,19 @@ pub enum UtilityContract {
     OracleRouter,
 }
 
-impl UtilityContract {
-    pub fn into_string(self) -> String {
-        match self {
-            UtilityContract::AdminAuth => "ADMIN_AUTH",
-            UtilityContract::OracleRouter => "ORACLE_ROUTER",
-            UtilityContract::QueryAuth => "QUERY_AUTH",
-            UtilityContract::Treasury => "TREASURY",
-        }
-        .to_string()
+impl fmt::Display for UtilityContract {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                UtilityContract::AdminAuth => "ADMIN_AUTH",
+                UtilityContract::OracleRouter => "ORACLE_ROUTER",
+                UtilityContract::QueryAuth => "QUERY_AUTH",
+                UtilityContract::Treasury => "TREASURY",
+            }
+            .to_string()
+        )
     }
 }
 
