@@ -3,16 +3,16 @@ pub mod claim_info;
 pub mod errors;
 
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::airdrop::{
         account::{AccountPermit, AddressProofPermit},
         claim_info::RequiredTask,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::{Uint128, Binary, Addr};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
