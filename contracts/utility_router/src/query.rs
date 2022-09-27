@@ -60,7 +60,13 @@ pub fn get_addresses(deps: Deps, keys: Vec<String>) -> StdResult<QueryAnswer> {
 
 pub fn get_keys(deps: Deps, start: usize, limit: usize) -> StdResult<QueryAnswer> {
     let keys = KEYS.load(deps.storage)?;
-    Ok(QueryAnswer::GetKeys {
-        keys: keys[start..start + limit].to_vec(),
-    })
+    if start + limit > keys.len() {
+        Ok(QueryAnswer::GetKeys {
+            keys: keys[start..].to_vec(),
+        })
+    } else {
+        Ok(QueryAnswer::GetKeys {
+            keys: keys[start..start + limit].to_vec(),
+        })
+    }
 }

@@ -1,5 +1,4 @@
-pub mod execute;
-pub mod query;
+pub mod integration;
 
 use shade_multi_test::multi::{
     admin::Admin,
@@ -9,16 +8,17 @@ use shade_multi_test::multi::{
 };
 use shade_protocol::{
     admin::{self, helpers::AdminPermissions},
-    c_std::{Addr, Binary, ContractInfo, Response, StdError, StdResult},
+    c_std::{Addr, Binary, ContractInfo, Response, StdResult},
     contract_interfaces::utility_router::*,
     multi_test::{App, AppResponse, Executor, Router},
     query_auth,
     snip20,
     utility_router,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    AnyResult,
 };
 
-pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo)> {
+pub fn init_contract() -> AnyResult<(App, ContractInfo, ContractInfo)> {
     let mut chain = App::default();
 
     let admin = admin::InstantiateMsg {
@@ -51,7 +51,7 @@ pub fn init_contract() -> StdResult<(App, ContractInfo, ContractInfo)> {
     Ok((chain, router, admin))
 }
 
-pub fn init_query_auth(chain: &mut App, admin: &ContractInfo) -> StdResult<ContractInfo> {
+pub fn init_query_auth(chain: &mut App, admin: &ContractInfo) -> AnyResult<ContractInfo> {
     let query_auth = query_auth::InstantiateMsg {
         admin_auth: Contract {
             address: admin.address.clone(),
@@ -71,7 +71,7 @@ pub fn init_query_auth(chain: &mut App, admin: &ContractInfo) -> StdResult<Contr
     Ok(query_auth)
 }
 
-pub fn init_snip20(chain: &mut App) -> StdResult<ContractInfo> {
+pub fn init_snip20(chain: &mut App) -> AnyResult<ContractInfo> {
     let snip20 = snip20::InstantiateMsg {
         name: "Issued".into(),
         admin: Some("admin".to_string()),
@@ -94,66 +94,128 @@ pub fn init_snip20(chain: &mut App) -> StdResult<ContractInfo> {
     Ok(snip20)
 }
 
-pub fn get_contract(chain: &App, router: &ContractInfo, name: String) -> StdResult<Contract> {
-    let query: utility_router::QueryAnswer =
-        utility_router::QueryMsg::GetContract { key: name }.test_query(router, chain)?;
-
-    match query {
-        utility_router::QueryAnswer::GetContract { status, contract } => Ok(contract),
-        // Err(e) => Err(e),
-        _ => Err(StdError::GenericErr {
-            msg: "get_contract error".to_string(),
-        }),
+pub fn get_contract(chain: &App, router: &ContractInfo, key: UtilityKey) -> AnyResult<Contract> {
+    match (utility_router::QueryMsg::GetContract {
+        key: key.to_string(),
+    }
+    .test_query(router, chain))
+    {
+        Ok(resp) => match resp {
+            utility_router::QueryAnswer::GetContract { contract } => Ok(contract),
+            _ => panic!("get_contract error"),
+        },
+        Err(e) => Err(e.into()),
     }
 }
 
-pub fn get_address(chain: &App, router: &ContractInfo, name: String) -> StdResult<String> {
-    let query: utility_router::QueryAnswer =
-        utility_router::QueryMsg::GetAddress { key: name }.test_query(router, chain)?;
-
-    match query {
-        utility_router::QueryAnswer::GetAddress { status, address } => Ok(address.to_string()),
-        _ => Err(StdError::GenericErr {
-            msg: "get_address error".to_string(),
-        }),
+pub fn get_contracts(
+    chain: &App,
+    router: &ContractInfo,
+    keys: Vec<UtilityKey>,
+) -> AnyResult<Vec<Contract>> {
+    match (utility_router::QueryMsg::GetContracts {
+        keys: keys.iter().map(|k| k.to_string()).collect(),
+    }
+    .test_query(router, chain))
+    {
+        Ok(resp) => match resp {
+            utility_router::QueryAnswer::GetContracts { contracts } => Ok(contracts),
+            _ => panic!("get_contract error"),
+        },
+        Err(e) => Err(e.into()),
     }
 }
 
-// pub fn forward_query(chain: &App, router: &ContractInfo, name: String, query: Binary ) -> StdResult<Binary> {
-//     let query: utility_router::QueryAnswer =
-//     utility_router::QueryMsg::ForwardQuery { utility_name: name, query  }.test_query(router, chain)?;
+pub fn get_address(chain: &App, router: &ContractInfo, key: UtilityKey) -> AnyResult<Addr> {
+    match (utility_router::QueryMsg::GetAddress {
+        key: key.to_string(),
+    }
+    .test_query(router, chain))
+    {
+        Ok(resp) => match resp {
+            utility_router::QueryAnswer::GetAddress { address } => Ok(address),
+            _ => panic!("get_address error"),
+        },
+        Err(e) => Err(e.into()),
+    }
+}
 
-//     match query {
-//         utility_router::QueryAnswer::ForwardQuery { status, result  } => {
-//             Ok(result)
-//         },
-//         // Err(e) => Err(e),
-//         _ => Err(StdError::GenericErr { msg: "forward_query error".to_string()  })
-//     }
-// }
+pub fn get_addresses(
+    chain: &App,
+    router: &ContractInfo,
+    keys: Vec<UtilityKey>,
+) -> AnyResult<Vec<Addr>> {
+    match (utility_router::QueryMsg::GetAddresses {
+        keys: keys.iter().map(|k| k.to_string()).collect(),
+    }
+    .test_query(router, chain))
+    {
+        Ok(resp) => match resp {
+            utility_router::QueryAnswer::GetAddresses { addresses } => Ok(addresses),
+            _ => panic!("get_address error"),
+        },
+        Err(e) => Err(e.into()),
+    }
+}
 
-pub fn get_status(chain: &App, router: &ContractInfo) -> StdResult<RouterStatus> {
-    let query: utility_router::QueryAnswer =
-        utility_router::QueryMsg::Status {}.test_query(router, chain)?;
+pub fn get_keys(
+    chain: &App,
+    router: &ContractInfo,
+    start: usize,
+    limit: usize,
+) -> AnyResult<Vec<String>> {
+    match (utility_router::QueryMsg::GetKeys { start, limit }.test_query(router, chain)) {
+        Ok(resp) => match resp {
+            utility_router::QueryAnswer::GetKeys { keys } => Ok(keys),
+            _ => panic!("get_address error"),
+        },
+        Err(e) => Err(e.into()),
+    }
+}
 
-    match query {
+pub fn get_status(chain: &App, router: &ContractInfo) -> AnyResult<RouterStatus> {
+    match (utility_router::QueryMsg::Status {}
+        .test_query(router, chain)
+        .unwrap())
+    {
         utility_router::QueryAnswer::Status { contract_status } => Ok(contract_status),
-        // Err(e) => Err(e),
-        _ => Err(StdError::GenericErr {
-            msg: "get_status error".to_string(),
-        }),
+        _ => panic!("get_status error"),
     }
 }
 
-// pub fn set_contract(chain: &App, router: &ContractInfo, name: String, contract: Contract, sender: String, query: Option<Binary>) -> StdResult<AppResponse> {
-//     // let execute: utility_router::HandleAnswer =
-//     let response: Result<AppResponse, Error> = utility_router::ExecuteMsg::SetContract { utility_contract_name: name, contract, query, padding: None }
-//     .test_exec(router, &mut chain, Addr::unchecked(sender), &[]);
-//     Ok(response)
-// }
+pub fn set_contract(
+    chain: &mut App,
+    router: &ContractInfo,
+    key: UtilityKey,
+    contract: Contract,
+    sender: Addr,
+) -> AnyResult<AppResponse> {
+    utility_router::ExecuteMsg::SetContract {
+        key: key.to_string(),
+        contract: contract.into(),
+    }
+    .test_exec(router, chain, sender, &[])
+}
 
-// pub fn toggle_status(chain: &App, router: &ContractInfo, status: RouterStatus, sender: String) -> StdResult<AppResponse> {
-//     let response: Result<AppResponse, Error> = utility_router::ExecuteMsg::ToggleStatus { status, padding: None }
-//     .test_exec(router, &mut chain, Addr::unchecked(sender), &[]);
-//     Ok(response)
-// }
+pub fn set_address(
+    chain: &mut App,
+    router: &ContractInfo,
+    key: UtilityKey,
+    address: Addr,
+    sender: Addr,
+) -> AnyResult<AppResponse> {
+    utility_router::ExecuteMsg::SetAddress {
+        key: key.to_string(),
+        address: address.to_string(),
+    }
+    .test_exec(router, chain, sender, &[])
+}
+
+pub fn set_status(
+    chain: &mut App,
+    router: &ContractInfo,
+    status: RouterStatus,
+    sender: Addr,
+) -> AnyResult<AppResponse> {
+    utility_router::ExecuteMsg::SetStatus { status }.test_exec(router, chain, sender, &[])
+}
