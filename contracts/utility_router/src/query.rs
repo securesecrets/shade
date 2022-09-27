@@ -33,12 +33,12 @@ pub fn get_contracts(deps: Deps, keys: Vec<String>) -> StdResult<QueryAnswer> {
 }
 
 pub fn get_address(deps: Deps, key: String) -> StdResult<QueryAnswer> {
-    if let Some(address) = ADDRESSES.may_load(deps.storage, key.clone())? {
-        Ok(QueryAnswer::GetAddress { address })
-    } else if let Some(contract) = CONTRACTS.may_load(deps.storage, key.clone())? {
+    if let Some(contract) = CONTRACTS.may_load(deps.storage, key.clone())? {
         Ok(QueryAnswer::GetAddress {
             address: contract.address,
         })
+    } else if let Some(address) = ADDRESSES.may_load(deps.storage, key.clone())? {
+        Ok(QueryAnswer::GetAddress { address })
     } else {
         Err(no_address_found(key))
     }
@@ -47,10 +47,10 @@ pub fn get_address(deps: Deps, key: String) -> StdResult<QueryAnswer> {
 pub fn get_addresses(deps: Deps, keys: Vec<String>) -> StdResult<QueryAnswer> {
     let mut addresses = vec![];
     for key in keys {
-        if let Some(address) = ADDRESSES.may_load(deps.storage, key.clone())? {
-            addresses.push(address);
-        } else if let Some(contract) = CONTRACTS.may_load(deps.storage, key.clone())? {
+        if let Some(contract) = CONTRACTS.may_load(deps.storage, key.clone())? {
             addresses.push(contract.address);
+        } else if let Some(address) = ADDRESSES.may_load(deps.storage, key.clone())? {
+            addresses.push(address);
         } else {
             return Err(no_address_found(key));
         }
