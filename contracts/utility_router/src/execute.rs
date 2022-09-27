@@ -10,7 +10,7 @@ use crate::storage::{ADDRESSES, CONTRACTS, KEYS, STATUS};
 
 pub fn set_status(deps: DepsMut, status: RouterStatus) -> StdResult<Response> {
     STATUS.save(deps.storage, &status)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetStatus { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetStatus { status: Success })?))
 }
 
 pub fn set_contract(
@@ -26,7 +26,7 @@ pub fn set_contract(
     }
 
     CONTRACTS.save(deps.storage, key, &contract)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetContract { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetContract { status: Success })?))
 }
 
 pub fn set_address(deps: DepsMut, key: String, address: Addr) -> StdResult<Response> {
@@ -41,5 +41,5 @@ pub fn set_address(deps: DepsMut, key: String, address: Addr) -> StdResult<Respo
     }
 
     ADDRESSES.save(deps.storage, key, &address)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAddress { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetAddress { status: Success })?))
 }

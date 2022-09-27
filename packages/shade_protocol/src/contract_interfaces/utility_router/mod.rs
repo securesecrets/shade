@@ -1,7 +1,8 @@
 pub mod error;
+pub mod helpers;
 
 use crate::{
-    c_std::Binary,
+    c_std::{Binary, CosmosMsg, QuerierWrapper, StdError},
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
@@ -13,7 +14,7 @@ use crate::{
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdResult};
 use serde::Serialize;
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -42,7 +43,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     SetStatus { status: ResponseStatus },
     SetContract { status: ResponseStatus },
     SetAddress { status: ResponseStatus },
@@ -88,12 +89,27 @@ impl fmt::Display for UtilityKey {
             "{}",
             match self {
                 UtilityKey::AdminAuth => "ADMIN_AUTH",
+                UtilityKey::Multisig => "MULTISIG",
                 UtilityKey::OracleRouter => "ORACLE_ROUTER",
                 UtilityKey::QueryAuth => "QUERY_AUTH",
                 UtilityKey::Treasury => "TREASURY",
-                UtilityKey::Multisig => "MULTISIG",
             }
             .to_string()
         )
+    }
+}
+
+impl FromStr for UtilityKey {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ADMIN_AUTH" => Ok(UtilityKey::AdminAuth),
+            "MULTISIG" => Ok(UtilityKey::Multisig),
+            "ORACLE_ROUTER" => Ok(UtilityKey::OracleRouter),
+            "QUERY_AUTH" => Ok(UtilityKey::QueryAuth),
+            "TREASURY" => Ok(UtilityKey::Treasury),
+            _ => Err(()),
+        }
     }
 }
