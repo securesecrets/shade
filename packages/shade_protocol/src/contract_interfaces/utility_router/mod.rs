@@ -55,6 +55,7 @@ pub enum QueryMsg {
     GetContracts { keys: Vec<String> },
     GetAddress { key: String },
     GetAddresses { keys: Vec<String> },
+    GetKeys { start: usize, limit: usize },
 }
 
 impl Query for QueryMsg {
@@ -68,42 +69,31 @@ pub enum QueryAnswer {
     GetContracts { contracts: Vec<Contract> },
     GetAddress { address: Addr },
     GetAddresses { addresses: Vec<Addr> },
+    GetKeys { keys: Vec<String> },
 }
 
-#[derive(Clone)]
-pub enum UtilityContract {
+#[cw_serde]
+pub enum UtilityKey {
+    Multisig,
     AdminAuth,
     QueryAuth,
     Treasury,
     OracleRouter,
 }
 
-impl fmt::Display for UtilityContract {
+impl fmt::Display for UtilityKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                UtilityContract::AdminAuth => "ADMIN_AUTH",
-                UtilityContract::OracleRouter => "ORACLE_ROUTER",
-                UtilityContract::QueryAuth => "QUERY_AUTH",
-                UtilityContract::Treasury => "TREASURY",
+                UtilityKey::AdminAuth => "ADMIN_AUTH",
+                UtilityKey::OracleRouter => "ORACLE_ROUTER",
+                UtilityKey::QueryAuth => "QUERY_AUTH",
+                UtilityKey::Treasury => "TREASURY",
+                UtilityKey::Multisig => "MULTISIG",
             }
             .to_string()
         )
-    }
-}
-
-#[derive(Clone)]
-pub enum UtilityAddresses {
-    Multisig,
-}
-
-impl UtilityAddresses {
-    pub fn into_string(self) -> String {
-        match self {
-            UtilityAddresses::Multisig => "MULTISIG",
-        }
-        .to_string()
     }
 }

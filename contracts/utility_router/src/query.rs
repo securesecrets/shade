@@ -1,10 +1,9 @@
 use shade_protocol::{
     c_std::{Deps, StdResult},
     contract_interfaces::utility_router::{error::*, *},
-    utils::generic_response::ResponseStatus::Success,
 };
 
-use crate::state::{ADDRESSES, CONTRACTS, STATUS};
+use crate::storage::{ADDRESSES, CONTRACTS, KEYS, STATUS};
 
 pub fn get_status(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Status {
@@ -44,6 +43,7 @@ pub fn get_address(deps: Deps, key: String) -> StdResult<QueryAnswer> {
         Err(no_address_found(key))
     }
 }
+
 pub fn get_addresses(deps: Deps, keys: Vec<String>) -> StdResult<QueryAnswer> {
     let mut addresses = vec![];
     for key in keys {
@@ -56,4 +56,11 @@ pub fn get_addresses(deps: Deps, keys: Vec<String>) -> StdResult<QueryAnswer> {
         }
     }
     Ok(QueryAnswer::GetAddresses { addresses })
+}
+
+pub fn get_keys(deps: Deps, start: usize, limit: usize) -> StdResult<QueryAnswer> {
+    let keys = KEYS.load(deps.storage)?;
+    Ok(QueryAnswer::GetKeys {
+        keys: keys[start..start + limit].to_vec(),
+    })
 }

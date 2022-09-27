@@ -1,4 +1,4 @@
-use crate::{execute::*, query::*, state::*};
+use crate::{execute::*, query::*, storage::*};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
@@ -30,9 +30,10 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     CONTRACTS.save(
         deps.storage,
-        UtilityContract::AdminAuth.to_string(),
+        UtilityKey::AdminAuth.to_string(),
         &msg.admin_auth,
     )?;
+    KEYS.save(deps.storage, &Vec::new())?;
     STATUS.save(deps.storage, &RouterStatus::Running)?;
     Ok(Response::new())
 }
@@ -45,7 +46,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     if let Some(admin_contract) =
-        CONTRACTS.may_load(deps.storage, UtilityContract::AdminAuth.to_string())?
+        CONTRACTS.may_load(deps.storage, UtilityKey::AdminAuth.to_string())?
     {
         validate_admin(
             &deps.querier,
@@ -94,6 +95,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryMsg::GetContracts { keys } => get_contracts(deps, keys)?,
             QueryMsg::GetAddress { key } => get_address(deps, key)?,
             QueryMsg::GetAddresses { keys } => get_addresses(deps, keys)?,
+            QueryMsg::GetKeys { start, limit } => get_keys(deps, start, limit)?,
         }),
         RESPONSE_BLOCK_SIZE,
     )
