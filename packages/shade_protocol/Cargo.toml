@@ -9,6 +9,15 @@ authors = [
 ]
 edition = "2018"
 
+[[bin]]
+name = "schemas"
+path = "src/schemas.rs"
+# Must have all of the contract_interfaces
+required-features = [
+  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
+  "peg_stability", "query_auth", "sky", "snip20", "staking"
+]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

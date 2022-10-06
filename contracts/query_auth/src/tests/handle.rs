@@ -238,10 +238,10 @@ fn create_vk() {
     .data
     .unwrap();
 
-    let msg: query_auth::HandleAnswer = from_binary(&data).unwrap();
+    let msg: query_auth::ExecuteAnswer = from_binary(&data).unwrap();
 
     let key = match msg {
-        query_auth::HandleAnswer::CreateViewingKey { key, .. } => key,
+        query_auth::ExecuteAnswer::CreateViewingKey { key, .. } => key,
         _ => {
             assert!(false);
             "doesnt_work".to_string()

@@ -298,7 +298,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     SetConfig { status: ResponseStatus },
     SetRuntimeState { status: ResponseStatus },
     Proposal { status: ResponseStatus },

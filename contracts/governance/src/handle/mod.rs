@@ -1,6 +1,6 @@
 use shade_protocol::{
     c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, SubMsg},
-    contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    contract_interfaces::governance::{Config, ExecuteAnswer, RuntimeState},
     governance::{
         assembly::{Assembly, AssemblyData},
         errors::Error,
@@ -110,7 +110,7 @@ pub fn try_set_config(
 
     config.save(deps.storage)?;
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::SetConfig {
+        .set_data(to_binary(&ExecuteAnswer::SetConfig {
             status: ResponseStatus::Success,
         })?)
         .add_submessages(messages))
@@ -128,7 +128,7 @@ pub fn try_set_runtime_state(
 
     state.save(deps.storage)?;
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
         })?),
     )
