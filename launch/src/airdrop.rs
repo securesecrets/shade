@@ -1,17 +1,24 @@
-use cosmwasm_c_std::Uint128;
-use cosmwasm_std::{Binary, Addr};
-use network_integration::utils::{
-    generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
+mod utils;
+
+use crate::utils::{
+    generate_label,
+    print_contract,
+    print_header,
+    store_struct,
+    AIRDROP_FILE,
+    GAS,
+    STORE_GAS,
 };
-use rs_merkle::algorithms::Sha256;
-use rs_merkle::{Hasher, MerkleTree};
-use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{handle, init};
+use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
+use secretcli::{
+    cli_types::NetContract,
+    secretcli::{handle, init},
+};
 use serde::{Deserialize, Serialize};
-use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
-    contract_interfaces::airdrop,
-    contract_interfaces::snip20
+    c_std::{Addr, Binary, Uint128},
+    contract_interfaces::{airdrop, snip20},
+    utils::asset::Contract,
 };
 use std::{env, fs};
 
@@ -34,6 +41,7 @@ struct Args {
     // Other stuff
     fund_airdrop: bool,
     shade: Contract,
+    generate_proofs: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,6 +58,39 @@ struct Tree {
 
 const QUERY_ROUNDING: Uint128 = Uint128::new(1_000_000_000_000_u128);
 const DEFAULT_CLAIM: Uint128 = Uint128::new(20u128);
+
+pub fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<Binary> {
+    let mut current_indices: Vec<usize> = indices.clone();
+    let mut helper_nodes: Vec<Binary> = Vec::new();
+
+    for layer in tree {
+        let mut siblings: Vec<usize> = Vec::new();
+        let mut parents: Vec<usize> = Vec::new();
+
+        for index in current_indices.iter() {
+            if index % 2 == 0 {
+                siblings.push(index + 1);
+                parents.push(index / 2);
+            } else {
+                siblings.push(index - 1);
+                parents.push((index - 1) / 2);
+            }
+        }
+
+        for sibling in siblings {
+            if !current_indices.contains(&sibling) {
+                if let Some(item) = layer.get(sibling) {
+                    helper_nodes.push(Binary(item.to_vec()));
+                }
+            }
+        }
+
+        parents.dedup();
+        current_indices = parents.clone();
+    }
+
+    helper_nodes
+}
 
 fn main() -> serde_json::Result<()> {
     let bin_args: Vec<String> = env::args().collect();
@@ -103,7 +144,7 @@ fn main() -> serde_json::Result<()> {
     let airdrop_init_msg = airdrop::InstantiateMsg {
         admin: args.admin,
         dump_address: match args.dump_address {
-            Some(addr) => Some(Addr(addr)),
+            Some(addr) => Some(Addr::unchecked(addr)),
             None => None,
         },
         airdrop_token: args.shade.clone(),
@@ -142,7 +183,7 @@ fn main() -> serde_json::Result<()> {
         };
         handle(
             &snip20::ExecuteMsg::Send {
-                recipient: Addr(airdrop.address),
+                recipient: airdrop.address,
                 recipient_code_hash: None,
                 amount: airdrop_amount,
                 msg: None,
@@ -157,6 +198,17 @@ fn main() -> serde_json::Result<()> {
             &mut vec![],
             None,
         )?;
+    }
+
+    if let Some(process) = args.generate_proofs {
+        for i in 0..rewards.len() {
+            let proofs = proof_from_tree(&vec![i], &merkle_tree.layers());
+            let mut built = "".to_string();
+            for proof in proofs {
+                built = built + &(proof.to_string() + ", ");
+            }
+            println!("{}: [{}]", rewards[i].address, built);
+        }
     }
 
     Ok(())

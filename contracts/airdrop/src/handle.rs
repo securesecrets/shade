@@ -320,7 +320,7 @@ pub fn try_account(
             .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
         messages.push(send_msg(
-            info.sender.to_string(),
+            info.sender.clone(),
             redeem_amount.into(),
             None,
             None,
@@ -436,7 +436,7 @@ pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Resp
             addresses: account.addresses,
         })?)
         .add_message(send_msg(
-            sender.to_string(),
+            sender.clone(),
             redeem_amount.into(),
             None,
             None,
@@ -463,7 +463,7 @@ pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResul
                 let total_claimed = total_claimed_r(deps.storage).load()?;
                 let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
                 let messages = vec![send_msg(
-                    dump_address.to_string(),
+                    dump_address.clone(),
                     send_total.into(),
                     None,
                     None,
@@ -484,11 +484,11 @@ pub fn finished_tasks(storage: &dyn Storage, account: String) -> StdResult<Vec<R
     let mut finished_tasks = vec![];
     let config = config_r(storage).load()?;
 
-    for (index, task) in config.task_claim.iter().enumerate() {
+    for (index, _task) in config.task_claim.iter().enumerate() {
         match claim_status_r(storage, index).may_load(account.as_bytes())? {
             None => {}
             Some(_) => {
-                finished_tasks.push(task.clone());
+                finished_tasks.push(config.task_claim[index].clone());
             }
         }
     }
