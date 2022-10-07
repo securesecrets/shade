@@ -1,11 +1,11 @@
 use crate::{
+    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
     contract_interfaces::dao::adapter,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Reward {
@@ -58,7 +58,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,

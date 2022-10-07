@@ -1,12 +1,11 @@
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::snip20::helpers::Snip20Asset,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Addr};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
@@ -60,7 +59,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
