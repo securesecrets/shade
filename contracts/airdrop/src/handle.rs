@@ -57,7 +57,7 @@ use shade_protocol::{
             unexpected_error,
         },
         Config,
-        HandleAnswer,
+        ExecuteAnswer,
     },
     query_authentication::viewing_keys::ViewingKey,
     snip20::helpers::send_msg,
@@ -173,7 +173,7 @@ pub fn try_update_config(
 
         Ok(state)
     })?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig { status: Success })?))
 }
 
 pub fn try_add_tasks(
@@ -205,7 +205,7 @@ pub fn try_add_tasks(
         Ok(config)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddTask { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddTask { status: Success })?))
 }
 
 pub fn try_account(
@@ -332,7 +332,7 @@ pub fn try_account(
     // Save account
     account_w(deps.storage).save(sender.as_bytes(), &account)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Account {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Account {
         status: ResponseStatus::Success,
         total: account.total_claimable,
         claimed: account_total_claimed_r(deps.storage).load(sender.to_string().as_bytes())?,
@@ -351,7 +351,7 @@ pub fn try_disable_permit_key(
     revoke_permit(deps.storage, info.sender.to_string(), key);
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::DisablePermitKey {
+        Response::new().set_data(to_binary(&ExecuteAnswer::DisablePermitKey {
             status: Success,
         })?),
     )
@@ -366,7 +366,11 @@ pub fn try_set_viewing_key(
     account_viewkey_w(deps.storage)
         .save(&info.sender.to_string().as_bytes(), &AccountKey(key).hash())?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey {
+            status: Success,
+        })?),
+    )
 }
 
 pub fn try_complete_task(
@@ -393,7 +397,7 @@ pub fn try_complete_task(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::CompleteTask { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CompleteTask { status: Success })?))
 }
 
 pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
@@ -428,7 +432,7 @@ pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Resp
         .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::Claim {
+        .set_data(to_binary(&ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             total: account.total_claimable,
             claimed: account_total_claimed_r(deps.storage).load(sender.to_string().as_bytes())?,
@@ -472,7 +476,7 @@ pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResul
                 )?];
 
                 return Ok(Response::new()
-                    .set_data(to_binary(&HandleAnswer::ClaimDecay { status: Success })?));
+                    .set_data(to_binary(&ExecuteAnswer::ClaimDecay { status: Success })?));
             }
         }
     }

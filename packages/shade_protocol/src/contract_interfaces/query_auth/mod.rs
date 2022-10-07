@@ -2,18 +2,24 @@
 pub mod auth;
 pub mod helpers;
 
-use crate::c_std::{Binary, Addr};
+use crate::c_std::{Addr, Binary};
 
-use crate::query_authentication::permit::Permit;
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
-use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "query_auth_impl")]
 use crate::utils::storage::plus::ItemStorage;
+use crate::{
+    query_authentication::permit::Permit,
+    utils::{
+        asset::Contract,
+        crypto::sha_256,
+        generic_response::ResponseStatus,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
+    },
+};
+use cosmwasm_schema::cw_serde;
 #[cfg(feature = "query_auth_impl")]
 use secret_storage_plus::Item;
-use crate::utils::crypto::sha_256;
-use crate::utils::asset::Contract;
 
 #[cfg(feature = "query_auth_impl")]
 #[cw_serde]
@@ -43,7 +49,7 @@ impl RngSeed {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin_auth: Contract,
-    pub prng_seed: Binary
+    pub prng_seed: Binary,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -55,7 +61,7 @@ pub enum ContractStatus {
     Default,
     DisablePermit,
     DisableVK,
-    DisableAll
+    DisableAll,
 }
 
 #[cfg(feature = "query_auth_impl")]
@@ -86,7 +92,7 @@ pub enum ExecuteMsg {
     BlockPermitKey {
         key: String,
         padding: Option<String>,
-    }
+    },
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -94,22 +100,12 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
-    SetAdminAuth {
-        status: ResponseStatus
-    },
-    SetRunState {
-        status: ResponseStatus
-    },
-    SetViewingKey {
-        status: ResponseStatus
-    },
-    CreateViewingKey {
-        key: String
-    },
-    BlockPermitKey {
-        status: ResponseStatus
-    },
+pub enum ExecuteAnswer {
+    SetAdminAuth { status: ResponseStatus },
+    SetRunState { status: ResponseStatus },
+    SetViewingKey { status: ResponseStatus },
+    CreateViewingKey { key: String },
+    BlockPermitKey { status: ResponseStatus },
 }
 
 pub type QueryPermit = Permit<PermitData>;
@@ -125,13 +121,8 @@ pub struct PermitData {
 pub enum QueryMsg {
     Config {},
 
-    ValidateViewingKey {
-        user: Addr,
-        key: String,
-    },
-    ValidatePermit {
-        permit: QueryPermit
-    }
+    ValidateViewingKey { user: Addr, key: String },
+    ValidatePermit { permit: QueryPermit },
 }
 
 impl Query for QueryMsg {
@@ -142,15 +133,13 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config {
         admin: Contract,
-        state: ContractStatus
+        state: ContractStatus,
     },
     ValidateViewingKey {
-        is_valid: bool
+        is_valid: bool,
     },
     ValidatePermit {
         user: Addr,
-        is_revoked: bool
-    }
+        is_revoked: bool,
+    },
 }
-
-

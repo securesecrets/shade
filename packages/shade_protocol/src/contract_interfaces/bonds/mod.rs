@@ -2,22 +2,29 @@ pub mod errors;
 pub mod rand;
 pub mod utils;
 
-use cosmwasm_std::MessageInfo;
 use crate::c_std::Env;
+use cosmwasm_std::MessageInfo;
 
-use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
-use crate::contract_interfaces::bonds::utils::{
-    create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
+use crate::{
+    c_std::{Addr, Binary, Uint128},
+    contract_interfaces::{
+        bonds::{
+            rand::{sha_256, Prng},
+            utils::{
+                create_hashed_password,
+                ct_slice_compare,
+                VIEWING_KEY_PREFIX,
+                VIEWING_KEY_SIZE,
+            },
+        },
+        query_auth::QueryPermit,
+        snip20::helpers::Snip20Asset,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::contract_interfaces::snip20::helpers::Snip20Asset;
-use crate::contract_interfaces::query_auth::QueryPermit;
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Addr};
 
 use crate::utils::ExecuteCallback;
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
@@ -121,7 +128,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     UpdateLimitConfig {
         status: ResponseStatus,
     },

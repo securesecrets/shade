@@ -419,7 +419,7 @@ impl ExecuteCallback for ReceiverHandleMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     // Native
     Deposit {
         status: ResponseStatus,

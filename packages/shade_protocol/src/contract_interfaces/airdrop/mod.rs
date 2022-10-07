@@ -121,7 +121,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     UpdateConfig {
         status: ResponseStatus,
     },

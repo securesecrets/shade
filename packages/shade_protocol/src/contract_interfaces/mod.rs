@@ -21,9 +21,6 @@ pub mod snip20;
 #[cfg(feature = "airdrop")]
 pub mod airdrop;
 
-#[cfg(feature = "initializer")]
-pub mod initializer;
-
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;

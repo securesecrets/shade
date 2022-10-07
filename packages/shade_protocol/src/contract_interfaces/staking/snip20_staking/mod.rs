@@ -1,15 +1,15 @@
 pub mod stake;
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::{
         snip20::QueryPermit,
         staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::{Binary, Addr, Uint128};
 
 use crate::utils::{ExecuteCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -130,7 +130,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     UpdateStakeConfig { status: ResponseStatus },
     Receive { status: ResponseStatus },
     Unbond { status: ResponseStatus },
