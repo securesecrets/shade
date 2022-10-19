@@ -21,7 +21,7 @@ use shade_oracles::{
     router,
 };
 
-pub fn init_contracts() -> StdResult<(
+pub fn init_contracts(seed_user: bool) -> StdResult<(
     ContractEnsemble,
     ContractLink<HumanAddr>,
     ContractLink<HumanAddr>,
@@ -52,6 +52,26 @@ pub fn init_contracts() -> StdResult<(
 
     // Register snip20s
     let issu = chain.register(Box::new(Snip20));
+    let mut balances;
+    if seed_user {
+        balances = vec![
+            InitialBalance {
+                address: HumanAddr::from("admin"),
+                amount: Uint128::new(1_000_000_000_000_000),
+            },
+            InitialBalance {
+                address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
+                amount: Uint128::new(1_000_000_000_000_000),
+            }
+        ];
+    } else {
+        balances = vec![
+            InitialBalance {
+                address: HumanAddr::from("admin"),
+                amount: Uint128::new(1_000_000_000_000_000),
+            },
+        ]
+    }
     let issu = chain
         .instantiate(
             issu.id,
@@ -60,16 +80,7 @@ pub fn init_contracts() -> StdResult<(
                 admin: Some(HumanAddr::from("admin")),
                 symbol: "ISSU".into(),
                 decimals: 8,
-                initial_balances: Some(vec![
-                    InitialBalance {
-                        address: HumanAddr::from("admin"),
-                        amount: Uint128::new(1_000_000_000_000_000),
-                    },
-                    InitialBalance {
-                        address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
-                        amount: Uint128::new(1_000_000_000_000_000),
-                    }
-                ]),
+                initial_balances: Some(balances),
                 prng_seed: Default::default(),
                 config: None,
             },
@@ -362,7 +373,7 @@ pub fn init_contracts() -> StdResult<(
                 bond_issuance_limit: Uint128::new(100_000_000_000_000),
                 bonding_period: 0,
                 discount: Uint128::new(10_000),
-                global_min_accepted_issued_price: Uint128::new(9_000_000_000_000_000_000),
+                global_min_accepted_issued_price: Uint128::new(10_000_000_000_000_000_000),
                 global_err_issued_price: Uint128::new(5_000_000_000_000_000_000),
                 allowance_key_entropy: "".into(),
                 airdrop: None,

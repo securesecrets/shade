@@ -16,7 +16,7 @@ use super::{increase_allowance, query::{query_acccount_parameters, query_bonds_b
 #[test]
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false).unwrap();
 
     set_prices(
         &mut chain,
@@ -503,7 +503,25 @@ fn update_config(
 #[test]
 pub fn test_shd_shd_bond() {
     let (mut chain, bonds, issu, depo, _atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(true).unwrap();
+
+    update_config(
+        &mut chain,
+        &bonds,
+        "admin",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(Uint128::new(9_500_000_000_000_000_000)),
+        None,
+        None,
+        None,
+        None,
+    );
 
     set_prices(
         &mut chain,
