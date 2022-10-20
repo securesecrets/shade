@@ -3,6 +3,7 @@ use shade_protocol::{
     c_std::{
         shd_entry_point,
         to_binary,
+        Addr,
         Binary,
         Deps,
         DepsMut,
@@ -12,6 +13,7 @@ use shade_protocol::{
         StdResult,
     },
     dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
+    utils::asset::Contract,
 };
 
 #[shd_entry_point]

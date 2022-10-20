@@ -52,6 +52,7 @@ pub fn dao_int_gains_losses(
         alloc_amount.clone(),
         alloc_tolerance,
         is_instant_unbond,
+        true,
     )
     .unwrap();
     let bals = {

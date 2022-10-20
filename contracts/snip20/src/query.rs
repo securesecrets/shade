@@ -40,7 +40,7 @@ pub fn token_config(deps: Deps) -> StdResult<QueryAnswer> {
         redeem_enabled: Config::redeem_enabled(deps.storage)?,
         mint_enabled: Config::mint_enabled(deps.storage)?,
         burn_enabled: Config::burn_enabled(deps.storage)?,
-        transfer_enabled: Config::transfer_enabled(deps.storage)?,
+        transfer_enabled: Some(Config::transfer_enabled(deps.storage)?),
     })
 }
 

@@ -52,6 +52,7 @@ pub fn test_tm_unbond(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     )
     .unwrap();
     let bals = system_balance_reserves(&app, &contracts, "SSCRT");

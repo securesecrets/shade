@@ -1,7 +1,7 @@
 pub mod batch;
 pub mod errors;
 pub mod helpers;
-pub mod manager;
+pub mod manager; //TODO: fragment this so it doesnt import useless stuff in interface
 pub mod transaction_history;
 
 use crate::{
@@ -44,6 +44,7 @@ use crate::{
     Contract,
 };
 use cosmwasm_schema::cw_serde;
+use serde::Serialize;
 
 pub const VERSION: &str = "SNIP24";
 
@@ -614,7 +615,8 @@ pub enum QueryAnswer {
         redeem_enabled: bool,
         mint_enabled: bool,
         burn_enabled: bool,
-        transfer_enabled: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        transfer_enabled: Option<bool>,
     },
     ContractStatus {
         status: ContractStatusLevel,

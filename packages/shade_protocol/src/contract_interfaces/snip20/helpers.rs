@@ -175,22 +175,9 @@ pub struct TokenInfo {
 }
 /// Returns a StdResult<TokenInfo> from performing TokenInfo query
 pub fn token_info(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenInfo> {
-    let answer: QueryAnswer = QueryMsg::TokenInfo {}.query(querier, contract)?;
+    let answer: TokenInfo = QueryMsg::TokenInfo {}.query(querier, contract)?;
 
-    match answer {
-        QueryAnswer::TokenInfo {
-            name,
-            symbol,
-            decimals,
-            total_supply,
-        } => Ok(TokenInfo {
-            name,
-            symbol,
-            decimals,
-            total_supply,
-        }),
-        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
-    }
+    Ok(answer)
 }
 
 /// Returns a StdResult<Uint128> from performing a Balance query
@@ -226,26 +213,9 @@ pub struct TokenConfig {
 }
 /// Returns a StdResult<TokenConfig> from performing TokenConfig query
 pub fn token_config(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenConfig> {
-    let answer: QueryAnswer = QueryMsg::TokenConfig {}.query(querier, contract)?;
+    let answer: TokenConfig = QueryMsg::TokenConfig {}.query(querier, contract)?;
 
-    match answer {
-        QueryAnswer::TokenConfig {
-            public_total_supply,
-            deposit_enabled,
-            redeem_enabled,
-            mint_enabled,
-            burn_enabled,
-            ..
-        } => Ok(TokenConfig {
-            public_total_supply,
-            deposit_enabled,
-            redeem_enabled,
-            mint_enabled,
-            burn_enabled,
-            transfer_enabled: None,
-        }),
-        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
-    }
+    Ok(answer)
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute IncreaseAllowance

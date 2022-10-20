@@ -55,6 +55,7 @@ pub fn execute_error() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     )
     .unwrap();
     match treasury::allowance_exec(
@@ -191,6 +192,7 @@ pub fn admin_errors() {
             4
         ],
         vec![vec![Uint128::zero(); 4]; 4],
+        true,
         true,
     )
     .unwrap();

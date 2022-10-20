@@ -56,6 +56,7 @@ pub fn non_manager_allowances() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     )
     .unwrap();
     contracts.insert(SupportedContracts::TreasuryManager(5), Contract {

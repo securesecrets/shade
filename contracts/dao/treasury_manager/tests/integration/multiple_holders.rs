@@ -66,6 +66,7 @@ pub fn multiple_holders(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         is_instant_unbond,
+        true,
     )
     .unwrap();
     let bals = {

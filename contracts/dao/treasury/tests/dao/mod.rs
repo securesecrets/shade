@@ -53,6 +53,7 @@ pub fn dao_int_test(
         alloc_amount.clone(),
         alloc_tolerance.clone(),
         is_instant_unbond,
+        true,
     )
     .unwrap();
     //query assets

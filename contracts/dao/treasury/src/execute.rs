@@ -58,7 +58,7 @@ pub fn receive(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
-    METRICS.pushf(deps.storage, env.block.time, Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
         context: Context::Receive,
         timestamp: env.block.time.seconds(),
@@ -391,7 +391,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     }
     ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
 
-    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
@@ -517,7 +517,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
         });
     }
 
-    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
@@ -636,7 +636,7 @@ pub fn register_manager(
 
     validate_admin(
         &deps.querier,
-        AdminPermissions::TreasuryManager,
+        AdminPermissions::TreasuryAdmin,
         &info.sender,
         &config.admin_auth,
     )?;
@@ -758,7 +758,7 @@ pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Resp
             let token = ASSET.load(deps.storage, asset)?;
             messages.push(wrap_coin(coin.clone(), token.contract.clone())?);
             success.push(coin.clone());
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            METRICS.push(deps.storage, env.block.time, Metric {
                 action: Action::Wrap,
                 context: Context::Wrap,
                 timestamp: env.block.time.seconds(),

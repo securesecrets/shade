@@ -61,6 +61,7 @@ pub fn migration_test(is_instant_unbond: bool) {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         is_instant_unbond,
+        true,
     )
     .unwrap();
     snip20::set_viewing_key_exec(

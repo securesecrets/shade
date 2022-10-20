@@ -1,38 +1,10 @@
-
-use shade_multi_test::{
-    multi::{
-        admin::init_admin_auth,
-        snip20::Snip20,
-        treasury::Treasury,
-    },
-};
+use shade_multi_test::multi::{admin::init_admin_auth, snip20::Snip20, treasury::Treasury};
 use shade_protocol::{
-    c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Coin,
-        Uint128,
-    },
-    multi_test::{App},
+    c_std::{from_binary, to_binary, Addr, Coin, Uint128},
+    contract_interfaces::{dao::treasury, snip20},
+    multi_test::App,
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
-use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            treasury,
-        },
-        snip20,
-    },
-    utils::{
-        asset::{RawContract},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
-};
-
-
 
 // Add other adapters here as they come
 fn wrap_coins_test(coins: Vec<Coin>) {
