@@ -107,7 +107,7 @@ pub struct MintMsgHook {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,

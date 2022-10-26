@@ -17,7 +17,7 @@ use shade_protocol::{
         errors::transfer_disabled,
         manager::{Allowance, Balance, CoinInfo, Config, ReceiverHash},
         transaction_history::store_transfer,
-        HandleAnswer,
+        ExecuteAnswer,
         ReceiverHandleMsg,
     },
     utils::{
@@ -78,7 +78,7 @@ pub fn try_transfer(
         &env.block,
     )?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Transfer { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Transfer { status: Success })?))
 }
 
 pub fn try_batch_transfer(
@@ -102,7 +102,7 @@ pub fn try_batch_transfer(
             &block,
         )?;
     }
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransfer { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::BatchTransfer { status: Success })?))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -203,7 +203,7 @@ pub fn try_send(
     )?;
 
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::Send { status: Success })?)
+        .set_data(to_binary(&ExecuteAnswer::Send { status: Success })?)
         .add_submessages(messages))
 }
 
@@ -234,6 +234,6 @@ pub fn try_batch_send(
     }
 
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::BatchSend { status: Success })?)
+        .set_data(to_binary(&ExecuteAnswer::BatchSend { status: Success })?)
         .add_submessages(messages))
 }

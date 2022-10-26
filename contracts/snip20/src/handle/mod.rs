@@ -40,7 +40,7 @@ use shade_protocol::{
             TotalSupply,
         },
         transaction_history::{store_deposit, store_redeem},
-        HandleAnswer,
+        ExecuteAnswer,
     },
     query_authentication::viewing_keys::ViewingKey,
     snip20::manager::QueryAuth,
@@ -89,7 +89,7 @@ pub fn try_redeem(
             to_address: sender.into(),
             amount: withdrawal_coins,
         }))
-        .set_data(to_binary(&HandleAnswer::Redeem { status: Success })?))
+        .set_data(to_binary(&ExecuteAnswer::Redeem { status: Success })?))
 }
 
 pub fn try_deposit(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
@@ -123,7 +123,7 @@ pub fn try_deposit(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Resp
         &env.block,
     )?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Deposit { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Deposit { status: Success })?))
 }
 
 pub fn try_change_admin(
@@ -138,7 +138,7 @@ pub fn try_change_admin(
 
     Admin(address).save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::ChangeAdmin { status: Success })?))
 }
 
 pub fn try_update_query_auth(
@@ -158,7 +158,7 @@ pub fn try_update_query_auth(
     }
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::UpdateQueryAuth {
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateQueryAuth {
             status: Success,
         })?),
     )
@@ -177,7 +177,7 @@ pub fn try_set_contract_status(
     status_level.save(deps.storage)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetContractStatus {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetContractStatus {
             status: Success,
         })?),
     )
@@ -191,7 +191,7 @@ pub fn try_register_receive(
 ) -> StdResult<Response> {
     ReceiverHash(code_hash).save(deps.storage, info.sender)?;
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::RegisterReceive {
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterReceive {
             status: Success,
         })?),
     )
@@ -209,7 +209,7 @@ pub fn try_create_viewing_key(
 
     HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key: key.0 })?))
 }
 
 pub fn try_set_viewing_key(
@@ -223,7 +223,7 @@ pub fn try_set_viewing_key(
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey { status: Success })?))
 }
 
 pub fn try_revoke_permit(
@@ -234,5 +234,5 @@ pub fn try_revoke_permit(
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, permit_name, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RevokePermit { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RevokePermit { status: Success })?))
 }

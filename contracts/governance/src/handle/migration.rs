@@ -7,8 +7,8 @@ use shade_protocol::{
         profile::Profile,
         stored_id::ID,
         Config,
+        ExecuteAnswer,
         ExecuteMsg::ReceiveMigrationData,
-        HandleAnswer,
         InstantiateMsg,
         MigrationData,
         MigrationDataAsk,
@@ -65,7 +65,7 @@ pub fn try_migrate(
             .to_cosmos_msg(label, id, code_hash, vec![])?,
             0,
         ))
-        .set_data(to_binary(&HandleAnswer::Migrate {
+        .set_data(to_binary(&ExecuteAnswer::Migrate {
             status: ResponseStatus::Success,
         })?))
 }
@@ -158,7 +158,7 @@ pub fn try_migrate_data(
                     .add_message(
                         ReceiveMigrationData { data: res_data }.to_cosmos_msg(&target, vec![])?,
                     )
-                    .set_data(to_binary(&HandleAnswer::MigrateData {
+                    .set_data(to_binary(&ExecuteAnswer::MigrateData {
                         status: ResponseStatus::Success,
                     })?));
             } else {
@@ -209,7 +209,9 @@ pub fn try_receive_migration_data(
         return Err(Error::migration_tartet(vec![]));
     }
 
-    Ok(res.set_data(to_binary(&HandleAnswer::ReceiveMigrationData {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(
+        res.set_data(to_binary(&ExecuteAnswer::ReceiveMigrationData {
+            status: ResponseStatus::Success,
+        })?),
+    )
 }

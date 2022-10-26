@@ -4,7 +4,7 @@ use shade_protocol::{
     contract_interfaces::snip20::{
         batch,
         manager::{Allowance, CoinInfo},
-        HandleAnswer,
+        ExecuteAnswer,
     },
     utils::{
         generic_response::ResponseStatus::Success,
@@ -42,7 +42,7 @@ pub fn try_increase_allowance(
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+        Response::new().set_data(to_binary(&ExecuteAnswer::IncreaseAllowance {
             spender,
             owner,
             allowance: allowance.amount,
@@ -79,7 +79,7 @@ pub fn try_decrease_allowance(
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+        Response::new().set_data(to_binary(&ExecuteAnswer::IncreaseAllowance {
             spender,
             owner,
             allowance: allowance.amount,
@@ -108,7 +108,7 @@ pub fn try_transfer_from(
         &env.block,
     )?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::TransferFrom { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::TransferFrom { status: Success })?))
 }
 
 pub fn try_batch_transfer_from(
@@ -133,7 +133,7 @@ pub fn try_batch_transfer_from(
     }
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::BatchTransferFrom {
+        Response::new().set_data(to_binary(&ExecuteAnswer::BatchTransferFrom {
             status: Success,
         })?),
     )
@@ -167,7 +167,7 @@ pub fn try_send_from(
     )?;
 
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::SendFrom { status: Success })?)
+        .set_data(to_binary(&ExecuteAnswer::SendFrom { status: Success })?)
         .add_submessages(messages))
 }
 
@@ -198,6 +198,6 @@ pub fn try_batch_send_from(
     }
 
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?)
+        .set_data(to_binary(&ExecuteAnswer::BatchSendFrom { status: Success })?)
         .add_submessages(messages))
 }

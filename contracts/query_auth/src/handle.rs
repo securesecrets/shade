@@ -5,7 +5,7 @@ use shade_protocol::{
         auth::{HashedKey, Key, PermitKey},
         Admin,
         ContractStatus,
-        HandleAnswer,
+        ExecuteAnswer,
         RngSeed,
     },
     query_authentication::viewing_keys::ViewingKey,
@@ -38,7 +38,7 @@ pub fn try_set_admin(
 
     Admin(admin).save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAdminAuth { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetAdminAuth { status: Success })?))
 }
 
 pub fn try_set_run_state(
@@ -51,7 +51,7 @@ pub fn try_set_run_state(
 
     state.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetRunState { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetRunState { status: Success })?))
 }
 
 pub fn try_create_viewing_key(
@@ -66,7 +66,7 @@ pub fn try_create_viewing_key(
 
     HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key: key.0 })?))
 }
 
 pub fn try_set_viewing_key(
@@ -77,7 +77,7 @@ pub fn try_set_viewing_key(
 ) -> StdResult<Response> {
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey { status: Success })?))
 }
 
 pub fn try_block_permit_key(
@@ -88,7 +88,7 @@ pub fn try_block_permit_key(
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, key, info.sender)?;
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::BlockPermitKey {
+        Response::new().set_data(to_binary(&ExecuteAnswer::BlockPermitKey {
             status: Success,
         })?),
     )
