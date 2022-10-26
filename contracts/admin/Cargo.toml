@@ -23,7 +23,7 @@ debug-print = ["shade-protocol/debug-print"]
 [dependencies]
 # Needs to be in contract dependency in order for build to work
 shade-protocol = { path = "../../packages/shade_protocol", features = ["admin_impl"] }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", package = "secret-cosmwasm-std" }
 
 [dev-dependencies]
 rstest = "0.15"
