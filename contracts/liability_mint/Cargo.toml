@@ -28,9 +28,9 @@ debug-print = ["shade-protocol/debug-print"]
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "mint", "liability_mint", "snip20", "storage_plus", "chrono" ] }
 schemars = "0.7"
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", package = "secret-cosmwasm-std" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
-shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop" }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle" }
 
 [dev-dependencies]
 shade-multi-test = { path = "../../packages/multi_test", features = [ 
