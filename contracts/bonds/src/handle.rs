@@ -1,7 +1,18 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 
 use secret_toolkit::{
@@ -13,24 +24,36 @@ use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
 
 use shade_oracles::{common::OraclePrice, router::QueryMsg::GetPrice};
 
-use shade_protocol::contract_interfaces::bonds::{
-    errors::*,
-    BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
+use shade_protocol::{
+    contract_interfaces::{
+        airdrop::HandleMsg::CompleteTask,
+        bonds::{errors::*, Account, BondOpportunity, Config, HandleAnswer, PendingBond, SlipMsg},
+        snip20::helpers::{fetch_snip20, Snip20Asset},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use shade_protocol::contract_interfaces::{
-    airdrop::HandleMsg::CompleteTask,
-    snip20::helpers::{fetch_snip20, Snip20Asset},
-};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
-    allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
-    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_issued_r,
-    global_total_issued_w, issued_asset_r,
+    account_r,
+    account_w,
+    allocated_allowance_r,
+    allocated_allowance_w,
+    allowance_key_r,
+    allowance_key_w,
+    bond_opportunity_r,
+    bond_opportunity_w,
+    config_r,
+    config_w,
+    deposit_assets_r,
+    deposit_assets_w,
+    global_total_claimed_w,
+    global_total_issued_r,
+    global_total_issued_w,
+    issued_asset_r,
+    number_of_interactions_r,
+    number_of_interactions_w,
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
@@ -350,6 +373,9 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
+    let interactions = number_of_interactions_r(&deps.storage).load()? + 1;
+    number_of_interactions_w(&mut deps.storage).save(&interactions)?;
+
     // Return Success response
     Ok(HandleResponse {
         messages,
@@ -475,9 +501,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     // Check whether previous bond for this asset exists
-    match bond_opportunity_r(&deps.storage)
-        .may_load(deposit_asset.address.as_str().as_bytes())?
-    {
+    match bond_opportunity_r(&deps.storage).may_load(deposit_asset.address.as_str().as_bytes())? {
         Some(prev_opp) => {
             let unspent = prev_opp
                 .issuance_limit
@@ -566,10 +590,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     };
 
     // Save bond opportunity
-    bond_opportunity_w(&mut deps.storage).save(
-        deposit_asset.address.as_str().as_bytes(),
-        &bond_opportunity,
-    )?;
+    bond_opportunity_w(&mut deps.storage)
+        .save(deposit_asset.address.as_str().as_bytes(), &bond_opportunity)?;
 
     // Increase global total issued by bond opportunity's issuance limit
     global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
@@ -619,12 +641,9 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
 
     // Check whether previous bond for this asset exists
 
-    match bond_opportunity_r(&deps.storage)
-        .may_load(deposit_asset.address.as_str().as_bytes())?
-    {
+    match bond_opportunity_r(&deps.storage).may_load(deposit_asset.address.as_str().as_bytes())? {
         Some(prev_opp) => {
-            bond_opportunity_w(&mut deps.storage)
-                .remove(deposit_asset.address.as_str().as_bytes());
+            bond_opportunity_w(&mut deps.storage).remove(deposit_asset.address.as_str().as_bytes());
 
             // Remove asset from address list
             deposit_assets_w(&mut deps.storage).update(|mut assets| {
@@ -778,12 +797,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     if issued_amount > available {
         return Err(mint_exceeds_limit(issued_amount, available));
     }
-    Ok((
-        issued_amount,
-        deposit_price,
-        issued_price,
-        discount_price,
-    ))
+    Ok((issued_amount, deposit_price, issued_price, discount_price))
 }
 
 pub fn calculate_issuance(

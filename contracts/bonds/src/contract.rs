@@ -1,6 +1,15 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
 
 use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
@@ -10,15 +19,23 @@ use shade_protocol::contract_interfaces::{
     snip20::helpers::Snip20Asset,
 };
 
-use secret_toolkit::snip20::token_config_query;
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use secret_toolkit::{
+    snip20::token_config_query,
+    utils::{pad_handle_result, pad_query_result},
+};
 
 use crate::{
     handle::{self, register_receive},
     query,
     state::{
-        allocated_allowance_w, allowance_key_w, deposit_assets_w, config_w,
-        global_total_claimed_w, global_total_issued_w, issued_asset_w,
+        allocated_allowance_w,
+        allowance_key_w,
+        config_w,
+        deposit_assets_w,
+        global_total_claimed_w,
+        global_total_issued_w,
+        issued_asset_w,
+        number_of_interactions_w,
     },
 };
 
@@ -92,6 +109,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
     allocated_allowance_w(&mut deps.storage).save(&Uint128::zero())?;
     deposit_assets_w(&mut deps.storage).save(&vec![])?;
+    number_of_interactions_w(&mut deps.storage).save(&0u16)?;
 
     Ok(InitResponse {
         messages,
@@ -180,9 +198,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 err_deposit_price,
                 minting_bond,
             ),
-            HandleMsg::CloseBond {
-                deposit_asset, ..
-            } => handle::try_close_bond(deps, env, deposit_asset),
+            HandleMsg::CloseBond { deposit_asset, .. } => {
+                handle::try_close_bond(deps, env, deposit_asset)
+            }
             HandleMsg::Receive {
                 sender,
                 from,
@@ -210,6 +228,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
             QueryMsg::CheckAllowance {} => to_binary(&query::check_allowance(deps)?),
             QueryMsg::CheckBalance {} => to_binary(&query::check_balance(deps)?),
+            QueryMsg::NumBondsPurchased {} => to_binary(&query::get_interactions(deps)?),
         },
         RESPONSE_BLOCK_SIZE,
     )

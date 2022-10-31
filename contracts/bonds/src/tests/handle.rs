@@ -1,14 +1,19 @@
 use crate::tests::{
-    check_balances, init_contracts,
-    query::{query_no_opps, query_opp_parameters},
+    check_balances,
+    init_contracts,
+    query::{query_interactions, query_no_opps, query_opp_parameters},
     set_prices,
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::HumanAddr;
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::contract_interfaces::{bonds, query_auth, snip20};
-use shade_protocol::utils::asset::Contract;
+use fadroma::{
+    core::ContractLink,
+    ensemble::{ContractEnsemble, MockEnv},
+};
+use shade_protocol::{
+    contract_interfaces::{bonds, query_auth, snip20},
+    utils::asset::Contract,
+};
 
 use super::{increase_allowance, query::query_acccount_parameters, setup_admin};
 
@@ -16,6 +21,8 @@ use super::{increase_allowance, query::query_acccount_parameters, setup_admin};
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
         init_contracts().unwrap();
+
+    query_interactions(&mut chain, &bonds, 0);
 
     set_prices(
         &mut chain,
@@ -48,6 +55,8 @@ pub fn test_bonds() {
     );
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
+
+    query_interactions(&mut chain, &bonds, 1);
 
     query_acccount_parameters(
         &mut chain,
@@ -98,6 +107,8 @@ pub fn test_bonds() {
     );
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
+
+    query_interactions(&mut chain, &bonds, 2);
 
     query_opp_parameters(
         &mut chain,
@@ -207,6 +218,9 @@ pub fn test_bonds() {
     .unwrap();
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(5));
+
+    query_interactions(&mut chain, &bonds, 3);
+
     open_opp(
         &mut chain,
         &bonds,
@@ -221,7 +235,8 @@ pub fn test_bonds() {
         false,
     );
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
-                                                                   // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
+    query_interactions(&mut chain, &bonds, 4);
+    // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
     query_opp_parameters(
         &mut chain,
         &bonds,
