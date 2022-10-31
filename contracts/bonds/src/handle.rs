@@ -57,6 +57,8 @@ use crate::{
         global_total_issued_r,
         global_total_issued_w,
         issued_asset_r,
+        number_of_interactions_r,
+        number_of_interactions_w,
     },
 };
 
@@ -404,6 +406,14 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?);
+    }
+
+    match number_of_interactions_r(&deps.storage)
+        .load()?
+        .checked_add(1)
+    {
+        Some(num) => number_of_interactions_w(&mut deps.storage).save(&num)?,
+        None => number_of_interactions_w(&mut deps.storage).save(&0)?,
     }
 
     // Return Success response

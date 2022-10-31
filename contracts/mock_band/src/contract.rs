@@ -1,20 +1,22 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::contract_interfaces::oracles::band::{InitMsg, ReferenceData};
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        Extern,
+        HandleResponse,
+        InitResponse,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
+    contract_interfaces::oracles::band::{InitMsg, ReferenceData},
+    math_compat::Uint128,
+};
 
 use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 

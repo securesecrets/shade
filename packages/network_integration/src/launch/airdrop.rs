@@ -1,17 +1,23 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr};
 use network_integration::utils::{
-    generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
+    generate_label,
+    print_contract,
+    print_header,
+    store_struct,
+    AIRDROP_FILE,
+    GAS,
+    STORE_GAS,
 };
-use rs_merkle::algorithms::Sha256;
-use rs_merkle::{Hasher, MerkleTree};
-use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{handle, init};
+use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
+use secretcli::{
+    cli_types::NetContract,
+    secretcli::{handle, init},
+};
 use serde::{Deserialize, Serialize};
-use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
-    contract_interfaces::airdrop,
-    contract_interfaces::snip20
+    contract_interfaces::{airdrop, snip20},
+    utils::asset::Contract,
 };
 use std::{env, fs};
 
@@ -99,6 +105,8 @@ fn main() -> serde_json::Result<()> {
 
     // Initialize airdrop
     print_header("Initializing airdrop");
+
+    println!("{}", Binary(root.to_vec()).to_base64());
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: args.admin,

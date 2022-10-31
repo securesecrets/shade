@@ -4,19 +4,27 @@ pub mod utils;
 
 use crate::c_std::Env;
 
-use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
-use crate::contract_interfaces::bonds::utils::{
-    create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
+use crate::{
+    c_std::{Binary, HumanAddr},
+    contract_interfaces::{
+        bonds::{
+            rand::{sha_256, Prng},
+            utils::{
+                create_hashed_password,
+                ct_slice_compare,
+                VIEWING_KEY_PREFIX,
+                VIEWING_KEY_SIZE,
+            },
+        },
+        query_auth::QueryPermit,
+        snip20::helpers::Snip20Asset,
+    },
+    math_compat::Uint128,
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::contract_interfaces::snip20::helpers::Snip20Asset;
-use crate::contract_interfaces::query_auth::QueryPermit;
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
-use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
 use secret_toolkit::utils::HandleCallback;
-use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -115,7 +123,6 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
 }
-
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
@@ -131,7 +138,7 @@ pub enum HandleAnswer {
         global_minimum_bonding_period: u64,
         global_maximum_discount: Uint128,
         global_total_issued: Uint128,
-        global_total_claimed: Uint128
+        global_total_claimed: Uint128,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -145,7 +152,7 @@ pub enum HandleAnswer {
         global_min_accepted_issued_price: Uint128,
         global_err_issued_price: Uint128,
         airdrop: Option<Contract>,
-        query_auth: Contract
+        query_auth: Contract,
     },
     Deposit {
         status: ResponseStatus,
@@ -186,6 +193,7 @@ pub enum QueryMsg {
     BondInfo {},
     CheckAllowance {},
     CheckBalance {},
+    Metrics {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -218,6 +226,9 @@ pub enum QueryAnswer {
     },
     CheckBalance {
         balance: Uint128,
+    },
+    Metrics {
+        interactions: u64,
     },
 }
 
