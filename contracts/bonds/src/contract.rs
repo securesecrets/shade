@@ -228,7 +228,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
             QueryMsg::CheckAllowance {} => to_binary(&query::check_allowance(deps)?),
             QueryMsg::CheckBalance {} => to_binary(&query::check_balance(deps)?),
-            QueryMsg::NumBondsPurchased {} => to_binary(&query::get_interactions(deps)?),
+            QueryMsg::Metrics {} => to_binary(&query::get_interactions(deps)?),
         },
         RESPONSE_BLOCK_SIZE,
     )

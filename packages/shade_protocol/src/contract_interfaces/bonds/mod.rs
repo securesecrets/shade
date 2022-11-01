@@ -175,7 +175,7 @@ pub enum QueryMsg {
     BondInfo {},
     CheckAllowance {},
     CheckBalance {},
-    NumBondsPurchased {},
+    Metrics {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -209,7 +209,7 @@ pub enum QueryAnswer {
     CheckBalance {
         balance: Uint128,
     },
-    NumBondsPurchased {
+    Metrics {
         interactions: u16,
     },
 }

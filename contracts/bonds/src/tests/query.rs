@@ -188,13 +188,10 @@ pub fn query_interactions(
     expected_interactions: u16,
 ) -> () {
     let query = chain
-        .query(
-            bonds.address.clone(),
-            &bonds::QueryMsg::NumBondsPurchased {},
-        )
+        .query(bonds.address.clone(), &bonds::QueryMsg::Metrics {})
         .unwrap();
     match query {
-        bonds::QueryAnswer::NumBondsPurchased { interactions } => {
+        bonds::QueryAnswer::Metrics { interactions } => {
             assert_eq!(expected_interactions, interactions);
         }
         _ => assert!(false),

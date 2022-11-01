@@ -166,7 +166,7 @@ pub fn check_balance<S: Storage, A: Api, Q: Querier>(
 pub fn get_interactions<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::NumBondsPurchased {
+    Ok(QueryAnswer::Metrics {
         interactions: number_of_interactions_r(&deps.storage).load()?,
     })
 }
