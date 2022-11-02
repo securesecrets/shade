@@ -106,10 +106,10 @@ pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> 
 }
 
 // Stores the number of interactions for the bond contract
-pub fn number_of_interactions_w<S: Storage>(storage: &mut S) -> Singleton<S, u16> {
+pub fn number_of_interactions_w<S: Storage>(storage: &mut S) -> Singleton<S, u64> {
     singleton(storage, NUMBER_OF_INTERACTIONS)
 }
 
-pub fn number_of_interactions_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, u16> {
+pub fn number_of_interactions_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, u64> {
     singleton_read(storage, NUMBER_OF_INTERACTIONS)
 }

@@ -210,7 +210,7 @@ pub enum QueryAnswer {
         balance: Uint128,
     },
     Metrics {
-        interactions: u16,
+        interactions: u64,
     },
 }
 

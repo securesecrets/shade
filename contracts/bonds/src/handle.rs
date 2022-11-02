@@ -373,8 +373,13 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
-    let interactions = number_of_interactions_r(&deps.storage).load()? + 1;
-    number_of_interactions_w(&mut deps.storage).save(&interactions)?;
+    match number_of_interactions_r(&deps.storage)
+        .load()?
+        .checked_add(1)
+    {
+        Some(num) => number_of_interactions_w(&mut deps.storage).save(&num)?,
+        None => number_of_interactions_w(&mut deps.storage).save(&0)?,
+    }
 
     // Return Success response
     Ok(HandleResponse {
