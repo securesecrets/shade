@@ -109,7 +109,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
     allocated_allowance_w(&mut deps.storage).save(&Uint128::zero())?;
     deposit_assets_w(&mut deps.storage).save(&vec![])?;
-    number_of_interactions_w(&mut deps.storage).save(&0u16)?;
+    number_of_interactions_w(&mut deps.storage).save(&0u64)?;
 
     Ok(InitResponse {
         messages,

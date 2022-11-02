@@ -185,7 +185,7 @@ fn get_permit() -> QueryPermit {
 pub fn query_interactions(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    expected_interactions: u16,
+    expected_interactions: u64,
 ) -> () {
     let query = chain
         .query(bonds.address.clone(), &bonds::QueryMsg::Metrics {})
