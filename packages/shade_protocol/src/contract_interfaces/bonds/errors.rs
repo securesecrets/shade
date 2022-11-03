@@ -28,7 +28,6 @@ pub enum Error {
     IssuedPriceBelowMinimum,
     SlippageToleranceExceeded,
     Blacklisted,
-    IssuedAssetDeposit,
     NotTreasuryBond,
     NoBondsClaimable,
     NotAdmin,
@@ -96,9 +95,6 @@ impl CodeType for Error {
             }
             Error::Blacklisted => {
                 build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
-            }
-            Error::IssuedAssetDeposit => {
-                build_string("Cannot deposit using this contract's issued asset", context)
             }
             Error::NotTreasuryBond => {
                 build_string("Cannot perform function since this is not a treasury bond", context)
@@ -309,10 +305,6 @@ pub fn permit_revoked(user: &str) -> StdError {
 
 pub fn blacklisted(address: HumanAddr) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::Blacklisted, vec![address.as_str()]).to_error()
-}
-
-pub fn issued_asset_deposit() -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::IssuedAssetDeposit, vec![]).to_error()
 }
 
 pub fn not_treasury_bond() -> StdError {

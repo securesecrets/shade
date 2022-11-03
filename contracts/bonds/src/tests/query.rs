@@ -24,6 +24,19 @@ pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAdd
     }
 }
 
+pub fn query_bonds_balance(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>, check_balance: Uint128) -> () {
+    let msg = bonds::QueryMsg::CheckBalance {  };
+
+    let query: bonds::QueryAnswer = chain.query(bonds.address.clone(), &msg).unwrap();
+
+    match query {
+        bonds::QueryAnswer::CheckBalance { balance } => {
+            assert_eq!(balance, check_balance)
+        }
+        _ => assert!(false),
+    }
+}
+
 pub fn query_opp_parameters(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
