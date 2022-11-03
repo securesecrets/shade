@@ -1,7 +1,13 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{HumanAddr, Storage};
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
 use shade_protocol::contract_interfaces::{
@@ -18,6 +24,7 @@ pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static BOND_OPPORTUNITIES: &[u8] = b"bond_opportunities";
 pub static ALLOCATED_ALLOWANCE: &[u8] = b"allocated_allowance";
 pub static ALLOWANCE_VIEWING_KEY: &[u8] = b"allowance_viewing_key";
+pub static NUMBER_OF_INTERACTIONS: &[u8] = b"number_of_interactions";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
@@ -96,4 +103,13 @@ pub fn allowance_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
 
 pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, ALLOWANCE_VIEWING_KEY)
+}
+
+// Stores the number of interactions for the bond contract
+pub fn number_of_interactions_w<S: Storage>(storage: &mut S) -> Singleton<S, u64> {
+    singleton(storage, NUMBER_OF_INTERACTIONS)
+}
+
+pub fn number_of_interactions_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, u64> {
+    singleton_read(storage, NUMBER_OF_INTERACTIONS)
 }

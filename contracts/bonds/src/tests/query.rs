@@ -1,6 +1,5 @@
 use cosmwasm_std::{testing::*, Binary, HumanAddr};
-use fadroma::core::ContractLink;
-use fadroma::ensemble::ContractEnsemble;
+use fadroma::{core::ContractLink, ensemble::ContractEnsemble};
 use shade_protocol::contract_interfaces::{
     bonds,
     query_auth::{self, PermitData, QueryPermit},
@@ -178,8 +177,7 @@ fn get_permit() -> QueryPermit {
     QueryPermit {
         params: PermitData {
             key: "key".to_string(),
-            data: Binary::from_base64("c29tZSBzdHJpbmc=").unwrap()
-        },
+            data: Binary::from_base64("c29tZSBzdHJpbmc=").unwrap() },
         signature: PermitSignature {
             pub_key: PubKey::new(
                 Binary::from_base64(
@@ -194,5 +192,21 @@ fn get_permit() -> QueryPermit {
         chain_id: Some(String::from("chain")),
         sequence: None,
         memo: None
+    }
+}
+
+pub fn query_interactions(
+    chain: &mut ContractEnsemble,
+    bonds: &ContractLink<HumanAddr>,
+    expected_interactions: u64,
+) -> () {
+    let query = chain
+        .query(bonds.address.clone(), &bonds::QueryMsg::Metrics {})
+        .unwrap();
+    match query {
+        bonds::QueryAnswer::Metrics { interactions } => {
+            assert_eq!(expected_interactions, interactions);
+        }
+        _ => assert!(false),
     }
 }

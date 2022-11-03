@@ -1,8 +1,15 @@
 use crate::{
     handle::oracle,
     state::{
-        account_r, allowance_key_r, bond_opportunity_r, deposit_assets_r, config_r,
-        global_total_claimed_r, global_total_issued_r, issued_asset_r,
+        account_r,
+        allowance_key_r,
+        bond_opportunity_r,
+        config_r,
+        deposit_assets_r,
+        global_total_claimed_r,
+        global_total_issued_r,
+        issued_asset_r,
+        number_of_interactions_r,
     },
 };
 
@@ -16,11 +23,14 @@ use secret_toolkit::{
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
-    BondOpportunity, QueryAnswer,
+    BondOpportunity,
+    QueryAnswer,
 };
 
 use shade_protocol::contract_interfaces::query_auth::{
-    self, QueryMsg::ValidatePermit, QueryPermit,
+    self,
+    QueryMsg::ValidatePermit,
+    QueryPermit,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -102,9 +112,7 @@ pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     let deposit_addresses = deposit_assets_r(&deps.storage).load()?;
-    Ok(QueryAnswer::DepositAddresses {
-        deposit_addresses,
-    })
+    Ok(QueryAnswer::DepositAddresses { deposit_addresses })
 }
 
 pub fn price_check<S: Storage, A: Api, Q: Querier>(
@@ -152,5 +160,13 @@ pub fn check_balance<S: Storage, A: Api, Q: Querier>(
 
     Ok(QueryAnswer::CheckBalance {
         balance: Uint128::from(balance.amount),
+    })
+}
+
+pub fn get_interactions<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::Metrics {
+        interactions: number_of_interactions_r(&deps.storage).load()?,
     })
 }

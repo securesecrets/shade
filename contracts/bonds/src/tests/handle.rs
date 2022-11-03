@@ -1,22 +1,33 @@
 use crate::tests::{
-    check_balances, init_contracts,
-    query::{query_no_opps, query_opp_parameters},
+    check_balances,
+    init_contracts,
+    query::{query_interactions, query_no_opps, query_opp_parameters},
     set_prices,
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::HumanAddr;
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use secret_toolkit::snip20::{TokenInfo, TokenConfig};
-use shade_protocol::contract_interfaces::{bonds, query_auth, snip20::{self, helpers::Snip20Asset}};
-use shade_protocol::utils::asset::Contract;
+use fadroma::{
+    core::ContractLink,
+    ensemble::{ContractEnsemble, MockEnv},
+};
+use secret_toolkit::snip20::{TokenConfig, TokenInfo};
+use shade_protocol::{
+    contract_interfaces::{bonds, query_auth, snip20, snip20::helpers::Snip20Asset},
+    utils::asset::Contract,
+};
 
-use super::{increase_allowance, query::{query_acccount_parameters, query_bonds_balance}, setup_admin};
+use super::{
+    increase_allowance,
+    query::{query_acccount_parameters, query_bonds_balance},
+    setup_admin,
+};
 
 #[test]
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
         init_contracts(false).unwrap();
+
+    query_interactions(&mut chain, &bonds, 0);
 
     set_prices(
         &mut chain,
@@ -49,6 +60,8 @@ pub fn test_bonds() {
     );
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
+
+    query_interactions(&mut chain, &bonds, 1);
 
     query_acccount_parameters(
         &mut chain,
@@ -99,6 +112,8 @@ pub fn test_bonds() {
     );
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
+
+    query_interactions(&mut chain, &bonds, 2);
 
     query_opp_parameters(
         &mut chain,
@@ -208,6 +223,9 @@ pub fn test_bonds() {
     .unwrap();
 
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(5));
+
+    query_interactions(&mut chain, &bonds, 3);
+
     open_opp(
         &mut chain,
         &bonds,
@@ -222,7 +240,8 @@ pub fn test_bonds() {
         false,
     );
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
-                                                                   // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
+    query_interactions(&mut chain, &bonds, 4);
+    // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
     query_opp_parameters(
         &mut chain,
         &bonds,
@@ -537,10 +556,10 @@ pub fn test_shd_shd_bond() {
     increase_allowance(&mut chain, &bonds, &issu);
 
     open_opp(
-        &mut chain, 
-        &bonds, 
-        &issu, 
-        "admin", 
+        &mut chain,
+        &bonds,
+        &issu,
+        "admin",
         Some(100),
         Some(Uint128::new(10_000_000_000)),
         Some(0),
@@ -556,21 +575,17 @@ pub fn test_shd_shd_bond() {
     // Buy opp successfully, hopefully
     buy_opp(&mut chain, &bonds, &issu, Uint128::new(2_000_000_000));
 
-    query_bonds_balance(
-        &mut chain, 
-        &bonds, 
-        Uint128::new(2_105_263_157)
-    );
+    query_bonds_balance(&mut chain, &bonds, Uint128::new(2_105_263_157));
 
     query_opp_parameters(
-        &mut chain, 
-        &bonds, 
-        None, 
-        Some(Uint128::new(2_105_263_157)), 
+        &mut chain,
+        &bonds,
+        None,
+        Some(Uint128::new(2_105_263_157)),
         Some(Snip20Asset {
-            contract: Contract { 
-                address: issu.address.clone(), 
-                code_hash: issu.code_hash.clone() 
+            contract: Contract {
+                address: issu.address.clone(),
+                code_hash: issu.code_hash.clone(),
             },
             token_info: TokenInfo {
                 name: "Issued".to_string(),
@@ -584,26 +599,26 @@ pub fn test_shd_shd_bond() {
                 redeem_enabled: false,
                 mint_enabled: false,
                 burn_enabled: false,
-            })
-        }), 
-        None, 
-        None, 
-        None, 
-        Some(Uint128::new(5000)), 
-        None, 
-        None, 
-        None
+            }),
+        }),
+        None,
+        None,
+        None,
+        Some(Uint128::new(5000)),
+        None,
+        None,
+        None,
     );
 
     query_acccount_parameters(
-        &mut chain, 
-        &bonds, 
-        &query_auth, 
-        "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", 
+        &mut chain,
+        &bonds,
+        &query_auth,
+        "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
         Some(Snip20Asset {
-            contract: Contract { 
-                address: issu.address.clone(), 
-                code_hash: issu.code_hash.clone() 
+            contract: Contract {
+                address: issu.address.clone(),
+                code_hash: issu.code_hash.clone(),
             },
             token_info: TokenInfo {
                 name: "Issued".to_string(),
@@ -617,20 +632,16 @@ pub fn test_shd_shd_bond() {
                 redeem_enabled: false,
                 mint_enabled: false,
                 burn_enabled: false,
-            })
-        }),  
-        None, 
-        Some(Uint128::new(2_000_000_000)), 
-        Some(Uint128::new(10_000_000_000_000_000_000)), 
-        Some(Uint128::new(2_105_263_157)), 
-        Some(Uint128::new(10_000_000_000_000_000_000)), 
-        Some(Uint128::new(5000)), 
-        Some(Uint128::new(9_500_000_000_000_000_000))
+            }),
+        }),
+        None,
+        Some(Uint128::new(2_000_000_000)),
+        Some(Uint128::new(10_000_000_000_000_000_000)),
+        Some(Uint128::new(2_105_263_157)),
+        Some(Uint128::new(10_000_000_000_000_000_000)),
+        Some(Uint128::new(5000)),
+        Some(Uint128::new(9_500_000_000_000_000_000)),
     );
 
-    query_bonds_balance(
-        &mut chain, 
-        &bonds, 
-        Uint128::new(2_105_263_157)
-    );
+    query_bonds_balance(&mut chain, &bonds, Uint128::new(2_105_263_157));
 }

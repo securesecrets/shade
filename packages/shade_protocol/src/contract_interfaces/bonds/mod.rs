@@ -4,14 +4,22 @@ pub mod utils;
 
 use cosmwasm_std::Env;
 
-use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
-use crate::contract_interfaces::bonds::utils::{
-    create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
+use crate::{
+    contract_interfaces::{
+        bonds::{
+            rand::{sha_256, Prng},
+            utils::{
+                create_hashed_password,
+                ct_slice_compare,
+                VIEWING_KEY_PREFIX,
+                VIEWING_KEY_SIZE,
+            },
+        },
+        query_auth::QueryPermit,
+        snip20::helpers::Snip20Asset,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::contract_interfaces::snip20::helpers::Snip20Asset;
-use crate::contract_interfaces::query_auth::QueryPermit;
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
@@ -115,7 +123,6 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
 }
-
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
@@ -168,6 +175,7 @@ pub enum QueryMsg {
     BondInfo {},
     CheckAllowance {},
     CheckBalance {},
+    Metrics {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -200,6 +208,9 @@ pub enum QueryAnswer {
     },
     CheckBalance {
         balance: Uint128,
+    },
+    Metrics {
+        interactions: u64,
     },
 }
 
