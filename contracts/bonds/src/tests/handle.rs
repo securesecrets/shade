@@ -15,12 +15,12 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-use super::{increase_allowance, query::query_acccount_parameters, setup_admin};
+use super::{increase_allowance, query::{query_acccount_parameters, query_bonds_balance}, setup_admin};
 
 #[test]
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false).unwrap();
 
     query_interactions(&mut chain, &bonds, 0);
 
@@ -512,4 +512,139 @@ fn update_config(
     chain
         .execute(&msg, MockEnv::new(sender, bonds.clone()))
         .unwrap();
+}
+
+#[test]
+pub fn test_shd_shd_bond() {
+    let (mut chain, bonds, issu, depo, _atom, band, _oracle, query_auth, shade_admins) =
+        init_contracts(true).unwrap();
+
+    update_config(
+        &mut chain,
+        &bonds,
+        "admin",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(Uint128::new(9_500_000_000_000_000_000)),
+        None,
+        None,
+        None,
+        None,
+    );
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(10_000_000_000_000_000_000),
+        Uint128::new(5_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    setup_admin(&mut chain, &shade_admins, &bonds);
+
+    increase_allowance(&mut chain, &bonds, &issu);
+
+    open_opp(
+        &mut chain, 
+        &bonds, 
+        &issu, 
+        "admin", 
+        Some(100),
+        Some(Uint128::new(10_000_000_000)),
+        Some(0),
+        Some(Uint128::new(5000)),
+        Uint128::new(10_000_000_000_000_000_000_000_000),
+        Uint128::new(10_000_000_000_000_000_000_000_000),
+        false,
+    );
+
+    // No opp, so fail
+    buy_opp_fail(&mut chain, &bonds, &depo);
+
+    // Buy opp successfully, hopefully
+    buy_opp(&mut chain, &bonds, &issu, Uint128::new(2_000_000_000));
+
+    query_bonds_balance(
+        &mut chain, 
+        &bonds, 
+        Uint128::new(2_105_263_157)
+    );
+
+    query_opp_parameters(
+        &mut chain, 
+        &bonds, 
+        None, 
+        Some(Uint128::new(2_105_263_157)), 
+        Some(Snip20Asset {
+            contract: Contract { 
+                address: issu.address.clone(), 
+                code_hash: issu.code_hash.clone() 
+            },
+            token_info: TokenInfo {
+                name: "Issued".to_string(),
+                symbol: "ISSU".to_string(),
+                decimals: 8,
+                total_supply: None,
+            },
+            token_config: Some(TokenConfig {
+                public_total_supply: false,
+                deposit_enabled: false,
+                redeem_enabled: false,
+                mint_enabled: false,
+                burn_enabled: false,
+            })
+        }), 
+        None, 
+        None, 
+        None, 
+        Some(Uint128::new(5000)), 
+        None, 
+        None, 
+        None
+    );
+
+    query_acccount_parameters(
+        &mut chain, 
+        &bonds, 
+        &query_auth, 
+        "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", 
+        Some(Snip20Asset {
+            contract: Contract { 
+                address: issu.address.clone(), 
+                code_hash: issu.code_hash.clone() 
+            },
+            token_info: TokenInfo {
+                name: "Issued".to_string(),
+                symbol: "ISSU".to_string(),
+                decimals: 8,
+                total_supply: None,
+            },
+            token_config: Some(TokenConfig {
+                public_total_supply: false,
+                deposit_enabled: false,
+                redeem_enabled: false,
+                mint_enabled: false,
+                burn_enabled: false,
+            })
+        }),  
+        None, 
+        Some(Uint128::new(2_000_000_000)), 
+        Some(Uint128::new(10_000_000_000_000_000_000)), 
+        Some(Uint128::new(2_105_263_157)), 
+        Some(Uint128::new(10_000_000_000_000_000_000)), 
+        Some(Uint128::new(5000)), 
+        Some(Uint128::new(9_500_000_000_000_000_000))
+    );
+
+    query_bonds_balance(
+        &mut chain, 
+        &bonds, 
+        Uint128::new(2_105_263_157)
+    );
 }

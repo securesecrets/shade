@@ -233,11 +233,6 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         return Err(blacklisted(sender));
     }
 
-    // Check that sender isn't the minted asset
-    if config.issued_asset.address == env.message.sender {
-        return Err(issued_asset_deposit());
-    }
-
     // Check that sender asset has an active bond opportunity
     let bond_opportunity = match bond_opportunity_r(&deps.storage)
         .may_load(env.message.sender.to_string().as_bytes())?
@@ -259,7 +254,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
 
-    // Calculate conversion of deposit to SHD
+    // Calculate conversion of deposit to issued
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
         &deps,
         deposit_amount,
