@@ -137,10 +137,6 @@ pub fn invalid_viewing_key() -> StdError {
     DetailedError::from_code(TARGET, Error::InvalidViewingKey, vec![]).to_error()
 }
 
-pub fn transfer_disabled() -> StdError {
-    DetailedError::from_code(TARGET, Error::TransfersDisabled, vec![]).to_error()
-}
-
 pub fn minting_disabled() -> StdError {
     DetailedError::from_code(TARGET, Error::MintingDisabled, vec![]).to_error()
 }
