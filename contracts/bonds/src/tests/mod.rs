@@ -381,7 +381,7 @@ pub fn init_contracts(
                 limit_admin: HumanAddr::from("limit_admin"),
                 global_issuance_limit: Uint128::new(100_000_000_000_000_000),
                 global_minimum_bonding_period: 0,
-                global_maximum_discount: Uint128::new(10_000),
+                global_maximum_discount: max_discount,
                 oracle: Contract {
                     address: router.address.clone(),
                     code_hash: router.code_hash.clone(),
