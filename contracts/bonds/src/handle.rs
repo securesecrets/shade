@@ -1,7 +1,20 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage,
+use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        CosmosMsg,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
+    math_compat::Uint128,
 };
 
 use shade_protocol::secret_toolkit::{
@@ -13,25 +26,38 @@ use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
 
 use shade_oracles::{common::OraclePrice, router::QueryMsg::GetPrice};
 
-use shade_protocol::contract_interfaces::bonds::{
-    errors::*,
-    BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
+use shade_protocol::{
+    contract_interfaces::{
+        airdrop::HandleMsg::CompleteTask,
+        bonds::{errors::*, Account, BondOpportunity, Config, HandleAnswer, PendingBond, SlipMsg},
+        snip20::helpers::{fetch_snip20, Snip20Asset},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use shade_protocol::contract_interfaces::{
-    airdrop::HandleMsg::CompleteTask,
-    snip20::helpers::{fetch_snip20, Snip20Asset},
-};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 use std::{cmp::Ordering, convert::TryFrom};
 
-use crate::contract::RESPONSE_BLOCK_SIZE;
-use crate::state::{
-    account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
-    allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
-    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_claimed_r, global_total_issued_r,
-    global_total_issued_w, issued_asset_r,
+use crate::{
+    contract::RESPONSE_BLOCK_SIZE,
+    state::{
+        account_r,
+        account_w,
+        allocated_allowance_r,
+        allocated_allowance_w,
+        allowance_key_r,
+        allowance_key_w,
+        bond_opportunity_r,
+        bond_opportunity_w,
+        config_r,
+        config_w,
+        deposit_assets_r,
+        deposit_assets_w,
+        global_total_claimed_r,
+        global_total_claimed_w,
+        global_total_issued_r,
+        global_total_issued_w,
+        issued_asset_r,
+    },
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
@@ -97,7 +123,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
             global_minimum_bonding_period: updated_config.global_minimum_bonding_period,
             global_maximum_discount: updated_config.global_maximum_discount,
             global_total_issued: global_total_issued_r(&deps.storage).load()?,
-            global_total_claimed: global_total_claimed_r(&deps.storage).load()?
+            global_total_claimed: global_total_claimed_r(&deps.storage).load()?,
         })?),
     })
 }
@@ -245,11 +271,6 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         return Err(blacklisted(sender));
     }
 
-    // Check that sender isn't the minted asset
-    if config.issued_asset.address == env.message.sender {
-        return Err(issued_asset_deposit());
-    }
-
     // Check that sender asset has an active bond opportunity
     let bond_opportunity = match bond_opportunity_r(&deps.storage)
         .may_load(env.message.sender.to_string().as_bytes())?
@@ -271,7 +292,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
 
-    // Calculate conversion of deposit to SHD
+    // Calculate conversion of deposit to issued
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
         deps,
         deposit_amount,
@@ -510,9 +531,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     // Check whether previous bond for this asset exists
-    match bond_opportunity_r(&deps.storage)
-        .may_load(deposit_asset.address.as_str().as_bytes())?
-    {
+    match bond_opportunity_r(&deps.storage).may_load(deposit_asset.address.as_str().as_bytes())? {
         Some(prev_opp) => {
             let unspent = prev_opp
                 .issuance_limit
@@ -601,10 +620,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     };
 
     // Save bond opportunity
-    bond_opportunity_w(&mut deps.storage).save(
-        deposit_asset.address.as_str().as_bytes(),
-        &bond_opportunity,
-    )?;
+    bond_opportunity_w(&mut deps.storage)
+        .save(deposit_asset.address.as_str().as_bytes(), &bond_opportunity)?;
 
     // Increase global total issued by bond opportunity's issuance limit
     global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
@@ -654,12 +671,9 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
 
     // Check whether previous bond for this asset exists
 
-    match bond_opportunity_r(&deps.storage)
-        .may_load(deposit_asset.address.as_str().as_bytes())?
-    {
+    match bond_opportunity_r(&deps.storage).may_load(deposit_asset.address.as_str().as_bytes())? {
         Some(prev_opp) => {
-            bond_opportunity_w(&mut deps.storage)
-                .remove(deposit_asset.address.as_str().as_bytes());
+            bond_opportunity_w(&mut deps.storage).remove(deposit_asset.address.as_str().as_bytes());
 
             // Remove asset from address list
             deposit_assets_w(&mut deps.storage).update(|mut assets| {
@@ -792,10 +806,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     }
     let mut issued_price = oracle(deps, issuance_asset.token_info.name.clone())?;
     if issued_price < err_issued_price {
-        return Err(issued_price_below_minimum(
-            issued_price,
-            err_issued_price,
-        ));
+        return Err(issued_price_below_minimum(issued_price, err_issued_price));
     }
     if issued_price < min_accepted_issued_price {
         disc = Uint128::zero();
@@ -813,12 +824,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     if issued_amount > available {
         return Err(mint_exceeds_limit(issued_amount, available));
     }
-    Ok((
-        issued_amount,
-        deposit_price,
-        issued_price,
-        discount_price,
-    ))
+    Ok((issued_amount, deposit_price, issued_price, discount_price))
 }
 
 pub fn calculate_issuance(

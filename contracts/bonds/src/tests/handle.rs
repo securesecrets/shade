@@ -1,24 +1,42 @@
-use crate::{tests::{
-    check_balances, init_contracts,
-    query::{query_no_opps, query_opp_parameters},
-    set_prices, set_viewing_key
-}, query};
+use crate::{
+    query,
+    tests::{
+        check_balances,
+        init_contracts,
+        query::{query_no_opps, query_opp_parameters},
+        set_prices,
+        set_viewing_key,
+    },
+};
 
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
-use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::contract_interfaces::{bonds, query_auth, snip20};
-use shade_protocol::utils::asset::Contract;
+use shade_protocol::{
+    c_std::HumanAddr,
+    contract_interfaces::{
+        bonds,
+        query_auth,
+        snip20::{self, helpers::Snip20Asset},
+    },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{ContractEnsemble, MockEnv},
+    },
+    math_compat::Uint128,
+    secret_toolkit::snip20::{TokenConfig, TokenInfo},
+    utils::asset::Contract,
+};
 
 use shade_protocol::c_std::StdError;
 
-use super::{increase_allowance, query::{query_acccount_parameters, query_config}, setup_admin};
+use super::{
+    increase_allowance,
+    query::{query_acccount_parameters, query_bonds_balance, query_config},
+    setup_admin,
+};
 
 #[test]
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -159,7 +177,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
-        "22" // Not an admin, can't start opp
+        "21", // Not an admin, can't start opp
     );
     open_opp_fail(
         &mut chain,
@@ -173,7 +191,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
-        "12" // Discount percentage is too high
+        "12", // Discount percentage is too high
     );
     open_opp(
         &mut chain,
@@ -213,7 +231,7 @@ pub fn test_bonds() {
         false,
     );
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
-                                                                   // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
+    // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
     query_opp_parameters(
         &mut chain,
         &bonds,
@@ -277,7 +295,6 @@ pub fn test_bonds() {
         None,
     );
 
-
     open_opp_fail(
         &mut chain,
         &bonds,
@@ -290,7 +307,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
-        "10" // Bond limit + previous limits exceeds global limit, so error
+        "10", // Bond limit + previous limits exceeds global limit, so error
     );
     open_opp(
         &mut chain,
@@ -338,7 +355,7 @@ pub fn test_bonds() {
 #[test]
 fn buy_no_opp() -> () {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -360,7 +377,7 @@ fn buy_no_opp() -> () {
 #[test]
 fn contract_inactive() -> () {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -375,7 +392,23 @@ fn contract_inactive() -> () {
 
     increase_allowance(&mut chain, &bonds, &issu);
 
-    update_config(&mut chain, &bonds, "admin", None, None, None, Some(false), None, None, None, None, None, None, None, None);
+    update_config(
+        &mut chain,
+        &bonds,
+        "admin",
+        None,
+        None,
+        None,
+        Some(false),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
 
     // Contract not active, error out with code 5
     open_opp_fail(
@@ -390,7 +423,7 @@ fn contract_inactive() -> () {
         Uint128::new(10_000_000_000_000_000_000_000_000),
         Uint128::new(10_000_000_000_000_000_000_000_000),
         false,
-        "5"
+        "5",
     );
 }
 
@@ -448,7 +481,7 @@ fn buy_opp_fail(
         memo: None,
         padding: None,
     };
-    
+
     match chain.execute(
         &msg,
         MockEnv::new(
@@ -457,21 +490,19 @@ fn buy_opp_fail(
         ),
     ) {
         Ok(_) => assert!(false),
-        Err(e) => {
-            match e {
-                StdError::GenericErr{ msg, backtrace: _ } =>  {
-                    let mut str = String::from("code\":{},");
-                    str = str.replace("{}", code);
-                    if msg.contains(&str) {
-                        assert!(true)
-                    } else {
-                        println!("{}", msg);
-                        assert!(false)
-                    }
+        Err(e) => match e {
+            StdError::GenericErr { msg, backtrace: _ } => {
+                let mut str = String::from("code\":{},");
+                str = str.replace("{}", code);
+                if msg.contains(&str) {
+                    assert!(true)
+                } else {
+                    println!("{}", msg);
+                    assert!(false)
                 }
-                _ => assert!(false)
             }
-        }
+            _ => assert!(false),
+        },
     }
 }
 
@@ -551,21 +582,19 @@ fn open_opp_fail(
 
     match chain.execute(&msg, MockEnv::new(sender, bonds.clone())) {
         Ok(_) => assert!(false),
-        Err(e) => {
-            match e {
-                StdError::GenericErr{ msg, backtrace: _ } =>  {
-                    let mut str = String::from("code\":{},");
-                    str = str.replace("{}", code);
-                    if msg.contains(&str) {
-                        assert!(true)
-                    } else {
-                        println!("{}", msg);
-                        assert!(false)
-                    }
+        Err(e) => match e {
+            StdError::GenericErr { msg, backtrace: _ } => {
+                let mut str = String::from("code\":{},");
+                str = str.replace("{}", code);
+                if msg.contains(&str) {
+                    assert!(true)
+                } else {
+                    println!("{}", msg);
+                    assert!(false)
                 }
-                _ => assert!(false)
             }
-        }
+            _ => assert!(false),
+        },
     }
 }
 
@@ -624,4 +653,131 @@ fn update_config(
     chain
         .execute(&msg, MockEnv::new(sender, bonds.clone()))
         .unwrap();
+}
+
+#[test]
+pub fn test_shd_shd_bond_mimic() {
+    let (mut chain, bonds, issu, depo, _atom, band, _oracle, query_auth, shade_admins) =
+        init_contracts(true, Uint128::new(5000)).unwrap();
+
+    update_config(
+        &mut chain,
+        &bonds,
+        "admin",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(Uint128::new(8_000_000_000_000_000_000)),
+        Some(Uint128::new(6_450_000_000_000_000_000)),
+        None,
+        None,
+        None,
+    );
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(9_213_000_000_000_000_000),
+        Uint128::new(5_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    setup_admin(&mut chain, &shade_admins, &bonds);
+
+    increase_allowance(&mut chain, &bonds, &issu);
+
+    open_opp(
+        &mut chain,
+        &bonds,
+        &issu,
+        "admin",
+        Some(100),
+        Some(Uint128::new(10_000_000_000)),
+        Some(0),
+        Some(Uint128::new(192)),
+        Uint128::new(100_000_000_000_000_000_000),
+        Uint128::new(100_000_000_000_000_000_000),
+        false,
+    );
+
+    // No opp, so fail
+    buy_opp_fail(&mut chain, &bonds, &depo, "6");
+
+    // Buy opp successfully, hopefully
+    buy_opp(&mut chain, &bonds, &issu, Uint128::new(2_000_000_000));
+
+    query_bonds_balance(&mut chain, &bonds, Uint128::new(2_003_847_386));
+
+    query_opp_parameters(
+        &mut chain,
+        &bonds,
+        None,
+        Some(Uint128::new(2_003_847_386)),
+        Some(Snip20Asset {
+            contract: Contract {
+                address: issu.address.clone(),
+                code_hash: issu.code_hash.clone(),
+            },
+            token_info: TokenInfo {
+                name: "Issued".to_string(),
+                symbol: "ISSU".to_string(),
+                decimals: 8,
+                total_supply: None,
+            },
+            token_config: Some(TokenConfig {
+                public_total_supply: false,
+                deposit_enabled: false,
+                redeem_enabled: false,
+                mint_enabled: false,
+                burn_enabled: false,
+            }),
+        }),
+        None,
+        None,
+        None,
+        Some(Uint128::new(192)),
+        None,
+        None,
+        None,
+    );
+
+    query_acccount_parameters(
+        &mut chain,
+        &bonds,
+        &query_auth,
+        "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
+        Some(Snip20Asset {
+            contract: Contract {
+                address: issu.address.clone(),
+                code_hash: issu.code_hash.clone(),
+            },
+            token_info: TokenInfo {
+                name: "Issued".to_string(),
+                symbol: "ISSU".to_string(),
+                decimals: 8,
+                total_supply: None,
+            },
+            token_config: Some(TokenConfig {
+                public_total_supply: false,
+                deposit_enabled: false,
+                redeem_enabled: false,
+                mint_enabled: false,
+                burn_enabled: false,
+            }),
+        }),
+        None,
+        Some(Uint128::new(2_000_000_000)),
+        Some(Uint128::new(9_213_000_000_000_000_000)),
+        Some(Uint128::new(2_003_847_386)),
+        Some(Uint128::new(9_213_000_000_000_000_000)),
+        Some(Uint128::new(192)),
+        Some(Uint128::new(9_195_311_040_000_000_000)),
+    );
+
+    query_bonds_balance(&mut chain, &bonds, Uint128::new(2_003_847_386));
 }

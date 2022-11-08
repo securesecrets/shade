@@ -2,26 +2,37 @@ pub mod handle;
 pub mod query;
 
 use contract_harness::harness::{
-    admin::Admin, bonds::Bonds, query_auth::QueryAuth, snip20::Snip20,
+    admin::Admin,
+    bonds::Bonds,
+    query_auth::QueryAuth,
+    snip20::Snip20,
 };
-use shade_protocol::c_std::{HumanAddr, StdResult};
-use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_oracles_ensemble::harness::{MockBand, OracleRouter, ProxyBandOracle};
-use shade_protocol::contract_interfaces::{
-    bonds, query_auth,
-    snip20::{self, InitialBalance},
+use shade_protocol::{
+    c_std::{HumanAddr, StdResult},
+    contract_interfaces::{
+        bonds,
+        query_auth,
+        snip20::{self, InitialBalance},
+    },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{ContractEnsemble, MockEnv},
+    },
+    utils::asset::Contract,
 };
-use shade_protocol::utils::asset::Contract;
 
-use shade_protocol::math_compat::Uint128;
 use shade_admin::admin;
 use shade_oracles::{
     band::{self, proxy::InitMsg, HandleMsg::UpdateSymbolPrice},
     router,
 };
+use shade_protocol::math_compat::Uint128;
 
-pub fn init_contracts() -> StdResult<(
+pub fn init_contracts(
+    seed_user: bool,
+    max_discount: Uint128,
+) -> StdResult<(
     ContractEnsemble,
     ContractLink<HumanAddr>,
     ContractLink<HumanAddr>,
@@ -40,18 +51,33 @@ pub fn init_contracts() -> StdResult<(
         .instantiate(
             shade_admin.id,
             &admin::InitMsg {},
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "shade_admin".into(),
-                    code_hash: shade_admin.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "shade_admin".into(),
+                code_hash: shade_admin.code_hash,
+            }),
         )?
         .instance;
 
     // Register snip20s
     let issu = chain.register(Box::new(Snip20));
+    let mut balances;
+    if seed_user {
+        balances = vec![
+            InitialBalance {
+                address: HumanAddr::from("admin"),
+                amount: Uint128::new(1_000_000_000_000_000),
+            },
+            InitialBalance {
+                address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
+                amount: Uint128::new(1_000_000_000_000_000),
+            },
+        ];
+    } else {
+        balances = vec![InitialBalance {
+            address: HumanAddr::from("admin"),
+            amount: Uint128::new(1_000_000_000_000_000),
+        }]
+    }
     let issu = chain
         .instantiate(
             issu.id,
@@ -60,20 +86,14 @@ pub fn init_contracts() -> StdResult<(
                 admin: Some(HumanAddr::from("admin")),
                 symbol: "ISSU".into(),
                 decimals: 8,
-                initial_balances: Some(vec![InitialBalance {
-                    address: HumanAddr::from("admin"),
-                    amount: Uint128::new(1_000_000_000_000_000),
-                }]),
+                initial_balances: Some(balances),
                 prng_seed: Default::default(),
                 config: None,
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "issu".into(),
-                    code_hash: issu.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "issu".into(),
+                code_hash: issu.code_hash,
+            }),
         )?
         .instance;
 
@@ -107,13 +127,10 @@ pub fn init_contracts() -> StdResult<(
                 prng_seed: Default::default(),
                 config: None,
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "depo".into(),
-                    code_hash: depo.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "depo".into(),
+                code_hash: depo.code_hash,
+            }),
         )?
         .instance;
 
@@ -141,13 +158,10 @@ pub fn init_contracts() -> StdResult<(
                 prng_seed: Default::default(),
                 config: None,
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "atom".into(),
-                    code_hash: atom.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "atom".into(),
+                code_hash: atom.code_hash,
+            }),
         )?
         .instance;
 
@@ -165,13 +179,10 @@ pub fn init_contracts() -> StdResult<(
         .instantiate(
             band.id,
             &band::InitMsg {},
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "band".into(),
-                    code_hash: band.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "band".into(),
+                code_hash: band.code_hash,
+            }),
         )?
         .instance;
 
@@ -191,13 +202,10 @@ pub fn init_contracts() -> StdResult<(
                 },
                 quote_symbol: "ISSU".to_string(),
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "issu_oracle".into(),
-                    code_hash: issu_oracle.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "issu_oracle".into(),
+                code_hash: issu_oracle.code_hash,
+            }),
         )?
         .instance;
 
@@ -217,13 +225,10 @@ pub fn init_contracts() -> StdResult<(
                 },
                 quote_symbol: "DEPO".to_string(),
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "depo_oracle".into(),
-                    code_hash: depo_oracle.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "depo_oracle".into(),
+                code_hash: depo_oracle.code_hash,
+            }),
         )?
         .instance;
 
@@ -243,13 +248,10 @@ pub fn init_contracts() -> StdResult<(
                 },
                 quote_symbol: "ATOM".to_string(),
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "atom_oracle".into(),
-                    code_hash: atom_oracle.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "atom_oracle".into(),
+                code_hash: atom_oracle.code_hash,
+            }),
         )?
         .instance;
 
@@ -273,13 +275,10 @@ pub fn init_contracts() -> StdResult<(
                 },
                 quote_symbol: "DEPO".to_string(),
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "router".into(),
-                    code_hash: router.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "router".into(),
+                code_hash: router.code_hash,
+            }),
         )?
         .instance;
 
@@ -293,9 +292,11 @@ pub fn init_contracts() -> StdResult<(
         },
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", router.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", router.clone()))
+            .is_ok()
+    );
 
     let msg = router::HandleMsg::UpdateRegistry {
         operation: router::RegistryOperation::Add {
@@ -307,33 +308,50 @@ pub fn init_contracts() -> StdResult<(
         },
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", router.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", router.clone()))
+            .is_ok()
+    );
 
-    let msg = router::HandleMsg::UpdateRegistry { 
-        operation: router::RegistryOperation::UpdateAlias { alias: "Deposit".to_string(), key: "DEPO".to_string() } 
+    let msg = router::HandleMsg::UpdateRegistry {
+        operation: router::RegistryOperation::UpdateAlias {
+            alias: "Deposit".to_string(),
+            key: "DEPO".to_string(),
+        },
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", router.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", router.clone()))
+            .is_ok()
+    );
 
-    let msg = router::HandleMsg::UpdateRegistry { 
-        operation: router::RegistryOperation::UpdateAlias { alias: "Issued".to_string(), key: "ISSU".to_string() } 
-    };
-    
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", router.clone()))
-        .is_ok());
-    
-    let msg = router::HandleMsg::UpdateRegistry { 
-        operation: router::RegistryOperation::UpdateAlias { alias: "Atom".to_string(), key: "ATOM".to_string() } 
+    let msg = router::HandleMsg::UpdateRegistry {
+        operation: router::RegistryOperation::UpdateAlias {
+            alias: "Issued".to_string(),
+            key: "ISSU".to_string(),
+        },
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", router.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", router.clone()))
+            .is_ok()
+    );
+
+    let msg = router::HandleMsg::UpdateRegistry {
+        operation: router::RegistryOperation::UpdateAlias {
+            alias: "Atom".to_string(),
+            key: "ATOM".to_string(),
+        },
+    };
+
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", router.clone()))
+            .is_ok()
+    );
 
     // Register query_auth
     let query_auth = chain.register(Box::new(QueryAuth));
@@ -347,13 +365,10 @@ pub fn init_contracts() -> StdResult<(
                 },
                 prng_seed: Default::default(),
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "query_auth".into(),
-                    code_hash: query_auth.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "query_auth".into(),
+                code_hash: query_auth.code_hash,
+            }),
         )?
         .instance;
 
@@ -366,7 +381,7 @@ pub fn init_contracts() -> StdResult<(
                 limit_admin: HumanAddr::from("limit_admin"),
                 global_issuance_limit: Uint128::new(100_000_000_000_000_000),
                 global_minimum_bonding_period: 0,
-                global_maximum_discount: Uint128::new(10_000),
+                global_maximum_discount: max_discount,
                 oracle: Contract {
                     address: router.address.clone(),
                     code_hash: router.code_hash.clone(),
@@ -379,7 +394,7 @@ pub fn init_contracts() -> StdResult<(
                 activated: true,
                 bond_issuance_limit: Uint128::new(100_000_000_000_000),
                 bonding_period: 0,
-                discount: Uint128::new(10_000),
+                discount: max_discount,
                 global_min_accepted_issued_price: Uint128::new(10_000_000_000_000_000_000),
                 global_err_issued_price: Uint128::new(5_000_000_000_000_000_000),
                 allowance_key_entropy: "".into(),
@@ -393,13 +408,10 @@ pub fn init_contracts() -> StdResult<(
                     code_hash: query_auth.code_hash.clone(),
                 },
             },
-            MockEnv::new(
-                "admin",
-                ContractLink {
-                    address: "bonds".into(),
-                    code_hash: bonds.code_hash,
-                },
-            ),
+            MockEnv::new("admin", ContractLink {
+                address: "bonds".into(),
+                code_hash: bonds.code_hash,
+            }),
         )?
         .instance;
 
@@ -503,9 +515,11 @@ pub fn setup_admin(
         contract_address: bonds.address.clone().to_string(),
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", shade_admins.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", shade_admins.clone()))
+            .is_ok()
+    );
 }
 
 pub fn increase_allowance(
@@ -520,15 +534,14 @@ pub fn increase_allowance(
         padding: None,
     };
 
-    assert!(chain
-        .execute(&msg, MockEnv::new("admin", issu.clone()))
-        .is_ok());
+    assert!(
+        chain
+            .execute(&msg, MockEnv::new("admin", issu.clone()))
+            .is_ok()
+    );
 }
 
-pub fn set_viewing_key(
-    chain: &mut ContractEnsemble,
-    query_auth: &ContractLink<HumanAddr>
-) -> () {
+pub fn set_viewing_key(chain: &mut ContractEnsemble, query_auth: &ContractLink<HumanAddr>) -> () {
     let msg = query_auth::HandleMsg::CreateViewingKey {
         entropy: "random".to_string(),
         padding: None,

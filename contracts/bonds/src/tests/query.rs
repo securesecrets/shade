@@ -1,11 +1,12 @@
 use shade_oracles::common::Contract;
-use shade_protocol::c_std::{testing::*, Binary, HumanAddr};
-use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::fadroma::ensemble::ContractEnsemble;
-use shade_protocol::contract_interfaces::{
-    bonds,
-    query_auth::{self, PermitData, QueryPermit},
-    snip20::helpers::Snip20Asset,
+use shade_protocol::{
+    c_std::{testing::*, Binary, HumanAddr},
+    contract_interfaces::{
+        bonds,
+        query_auth::{self, PermitData, QueryPermit},
+        snip20::helpers::Snip20Asset,
+    },
+    fadroma::{core::ContractLink, ensemble::ContractEnsemble},
 };
 
 use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
@@ -25,15 +26,31 @@ pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAdd
     }
 }
 
+pub fn query_bonds_balance(
+    chain: &mut ContractEnsemble,
+    bonds: &ContractLink<HumanAddr>,
+    check_balance: Uint128,
+) -> () {
+    let msg = bonds::QueryMsg::CheckBalance {};
+
+    let query: bonds::QueryAnswer = chain.query(bonds.address.clone(), &msg).unwrap();
+
+    match query {
+        bonds::QueryAnswer::CheckBalance { balance } => {
+            assert_eq!(balance, check_balance)
+        }
+        _ => assert!(false),
+    }
+}
+
 pub fn query_config(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    activated: Option<bool>
+    activated: Option<bool>,
 ) -> () {
-    let query: bonds::QueryAnswer = chain.query(
-        bonds.address.clone(), 
-        &bonds::QueryMsg::Config {  }
-    ).unwrap();
+    let query: bonds::QueryAnswer = chain
+        .query(bonds.address.clone(), &bonds::QueryMsg::Config {})
+        .unwrap();
 
     match query {
         bonds::QueryAnswer::Config { config } => {
@@ -41,7 +58,7 @@ pub fn query_config(
                 assert_eq!(config.activated, activated.unwrap())
             }
         }
-        _ => assert!(false)
+        _ => assert!(false),
     }
 }
 
