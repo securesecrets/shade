@@ -31,6 +31,7 @@ use shade_protocol::math_compat::Uint128;
 
 pub fn init_contracts(
     seed_user: bool,
+    max_discount: Uint128
 ) -> StdResult<(
     ContractEnsemble,
     ContractLink<HumanAddr>,
