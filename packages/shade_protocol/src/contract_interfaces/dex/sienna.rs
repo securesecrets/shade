@@ -1,16 +1,18 @@
 use crate::{
+    c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage},
     contract_interfaces::{dex::dex, oracles::band},
+    math_compat::Uint128,
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use cosmwasm_math_compat::Uint128;
 
-use schemars::JsonSchema;
-use secret_toolkit::{utils::Query, serialization::Base64};
-use serde::{Deserialize, Serialize};
+use crate::{
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
+};
+use secret_toolkit::{serialization::Base64, utils::Query};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -1,273 +1,521 @@
-use cosmwasm_std::{
-    Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
-    StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
-};
-use fadroma::scrt::to_cosmos_msg;
-use cosmwasm_math_compat::Uint128;
+use crate::query::{any_cycles_profitable, cycle_profitability};
+use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
-    utils::{asset::Contract, storage::plus::ItemStorage},
-    contract_interfaces::{
-    sky::sky::{
-        Config, HandleAnswer, self
+    c_std::{
+        self,
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
     },
-    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
-    mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
-    snip20::helpers::Snip20Asset,
-}};
-use secret_toolkit::utils::Query;
-use secret_toolkit::snip20::send_msg;
-use crate::{query::trade_profitability};
+    contract_interfaces::{
+        dao::adapter,
+        sky::{
+            self,
+            cycles::{Cycle, Offer},
+            Config,
+            Cycles,
+            HandleAnswer,
+            SelfAddr,
+            ViewingKeys,
+        },
+    },
+    math_compat::{Decimal, Uint128},
+    secret_toolkit::{
+        snip20::{send_msg, set_viewing_key_msg},
+        utils::{HandleCallback, Query},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
+};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    config: Config,
+    shade_admin: Option<Contract>,
+    shd_token: Option<Contract>,
+    silk_token: Option<Contract>,
+    sscrt_token: Option<Contract>,
+    treasury: Option<Contract>,
+    payback_rate: Option<Decimal>,
+    min_amount: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
-        return Err(StdError::unauthorized())
+    //Admin-only
+    let mut config = Config::load(&mut deps.storage)?;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(
+            &deps.querier,
+            config.shade_admin.code_hash.clone(),
+            config.shade_admin.address.clone(),
+        )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    let mut messages = vec![];
+
+    if let Some(shade_admin) = shade_admin {
+        config.shade_admin = shade_admin;
+    }
+    if let Some(shd_token) = shd_token {
+        config.shd_token = shd_token;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
+            None,
+            1,
+            config.shd_token.code_hash.clone(),
+            config.shd_token.address.clone(),
+        )?);
+    }
+    if let Some(silk_token) = silk_token {
+        config.silk_token = silk_token;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
+            None,
+            1,
+            config.silk_token.code_hash.clone(),
+            config.silk_token.address.clone(),
+        )?);
+    }
+    if let Some(sscrt_token) = sscrt_token {
+        config.sscrt_token = sscrt_token;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
+            None,
+            1,
+            config.sscrt_token.code_hash.clone(),
+            config.sscrt_token.address.clone(),
+        )?);
+    }
+    if let Some(treasury) = treasury {
+        config.treasury = treasury;
+    }
+    if let Some(payback_rate) = payback_rate {
+        if payback_rate == Decimal::zero() {
+            return Err(StdError::generic_err("payback_rate cannot be zero"));
+        }
+        config.payback_rate = payback_rate;
+    }
+    if let Some(min_amount) = min_amount {
+        config.min_amount = min_amount;
     }
     config.save(&mut deps.storage)?;
-    Ok(HandleResponse{
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::UpdateConfig { status: true })?),
+    })
+}
+
+pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_set: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    if cycles_to_set.clone().len() > 40 {
+        return Err(StdError::generic_err("Too many cycles"));
+    }
+
+    // validate cycles
+    for cycle in cycles_to_set.clone() {
+        cycle.validate_cycle()?;
+    }
+
+    let new_cycles = Cycles(cycles_to_set);
+    new_cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig{
+        data: Some(to_binary(&HandleAnswer::SetCycles { status: true })?),
+    })
+}
+
+pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_add: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    for cycle in cycles_to_add.clone() {
+        cycle.validate_cycle()?;
+    }
+
+    let mut cycles = Cycles::load(&deps.storage)?;
+
+    if cycles.0.clone().len() + cycles_to_add.clone().len() > 40 {
+        return Err(StdError::generic_err("Too many cycles"));
+    }
+
+    cycles.0.append(&mut cycles_to_add.clone());
+
+    cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::AppendCycles { status: true })?),
+    })
+}
+
+pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycle: Cycle,
+    index: Uint128,
+) -> StdResult<HandleResponse> {
+    let i = index.u128() as usize;
+    // Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    cycle.validate_cycle()?;
+    let mut cycles = Cycles::load(&deps.storage)?;
+    if i > cycles.0.clone().len() - 1 {
+        return Err(StdError::generic_err("index out of bounds"));
+    }
+    cycles.0[i] = cycle;
+    cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::UpdateCycle { status: true })?),
+    })
+}
+
+pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    index: Uint128,
+) -> StdResult<HandleResponse> {
+    let i = index.u128() as usize;
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    // I'm pissed I couldn't do this in one line
+    let mut cycles = Cycles::load(&deps.storage)?.0;
+
+    if i > cycles.clone().len() - 1 {
+        return Err(StdError::generic_err("index out of bounds"));
+    }
+
+    cycles.remove(i);
+    Cycles(cycles).save(&mut deps.storage)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveCycle { status: true })?),
+    })
+}
+
+pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    amount: Uint128,
+    index: Uint128,
+    payback_addr: Option<HumanAddr>,
+) -> StdResult<HandleResponse> {
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
+    }
+    let mut messages = vec![];
+    let mut return_swap_amounts = vec![];
+    let mut payback_amount = Uint128::zero();
+    let i = index.u128() as usize;
+    // cur_asset will keep track of the asset that we currently "have"
+    let mut cur_asset = Contract {
+        address: HumanAddr::default(),
+        code_hash: "".to_string(),
+    };
+
+    // don't need to check for an index out of bounds since that check will happen in
+    // cycle_profitability
+    let res = cycle_profitability(deps, amount, index)?; // get profitability data from query
+    match res {
+        sky::QueryAnswer::IsCycleProfitable {
+            is_profitable,
+            direction,
+            swap_amounts,
+            profit,
+        } => {
+            return_swap_amounts = swap_amounts.clone();
+            if direction.pair_addrs[0] // test to see which of the token attributes are the proposed starting addr
+                .token0
+                == direction.start_addr.clone()
+            {
+                cur_asset = direction.pair_addrs[0].token0.clone();
+            } else {
+                cur_asset = direction.pair_addrs[0].token1.clone();
+            }
+            // if tx is unprofitable, err out
+            if !is_profitable {
+                return Err(StdError::generic_err("Unprofitable"));
+            }
+            //loop through the pairs in the cycle
+            for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
+                // if it's the last pair, set our minimum expected amount, otherwise, this field
+                // should be zero
+                if direction.pair_addrs.len() - 1 == i {
+                    messages.push(arb_pair.to_cosmos_msg(
+                        Offer {
+                            asset: cur_asset.clone(),
+                            amount: swap_amounts[i],
+                        },
+                        amount,
+                    )?);
+                } else {
+                    messages.push(arb_pair.to_cosmos_msg(
+                        Offer {
+                            asset: cur_asset.clone(),
+                            amount: swap_amounts[i],
+                        },
+                        Uint128::zero(),
+                    )?);
+                }
+                // reset cur asset to the other asset held in the struct
+                if cur_asset == arb_pair.token0.clone() {
+                    cur_asset = arb_pair.token1.clone();
+                } else {
+                    cur_asset = arb_pair.token0.clone();
+                }
+            }
+            // calculate payback amount
+            payback_amount = profit * Config::load(&deps.storage)?.payback_rate;
+
+            // add the payback msg
+            if let Some(payback_addr) = payback_addr {
+                messages.push(send_msg(
+                    payback_addr,
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            } else {
+                messages.push(send_msg(
+                    env.message.sender.clone(),
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            }
+        }
+        _ => {}
+    }
+
+    // the final cur_asset should be the same as the start_addr
+    if !(cur_asset.clone() == Cycles::load(&deps.storage)?.0[i].start_addr) {
+        return Err(StdError::generic_err(
+            "final asset not equal to start asset",
+        ));
+    }
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ExecuteArbCycle {
             status: true,
+            swap_amounts: return_swap_amounts,
+            payback_amount,
         })?),
     })
 }
 
-/*pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
+pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
-    let config: Config = Config::load(&deps.storage)?;
-    let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
-        &deps.querier,
-        env.contract_code_hash.clone(),//TODO
-        config.market_swap_addr.address.clone(),
-    )?;
-    let test_amount: u128 = 100000000;
-    let mint_info: QueryAnswer = QueryMsg::Mint{
-        offer_asset: config.shd_token.contract.address.clone(),
-        amount: Uint128::new(test_amount),
-    }.query(
-        &deps.querier,
-        env.contract_code_hash.clone(),//TODO
-        config.mint_addr.address.clone(),
-    )?;
-    let mut mint_price: Uint128 = Uint128::zero();
-    match mint_info{
-        QueryAnswer::Mint {
-            asset,
-            amount,
-        } => {
-            mint_price = amount;
-        },
-        _ => {
-            return Err(StdError::GenericErr { 
-                msg: "Query returned with unexpected result".to_string(), 
-                backtrace: None 
-            });
-        },
-    };
-    let mut nom = Uint128::zero();
-    let mut denom = Uint128::zero();
-    if pool_info.pair_info.amount_0.u128().lt(&pool_info.pair_info.amount_1.u128()) {
-        nom = pool_info.pair_info.amount_1.checked_mul(Uint128::new(100000000))?;
-        denom = pool_info.pair_info.amount_0.clone();
-    } else {
-        nom = pool_info.pair_info.amount_0.checked_mul(Uint128::new(100000000))?;
-        denom = pool_info.pair_info.amount_1.clone();
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
     }
-    let mut market_price: Uint128 = nom.checked_mul(denom)?; // silk/shd
-    
-
+    let mut total_profit = Uint128::zero();
     let mut messages = vec![];
-    if mint_price.lt(&market_price) { //swap then mint
-        //take out swap fees here
-        let first_swap = constant_product(
-            amount.clone(), 
-            nom.checked_div(Uint128::new(100000000))?, 
-            denom.clone()
-        )?;
-        let second_swap = first_swap.checked_div(mint_price)?;
-        let mut msg = Swap{
-            send: SwapOffer{
-                recipient: config.market_swap_addr.address.clone(),
-                amount,
-                msg: to_binary(&{})?
-            }
-        };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //swap
-            contract_addr: config.shd_token.contract.address.clone(),
-            callback_code_hash: env.contract_code_hash.clone(),
-            msg: to_binary(&msg)?,
-            send: vec![],
-        }));
-        //let expected = {
-        //    expected_amount: second_swap.clone(),
-        //};
-        let msg = Receive{
-            amount: first_swap.clone(),
-            from: config.silk_token.contract.address.clone(),
-            memo: Some(to_binary("")?),
-            sender:  env.contract.address.clone(),
-            msg: Some(to_binary(&"TODO".to_string())?),
-        };
-        let data = to_binary(&msg)?;
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //mint
-            contract_addr: config.mint_addr.address.clone(),
-            callback_code_hash: "".to_string(),
-            msg: data,
-            send: vec![],
-        }));
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //swap
-            contract_addr: config.shd_token.contract.address.clone(),
-            callback_code_hash: "".to_string(),
-            msg: Binary(vec![]),
-            send: vec![],
-        }));
-    }else{ //mint then swap
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //swap
-            contract_addr: config.shd_token.contract.address.clone(),
-            callback_code_hash: "".to_string(),
-            msg: Binary(vec![]),
-            send: vec![],
-        }));
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //mint
-            contract_addr: config.shd_token.contract.address.clone(),
-            callback_code_hash: "".to_string(),
-            msg: Binary(vec![]),
-            send: vec![],
-        }));
-    }
-
-    Ok(HandleResponse{
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExecuteArb{
-            status: true,
-        })?)
-    })
-}*/
-
-pub fn try_execute<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    amount: Uint128,
-) -> StdResult<HandleResponse> {
-
-    let config: Config = Config::load(&deps.storage)?;
-
-    //if amount.gt(env.)
-    
-    let res = trade_profitability( deps, amount )?;
-
-    let mut profitable = false;
-    let mut is_mint_first = false;
-    let mut pool_shd_amount = Uint128::zero();
-    let mut pool_silk_amount = Uint128::zero();
-    let mut first_swap_min_expected = Uint128::zero();
-    let mut second_swap_min_expected = Uint128::zero();
+    let res = any_cycles_profitable(deps, amount)?; // get profitability data from query
     match res {
-        sky::QueryAnswer::TestProfitability{
-            is_profitable, 
-            mint_first, 
-            shd_amount,
-            silk_amount,
-            first_swap_amount, 
-            second_swap_amount,
+        sky::QueryAnswer::IsAnyCycleProfitable {
+            is_profitable,
+            profit,
+            ..
         } => {
-            profitable = is_profitable;
-            is_mint_first = mint_first;
-            pool_shd_amount = shd_amount;
-            pool_silk_amount = silk_amount;
-            first_swap_min_expected = first_swap_amount;
-            second_swap_min_expected = second_swap_amount;
+            // loop through the data returned for each cycle
+            for (i, profit_bool) in is_profitable.iter().enumerate() {
+                // if a cycle is profitable call the try_arb_cycle fn and keep track of the
+                // total_profit
+                if profit_bool.clone() {
+                    messages.push(
+                        sky::HandleMsg::ArbCycle {
+                            amount,
+                            index: Uint128::from(i as u128),
+                            payback_addr: Some(env.message.sender.clone()),
+                            padding: None,
+                        }
+                        .to_cosmos_msg(
+                            env.contract_code_hash.clone(),
+                            env.contract.address.clone(),
+                            None,
+                        )?,
+                    );
+                    total_profit = total_profit.clone().checked_add(profit[i])?;
+                }
+            }
         }
         _ => {}
     }
-    
-    let mut messages = vec![];
-    let mut mint_msg: mint::HandleMsg;
-    let mut sienna_msg: Swap;
-
-    if is_mint_first {
-        messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
-            &mint::HandleMsg::Receive{
-                sender: env.contract.address.clone(),
-                from: config.shd_token.contract.address.clone(),
-                amount: amount.clone(),
-                memo: None,
-                msg: Some(to_binary(&mint::MintMsgHook{
-                    minimum_expected_amount: first_swap_min_expected
-                })?)
-            },
-        )?);
-
-        messages.push(send_msg(
-            config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
-            Some(to_binary(&CallbackSwap{
-                expected_return: second_swap_min_expected.clone(),
-            })?),
-            None,
-            None,
-            256,
-            config.silk_token.contract.code_hash.clone(),
-            config.silk_token.contract.address.clone(),
-        )?);
-    }
-    else {
-        messages.push(send_msg(
-            config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(amount.u128()),
-            Some(to_binary(&CallbackSwap{
-                expected_return: first_swap_min_expected,
-            })?),
-            None,
-            None,
-            256,
-            config.shd_token.contract.code_hash.clone(),
-            config.shd_token.contract.address.clone(),
-        )?);
-
-        messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
-            &mint::HandleMsg::Receive{
-                sender: env.contract.address.clone(),
-                from: config.silk_token.contract.address.clone(),
-                amount: first_swap_min_expected,
-                memo: None,
-                msg: Some(to_binary(&mint::MintMsgHook{
-                    minimum_expected_amount: second_swap_min_expected
-                })?)
-            },
-        )?);
-    }
-
-    Ok(HandleResponse{
+    // calculate payback_amount
+    let payback_amount = total_profit * Config::load(&deps.storage)?.payback_rate;
+    Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExecuteArb{
+        data: Some(to_binary(&HandleAnswer::ArbAllCycles {
             status: true,
-        })?)
+            payback_amount,
+        })?),
     })
 }
 
-pub fn constant_product(swap_amount: Uint128, pool_buy: Uint128, pool_sell: Uint128) -> StdResult<Uint128> {
-    //let cp = pool_buy.u128().clone() * pool_sell.u128().clone();
-    //let lpb = pool_sell.u128().clone() + swap_amount.u128().clone();
-    //let ncp = div(Uint128::new(cp.clone()), Uint128::new(lpb.clone()))?;
-    //let result = pool_buy.u128().clone() - ncp.u128().clone();
-    let cp = pool_buy.checked_mul(pool_sell)?;
-    let lpb = pool_sell.checked_add(swap_amount)?;
-    let ncp = cp.checked_div(lpb)?;
-    let result = pool_buy.checked_sub(ncp)?;
+pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+    let config = Config::load(&deps.storage)?;
+    // Error out if anyone other than the treasury is asking for money
+    if !(env.message.sender == config.treasury.address) {
+        return Err(StdError::unauthorized());
+    }
+    // Error out if the treasury is asking for an asset sky doesn't account for
+    if !(config.shd_token.address == asset
+        || config.silk_token.address == asset
+        || config.sscrt_token.address == asset)
+    {
+        return Err(StdError::GenericErr {
+            msg: String::from("Unrecognized asset"),
+            backtrace: None,
+        });
+    }
+    // initialize this var to whichever token the treasury is asking for
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token;
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token;
+    } else {
+        contract = config.sscrt_token;
+    }
+    // send the msg
+    let messages = vec![send_msg(
+        config.treasury.address,
+        c_std::Uint128::from(amount.u128()),
+        None,
+        None,
+        None,
+        256,
+        contract.code_hash,
+        contract.address,
+    )?];
 
-    Ok(result)
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: c_std::Uint128::from(amount.u128()),
+        })?),
+    })
+}
+
+// Unessesary for sky
+pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount: c_std::Uint128::zero(),
+        })?),
+    })
+}
+
+// Unessesary for sky
+pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Update {
+            status: ResponseStatus::Success,
+        })?),
+    })
 }

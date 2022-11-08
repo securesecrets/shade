@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Api,
     BalanceResponse,
     BankQuery,
@@ -90,10 +90,12 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             .sum::<u128>(),
     );
 
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+
     let rewards = rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: delegated + rewards,
+        amount: delegated + rewards + scrt_balance,
     })
 }
 
@@ -110,17 +112,13 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
-
-    let mut amount = scrt_balance.amount.amount;
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+    let rewards = rewards(&deps)?;
+    //assert!(false, "balance {}", scrt_balance);
     let unbonding = unbonding_r(&deps.storage).load()?;
+    //assert!(false, "unbonding {}", unbonding);
 
+    let mut amount = scrt_balance + rewards;
     if amount > unbonding {
         amount = unbonding;
     }
@@ -141,8 +139,12 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
+    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+
+    let rewards = rewards(&deps)?;
+
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(&deps.storage).load()?,
+        amount: (unbonding_r(&deps.storage).load()? - (scrt_balance + rewards))?,
     })
 }
 
@@ -159,12 +161,24 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
+    /* TODO: issues since we cant query unbondings
+     *    While assets are unbonding they don't reflect anywhere in balance
+     *    Once the unbonding funds are here they will show, making it difficult to present
+     *    unbondable funds that arent being currently unbonded
+     */
     let unbondable = match balance(deps, asset)? {
         adapter::QueryAnswer::Balance { amount } => amount,
         _ => {
             return Err(StdError::generic_err("Failed to query balance"));
         }
     };
+
+    /*
+    let unbonding = unbonding_r(&deps.storage).load()?;
+    if !unbonding.is_zero() {
+        panic!("unbondable {}, unbonding {}", unbondable, unbonding);
+    }
+    */
 
     /*TODO: Query current unbondings
      * u >= 7 = 0
@@ -186,8 +200,14 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
     let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
 
+    let rewards = rewards(&deps)?;
+    //assert!(false, "rewards {}", rewards);
+
+    if !scrt_balance.is_zero() {
+        assert!(false, "scrt bal {}", scrt_balance);
+    }
     Ok(adapter::QueryAnswer::Reserves {
-        amount: scrt_balance + rewards(&deps)?,
+        amount: scrt_balance + rewards,
     })
 }
 

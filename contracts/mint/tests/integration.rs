@@ -1,5 +1,5 @@
-use cosmwasm_math_compat as compat;
-use cosmwasm_std::{
+use shade_protocol::math_compat as compat;
+use shade_protocol::c_std::{
     coins,
     from_binary,
     to_binary,
@@ -13,7 +13,7 @@ use cosmwasm_std::{
     StdResult,
 };
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::{
     contract_interfaces::{
         snip20,
@@ -42,10 +42,10 @@ use contract_harness::harness::{
     snip20_reference_impl::Snip20ReferenceImpl as Snip20
 };
 
-use fadroma::{
+use shade_protocol::fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
 };
-use fadroma::core::ContractLink;
+use shade_protocol::fadroma::core::ContractLink;
 
 fn test_ensemble(
     offer_price: Uint128,

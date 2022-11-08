@@ -1,5 +1,5 @@
-use cosmwasm_std::{StdResult, Storage};
-use cosmwasm_storage::{
+use crate::c_std::{StdResult, Storage};
+use crate::storage::{
     bucket,
     bucket_read,
     singleton,
@@ -9,7 +9,7 @@ use cosmwasm_storage::{
     ReadonlySingleton,
     Singleton,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use crate::serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveSingletonStorage: Serialize + DeserializeOwned {
     fn read<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> ReadonlySingleton<'a, S, Self> {

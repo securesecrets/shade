@@ -1,17 +1,19 @@
-use crate::tests::{
+use crate::{tests::{
     check_balances, init_contracts,
     query::{query_no_opps, query_opp_parameters},
-    set_prices,
-};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use secret_toolkit::snip20::{TokenInfo, TokenConfig};
-use shade_protocol::contract_interfaces::{bonds, query_auth, snip20::{self, helpers::Snip20Asset}};
+    set_prices, set_viewing_key
+}, query};
+
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::HumanAddr;
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::contract_interfaces::{bonds, query_auth, snip20};
 use shade_protocol::utils::asset::Contract;
 
-use super::{increase_allowance, query::{query_acccount_parameters, query_bonds_balance}, setup_admin};
+use shade_protocol::c_std::StdError;
+
+use super::{increase_allowance, query::{query_acccount_parameters, query_config}, setup_admin};
 
 #[test]
 pub fn test_bonds() {
@@ -32,7 +34,7 @@ pub fn test_bonds() {
     increase_allowance(&mut chain, &bonds, &issu);
 
     // No bond, so fail
-    buy_opp_fail(&mut chain, &bonds, &depo);
+    // buy_opp_fail(&mut chain, &bonds, &depo);
 
     open_opp(
         &mut chain,
@@ -115,20 +117,7 @@ pub fn test_bonds() {
         None,
     );
 
-    let msg = query_auth::HandleMsg::CreateViewingKey {
-        entropy: "random".to_string(),
-        padding: None,
-    };
-
-    chain
-        .execute(
-            &msg,
-            MockEnv::new(
-                "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
-                query_auth.clone(),
-            ),
-        )
-        .unwrap();
+    set_viewing_key(&mut chain, &query_auth);
 
     claim(&mut chain, &bonds);
 
@@ -170,6 +159,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
+        "22" // Not an admin, can't start opp
     );
     open_opp_fail(
         &mut chain,
@@ -183,6 +173,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
+        "12" // Discount percentage is too high
     );
     open_opp(
         &mut chain,
@@ -213,12 +204,12 @@ pub fn test_bonds() {
         &bonds,
         &depo,
         "admin",
-        None,
+        Some(200),
         None,
         None,
         Some(Uint128::new(4_347)),
         Uint128::new(1_000_000_000_000_000_000),
-        Uint128::new(950_000_000_000_000_000),
+        Uint128::new(3_000_000_000_000_000_000),
         false,
     );
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
@@ -238,6 +229,55 @@ pub fn test_bonds() {
         None,
     );
 
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(4_000_000_000_000_000_000),
+        Uint128::new(980_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp_fail(&mut chain, &bonds, &depo, "16");
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(6_000_000_000_000_000_000),
+        Uint128::new(4_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp_fail(&mut chain, &bonds, &depo, "15");
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(6_000_000_000_000_000_000),
+        Uint128::new(2_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(1_000_000_000));
+
+    query_opp_parameters(
+        &mut chain,
+        &bonds,
+        None,
+        Some(Uint128::new(165_555_555)),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
+
     open_opp_fail(
         &mut chain,
         &bonds,
@@ -250,6 +290,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
+        "10" // Bond limit + previous limits exceeds global limit, so error
     );
     open_opp(
         &mut chain,
@@ -291,6 +332,65 @@ pub fn test_bonds() {
         None,
         None,
         None,
+    );
+}
+
+#[test]
+fn buy_no_opp() -> () {
+    let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
+        init_contracts().unwrap();
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(10_000_000_000_000_000_000),
+        Uint128::new(5_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    setup_admin(&mut chain, &shade_admins, &bonds);
+
+    increase_allowance(&mut chain, &bonds, &issu);
+
+    // No bond, so fail. Error code 6 is "No Bond Found"
+    buy_opp_fail(&mut chain, &bonds, &depo, "6");
+}
+
+#[test]
+fn contract_inactive() -> () {
+    let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
+        init_contracts().unwrap();
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(10_000_000_000_000_000_000),
+        Uint128::new(5_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    setup_admin(&mut chain, &shade_admins, &bonds);
+
+    increase_allowance(&mut chain, &bonds, &issu);
+
+    update_config(&mut chain, &bonds, "admin", None, None, None, Some(false), None, None, None, None, None, None, None, None);
+
+    // Contract not active, error out with code 5
+    open_opp_fail(
+        &mut chain,
+        &bonds,
+        &depo,
+        "admin",
+        Some(100),
+        Some(Uint128::new(10_000_000_000)),
+        Some(0),
+        Some(Uint128::new(1000)),
+        Uint128::new(10_000_000_000_000_000_000_000_000),
+        Uint128::new(10_000_000_000_000_000_000_000_000),
+        false,
+        "5"
     );
 }
 
@@ -338,6 +438,7 @@ fn buy_opp_fail(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
     depo: &ContractLink<HumanAddr>,
+    code: &str,
 ) -> () {
     let msg = snip20::HandleMsg::Send {
         recipient: bonds.address.clone(),
@@ -347,7 +448,7 @@ fn buy_opp_fail(
         memo: None,
         padding: None,
     };
-
+    
     match chain.execute(
         &msg,
         MockEnv::new(
@@ -356,7 +457,21 @@ fn buy_opp_fail(
         ),
     ) {
         Ok(_) => assert!(false),
-        Err(_) => assert!(true),
+        Err(e) => {
+            match e {
+                StdError::GenericErr{ msg, backtrace: _ } =>  {
+                    let mut str = String::from("code\":{},");
+                    str = str.replace("{}", code);
+                    if msg.contains(&str) {
+                        assert!(true)
+                    } else {
+                        println!("{}", msg);
+                        assert!(false)
+                    }
+                }
+                _ => assert!(false)
+            }
+        }
     }
 }
 
@@ -411,6 +526,7 @@ fn open_opp_fail(
     max_accepted_deposit_price: Uint128,
     err_deposit_price: Uint128,
     minting_bond: bool,
+    code: &str,
 ) -> () {
     let mut add: u64 = 0;
     if time_till_opp_end.is_some() {
@@ -434,11 +550,21 @@ fn open_opp_fail(
     };
 
     match chain.execute(&msg, MockEnv::new(sender, bonds.clone())) {
-        Ok(_) => {
-            assert!(false)
-        }
-        Err(_) => {
-            assert!(true)
+        Ok(_) => assert!(false),
+        Err(e) => {
+            match e {
+                StdError::GenericErr{ msg, backtrace: _ } =>  {
+                    let mut str = String::from("code\":{},");
+                    str = str.replace("{}", code);
+                    if msg.contains(&str) {
+                        assert!(true)
+                    } else {
+                        println!("{}", msg);
+                        assert!(false)
+                    }
+                }
+                _ => assert!(false)
+            }
         }
     }
 }

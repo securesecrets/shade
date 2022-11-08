@@ -1,207 +1,386 @@
-use cosmwasm_std::{
-    Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
-};
-use cosmwasm_math_compat::Uint128;
-use secret_toolkit::utils::Query;
 use shade_protocol::{
+    c_std::{self, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
-        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr},
-        mint::mint::{QueryMsg, self},
-        dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
-    snip20,
+        dao::adapter,
+        sky::{cycles::Offer, Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
+        snip20,
     },
+    math_compat::Uint128,
+    secret_toolkit::utils::Query,
     utils::storage::plus::ItemStorage,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
-) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: Config::load(&deps.storage)?,
     })
 }
 
-pub fn market_rate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
-) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
-
-    //Query mint contract
-    let mint_info: mint::QueryAnswer = QueryMsg::Mint{
-        offer_asset: config.shd_token.contract.address.clone(),
-        amount: Uint128::new(100000000), //1 SHD
-    }.query(
-        &deps.querier,
-        config.mint_addr.code_hash.clone(),
-        config.mint_addr.address.clone(),
-    )?;
-    let mut mint_price: Uint128 = Uint128::new(0); // SILK/SHD
-    match mint_info{
-        mint::QueryAnswer::Mint {
-            asset: _,
-            amount,
-        } => {
-            mint_price = amount.checked_mul(Uint128::new(100))?; // times 100 to make it have 8 decimals
-        },
-        _ => {
-            mint_price = Uint128::new(0);
-        },
-    };
-
-    //TODO Query Pool Amount
-    let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
-        &deps.querier,
-        config.market_swap_addr.code_hash.clone(),
-        config.market_swap_addr.address.clone(),
-    )?;
-
-    Ok(QueryAnswer::GetMarketRate { 
-        mint_rate: mint_price,
-        pair: pool_info,
-    })
-}
-
-pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    amount: Uint128,
-) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
-
-    let market_query = market_rate(&deps)?;
-    let mint_price: Uint128;
-    let pool_info: PairInfoResponse;
-    
-    match market_query {
-        QueryAnswer::GetMarketRate { 
-            mint_rate, 
-            pair
-         } => {
-            mint_price = mint_rate;
-            pool_info = pair;
-         },
-         _ => {
-            return Err(StdError::generic_err("failed."));
-        }
-    };
-
-    let mut shd_amount: Uint128 = Uint128::new(1);
-    let mut silk_amount: Uint128 = Uint128::new(1);
-    let mut silk_8d: Uint128 = Uint128::new(1);
-
-    match pool_info.pair_info.pair.token_0{
-        TokenType::CustomToken {
-            contract_addr,
-            token_code_hash: _,
-        } => {
-            if contract_addr.eq(&config.shd_token.contract.address) {
-                shd_amount = pool_info.pair_info.amount_0;
-                silk_amount = pool_info.pair_info.amount_1;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
-            } else {
-                shd_amount = pool_info.pair_info.amount_1;
-                silk_amount = pool_info.pair_info.amount_0;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
-            }
-        }
-        _ => {
-            ;
-        }
-    }
-
-    let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000))?;
-    let dex_price: Uint128 = div_silk_8d.checked_div(shd_amount.clone())?;    
-
-
-    let mut first_swap_amount: Uint128 = Uint128::new(0);
-    let mut second_swap_amount: Uint128 = Uint128::new(0);
-    let mut mint_first: bool = false;
-
-    if mint_price.gt(&dex_price) {
-        mint_first = true;
-        let mul_mint_price: Uint128 = mint_price.checked_mul(amount)?;
-        first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000))?;
-        let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325))?;
-        first_swap_less_fee = first_swap_amount.checked_sub(first_swap_less_fee)?;
-        second_swap_amount = pool_take_amount(
-            amount, 
-            silk_8d, 
-            shd_amount,
-        );
-    } else {
-        mint_first = false;
-        let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325))?;
-        amount_less_fee = amount.checked_sub(amount_less_fee)?;
-        first_swap_amount = pool_take_amount(
-            amount_less_fee, 
-            shd_amount,
-            silk_8d,
-        );
-        let mul_first_swap = first_swap_amount.checked_mul(Uint128::new(100000000))?;
-        second_swap_amount = mul_first_swap.checked_div(mint_price)?;
-    }
-
-    let is_profitable = second_swap_amount.gt(&amount);
-
-    Ok(QueryAnswer::TestProfitability { 
-        is_profitable, 
-        mint_first, 
-        shd_amount,
-        silk_amount,
-        first_swap_amount, 
-        second_swap_amount, 
-    })
-}
-
 pub fn get_balances<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
+    deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;
     let self_addr = SelfAddr::load(&deps.storage)?.0;
     let config = Config::load(&deps.storage)?;
-    let mut is_error = false;
 
+    // Query shd balance
     let mut res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
-        key: viewing_key.clone()
-    }.query(
+        key: viewing_key.clone(),
+    }
+    .query(
         &deps.querier,
-        config.shd_token.contract.code_hash.clone(),
-        config.shd_token.contract.address.clone(),
+        config.shd_token.code_hash.clone(),
+        config.shd_token.address.clone(),
     )?;
 
-    debug_print!("{}", viewing_key);
+    let shd_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
-    let mut shd_bal = Uint128::new(0);
-
-    match res {
-        snip20::QueryAnswer::Balance {amount } => {
-            shd_bal = amount.clone();
-        }, 
-        _ => is_error = true,
-    }
-
+    // Query silk balance
     res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
         key: viewing_key.clone(),
-    }.query(
+    }
+    .query(
         &deps.querier,
-        config.silk_token.contract.code_hash.clone(),
-        config.silk_token.contract.address.clone()
+        config.silk_token.code_hash.clone(),
+        config.silk_token.address.clone(),
     )?;
 
-    let mut silk_bal = Uint128::new(0);
+    let silk_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
-    match res {
-        snip20::QueryAnswer::Balance { amount  } => {
-            silk_bal = amount;
-        },
-        _ => is_error = true,
+    // Query sscrt balance
+    res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
     }
+    .query(
+        &deps.querier,
+        config.sscrt_token.code_hash.clone(),
+        config.sscrt_token.address.clone(),
+    )?;
+
+    let sscrt_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
     Ok(QueryAnswer::Balance {
-        error_status: is_error.clone(),
         shd_bal,
-        silk_bal
+        silk_bal,
+        sscrt_bal,
+    })
+}
+
+pub fn get_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    //Need to make private eventually
+    Ok(QueryAnswer::GetCycles {
+        cycles: Cycles::load(&deps.storage)?.0,
+    })
+}
+
+pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    amount: Uint128,
+    index: Uint128,
+) -> StdResult<QueryAnswer> {
+    let mut cycles = Cycles::load(&deps.storage)?.0;
+    let mut swap_amounts = vec![amount];
+    let i = index.u128() as usize;
+
+    if (i) >= cycles.len() {
+        return Err(StdError::generic_err("Index passed is out of bounds"));
+    }
+
+    // set up inital offer
+    let mut current_offer = Offer {
+        asset: cycles[i].start_addr.clone(),
+        amount,
+    };
+
+    //loop through the pairs in the cycle
+    for arb_pair in cycles[i].pair_addrs.clone() {
+        // simulate swap will run a query with respect to which dex or minting that the pair says
+        // it is
+        let estimated_return =
+            arb_pair
+                .clone()
+                .simulate_swap(&deps, current_offer.clone(), Some(true))?;
+        swap_amounts.push(estimated_return.clone());
+        // set up the next offer with the other token contract in the pair and the expected return
+        // from the last query
+        if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
+            current_offer = Offer {
+                asset: arb_pair.token1.clone(),
+                amount: estimated_return,
+            };
+        } else {
+            current_offer = Offer {
+                asset: arb_pair.token0.clone(),
+                amount: estimated_return,
+            };
+        }
+    }
+
+    /*if swap_amounts.len() > cycles[i].pair_addrs.clone().len() {
+        return Err(StdError::generic_err("More swap amounts than arb pairs"));
+    }*/
+
+    // if the last calculated swap is greater than the initial amount, return true
+    if current_offer.amount.u128() > amount.u128() {
+        return Ok(QueryAnswer::IsCycleProfitable {
+            is_profitable: true,
+            direction: cycles[i].clone(),
+            swap_amounts,
+            profit: current_offer.amount.checked_sub(amount)?,
+        });
+    }
+    let mut return_swap_amounts = swap_amounts;
+    let last_offer_amount = current_offer.amount;
+
+    // reset these variables in order to check the other way
+    swap_amounts = vec![amount];
+    current_offer = Offer {
+        asset: cycles[i].start_addr.clone(),
+        amount,
+    };
+
+    // this is a fancy way of iterating through a vec in reverse
+    for arb_pair in cycles[i].pair_addrs.clone().iter().rev() {
+        // get the estimated return from the simulate swap function
+        let estimated_return =
+            arb_pair
+                .clone()
+                .simulate_swap(&deps, current_offer.clone(), Some(true))?;
+        swap_amounts.push(estimated_return.clone());
+        // set the current offer to the other asset we are swapping into
+        if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
+            current_offer = Offer {
+                asset: arb_pair.token1.clone(),
+                amount: estimated_return,
+            };
+        } else {
+            current_offer = Offer {
+                asset: arb_pair.token0.clone(),
+                amount: estimated_return,
+            };
+        }
+    }
+
+    // check to see if this direction was profitable
+    if current_offer.amount > amount {
+        // do an inplace reversal of the pair_addrs so that we know which way the opportunity goes
+        cycles[i].pair_addrs.reverse();
+        return Ok(QueryAnswer::IsCycleProfitable {
+            is_profitable: true,
+            direction: cycles[i].clone(),
+            swap_amounts,
+            profit: current_offer.amount.checked_sub(amount)?,
+        });
+    }
+    if current_offer.amount > last_offer_amount {
+        return_swap_amounts = swap_amounts;
+    } else {
+        cycles[i].pair_addrs.reverse();
+    }
+
+    // If both possible directions are unprofitable, return false
+    Ok(QueryAnswer::IsCycleProfitable {
+        is_profitable: false,
+        direction: cycles[i].clone(),
+        swap_amounts: return_swap_amounts,
+        profit: Uint128::zero(),
+    })
+}
+
+pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    amount: Uint128,
+) -> StdResult<QueryAnswer> {
+    let cycles = Cycles::load(&deps.storage)?.0;
+    let mut return_is_profitable = vec![];
+    let mut return_directions = vec![];
+    let mut return_swap_amounts = vec![];
+    let mut return_profit = vec![];
+
+    // loop through the cycles with an index
+    for index in 0..cycles.len() {
+        // for each cycle, check its profitability
+        let res = cycle_profitability(deps, amount, Uint128::from(index as u128)).unwrap();
+        match res {
+            QueryAnswer::IsCycleProfitable {
+                is_profitable,
+                direction,
+                swap_amounts,
+                profit,
+            } => {
+                // push the results to a vec
+                return_is_profitable.push(is_profitable);
+                return_directions.push(direction);
+                return_swap_amounts.push(swap_amounts);
+                return_profit.push(profit);
+            }
+            _ => {
+                return Err(StdError::generic_err("Unexpected result"));
+            }
+        }
+    }
+
+    Ok(QueryAnswer::IsAnyCycleProfitable {
+        is_profitable: return_is_profitable,
+        direction: return_directions,
+        swap_amounts: return_swap_amounts,
+        profit: return_profit,
+    })
+}
+
+pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    let config = Config::load(&deps.storage)?;
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
+    }
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
+    }
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    Ok(adapter::QueryAnswer::Unbondable {
+        amount: c_std::Uint128(amount.u128()),
+    })
+}
+
+pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
+    _deps: &Extern<S, A, Q>,
+    _asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Claimable {
+        amount: c_std::Uint128::zero(),
+    })
+}
+
+// Same as adapter_balance
+pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    let config = Config::load(&deps.storage)?;
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
+    }
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
+    }
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    Ok(adapter::QueryAnswer::Unbondable {
+        amount: c_std::Uint128(amount.u128()),
+    })
+}
+
+pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
+    _deps: &Extern<S, A, Q>,
+    _asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Unbonding {
+        amount: c_std::Uint128::zero(),
+    })
+}
+
+// Same as adapter_balance
+pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    let config = Config::load(&deps.storage)?;
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
+    }
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
+    }
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    Ok(adapter::QueryAnswer::Unbondable {
+        amount: c_std::Uint128(amount.u128()),
     })
 }

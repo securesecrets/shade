@@ -1,6 +1,6 @@
-use cosmwasm_std::{StdError, StdResult};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{StdError, StdResult};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -1,10 +1,10 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage,
 };
 
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg},
     utils::{HandleCallback, Query},
 };
@@ -26,10 +26,11 @@ use shade_protocol::utils::generic_response::ResponseStatus;
 
 use std::{cmp::Ordering, convert::TryFrom};
 
+use crate::contract::RESPONSE_BLOCK_SIZE;
 use crate::state::{
     account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
     allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
-    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_issued_r,
+    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_claimed_r, global_total_issued_r,
     global_total_issued_w, issued_asset_r,
 };
 
@@ -83,11 +84,20 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    let updated_config = config_r(&deps.storage).load()?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateLimitConfig {
             status: ResponseStatus::Success,
+            limit_admin: updated_config.limit_admin,
+            shade_admin: updated_config.shade_admin,
+            global_issuance_limit: updated_config.global_issuance_limit,
+            global_minimum_bonding_period: updated_config.global_minimum_bonding_period,
+            global_maximum_discount: updated_config.global_maximum_discount,
+            global_total_issued: global_total_issued_r(&deps.storage).load()?,
+            global_total_claimed: global_total_claimed_r(&deps.storage).load()?
         })?),
     })
 }
@@ -147,9 +157,21 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             state.bond_issuance_limit = bond_issuance_limit;
         }
         if let Some(bonding_period) = bonding_period {
+            if bonding_period < state.global_minimum_bonding_period {
+                return Err(bonding_period_below_minimum_time(
+                    bonding_period,
+                    state.global_minimum_bonding_period,
+                ));
+            }
             state.bonding_period = bonding_period;
         }
         if let Some(discount) = discount {
+            if discount > state.global_maximum_discount {
+                return Err(bond_discount_above_maximum_rate(
+                    discount,
+                    state.global_maximum_discount,
+                ));
+            }
             state.discount = discount;
         }
         if let Some(global_min_accepted_issued_price) = global_min_accepted_issued_price {
@@ -167,11 +189,24 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
+    let updated_config = config_r(&deps.storage).load()?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
+            oracle: updated_config.oracle,
+            treasury: updated_config.treasury,
+            issued_asset: updated_config.issued_asset,
+            activated: updated_config.activated,
+            bond_issuance_limit: updated_config.bond_issuance_limit,
+            bonding_period: updated_config.bonding_period,
+            discount: updated_config.discount,
+            global_min_accepted_issued_price: updated_config.global_min_accepted_issued_price,
+            global_err_issued_price: updated_config.global_err_issued_price,
+            airdrop: updated_config.airdrop,
+            query_auth: updated_config.query_auth,
         })?),
     })
 }
@@ -180,7 +215,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     sender: HumanAddr,
-    _from: HumanAddr,
+    from: HumanAddr,
     deposit_amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -215,7 +250,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         .may_load(env.message.sender.to_string().as_bytes())?
     {
         Some(prev_opp) => {
-            bond_active(&env, &prev_opp)?;
+            bond_active(env, &prev_opp)?;
             prev_opp
         }
         None => {
@@ -233,7 +268,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Calculate conversion of deposit to issued
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
-        &deps,
+        deps,
         deposit_amount,
         available,
         bond_opportunity.deposit_denom.clone(),
@@ -249,7 +284,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         let msg: SlipMsg = from_binary(&message)?;
 
         // Check Slippage
-        if amount_to_issue.clone() < msg.minimum_expected_amount.clone() {
+        if amount_to_issue < msg.minimum_expected_amount {
             return Err(slippage_tolerance_exceeded(
                 amount_to_issue,
                 msg.minimum_expected_amount,
@@ -271,7 +306,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         None,
         None,
         None,
-        1,
+        RESPONSE_BLOCK_SIZE,
         bond_opportunity.deposit_denom.contract.code_hash.clone(),
         bond_opportunity.deposit_denom.contract.address.clone(),
     )?);
@@ -281,7 +316,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Begin PendingBond
     let new_bond = PendingBond {
-        claim_amount: amount_to_issue.clone(),
+        claim_amount: amount_to_issue,
         end_time: end,
         deposit_denom: bond_opportunity.deposit_denom,
         deposit_amount,
@@ -292,19 +327,19 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     };
 
     // Find user account, create if it doesn't exist
-    let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
+    let mut account = match account_r(&deps.storage).may_load(from.as_str().as_bytes())? {
         None => {
             // Airdrop task
             if let Some(airdrop) = config.airdrop {
                 let msg = CompleteTask {
-                    address: sender.clone(),
+                    address: from.clone(),
                     padding: None,
                 };
                 messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
             }
 
             Account {
-                address: sender,
+                address: from,
                 pending_bonds: vec![],
             }
         }
@@ -320,7 +355,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     if !bond_opportunity.minting_bond {
         // Decrease AllocatedAllowance since user is claiming
         allocated_allowance_w(&mut deps.storage)
-            .update(|allocated| Ok(allocated.checked_sub(amount_to_issue.clone())?))?;
+            .update(|allocated| Ok(allocated.checked_sub(amount_to_issue)?))?;
 
         // Transfer funds using allowance to bonds
         messages.push(transfer_from_msg(
@@ -329,7 +364,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             amount_to_issue.into(),
             None,
             None,
-            256,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash.clone(),
             config.issued_asset.address,
         )?);
@@ -339,7 +374,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             amount_to_issue.into(),
             None,
             None,
-            256,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?);
@@ -410,7 +445,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
 
     global_total_claimed_w(&mut deps.storage)
-        .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total.clone())?))?;
+        .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total)?))?;
 
     //Set up empty message vec
     let mut messages = vec![];
@@ -421,7 +456,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         None,
         None,
         None,
-        256,
+        RESPONSE_BLOCK_SIZE,
         config.issued_asset.code_hash.clone(),
         config.issued_asset.address,
     )?);
@@ -478,7 +513,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent)?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
@@ -512,16 +547,16 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let period = bonding_period.unwrap_or(config.bonding_period);
     let discount = discount.unwrap_or(config.discount);
 
-    check_against_limits(&deps, limit, period, discount)?;
+    check_against_limits(deps, limit, period, discount)?;
 
     if !minting_bond {
         // Check bond issuance amount against snip20 allowance and allocated_allowance
         let snip20_allowance = allowance_query(
             &deps.querier,
             config.treasury,
-            env.contract.address.clone(),
+            env.contract.address,
             allowance_key_r(&deps.storage).load()?.to_string(),
-            1,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?;
@@ -544,7 +579,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             .update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
-    let deposit_denom = fetch_snip20(&deposit_asset.clone(), &deps.querier)?;
+    let deposit_denom = fetch_snip20(&deposit_asset, &deps.querier)?;
 
     // Generate bond opportunity
     let bond_opportunity = BondOpportunity {
@@ -631,7 +666,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent)?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
@@ -740,21 +775,21 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut disc = discount;
-    let mut deposit_price = oracle(&deps, deposit_asset.token_info.symbol.clone())?;
+    let mut deposit_price = oracle(deps, deposit_asset.token_info.name.clone())?;
     if deposit_price > max_accepted_deposit_price {
         if deposit_price > err_deposit_price {
             return Err(deposit_price_exceeds_limit(
-                deposit_price.clone(),
-                err_deposit_price.clone(),
+                deposit_price,
+                err_deposit_price,
             ));
         }
         deposit_price = max_accepted_deposit_price;
     }
-    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?;
+    let mut issued_price = oracle(deps, issuance_asset.token_info.name.clone())?;
     if issued_price < err_issued_price {
         return Err(issued_price_below_minimum(
-            issued_price.clone(),
-            err_issued_price.clone(),
+            issued_price,
+            err_issued_price,
         ));
     }
     if issued_price < min_accepted_issued_price {
@@ -762,7 +797,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
-        deposit_price.clone(),
+        deposit_price,
         deposit_amount,
         deposit_asset.token_info.decimals,
         issued_price,
@@ -833,16 +868,14 @@ pub fn calculate_claim_date(env_time: u64, bonding_period: u64) -> u64 {
     // Previously, translated the passed u64 as days and converted to seconds.
     // Now, however, it treats the passed value as seconds, due to that being
     // how the block environment tracks it.
-    let end = env_time.checked_add(bonding_period).unwrap();
-
-    end
+    env_time.checked_add(bonding_period).unwrap()
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
     register_receive_msg(
         env.contract_code_hash.clone(),
         None,
-        256,
+        RESPONSE_BLOCK_SIZE,
         contract.code_hash.clone(),
         contract.address.clone(),
     )

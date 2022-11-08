@@ -19,28 +19,24 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "treasury_manager",
   "snip20"
 ]}
 schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
-fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features = ["ensemble", "scrt"] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["snip20_reference_impl", "treasury", "treasury_manager", "scrt_staking", "snip20"]}
+# fadroma = { path = "../../../fadroma-staking/crates/fadroma", features = ["ensemble", "scrt"] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "mint",
   "band",
+  "ensemble"
 ] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
+cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }

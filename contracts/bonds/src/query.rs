@@ -6,14 +6,14 @@ use crate::{
     },
 };
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
 };
 
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
     BondOpportunity, QueryAnswer,
@@ -48,7 +48,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
                 return Err(permit_revoked(user.as_str()));
             }
         }
-        _ => return Err(query_auth_bad_response()),
+        _ => Err(query_auth_bad_response()),
     }
 }
 
@@ -70,9 +70,9 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let deposit_assets = deposit_assets_r(&deps.storage).load()?;
     if deposit_assets.is_empty() {
-        return Ok(QueryAnswer::BondOpportunities {
+        Ok(QueryAnswer::BondOpportunities {
             bond_opportunities: vec![],
-        });
+        })
     } else {
         let iter = deposit_assets.iter();
         let mut bond_opportunities: Vec<BondOpportunity> = vec![];
@@ -80,7 +80,7 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
             bond_opportunities
                 .push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes())?);
         }
-        return Ok(QueryAnswer::BondOpportunities { bond_opportunities });
+        Ok(QueryAnswer::BondOpportunities { bond_opportunities })
     }
 }
 

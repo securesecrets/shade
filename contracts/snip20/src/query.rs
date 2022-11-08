@@ -1,5 +1,5 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Storage};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{to_binary, Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::snip20::{
         manager::{
@@ -96,6 +96,8 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         &deps.storage,
         (owner.clone(), spender.clone())
     )?.unwrap_or_default();
+
+    //panic!("allowance {}", allowance.amount);
 
     Ok(QueryAnswer::Allowance {
         spender,

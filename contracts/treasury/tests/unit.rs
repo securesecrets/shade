@@ -1,5 +1,5 @@
 /*
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     coins, from_binary, to_binary,
     Extern, HumanAddr, StdError,
     Binary, StdResult, HandleResponse, Env,

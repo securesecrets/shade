@@ -1,116 +1,177 @@
 #[cfg(feature = "mint")]
 pub mod mint {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use mint;
 
     pub struct Mint;
-    harness_macro::implement_harness!(Mint, mint);
+    implement_harness!(Mint, mint);
 }
 
 #[cfg(feature = "oracle")]
 pub mod oracle {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use oracle;
 
     pub struct Oracle;
-    harness_macro::implement_harness!(Oracle, oracle);
+    implement_harness!(Oracle, oracle);
 }
 
 #[cfg(feature = "mock_band")]
 pub mod mock_band {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use mock_band;
 
     pub struct MockBand;
-    harness_macro::implement_harness!(MockBand, mock_band);
+    implement_harness!(MockBand, mock_band);
 }
 
 #[cfg(feature = "governance")]
 pub mod governance {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use governance;
 
     pub struct Governance;
-    harness_macro::implement_harness!(Governance, governance);
+    implement_harness!(Governance, governance);
 }
 
 #[cfg(feature = "snip20_staking")]
 pub mod snip20_staking {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use spip_stkd_0;
 
     pub struct Snip20Staking;
-    harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
+    implement_harness!(Snip20Staking, spip_stkd_0);
 }
 
 #[cfg(feature = "scrt_staking")]
 pub mod scrt_staking {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use scrt_staking;
 
     pub struct ScrtStaking;
-    harness_macro::implement_harness!(ScrtStaking, scrt_staking);
+    implement_harness!(ScrtStaking, scrt_staking);
 }
 
 #[cfg(feature = "snip20")]
 pub mod snip20 {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use snip20;
 
     pub struct Snip20;
-    harness_macro::implement_harness!(Snip20, snip20);
+    implement_harness!(Snip20, snip20);
 }
 
 #[cfg(feature = "bonds")]
 pub mod bonds {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use bonds;
 
     pub struct Bonds;
-    harness_macro::implement_harness!(Bonds, bonds);
+    implement_harness!(Bonds, bonds);
 }
 
 #[cfg(feature = "query_auth")]
 pub mod query_auth {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use query_auth;
 
     pub struct QueryAuth;
-    harness_macro::implement_harness!(QueryAuth, query_auth);
+    implement_harness!(QueryAuth, query_auth);
 }
 
 #[cfg(feature = "admin")]
 pub mod admin {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use admin;
 
     pub struct Admin;
-    harness_macro::implement_harness!(Admin, admin);
+    implement_harness!(Admin, admin);
 }
 
 #[cfg(feature = "snip20_reference_impl")]
 pub mod snip20_reference_impl {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use snip20_reference_impl;
 
     pub struct Snip20ReferenceImpl;
-    harness_macro::implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
+    implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
 }
 
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use treasury_manager;
 
     pub struct TreasuryManager;
-    harness_macro::implement_harness!(TreasuryManager, treasury_manager);
+    implement_harness!(TreasuryManager, treasury_manager);
 }
 
 #[cfg(feature = "treasury")]
 pub mod treasury {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use treasury;
 
     pub struct Treasury;
-    harness_macro::implement_harness!(Treasury, treasury);
+    implement_harness!(Treasury, treasury);
+}
+
+#[cfg(feature = "sky")]
+pub mod sky {
+    use crate::implement_harness;
+    use sky;
+
+    pub struct Sky;
+    implement_harness!(Sky, sky);
+}
+
+#[cfg(feature = "mock_secretswap_pair")]
+pub mod mock_secretswap_pair {
+    use crate::implement_harness;
+    use mock_secretswap_pair;
+
+    pub struct MockSecretswapPair;
+    implement_harness!(MockSecretswapPair, mock_secretswap_pair);
+}
+
+#[cfg(feature = "mock_shadeswap_pair")]
+pub mod mock_shadeswap_pair {
+    use crate::implement_harness;
+    use mock_shadeswap_pair;
+
+    pub struct MockShadeswapPair;
+    implement_harness!(MockShadeswapPair, mock_shadeswap_pair);
+}
+#[cfg(feature = "shadeswap_exchange")]
+pub mod shadeswap_exchange {
+    use crate::harness_macro;
+    use amm_pair;
+
+    pub struct ShadeswapExchange;
+    harness_macro::implement_harness!(ShadeswapExchange, exchange);
+}
+
+#[cfg(feature = "shadeswap_factory")]
+pub mod shadeswap_factory {
+    use crate::harness_macro;
+    use factory;
+
+    pub struct ShadeswapFactory;
+    harness_macro::implement_harness_fadroma!(ShadeswapFactory, factory);
+}
+
+#[cfg(feature = "shadeswap_lp_token")]
+pub mod shadeswap_lp_token {
+    use crate::harness_macro;
+    use lp_token;
+
+    pub struct ShadeswapLpToken;
+    harness_macro::implement_harness!(ShadeswapLpToken, lp_token);
+}
+#[cfg(feature = "mock_shdswp")]
+pub mod mock_shdswp {
+    use crate::harness_macro;
+    use mock_shade_pair;
+
+    pub struct MockShdSwp;
+    harness_macro::implement_harness!(MockShdSwp, mock_shade_pair);
 }

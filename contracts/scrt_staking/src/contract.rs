@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print,
     to_binary,
     Api,
@@ -21,7 +21,7 @@ use shade_protocol::contract_interfaces::dao::scrt_staking::{
     QueryMsg,
 };
 
-use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
 use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
@@ -59,7 +59,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(InitResponse {
         messages: vec![
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                msg.viewing_key,
                 None,
                 1,
                 config.sscrt.code_hash.clone(),
@@ -108,6 +108,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
+        QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),

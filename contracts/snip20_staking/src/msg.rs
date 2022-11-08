@@ -1,16 +1,16 @@
 #![allow(clippy::field_reassign_with_default)] // This is triggered in `#[derive(JsonSchema)]`
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
 use crate::{
     batch,
     transaction_history::{RichTx, Tx},
     viewing_key::ViewingKey,
 };
-use cosmwasm_math_compat::{Uint128, Uint256};
-use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult};
-use secret_toolkit::permit::Permit;
+use shade_protocol::math_compat::{Uint128, Uint256};
+use shade_protocol::c_std::{Binary, HumanAddr, StdError, StdResult};
+use shade_protocol::secret_toolkit::permit::Permit;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
     utils::asset::Contract,
@@ -536,7 +536,7 @@ pub fn space_pad(block_size: usize, message: &mut Vec<u8>) -> &mut Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::{from_slice, StdResult};
+    use shade_protocol::c_std::{from_slice, StdResult};
 
     #[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
     #[serde(rename_all = "snake_case")]

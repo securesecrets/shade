@@ -1,6 +1,6 @@
 use crate::tests::{get_permit, init_contract};
-use cosmwasm_std::{from_binary, HumanAddr};
-use fadroma::ensemble::MockEnv;
+use shade_protocol::c_std::{from_binary, HumanAddr};
+use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::{
     contract_interfaces::{query_auth, query_auth::ContractStatus},
 };
@@ -125,7 +125,7 @@ fn runstate_block_permits() {
             .is_ok()
     );
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidatePermit {
             permit: get_permit(),
@@ -134,7 +134,7 @@ fn runstate_block_permits() {
 
     assert!(res.is_err());
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
             user: HumanAddr::from("user"),
@@ -195,7 +195,7 @@ fn runstate_block_vks() {
             .is_err()
     );
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidatePermit {
             permit: get_permit(),
@@ -204,7 +204,7 @@ fn runstate_block_vks() {
 
     assert!(res.is_ok());
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
             user: HumanAddr::from("user"),
@@ -265,7 +265,7 @@ fn runstate_block_all() {
             .is_err()
     );
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidatePermit {
             permit: get_permit(),
@@ -274,7 +274,7 @@ fn runstate_block_all() {
 
     assert!(res.is_err());
 
-    let res: Result<query_auth::QueryAnswer, cosmwasm_std::StdError> = chain.query(
+    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
             user: HumanAddr::from("user"),

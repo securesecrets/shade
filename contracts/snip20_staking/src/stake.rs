@@ -21,14 +21,13 @@ use crate::{
         store_unbond,
     },
 };
-use cosmwasm_math_compat::{Uint128, Uint256};
-use cosmwasm_std::{
+use shade_protocol::math_compat::{Uint128, Uint256};
+use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Api,
     Binary,
     CanonicalAddr,
-    Decimal,
     Env,
     Extern,
     HandleResponse,
@@ -38,7 +37,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::snip20::send_msg;
+use shade_protocol::secret_toolkit::snip20::send_msg;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::{
         stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue},
@@ -1015,7 +1014,7 @@ mod tests {
         assert_eq!(reward_token, Uint128::zero());
     }
 
-    use cosmwasm_math_compat::{Uint128, Uint256};
+    use shade_protocol::math_compat::{Uint128, Uint256};
     use rand::Rng;
 
     #[test]

@@ -1,13 +1,13 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
 use crate::{
     msg::{HandleAnswer, ResponseStatus::Success},
     state::{get_receiver_hash, Balances},
     state_staking::UserCooldown,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -21,7 +21,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::utils::HandleCallback;
+use shade_protocol::secret_toolkit::utils::HandleCallback;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::VecQueue,
     utils::storage::default::BucketStorage,

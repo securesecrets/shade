@@ -1,7 +1,7 @@
 [package]
-name = "lp_shade_swap"
+name = "mock_shadeswap_pair"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = ["Jack Sisson <sissonjack67@gmail.com>"]
 edition = "2018"
 
 exclude = [
@@ -19,23 +19,13 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = [
-  "staking",
-] }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
-cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
+bincode = "1.3.1"
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "lp_shade_swap",
-  "treasury",
-  "math",
   "dex",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }

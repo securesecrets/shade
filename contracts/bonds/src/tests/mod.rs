@@ -4,9 +4,9 @@ pub mod query;
 use contract_harness::harness::{
     admin::Admin, bonds::Bonds, query_auth::QueryAuth, snip20::Snip20,
 };
-use cosmwasm_std::{HumanAddr, StdResult};
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::c_std::{HumanAddr, StdResult};
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_oracles_ensemble::harness::{MockBand, OracleRouter, ProxyBandOracle};
 use shade_protocol::contract_interfaces::{
     bonds, query_auth,
@@ -14,7 +14,7 @@ use shade_protocol::contract_interfaces::{
 };
 use shade_protocol::utils::asset::Contract;
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 use shade_admin::admin;
 use shade_oracles::{
     band::{self, proxy::InitMsg, HandleMsg::UpdateSymbolPrice},
@@ -328,6 +328,30 @@ pub fn init_contracts(seed_user: bool) -> StdResult<(
         .execute(&msg, MockEnv::new("admin", router.clone()))
         .is_ok());
 
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Deposit".to_string(), key: "DEPO".to_string() } 
+    };
+
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Issued".to_string(), key: "ISSU".to_string() } 
+    };
+    
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+    
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Atom".to_string(), key: "ATOM".to_string() } 
+    };
+
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+
     // Register query_auth
     let query_auth = chain.register(Box::new(QueryAuth));
     let query_auth = chain
@@ -516,4 +540,24 @@ pub fn increase_allowance(
     assert!(chain
         .execute(&msg, MockEnv::new("admin", issu.clone()))
         .is_ok());
+}
+
+pub fn set_viewing_key(
+    chain: &mut ContractEnsemble,
+    query_auth: &ContractLink<HumanAddr>
+) -> () {
+    let msg = query_auth::HandleMsg::CreateViewingKey {
+        entropy: "random".to_string(),
+        padding: None,
+    };
+
+    chain
+        .execute(
+            &msg,
+            MockEnv::new(
+                "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
+                query_auth.clone(),
+            ),
+        )
+        .unwrap();
 }
