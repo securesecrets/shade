@@ -36,7 +36,7 @@ use super::{
 #[test]
 pub fn test_bonds() {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts(false).unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -177,7 +177,7 @@ pub fn test_bonds() {
         Uint128::new(1),
         Uint128::new(1),
         false,
-        "22", // Not an admin, can't start opp
+        "21", // Not an admin, can't start opp
     );
     open_opp_fail(
         &mut chain,
@@ -355,7 +355,7 @@ pub fn test_bonds() {
 #[test]
 fn buy_no_opp() -> () {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -377,7 +377,7 @@ fn buy_no_opp() -> () {
 #[test]
 fn contract_inactive() -> () {
     let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
-        init_contracts().unwrap();
+        init_contracts(false, Uint128::new(10_000)).unwrap();
 
     set_prices(
         &mut chain,
@@ -706,7 +706,7 @@ pub fn test_shd_shd_bond_mimic() {
     );
 
     // No opp, so fail
-    buy_opp_fail(&mut chain, &bonds, &depo);
+    buy_opp_fail(&mut chain, &bonds, &depo, "6");
 
     // Buy opp successfully, hopefully
     buy_opp(&mut chain, &bonds, &issu, Uint128::new(2_000_000_000));

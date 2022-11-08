@@ -31,7 +31,7 @@ use shade_protocol::math_compat::Uint128;
 
 pub fn init_contracts(
     seed_user: bool,
-    max_discount: Uint128
+    max_discount: Uint128,
 ) -> StdResult<(
     ContractEnsemble,
     ContractLink<HumanAddr>,
@@ -394,7 +394,7 @@ pub fn init_contracts(
                 activated: true,
                 bond_issuance_limit: Uint128::new(100_000_000_000_000),
                 bonding_period: 0,
-                discount: Uint128::new(10_000),
+                discount: max_discount,
                 global_min_accepted_issued_price: Uint128::new(10_000_000_000_000_000_000),
                 global_err_issued_price: Uint128::new(5_000_000_000_000_000_000),
                 allowance_key_entropy: "".into(),
