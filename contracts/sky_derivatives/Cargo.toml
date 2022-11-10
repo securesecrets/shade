@@ -33,5 +33,6 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 better-secret-math = { git = "https://github.com/securesecrets/better-secret-math" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
+cosmwasm_floating_point = { git = "https://github.com/a-stgeorge/cosmwasm-floating-point" }
 
 
