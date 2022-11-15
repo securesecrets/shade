@@ -67,14 +67,21 @@ pub struct InstantiateMsg {
 
 fn is_valid_name(name: &str) -> bool {
     let len = name.len();
-    (3..=30).contains(&len)
+    (3..=200).contains(&len)
 }
 
 fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
-    let len_is_valid = (3..=6).contains(&len);
+    let len_is_valid = (3..=18).contains(&len);
+    let mut cond = Vec::new();
+    cond.push(b'A'..=b'Z');
+    cond.push(b'a'..=b'z');
+    let special = vec![b'-', b' ',b'/'];
 
-    len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
+    len_is_valid
+        && symbol
+            .bytes()
+            .all(|x| cond.iter().any(|c| c.contains(&x) || special.contains(&x)))
 }
 
 #[cfg(feature = "snip20-impl")]
