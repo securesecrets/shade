@@ -74,7 +74,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
     let len_is_valid = (3..=6).contains(&len);
 
-    len_is_valid && symbol.bytes().all(|byte| (b'A'..b'Z').contains(&byte))
+    len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
 }
 
 #[cfg(feature = "snip20-impl")]
