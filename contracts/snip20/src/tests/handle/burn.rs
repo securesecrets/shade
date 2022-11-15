@@ -20,7 +20,6 @@ fn burn() {
         enable_redeem: None,
         enable_mint: None,
         enable_burn: Some(true),
-        enable_transfer: None
     })).unwrap();
 
     chain.update_block(|block| block.time = Timestamp::from_seconds(0));
@@ -68,7 +67,6 @@ fn burn_from() {
         enable_redeem: None,
         enable_mint: None,
         enable_burn: Some(true),
-        enable_transfer: None
     })).unwrap();
 
     chain.update_block(|block| block.time = Timestamp::from_seconds(0));
@@ -153,7 +151,6 @@ fn batch_burn_from() {
         enable_redeem: None,
         enable_mint: None,
         enable_burn: Some(true),
-        enable_transfer: None
     })).unwrap();
 
     chain.update_block(|block| block.time = Timestamp::from_seconds(0));

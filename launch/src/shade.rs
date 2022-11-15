@@ -54,7 +54,6 @@ fn main() -> serde_json::Result<()> {
             enable_redeem: Some(false),
             enable_mint: Some(true),
             enable_burn: Some(true),
-            enable_transfer: Some(true),
         }),
         query_auth: None,
     };

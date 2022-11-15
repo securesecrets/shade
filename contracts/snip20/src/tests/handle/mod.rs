@@ -112,7 +112,6 @@ fn contract_status_stop_all() {
         enable_redeem: Some(true),
         enable_mint: None,
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     let scrt_coin = Coin {
@@ -174,7 +173,6 @@ fn contract_status_stop_all_but_redeem() {
         enable_redeem: Some(true),
         enable_mint: None,
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     let scrt_coin = Coin {

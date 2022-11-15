@@ -14,7 +14,6 @@ fn deposit() {
         enable_redeem: Some(true),
         enable_mint: None,
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     let scrt_coin = Coin {
@@ -61,7 +60,6 @@ fn redeem() {
         enable_redeem: Some(true),
         enable_mint: None,
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     let scrt_coin = Coin {

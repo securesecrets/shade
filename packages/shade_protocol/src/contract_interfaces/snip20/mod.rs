@@ -169,9 +169,6 @@ pub struct InitConfig {
     /// Indicates whether burn functionality should be enabled
     /// default: False
     pub enable_burn: Option<bool>,
-    /// Indicates whether transferring tokens should be enables
-    /// default: True
-    pub enable_transfer: Option<bool>,
 }
 
 impl Default for InitConfig {
@@ -182,7 +179,6 @@ impl Default for InitConfig {
             enable_redeem: None,
             enable_mint: None,
             enable_burn: None,
-            enable_transfer: None,
         }
     }
 }
@@ -219,10 +215,6 @@ impl InitConfig {
 
     pub fn burn_enabled(&self) -> bool {
         self.enable_burn.unwrap_or(false)
-    }
-
-    pub fn transfer_enabled(&self) -> bool {
-        self.enable_transfer.unwrap_or(true)
     }
 }
 

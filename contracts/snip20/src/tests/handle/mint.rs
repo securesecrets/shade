@@ -14,7 +14,6 @@ fn mint() {
         enable_redeem: None,
         enable_mint: Some(true),
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     assert!(ExecuteMsg::Mint {
@@ -54,7 +53,6 @@ fn set_minters() {
         enable_redeem: None,
         enable_mint: Some(true),
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     assert!(ExecuteMsg::SetMinters {
@@ -90,7 +88,6 @@ fn add_minters() {
         enable_redeem: None,
         enable_mint: Some(true),
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     assert!(ExecuteMsg::AddMinters {
@@ -130,7 +127,6 @@ fn remove_minters() {
         enable_redeem: None,
         enable_mint: Some(true),
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
 
     assert!(ExecuteMsg::AddMinters {
