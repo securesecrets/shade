@@ -105,8 +105,8 @@ impl InstantiateMsg {
             return Err(invalid_decimals());
         }
 
-        let config = self.config.clone().unwrap_or_default();
-        config.save(storage)?;
+        let config = self.config.clone().unwrap_or_default().clone();
+        config.clone().save(storage)?;
 
         CoinInfo {
             name: self.name.clone(),
@@ -149,7 +149,11 @@ impl InstantiateMsg {
 
         ContractStatusLevel::NormalRun.save(storage)?;
 
-        Minters(vec![]).save(storage)?;
+        if !config.mint_enabled() {
+            Minters(vec![]).save(storage)?;
+        } else {
+            Minters(vec![admin_addr]).save(storage)?;
+        }
 
         if let Some(query_auth) = self.query_auth.clone() {
             QueryAuth(query_auth).save(storage)?;
