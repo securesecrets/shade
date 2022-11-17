@@ -616,10 +616,10 @@ pub fn register_wrap(
                     })?),
                 )
             } else {
-                Err(StdError::generic_err("Deposit not eneabled"))
+                Err(StdError::generic_err("Asset deposit not enabled"))
             }
         } else {
-            Err(StdError::generic_err("Deposit not eneabled"))
+            Err(StdError::generic_err("Asset has no token config"))
         }
     } else {
         Err(StdError::generic_err("Unrecognized Asset"))
@@ -672,7 +672,14 @@ pub fn allowance(
     )?;
 
     if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Not an asset"));
+        return Err(StdError::generic_err("Not a registered asset"));
+    }
+
+    if allowance.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allowance.tolerance
+        )));
     }
 
     let mut allowances = ALLOWANCES
@@ -689,13 +696,6 @@ pub fn allowance(
         }
         None => {}
     };
-
-    if allowance.tolerance >= ONE_HUNDRED_PERCENT {
-        return Err(StdError::generic_err(format!(
-            "Tolerance {} >= 100%",
-            allowance.tolerance
-        )));
-    }
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),

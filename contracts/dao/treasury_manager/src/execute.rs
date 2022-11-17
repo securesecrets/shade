@@ -205,6 +205,13 @@ pub fn allocate(
         &config.admin_auth,
     )?;
 
+    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allocation.tolerance
+        )));
+    }
+
     let mut allocations = ALLOCATIONS
         .may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
@@ -220,13 +227,6 @@ pub fn allocate(
         }
         None => {}
     };
-
-    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
-        return Err(StdError::generic_err(format!(
-            "Tolerance {} >= 100%",
-            allocation.tolerance
-        )));
-    }
 
     allocations.push(AllocationMeta {
         nick: allocation.nick,

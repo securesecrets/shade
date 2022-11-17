@@ -41,7 +41,7 @@ pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager:
     let full_asset = match ASSETS.may_load(deps.storage, asset)? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Asset not found"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
 
@@ -90,7 +90,7 @@ pub fn allocations(deps: Deps, asset: Addr) -> StdResult<treasury_manager::Query
 
 pub fn unbonding(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     if ASSETS.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Not an asset"));
+        return Err(StdError::generic_err("Not a registered asset"));
     }
 
     let _config = CONFIG.load(deps.storage)?;
@@ -112,7 +112,7 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Not an asset"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
     let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
