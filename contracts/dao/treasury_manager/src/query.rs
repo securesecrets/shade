@@ -157,13 +157,9 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
         }
     };
     let mut holder_balance = Uint128::zero();
-    let mut holder_unbonding = Uint128::zero();
 
     match HOLDING.may_load(deps.storage, holder.clone())? {
         Some(h) => {
-            if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
-                holder_unbonding += u.amount;
-            }
             if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
                 holder_balance += b.amount;
             }

@@ -107,7 +107,16 @@ pub fn try_update_config(
 
 pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     match RUN_LEVEL.load(deps.storage)? {
-        RunLevel::Migrating => migrate(deps, env, info, asset),
+        RunLevel::Migrating => {
+            let config = CONFIG.load(deps.storage)?;
+            validate_admin(
+                &deps.querier,
+                AdminPermissions::TreasuryAdmin,
+                &info.sender,
+                &config.admin_auth,
+            )?;
+            migrate(deps, env, info, asset)
+        }
         RunLevel::Deactivated => {
             return Err(StdError::generic_err("Contract Deactivated"));
         }
