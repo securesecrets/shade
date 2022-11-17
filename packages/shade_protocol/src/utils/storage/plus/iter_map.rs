@@ -60,7 +60,15 @@ where
     id_storage: Map<'a, K, IterKey<N>>,
 }
 
-//const PREFIX: &str = "iter-map-size-namespace-";
+#[macro_export]
+macro_rules! new_iter_map {
+    ($StoragePath:tt) => {
+        IterMap::new_override(
+            $StoragePath,
+            concat!("iter-map-size-namespace-", $StoragePath),
+        )
+    };
+}
 
 impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
@@ -74,11 +82,6 @@ where
         + DeserializeOwned
         + Clone,
 {
-    // TODO: gotta figure this out
-    // pub const fn new(namespace: &'a str) -> Self {
-    //     Self::new_override(namespace, PREFIX.as_bytes() + namespace.as_bytes())
-    // }
-
     pub const fn new_override(namespace: &'a str, size_namespace: &'a str) -> Self {
         IterMap {
             storage: Map::new(namespace),
@@ -244,22 +247,37 @@ where
 #[cfg(test)]
 mod tests {
     use crate::utils::storage::plus::iter_map::IterMap;
-    use cosmwasm_std::{testing::MockStorage, Addr, CustomQuery, Storage, Uint64};
-    use serde::{Deserialize, Serialize};
+    use cosmwasm_std::{
+        testing::{MockApi, MockQuerier, MockStorage},
+        Addr,
+        CustomQuery,
+        OwnedDeps,
+        Storage,
+        Uint64,
+    };
+    use serde::{
+        de::{self, DeserializeOwned},
+        ser,
+        Deserialize,
+        Serialize,
+    };
+    use std::marker::PhantomData;
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
     impl CustomQuery for MyQuery {}
 
+    const MACRO_TEST: IterMap<(Addr), Uint64, u64> = new_iter_map!("MACRO_TEST");
+
     #[test]
     fn initialization() {
-        let _storage = MockStorage::new();
+        let mut storage = MockStorage::new();
 
-        let _iter: IterMap<Addr, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+        let iter: IterMap<(Addr), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
     }
 
-    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<String, Uint64, u64> {
-        let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<(String), Uint64, u64> {
+        let iter: IterMap<(String), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
 
         for i in 0..size {
             iter.push(storage, "TESTING".to_string(), &Uint64::new(i as u64))

@@ -1,4 +1,4 @@
-use super::{batch, ExecuteMsg, QueryAnswer, QueryMsg};
+use super::{batch, manager::AllowanceResponse, ExecuteMsg, QueryAnswer, QueryMsg};
 use crate::{
     c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
     utils::{asset::Contract, ExecuteCallback, Query},
@@ -32,28 +32,6 @@ pub fn send_msg(
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(ExecuteMsg::Send {
-        recipient: recipient.to_string(),
-        recipient_code_hash: None,
-        amount,
-        msg,
-        memo,
-        padding,
-    }
-    .to_cosmos_msg(contract, vec![])?)
-}
-/// Returns a StdResult<CosmosMsg> used to execute Send
-#[allow(clippy::too_many_arguments)]
-pub fn send_from_msg(
-    owner: Addr,
-    recipient: Addr,
-    amount: Uint128,
-    msg: Option<Binary>,
-    memo: Option<String>,
-    padding: Option<String>,
-    contract: &Contract,
-) -> StdResult<CosmosMsg> {
-    Ok(ExecuteMsg::SendFrom {
-        owner: owner.to_string(),
         recipient: recipient.to_string(),
         recipient_code_hash: None,
         amount,
@@ -175,9 +153,22 @@ pub struct TokenInfo {
 }
 /// Returns a StdResult<TokenInfo> from performing TokenInfo query
 pub fn token_info(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenInfo> {
-    let answer: TokenInfo = QueryMsg::TokenInfo {}.query(querier, contract)?;
+    let answer: QueryAnswer = QueryMsg::TokenInfo {}.query(querier, contract)?;
 
-    Ok(answer)
+    match answer {
+        QueryAnswer::TokenInfo {
+            name,
+            symbol,
+            decimals,
+            total_supply,
+        } => Ok(TokenInfo {
+            name,
+            symbol,
+            decimals,
+            total_supply,
+        }),
+        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
+    }
 }
 
 /// Returns a StdResult<Uint128> from performing a Balance query
@@ -213,9 +204,26 @@ pub struct TokenConfig {
 }
 /// Returns a StdResult<TokenConfig> from performing TokenConfig query
 pub fn token_config(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenConfig> {
-    let answer: TokenConfig = QueryMsg::TokenConfig {}.query(querier, contract)?;
+    let answer: QueryAnswer = QueryMsg::TokenConfig {}.query(querier, contract)?;
 
-    Ok(answer)
+    match answer {
+        QueryAnswer::TokenConfig {
+            public_total_supply,
+            deposit_enabled,
+            redeem_enabled,
+            mint_enabled,
+            burn_enabled,
+            ..
+        } => Ok(TokenConfig {
+            public_total_supply,
+            deposit_enabled,
+            redeem_enabled,
+            mint_enabled,
+            burn_enabled,
+            transfer_enabled: None,
+        }),
+        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
+    }
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute IncreaseAllowance
@@ -234,7 +242,7 @@ pub fn increase_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    _block_size: usize,
+    block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -263,7 +271,7 @@ pub fn decrease_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    _block_size: usize,
+    block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -274,14 +282,6 @@ pub fn decrease_allowance_msg(
         padding,
     }
     .to_cosmos_msg(contract, funds)
-}
-
-#[cw_serde]
-pub struct AllowanceResponse {
-    pub spender: Addr,
-    pub owner: Addr,
-    pub allowance: Uint128,
-    pub expiration: Option<u64>,
 }
 
 /// Returns a StdResult<Allowance> from performing Allowance query
@@ -301,7 +301,7 @@ pub fn allowance_query(
     owner: Addr,
     spender: Addr,
     key: String,
-    _block_size: usize,
+    block_size: usize,
     contract: &Contract,
 ) -> StdResult<AllowanceResponse> {
     let answer: QueryAnswer = QueryMsg::Allowance {
@@ -319,8 +319,8 @@ pub fn allowance_query(
         } => Ok(AllowanceResponse {
             spender,
             owner,
-            expiration,
             allowance,
+            expiration,
         }),
         QueryAnswer::ViewingKeyError { .. } => Err(StdError::generic_err("Unauthorized")),
         _ => Err(StdError::generic_err("Invalid Allowance query response")),

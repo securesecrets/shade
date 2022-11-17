@@ -238,7 +238,7 @@ pub trait MultiTestable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::{to_vec, Binary, Querier};
+    use cosmwasm_std::{to_vec, Binary, Querier, QuerierResult};
     use serde::Deserialize;
 
     #[derive(Serialize)]
@@ -368,10 +368,10 @@ mod tests {
             }
         }
 
-        let _querier = MyMockQuerier {};
+        let querier = MyMockQuerier {};
         let address = "secret1xyzasdf".to_string();
         let hash = "asdf".to_string();
-        let _contract = Contract::new(&Addr::unchecked(address), &hash);
+        let contract = Contract::new(&Addr::unchecked(address), &hash);
 
         // Was getting an error here
         // let response: QueryResponse =

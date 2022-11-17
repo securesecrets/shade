@@ -1,12 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        Addr,
-        Delegation,
-        Deps,
-        StdError,
-        StdResult,
-        Uint128,
-    },
+    c_std::{Addr, Delegation, Deps, StdError, StdResult, Uint128},
     dao::{adapter, scrt_staking::QueryAnswer},
     utils::asset::scrt_balance,
 };
@@ -70,7 +63,7 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
             .sum::<u128>(),
     );
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
 
@@ -89,7 +82,7 @@ pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
     let rewards = rewards(deps)?;
     //assert!(false, "balance {}", scrt_balance);
     let unbonding = UNBONDING.load(deps.storage)?;
@@ -113,7 +106,7 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
     let mut unbonding = UNBONDING.load(deps.storage)?;
@@ -148,7 +141,7 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
             .sum::<u128>(),
     );
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
     let rewards = rewards(deps)?;
 
     let unbonding = UNBONDING.load(deps.storage)?;
@@ -176,7 +169,7 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
 
