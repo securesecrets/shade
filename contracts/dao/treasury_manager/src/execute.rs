@@ -846,7 +846,7 @@ pub fn unbond(
                 &deps.querier,
                 AdminPermissions::TreasuryManager,
                 &info.sender,
-                &CONFIG.load(deps.storage)?.admin_auth,
+                &config.admin_auth,
             )?;
             config.treasury
         }
@@ -900,10 +900,11 @@ pub fn unbond(
     }
 
     HOLDING.save(deps.storage, unbonder.clone(), &holding)?;
+    let allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
     // get the total amount that the adapters are currently unbonding
     let mut unbonding_tot = Uint128::zero();
-    for a in ALLOCATIONS.load(deps.storage, asset.clone())? {
+    for a in allocations.clone() {
         unbonding_tot +=
             adapter::unbonding_query(deps.querier, &asset.clone(), a.contract.clone())?;
     }
@@ -1046,9 +1047,7 @@ pub fn unbond(
         }
     }
 
-    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
-
-    let allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
+    // let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     // Build metadata
     let mut alloc_meta = vec![];
@@ -1363,11 +1362,12 @@ pub fn add_holder(
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &CONFIG.load(deps.storage)?.admin_auth,
+        &config.admin_auth,
     )?;
 
     let mut holders = HOLDERS.load(deps.storage)?;
