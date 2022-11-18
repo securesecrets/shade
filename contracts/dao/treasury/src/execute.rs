@@ -58,14 +58,17 @@ pub fn receive(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
-    METRICS.push(deps.storage, env.block.time, Metric {
-        action: Action::FundsReceived,
-        context: Context::Receive,
-        timestamp: env.block.time.seconds(),
-        token: info.sender,
-        amount,
-        user: from,
-    })?;
+    // Only store metrics for registered assets
+    if ASSET.may_load(deps.storage, info.sender.clone())?.is_some() {
+        METRICS.push(deps.storage, env.block.time, Metric {
+            action: Action::FundsReceived,
+            context: Context::Receive,
+            timestamp: env.block.time.seconds(),
+            token: info.sender,
+            amount,
+            user: from,
+        })?;
+    }
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
@@ -131,7 +134,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Not an asset"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
 

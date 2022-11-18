@@ -61,7 +61,12 @@ pub fn receive(
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
-    let asset = ASSETS.load(deps.storage, info.sender.clone())?;
+    let asset = match ASSETS.may_load(deps.storage, info.sender.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not a registered asset"));
+        }
+    };
 
     METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
