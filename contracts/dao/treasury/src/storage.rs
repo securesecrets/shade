@@ -11,7 +11,6 @@ use shade_protocol::{
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
 
 pub const ASSET_LIST: IterItem<Addr, u64> = IterItem::new_override("asset_list", "asset_list_2");
 pub const ASSET: Map<Addr, Snip20Asset> = Map::new("asset");

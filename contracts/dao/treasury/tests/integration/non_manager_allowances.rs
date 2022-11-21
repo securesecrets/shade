@@ -73,6 +73,7 @@ pub fn non_manager_allowances() {
         Cycle::Once,
         Uint128::new(100),
         Uint128::zero(),
+        true,
     )
     .unwrap();
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
@@ -148,6 +149,7 @@ pub fn non_manager_allowances() {
         Cycle::Constant,
         Uint128::new(50),
         Uint128::zero(),
+        true,
     )
     .unwrap();
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();

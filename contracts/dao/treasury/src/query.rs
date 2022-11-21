@@ -37,9 +37,7 @@ pub fn metrics(
     })
 }
 
-pub fn batch_balance(deps: Deps, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
+pub fn batch_balance(deps: Deps, env: Env, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
     let mut balances = vec![];
     let mut managers: HashSet<Contract> = HashSet::new();
 
@@ -53,7 +51,7 @@ pub fn batch_balance(deps: Deps, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
 
         let balance = balance_query(
             &deps.querier,
-            self_address.clone(),
+            env.contract.address.clone(),
             VIEWING_KEY.load(deps.storage)?,
             &full_asset.contract.clone(),
         )?;
@@ -71,7 +69,7 @@ pub fn batch_balance(deps: Deps, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
         let manager_balances = manager::batch_balance_query(
             deps.querier,
             &assets.clone(),
-            self_address.clone(),
+            env.contract.address.clone(),
             manager,
         )?;
         balances = balances
@@ -84,7 +82,7 @@ pub fn batch_balance(deps: Deps, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
     Ok(balances)
 }
 
-pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn balance(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
@@ -92,29 +90,30 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         }
     };
 
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
 
     let mut balance = balance_query(
         &deps.querier,
-        self_address.clone(),
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
 
     for allowance in allowances {
         if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            balance +=
-                manager::balance_query(deps.querier, &asset.clone(), self_address.clone(), m)?;
+            balance += manager::balance_query(
+                deps.querier,
+                &asset.clone(),
+                env.contract.address.clone(),
+                m,
+            )?;
         }
     }
     Ok(adapter::QueryAnswer::Balance { amount: balance })
 }
 
-pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn reserves(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
-
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
@@ -125,7 +124,7 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
 
     let reserves = balance_query(
         &deps.querier,
-        self_address.clone(),
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -133,8 +132,12 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Reserves { amount: reserves })
 }
 
-pub fn allowance(deps: Deps, asset: Addr, spender: Addr) -> StdResult<treasury::QueryAnswer> {
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
+pub fn allowance(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    spender: Addr,
+) -> StdResult<treasury::QueryAnswer> {
     let key = VIEWING_KEY.load(deps.storage)?;
 
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
@@ -147,7 +150,7 @@ pub fn allowance(deps: Deps, asset: Addr, spender: Addr) -> StdResult<treasury::
     return Ok(treasury::QueryAnswer::Allowance {
         amount: allowance_query(
             &deps.querier,
-            self_address,
+            env.contract.address,
             spender.clone(),
             key,
             1,

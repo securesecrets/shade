@@ -36,7 +36,11 @@ pub fn metrics(
     })
 }
 
-pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager::QueryAnswer> {
+pub fn pending_allowance(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+) -> StdResult<treasury_manager::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
     let full_asset = match ASSETS.may_load(deps.storage, asset)? {
         Some(a) => a,
@@ -48,7 +52,7 @@ pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager:
     let allowance = allowance_query(
         &deps.querier,
         config.treasury,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         1,
         &full_asset.contract.clone(),
@@ -58,11 +62,16 @@ pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager:
     Ok(treasury_manager::QueryAnswer::PendingAllowance { amount: allowance })
 }
 
-pub fn reserves(deps: Deps, asset: Addr, _holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn reserves(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    _holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset)? {
         let reserves = balance_query(
             &deps.querier,
-            SELF_ADDRESS.load(deps.storage)?,
+            env.contract.address,
             VIEWING_KEY.load(deps.storage)?,
             &full_asset.contract.clone(),
         )?;
@@ -108,7 +117,12 @@ pub fn unbonding(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     }
 }
 
-pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn claimable(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
@@ -123,7 +137,7 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
 
     let mut claimable = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -149,7 +163,12 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     }
 }
 
-pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn unbondable(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
@@ -177,7 +196,7 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
 
     let mut unbondable = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;

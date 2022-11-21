@@ -105,6 +105,7 @@ pub fn dao_int_test(
             cycle[i].clone(),
             Uint128::zero(),
             allow_tolerance[i].clone(),
+            true,
         )
         .unwrap();
         for j in 0..alloc_amount[i].len() {

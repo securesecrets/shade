@@ -8,7 +8,6 @@ use shade_protocol::{
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
 
 pub const ASSET_LIST: Item<Vec<Addr>> = Item::new("asset_list");
 pub const ASSETS: Map<Addr, Snip20Asset> = Map::new("assets");

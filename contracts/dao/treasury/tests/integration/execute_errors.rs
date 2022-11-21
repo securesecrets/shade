@@ -68,6 +68,7 @@ pub fn execute_error() {
         Cycle::Constant,
         Uint128::new(1),
         Uint128::new(10u128.pow(18u32)),
+        true,
     ) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
@@ -82,6 +83,7 @@ pub fn execute_error() {
         Cycle::Constant,
         Uint128::new(101 * 10u128.pow(16u32)),
         Uint128::zero(),
+        true,
     ) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
@@ -97,6 +99,7 @@ pub fn execute_error() {
         Cycle::Constant,
         Uint128::new(1),
         Uint128::zero(),
+        true,
     ) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
@@ -233,7 +236,8 @@ pub fn admin_errors() {
                 days: Uint128::new(1)
             },
             Uint128::zero(),
-            Uint128::zero()
+            Uint128::zero(),
+            true,
         )
         .is_ok()
     );

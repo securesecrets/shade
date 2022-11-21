@@ -102,6 +102,7 @@ fn allowance_cycle(
             // 100% (adapter balance will 2x before unbond)
             tolerance: Uint128::zero(),
         },
+        refresh_now: true,
     }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();

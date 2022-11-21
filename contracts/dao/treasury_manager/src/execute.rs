@@ -120,7 +120,7 @@ pub fn receive(
     })?))
 }
 
-pub fn try_update_config(
+pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -153,7 +153,7 @@ pub fn try_update_config(
     )
 }
 
-pub fn try_register_asset(
+pub fn register_asset(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
@@ -336,7 +336,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 
     let reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -532,7 +532,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // snip20 balance query to get the treasury managers current snip20 balance
     let mut balance = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -972,7 +972,7 @@ pub fn unbond(
     // Reserves to be sent immediately
     let mut reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;

@@ -88,6 +88,7 @@ fn underfunded_tolerance(
             // 100% (adapter balance will 2x before unbond)
             tolerance,
         },
+        refresh_now: true,
     }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
@@ -297,6 +298,7 @@ fn overfunded_tolerance(
             // 100% (adapter balance will 2x before unbond)
             tolerance,
         },
+        refresh_now: true,
     }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
@@ -345,6 +347,7 @@ fn overfunded_tolerance(
             amount: reduced,
             tolerance,
         },
+        refresh_now: true,
     }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();

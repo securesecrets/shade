@@ -129,7 +129,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
 fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
@@ -142,7 +141,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
     let mut total_balance = balance_query(
         &deps.querier,
-        self_address.clone(),
+        env.contract.address.clone(),
         viewing_key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -673,6 +672,7 @@ pub fn allowance(
     info: MessageInfo,
     asset: Addr,
     allowance: Allowance,
+    refresh_now: bool,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -698,12 +698,18 @@ pub fn allowance(
         .may_load(deps.storage, asset.clone())?
         .unwrap_or(vec![]);
 
+    // This will cause allowance refresh asap, changed below if !refresh_now
+    let mut last_refresh = utc_from_seconds(0).to_rfc3339();
+
     // remove duplicated allowance
     match allowances
         .iter()
         .position(|a| a.spender == allowance.spender)
     {
         Some(i) => {
+            if !refresh_now {
+                last_refresh = allowances[i].last_refresh.clone();
+            }
             allowances.swap_remove(i);
         }
         None => {}
@@ -715,7 +721,7 @@ pub fn allowance(
         cycle: allowance.cycle,
         allowance_type: allowance.allowance_type.clone(),
         // "zero/null" datetime, guarantees refresh next update
-        last_refresh: utc_from_seconds(0).to_rfc3339(),
+        last_refresh,
         tolerance: allowance.tolerance,
     });
 
