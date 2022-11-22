@@ -140,7 +140,7 @@ fn allowance_cycle(
         _ => panic!("query failed"),
     };
 
-    // Send out of treasury to reduce allowance
+    // Send out of treasury to reduce allowance (user using funds)
     snip20::ExecuteMsg::SendFrom {
         recipient: spender.to_string().clone(), //treasury.address.to_string().clone(),
         recipient_code_hash: None,
@@ -186,7 +186,6 @@ fn allowance_cycle(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    //TODO override env.block.time
     let not_refreshed = parse_utc_datetime(&not_refreshed).unwrap();
     app.set_block(BlockInfo {
         height: 1,
@@ -215,7 +214,6 @@ fn allowance_cycle(
         _ => panic!("query failed"),
     };
 
-    //TODO override env.block.time
     let refreshed = parse_utc_datetime(&refreshed).unwrap();
     app.set_block(BlockInfo {
         height: 1,
