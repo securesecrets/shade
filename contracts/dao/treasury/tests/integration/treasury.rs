@@ -455,7 +455,7 @@ fn bonded_adapter_int(
     )
     .unwrap();
 
-    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol);
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol).unwrap();
 
     assert_eq!(
         interfaces::treasury::balance_query(&app, &contracts, symbol,).unwrap(),
