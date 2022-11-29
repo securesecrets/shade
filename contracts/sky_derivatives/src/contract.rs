@@ -2,20 +2,25 @@ use shade_protocol::c_std::{
     shd_entry_point,
     to_binary,
     Binary,
+    Decimal,
     Deps,
     DepsMut,
     Env,
     MessageInfo,
     Response,
+    StdError,
     StdResult,
     SubMsg,
     Uint128,
 };
 
 use shade_protocol::{
+    admin::helpers::{validate_admin, AdminPermissions},
     contract_interfaces::{
         dao::adapter,
         sky::sky_derivatives::{
+            Config,
+            DexPairs,
             ExecuteMsg, 
             InstantiateMsg, 
             QueryMsg,
@@ -40,22 +45,41 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    SelfAddr(env.contract.address).save(deps.storage)?;
-    ViewingKey(msg.viewing_key).save(deps.storage)?;
+    SelfAddr(env.contract.address.clone()).save(deps.storage)?;
+    ViewingKey(msg.viewing_key.clone()).save(deps.storage)?;
     Rollover(Uint128::zero()).save(deps.storage)?;
 
-    // Use handle's functions for data validation
-    execute::try_update_config(
-        deps,
-        env,
-        info,
-        Some(msg.shade_admin_addr),
-        Some(msg.derivative.clone()),
-        Some(msg.trading_fees),
-        Some(msg.max_arb_amount),
-        Some(msg.arb_period),
+    // Validate shade admin works
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::SkyAdmin,
+        info.sender.to_string(),
+        &msg.shade_admin_addr,
     )?;
-    execute::try_set_dex_pairs(deps, env, info, msg.dex_pairs)?;
+
+    // Validate trading fees
+    if msg.trading_fees.dex_fee > Decimal::one() || msg.trading_fees.stake_fee > Decimal::one() ||
+            msg.trading_fees.unbond_fee > Decimal::one() {
+        return Err(StdError::generic_err("Trading fee cannot be over 100%"));
+    }
+
+    Config {
+        shade_admin_addr: msg.shade_admin_addr,
+        derivative: msg.derivative.clone(),
+        trading_fees: msg.trading_fees,
+        max_arb_amount: msg.max_arb_amount,
+        arb_period: msg.arb_period,
+    }.save(deps.storage)?;
+
+    // Clear current pairs, then add individual (validating each)
+    let mut new_pairs = vec![];
+    for pair in msg.dex_pairs {
+        if !execute::validate_dex_pair(&msg.derivative, &pair) {
+            return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+        }
+        new_pairs.push(pair);
+    }
+    DexPairs(new_pairs).save(deps.storage)?;
 
     // Viewing keys
     let mut messages = vec![];
@@ -89,7 +113,6 @@ pub fn execute(
             arb_period,
         } => execute::try_update_config(
             deps, 
-            env, 
             info,
             shade_admin_addr, 
             derivative, 
@@ -97,12 +120,12 @@ pub fn execute(
             max_arb_amount,
             arb_period,
         ),
-        ExecuteMsg::SetDexPairs { pairs } => execute::try_set_dex_pairs(deps, env, info, pairs),
-        ExecuteMsg::SetPair { pair, index } => execute::try_set_pair(deps, env, info, pair, index),
-        ExecuteMsg::AddPair { pair } => execute::try_add_pair(deps, env, info, pair),
-        ExecuteMsg::RemovePair { index } => execute::try_remove_pair(deps, env, info, index),
-        ExecuteMsg::Arbitrage { index } => execute::try_arb_pair(deps, index),
-        ExecuteMsg::ArbAllPairs {} => execute::try_arb_all_pairs(deps),
+        ExecuteMsg::SetDexPairs { pairs } => execute::try_set_dex_pairs(deps, info, pairs),
+        ExecuteMsg::SetPair { pair, index } => execute::try_set_pair(deps, info, pair, index),
+        ExecuteMsg::AddPair { pair } => execute::try_add_pair(deps, info, pair),
+        ExecuteMsg::RemovePair { index } => execute::try_remove_pair(deps, info, index),
+        ExecuteMsg::Arbitrage { index } => execute::try_arb_pair(deps.as_ref(), index),
+        ExecuteMsg::ArbAllPairs {} => execute::try_arb_all_pairs(deps.as_ref()),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } =>
                 execute::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128())),

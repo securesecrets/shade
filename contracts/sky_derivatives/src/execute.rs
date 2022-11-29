@@ -3,6 +3,7 @@ use shade_protocol::c_std::{
     to_binary,
     Addr,
     Decimal,
+    Deps,
     DepsMut,
     Env,
     MessageInfo,
@@ -11,7 +12,6 @@ use shade_protocol::c_std::{
     StdResult,
     Uint128,
 };
-use shade_admin::admin::{QueryMsg as AdminQueryMsg, ValidateAdminPermissionResponse};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     contract_interfaces::{
@@ -40,9 +40,16 @@ use shade_protocol::{
 };
 use crate::query;
 
+pub fn validate_dex_pair(derivative: &Derivative, pair: &ArbPair) -> bool {
+    if (pair.token0 != derivative.original_token || pair.token1 != derivative.contract)
+            && (pair.token0 != derivative.contract || pair.token1 != derivative.original_token) {
+        return false;
+    }
+    true
+}
+
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     shade_admin_addr: Option<Contract>,
     derivative: Option<Derivative>,
@@ -63,13 +70,13 @@ pub fn try_update_config(
     let config = Config {
         shade_admin_addr: match shade_admin_addr {
             Some(contract) => {
-                // Verify new shade admins so contract doesn't rug if new shade admin is broken
+                // Verify new shade admins so contract doesn't break if new shade admin is broken
                 // This means sender also has to have admin permission on new contract
                 validate_admin(
                     &deps.querier,
                     AdminPermissions::SkyAdmin, // TODO does this make sense????
                     info.sender.to_string(),
-                    &cur_config.shade_admin_addr,
+                    &contract,
                 )?;
                 contract
             },
@@ -112,23 +119,28 @@ pub fn try_update_config(
 
 pub fn try_set_dex_pairs(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     pairs: Vec<ArbPair>,
 ) -> StdResult<Response> {
+    let config = &Config::load(deps.storage)?;
+
     // Admin Only
     validate_admin(
         &deps.querier,
         AdminPermissions::SkyAdmin, // TODO does this make sense????
         info.sender.to_string(),
-        &Config::load(deps.storage)?.shade_admin_addr,
+        &config.shade_admin_addr,
     )?;
 
     // Clear current pairs, then add individual (using try_add_pair's pair verification)
-    DexPairs(vec![]).save(deps.storage)?;
+    let mut new_pairs = vec![];
     for pair in pairs {
-        try_add_pair(deps, env, info, pair)?;
+        if !validate_dex_pair(&config.derivative, &pair) {
+            return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+        }
+        new_pairs.push(pair);
     }
+    DexPairs(new_pairs).save(deps.storage)?;
 
     Ok(Response::new()
        .set_data(to_binary(&ExecuteAnswer::SetDexPairs {
@@ -138,11 +150,12 @@ pub fn try_set_dex_pairs(
 
 pub fn try_set_pair(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     pair: ArbPair,
     index: Option<usize>,
 ) -> StdResult<Response> {
+    let config = &Config::load(deps.storage)?;
+
     // Admin Only
     validate_admin(
         &deps.querier,
@@ -160,14 +173,12 @@ pub fn try_set_pair(
         return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", i)));
     }
 
-    // Validate dex pair
-    let deriv = Config::load(deps.storage)?.derivative;
-    if (pair.token0 != deriv.original_token || pair.token1 != deriv.contract)
-        && (pair.token0 != deriv.contract || pair.token1 != deriv.original_token) {
+    if !validate_dex_pair(&config.derivative, &pair) {
         return Err(StdError::generic_err("Invalid pair - does not match derivative"));
     }
-
+    
     pairs[i] = pair;
+
     // TODO - Test if this is necessary
     // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
 
@@ -179,10 +190,11 @@ pub fn try_set_pair(
 
 pub fn try_add_pair(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     pair: ArbPair,
 ) -> StdResult<Response> {
+    let config = &Config::load(deps.storage)?;
+
     // Admin Only
     validate_admin(
         &deps.querier,
@@ -191,16 +203,13 @@ pub fn try_add_pair(
         &Config::load(deps.storage)?.shade_admin_addr,
     )?;
 
-
-    // Validate dex pair
-    let deriv = Config::load(deps.storage)?.derivative;
-    if (pair.token0 != deriv.original_token || pair.token1 != deriv.contract)
-        && (pair.token0 != deriv.contract || pair.token1 != deriv.original_token) {
+    if !validate_dex_pair(&config.derivative, &pair) {
         return Err(StdError::generic_err("Invalid pair - does not match derivative"));
     }
 
     let mut pairs = DexPairs::load(deps.storage)?.0;
     pairs.push(pair);
+
     // TODO - Test if this is necessary
     // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
 
@@ -212,7 +221,6 @@ pub fn try_add_pair(
 
 pub fn try_remove_pair(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     index: usize,
 ) -> StdResult<Response> {
@@ -223,7 +231,6 @@ pub fn try_remove_pair(
         info.sender.to_string(),
         &Config::load(deps.storage)?.shade_admin_addr,
     )?;
-
 
     let mut pairs = DexPairs::load(deps.storage)?.0;
     if index >= pairs.len() {
@@ -238,7 +245,7 @@ pub fn try_remove_pair(
 }
 
 pub fn try_arb_pair(
-    deps: DepsMut,
+    deps: Deps, // mutable not needed
     index: usize,
 ) -> StdResult<Response> {
     let dex_pairs = DexPairs::load(deps.storage)?.0;
@@ -250,7 +257,7 @@ pub fn try_arb_pair(
     let periodically = Config::load(deps.storage)?.max_arb_amount;
     let max_swap = Uint128::from(rollover + periodically);
 
-    let is_profitable_result = query::is_profitable(deps.as_ref(), index, Some(max_swap));
+    let is_profitable_result = query::is_profitable(deps, index, Some(max_swap));
     let (profitable, swap_amounts_opt, direction_opt) = match is_profitable_result {
         Ok( QueryAnswer::IsProfitable { is_profitable, swap_amounts, direction } ) => 
             (is_profitable, swap_amounts, direction),
@@ -262,9 +269,10 @@ pub fn try_arb_pair(
     // Return failure (error not neccesary) if not profitable.
     if !profitable {
         return Ok(Response::new()
-                  .set_data(to_binary(&ExecuteAnswer::Arbitrage {
+            .set_data(to_binary(&ExecuteAnswer::Arbitrage {
                 status: ResponseStatus::Failure,
-            })?))
+            })?)
+        )
     }
 
     let swap_amounts = match swap_amounts_opt {
@@ -307,13 +315,14 @@ pub fn try_arb_pair(
     };
     
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::Arbitrage {
+        .add_messages(messages)
+        .set_data(to_binary(&ExecuteAnswer::Arbitrage {
             status: ResponseStatus::Success,
         })?))
 }
 
 pub fn try_arb_all_pairs(
-    deps: DepsMut,
+    deps: Deps, // mutable not needed
 ) -> StdResult<Response> {
     let pairs = DexPairs::load(deps.storage)?.0;
     let mut statuses = vec![];
