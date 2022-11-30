@@ -1,14 +1,5 @@
 use mock_adapter;
 use shade_multi_test::{
-    c_std::{to_binary, Addr, Coin, Uint128},
-    contract_interfaces::{
-        dao::{
-            treasury,
-            treasury::{AllowanceType, RunLevel},
-            treasury_manager::{self, Allocation, AllocationType},
-        },
-        snip20,
-    },
     interfaces::{
         self,
         utils::{DeployedContracts, SupportedContracts},
@@ -19,6 +10,17 @@ use shade_multi_test::{
         snip20::Snip20,
         treasury::Treasury,
         treasury_manager::TreasuryManager,
+    },
+};
+use shade_protocol::{
+    c_std::{to_binary, Addr, Coin, Uint128},
+    contract_interfaces::{
+        dao::{
+            treasury,
+            treasury::{AllowanceType, RunLevel},
+            treasury_manager::{self, Allocation, AllocationType},
+        },
+        snip20,
     },
     multi_test::{App, BankSudo, StakingSudo, SudoMsg},
     utils::{
@@ -76,7 +78,6 @@ fn bonded_adapter_int(
     assert_eq!(
         interfaces::treasury::allowance_query(
             &app,
-            &admin.to_string(),
             &contracts,
             symbol,
             SupportedContracts::TreasuryManager(0),
@@ -454,7 +455,7 @@ fn bonded_adapter_int(
     )
     .unwrap();
 
-    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol);
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol).unwrap();
 
     assert_eq!(
         interfaces::treasury::balance_query(&app, &contracts, symbol,).unwrap(),

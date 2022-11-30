@@ -36,19 +36,23 @@ pub fn metrics(
     })
 }
 
-pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager::QueryAnswer> {
+pub fn pending_allowance(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+) -> StdResult<treasury_manager::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
     let full_asset = match ASSETS.may_load(deps.storage, asset)? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Asset not found"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
 
     let allowance = allowance_query(
         &deps.querier,
         config.treasury,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         1,
         &full_asset.contract.clone(),
@@ -58,11 +62,16 @@ pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager:
     Ok(treasury_manager::QueryAnswer::PendingAllowance { amount: allowance })
 }
 
-pub fn reserves(deps: Deps, asset: Addr, _holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn reserves(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    _holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset)? {
         let reserves = balance_query(
             &deps.querier,
-            SELF_ADDRESS.load(deps.storage)?,
+            env.contract.address,
             VIEWING_KEY.load(deps.storage)?,
             &full_asset.contract.clone(),
         )?;
@@ -90,7 +99,7 @@ pub fn allocations(deps: Deps, asset: Addr) -> StdResult<treasury_manager::Query
 
 pub fn unbonding(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     if ASSETS.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Not an asset"));
+        return Err(StdError::generic_err("Not a registered asset"));
     }
 
     let _config = CONFIG.load(deps.storage)?;
@@ -108,11 +117,16 @@ pub fn unbonding(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     }
 }
 
-pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn claimable(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Not an asset"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
     let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
@@ -123,7 +137,7 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
 
     let mut claimable = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -149,7 +163,12 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     }
 }
 
-pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn unbondable(
+    deps: Deps,
+    env: Env,
+    asset: Addr,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
@@ -157,13 +176,9 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
         }
     };
     let mut holder_balance = Uint128::zero();
-    let mut holder_unbonding = Uint128::zero();
 
     match HOLDING.may_load(deps.storage, holder.clone())? {
         Some(h) => {
-            if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
-                holder_unbonding += u.amount;
-            }
             if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
                 holder_balance += b.amount;
             }
@@ -181,7 +196,7 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
 
     let mut unbondable = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;

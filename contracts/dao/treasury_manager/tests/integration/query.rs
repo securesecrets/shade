@@ -59,6 +59,7 @@ pub fn query() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     )
     .unwrap();
     assert_eq!(

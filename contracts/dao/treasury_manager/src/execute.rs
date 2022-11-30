@@ -61,7 +61,12 @@ pub fn receive(
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
-    let asset = ASSETS.load(deps.storage, info.sender.clone())?;
+    let asset = match ASSETS.may_load(deps.storage, info.sender.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not a registered asset"));
+        }
+    };
 
     METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
@@ -115,7 +120,7 @@ pub fn receive(
     })?))
 }
 
-pub fn try_update_config(
+pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -148,7 +153,7 @@ pub fn try_update_config(
     )
 }
 
-pub fn try_register_asset(
+pub fn register_asset(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
@@ -205,6 +210,13 @@ pub fn allocate(
         &config.admin_auth,
     )?;
 
+    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allocation.tolerance
+        )));
+    }
+
     let mut allocations = ALLOCATIONS
         .may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
@@ -220,13 +232,6 @@ pub fn allocate(
         }
         None => {}
     };
-
-    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
-        return Err(StdError::generic_err(format!(
-            "Tolerance {} >= 100%",
-            allocation.tolerance
-        )));
-    }
 
     allocations.push(AllocationMeta {
         nick: allocation.nick,
@@ -331,7 +336,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 
     let reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -527,7 +532,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // snip20 balance query to get the treasury managers current snip20 balance
     let mut balance = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -846,7 +851,7 @@ pub fn unbond(
                 &deps.querier,
                 AdminPermissions::TreasuryManager,
                 &info.sender,
-                &CONFIG.load(deps.storage)?.admin_auth,
+                &config.admin_auth,
             )?;
             config.treasury
         }
@@ -900,10 +905,11 @@ pub fn unbond(
     }
 
     HOLDING.save(deps.storage, unbonder.clone(), &holding)?;
+    let allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
     // get the total amount that the adapters are currently unbonding
     let mut unbonding_tot = Uint128::zero();
-    for a in ALLOCATIONS.load(deps.storage, asset.clone())? {
+    for a in allocations.clone() {
         unbonding_tot +=
             adapter::unbonding_query(deps.querier, &asset.clone(), a.contract.clone())?;
     }
@@ -966,7 +972,7 @@ pub fn unbond(
     // Reserves to be sent immediately
     let mut reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?,
+        env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -1046,9 +1052,7 @@ pub fn unbond(
         }
     }
 
-    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
-
-    let allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
+    // let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     // Build metadata
     let mut alloc_meta = vec![];
@@ -1363,11 +1367,12 @@ pub fn add_holder(
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &CONFIG.load(deps.storage)?.admin_auth,
+        &config.admin_auth,
     )?;
 
     let mut holders = HOLDERS.load(deps.storage)?;

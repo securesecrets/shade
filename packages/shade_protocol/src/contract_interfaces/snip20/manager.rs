@@ -276,7 +276,7 @@ impl ItemStorage for Minters {
 pub struct AllowanceResponse {
     pub spender: Addr,
     pub owner: Addr,
-    pub amount: Uint128,
+    pub allowance: Uint128,
     pub expiration: Option<u64>,
 }
 

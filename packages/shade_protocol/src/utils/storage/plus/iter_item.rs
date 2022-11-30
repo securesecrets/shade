@@ -19,7 +19,15 @@ where
     id_storage: Item<'a, IterKey<N>>,
 }
 
-//const PREFIX: &str = "iter-map-size-namespace-";
+#[macro_export]
+macro_rules! new_iter_item {
+    ($StoragePath:tt) => {
+        IterItem::new_override(
+            $StoragePath,
+            concat!("iter-item-size-namespace-", $StoragePath),
+        )
+    };
+}
 
 impl<'a, T, N> IterItem<'a, T, N>
 where
@@ -32,11 +40,6 @@ where
         + DeserializeOwned
         + Clone,
 {
-    // TODO: gotta figure this out
-    // pub const fn new(namespace: &'a str) -> Self {
-    //     Self::new_override(namespace, PREFIX.as_bytes() + namespace.as_bytes())
-    // }
-
     pub const fn new_override(namespace: &'a str, size_namespace: &'a str) -> Self {
         IterItem {
             storage: Map::new(namespace),
@@ -75,23 +78,6 @@ where
         self.id_storage.save(store, &id)?;
 
         Ok(id.item)
-    }
-
-    pub fn append(&self, store: &mut dyn Storage, data: &mut Vec<T>) -> StdResult<N> {
-        let mut id = match self.id_storage.may_load(store)? {
-            None => N::zero(),
-            Some(id) => id.item,
-        };
-
-        for d in data {
-            id = id + N::one();
-            self.storage
-                .save(store, IterKey::new(id.clone()).to_bytes()?, &d)?;
-        }
-
-        self.id_storage.save(store, &IterKey::new(id.clone()))?;
-
-        Ok(id)
     }
 
     pub fn remove(&self, store: &mut dyn Storage) -> StdResult<()> {
@@ -208,18 +194,33 @@ where
 #[cfg(test)]
 mod tests {
     use crate::utils::storage::plus::iter_item::IterItem;
-    use cosmwasm_std::{testing::MockStorage, CustomQuery, Storage, Uint64};
-    use serde::{Deserialize, Serialize};
+    use cosmwasm_std::{
+        testing::{MockApi, MockQuerier, MockStorage},
+        Addr,
+        CustomQuery,
+        OwnedDeps,
+        Storage,
+        Uint64,
+    };
+    use serde::{
+        de::{self, DeserializeOwned},
+        ser,
+        Deserialize,
+        Serialize,
+    };
+    use std::marker::PhantomData;
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
     impl CustomQuery for MyQuery {}
 
+    const MACRO_TEST: IterItem<Uint64, u64> = new_iter_item!("MACRO_TEST");
+
     #[test]
     fn initialization() {
-        let _storage = MockStorage::new();
+        let mut storage = MockStorage::new();
 
-        let _iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
     }
 
     fn generate(size: u8, storage: &mut dyn Storage) -> IterItem<Uint64, u64> {
@@ -249,7 +250,7 @@ mod tests {
             iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
         }
 
-        let _item = iter.remove(&mut storage).unwrap();
+        let item = iter.remove(&mut storage).unwrap();
 
         assert_eq!(9, iter.size(&storage).unwrap());
     }

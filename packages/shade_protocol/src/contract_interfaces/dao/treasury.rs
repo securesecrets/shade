@@ -4,9 +4,7 @@ use crate::utils::{
     generic_response::ResponseStatus,
 };
 
-use crate::{
-    c_std::{Addr, Binary, Coin, Uint128},
-};
+use crate::c_std::{Addr, Binary, Coin, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
@@ -124,6 +122,7 @@ pub enum ExecuteMsg {
     Allowance {
         asset: String,
         allowance: Allowance,
+        refresh_now: bool,
     },
     Update {
         asset: String,

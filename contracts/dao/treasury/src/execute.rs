@@ -58,14 +58,17 @@ pub fn receive(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
-    METRICS.push(deps.storage, env.block.time, Metric {
-        action: Action::FundsReceived,
-        context: Context::Receive,
-        timestamp: env.block.time.seconds(),
-        token: info.sender,
-        amount,
-        user: from,
-    })?;
+    // Only store metrics for registered assets
+    if ASSET.may_load(deps.storage, info.sender.clone())?.is_some() {
+        METRICS.push(deps.storage, env.block.time, Metric {
+            action: Action::FundsReceived,
+            context: Context::Receive,
+            timestamp: env.block.time.seconds(),
+            token: info.sender,
+            amount,
+            user: from,
+        })?;
+    }
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
@@ -107,7 +110,16 @@ pub fn try_update_config(
 
 pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     match RUN_LEVEL.load(deps.storage)? {
-        RunLevel::Migrating => migrate(deps, env, info, asset),
+        RunLevel::Migrating => {
+            let config = CONFIG.load(deps.storage)?;
+            validate_admin(
+                &deps.querier,
+                AdminPermissions::TreasuryAdmin,
+                &info.sender,
+                &config.admin_auth,
+            )?;
+            migrate(deps, env, info, asset)
+        }
         RunLevel::Deactivated => {
             return Err(StdError::generic_err("Contract Deactivated"));
         }
@@ -117,12 +129,11 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
 fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Not an asset"));
+            return Err(StdError::generic_err("Not a registered asset"));
         }
     };
 
@@ -130,7 +141,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
     let mut total_balance = balance_query(
         &deps.querier,
-        self_address.clone(),
+        env.contract.address.clone(),
         viewing_key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -616,10 +627,10 @@ pub fn register_wrap(
                     })?),
                 )
             } else {
-                Err(StdError::generic_err("Deposit not eneabled"))
+                Err(StdError::generic_err("Asset deposit not enabled"))
             }
         } else {
-            Err(StdError::generic_err("Deposit not eneabled"))
+            Err(StdError::generic_err("Asset has no token config"))
         }
     } else {
         Err(StdError::generic_err("Unrecognized Asset"))
@@ -661,6 +672,7 @@ pub fn allowance(
     info: MessageInfo,
     asset: Addr,
     allowance: Allowance,
+    refresh_now: bool,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -672,23 +684,8 @@ pub fn allowance(
     )?;
 
     if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Not an asset"));
+        return Err(StdError::generic_err("Not a registered asset"));
     }
-
-    let mut allowances = ALLOWANCES
-        .may_load(deps.storage, asset.clone())?
-        .unwrap_or(vec![]);
-
-    // remove duplicated allowance
-    match allowances
-        .iter()
-        .position(|a| a.spender == allowance.spender)
-    {
-        Some(i) => {
-            allowances.swap_remove(i);
-        }
-        None => {}
-    };
 
     if allowance.tolerance >= ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(format!(
@@ -697,13 +694,34 @@ pub fn allowance(
         )));
     }
 
+    let mut allowances = ALLOWANCES
+        .may_load(deps.storage, asset.clone())?
+        .unwrap_or(vec![]);
+
+    // This will cause allowance refresh asap, changed below if !refresh_now
+    let mut last_refresh = utc_from_seconds(0).to_rfc3339();
+
+    // remove duplicated allowance
+    match allowances
+        .iter()
+        .position(|a| a.spender == allowance.spender)
+    {
+        Some(i) => {
+            if !refresh_now {
+                last_refresh = allowances[i].last_refresh.clone();
+            }
+            allowances.swap_remove(i);
+        }
+        None => {}
+    };
+
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),
         amount: allowance.amount,
         cycle: allowance.cycle,
         allowance_type: allowance.allowance_type.clone(),
         // "zero/null" datetime, guarantees refresh next update
-        last_refresh: utc_from_seconds(0).to_rfc3339(),
+        last_refresh,
         tolerance: allowance.tolerance,
     });
 

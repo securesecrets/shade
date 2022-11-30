@@ -351,6 +351,7 @@ pub fn allowance_exec(
     cycle: Cycle,
     amount: Uint128,
     tolerance: Uint128,
+    refresh_now: bool,
 ) -> StdResult<()> {
     match (treasury::ExecuteMsg::Allowance {
         asset: contracts
@@ -370,6 +371,7 @@ pub fn allowance_exec(
             amount,
             tolerance,
         },
+        refresh_now,
     }
     .test_exec(
         &contracts

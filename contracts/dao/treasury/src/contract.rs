@@ -29,7 +29,6 @@ pub fn instantiate(
     })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
-    SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
     RUN_LEVEL.save(deps.storage, &RunLevel::Normal)?;
 
     Ok(Response::new())
@@ -65,9 +64,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let contract = contract.into_valid(deps.api)?;
             execute::register_wrap(deps, &env, info, denom, &contract)
         }
-        ExecuteMsg::Allowance { asset, allowance } => {
+        ExecuteMsg::Allowance {
+            asset,
+            allowance,
+            refresh_now,
+        } => {
             let asset = deps.api.addr_validate(&asset)?;
-            execute::allowance(deps, &env, info, asset, allowance)
+            execute::allowance(deps, &env, info, asset, allowance, refresh_now)
         }
         ExecuteMsg::Update { asset } => {
             let asset = deps.api.addr_validate(&asset)?;
@@ -92,7 +95,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Allowance { asset, spender } => {
             let asset = deps.api.addr_validate(&asset)?;
             let spender = deps.api.addr_validate(&spender)?;
-            to_binary(&query::allowance(deps, asset, spender)?)
+            to_binary(&query::allowance(deps, env, asset, spender)?)
         }
         QueryMsg::RunLevel => to_binary(&QueryAnswer::RunLevel {
             run_level: RUN_LEVEL.load(deps.storage)?,
@@ -105,7 +108,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&query::metrics(deps, env, date, epoch, period)?),
         QueryMsg::Balance { asset } => {
             let asset = deps.api.addr_validate(&asset)?;
-            to_binary(&query::balance(deps, asset)?)
+            to_binary(&query::balance(deps, env, asset)?)
         }
         QueryMsg::BatchBalance { assets } => {
             let mut val_assets = vec![];
@@ -114,11 +117,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 val_assets.push(deps.api.addr_validate(&a)?);
             }
 
-            to_binary(&query::batch_balance(deps, val_assets)?)
+            to_binary(&query::batch_balance(deps, env, val_assets)?)
         }
         QueryMsg::Reserves { asset } => {
             let asset = deps.api.addr_validate(&asset)?;
-            to_binary(&query::reserves(deps, asset)?)
+            to_binary(&query::reserves(deps, env, asset)?)
         }
     }
 }

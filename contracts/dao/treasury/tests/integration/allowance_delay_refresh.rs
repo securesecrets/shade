@@ -18,12 +18,15 @@ use shade_protocol::{
 fn allowance_cycle(
     deposit: Uint128,
     removed: Uint128,
-    expected: Uint128,
-    allowance: Uint128,
-    allow_type: AllowanceType,
-    cycle: Cycle,
+    start_expected: Uint128,
+    start_allowance: Uint128,
+    start_allow_type: AllowanceType,
+    start_cycle: Cycle,
+    updated_expected: Uint128,
+    updated_allowance: Uint128,
+    updated_allow_type: AllowanceType,
+    updated_cycle: Cycle,
     start: String,
-    not_refreshed: String,
     refreshed: String,
 ) {
     let mut app = App::default();
@@ -50,7 +53,7 @@ fn allowance_cycle(
         decimals: 6,
         initial_balances: Some(vec![snip20::InitialBalance {
             address: admin.to_string().clone(),
-            amount: deposit,
+            amount: deposit + deposit,
         }]),
         prng_seed: to_binary("").ok().unwrap(),
         config: Some(snip20::InitConfig {
@@ -90,19 +93,19 @@ fn allowance_cycle(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // treasury allowance to spender
+    // treasury starting allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
         allowance: treasury::Allowance {
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: spender.clone(),
-            allowance_type: allow_type,
-            cycle,
-            amount: allowance,
+            allowance_type: start_allow_type,
+            cycle: start_cycle,
+            amount: start_allowance,
             // 100% (adapter balance will 2x before unbond)
             tolerance: Uint128::zero(),
         },
-        refresh_now: true,
+        refresh_now: false,
     }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
@@ -135,7 +138,7 @@ fn allowance_cycle(
     .unwrap())
     {
         treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected, "Initial Allowance");
+            assert_eq!(amount, start_expected, "Initial Allowance");
         }
         _ => panic!("query failed"),
     };
@@ -153,7 +156,7 @@ fn allowance_cycle(
     .test_exec(&token, &mut app, spender.clone(), &[])
     .unwrap();
 
-    // Send back to treasury to maintain balance/expected
+    // Refill treasury balance
     snip20::ExecuteMsg::Send {
         recipient: treasury.address.to_string().clone(),
         recipient_code_hash: None,
@@ -162,10 +165,17 @@ fn allowance_cycle(
         msg: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, spender.clone(), &[])
+    .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Check treasury allowance
+    // Update treasury
+    treasury::ExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    }
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Check treasury allowance reflects used funds
     match (treasury::QueryMsg::Allowance {
         asset: token.address.to_string().clone(),
         spender: spender.to_string().clone(),
@@ -174,11 +184,28 @@ fn allowance_cycle(
     .unwrap())
     {
         treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected - removed, "Allowance after use");
+            assert_eq!(amount, start_expected - removed, "Allowance after use");
         }
         _ => panic!("query failed"),
     };
 
+    // Update allowance to spender
+    treasury::ExecuteMsg::Allowance {
+        asset: token.address.to_string().clone(),
+        allowance: treasury::Allowance {
+            //nick: "Mid-Stakes-Manager".to_string(),
+            spender: spender.clone(),
+            allowance_type: updated_allow_type,
+            cycle: updated_cycle,
+            amount: updated_allowance,
+            // 100% (adapter balance will 2x before unbond)
+            tolerance: Uint128::zero(),
+        },
+        refresh_now: false,
+    }
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
     // Update treasury
     treasury::ExecuteMsg::Update {
         asset: token.address.to_string().clone(),
@@ -186,21 +213,7 @@ fn allowance_cycle(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    let not_refreshed = parse_utc_datetime(&not_refreshed).unwrap();
-    app.set_block(BlockInfo {
-        height: 1,
-        time: Timestamp::from_seconds(not_refreshed.timestamp() as u64),
-        chain_id: "chain_id".to_string(),
-    });
-
-    // Update treasury
-    treasury::ExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Check treasury allowance
+    // Check allowance hasn't changed
     match (treasury::QueryMsg::Allowance {
         asset: token.address.to_string().clone(),
         spender: spender.to_string().clone(),
@@ -209,7 +222,11 @@ fn allowance_cycle(
     .unwrap())
     {
         treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected - removed, "Allowance not refreshed");
+            assert_eq!(
+                amount,
+                start_expected - removed,
+                "Allowance after update, not refreshed"
+            );
         }
         _ => panic!("query failed"),
     };
@@ -228,7 +245,7 @@ fn allowance_cycle(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Check treasury allowance
+    // Check treasury updated to new allowance settings
     match (treasury::QueryMsg::Allowance {
         asset: token.address.to_string().clone(),
         spender: spender.to_string().clone(),
@@ -237,13 +254,16 @@ fn allowance_cycle(
     .unwrap())
     {
         treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected, "Allowance refreshed");
+            assert_eq!(
+                amount, updated_expected,
+                "Allowance refreshed to updated amount"
+            );
         }
         _ => panic!("query failed"),
     };
 }
 
-macro_rules! allowance_cycle_tests {
+macro_rules! allowance_delay_update_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -251,23 +271,29 @@ macro_rules! allowance_cycle_tests {
                 let (
                     deposit,
                     removed,
-                    expected,
-                    allowance,
-                    allow_type,
-                    cycle,
+                    start_expected,
+                    start_allowance,
+                    start_allow_type,
+                    start_cycle,
+                    updated_expected,
+                    updated_allowance,
+                    updated_allow_type,
+                    updated_cycle,
                     start,
-                    not_refreshed,
                     refreshed,
                 ) = $value;
                 allowance_cycle(
                     deposit,
                     removed,
-                    expected,
-                    allowance,
-                    allow_type,
-                    cycle,
+                    start_expected,
+                    start_allowance,
+                    start_allow_type,
+                    start_cycle,
+                    updated_expected,
+                    updated_allowance,
+                    updated_allow_type,
+                    updated_cycle,
                     start.to_string(),
-                    not_refreshed.to_string(),
                     refreshed.to_string(),
                 );
             }
@@ -275,115 +301,35 @@ macro_rules! allowance_cycle_tests {
     }
 }
 
-allowance_cycle_tests! {
+allowance_delay_update_tests! {
     portion_seconds_30: (
         Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(1 * 10u128.pow(18)), // allowance
+        Uint128::new(100), // used
+        Uint128::new(100), // start expected
+        Uint128::new(1 * 10u128.pow(18)), // start allowance
+        AllowanceType::Portion,
+        Cycle::Seconds { seconds: Uint128::new(30) },
+
+        Uint128::new(90), // updated expected
+        Uint128::new(9 * 10u128.pow(17)), // updated allowance
         AllowanceType::Portion,
         Cycle::Seconds { seconds: Uint128::new(30) },
         "1995-11-13T00:00:00.00Z",
-        "1995-11-13T00:00:29.00Z",
         "1995-11-13T00:00:30.00Z",
     ),
     amount_seconds_30: (
         Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(100), // allowance
+        Uint128::new(100), // used
+        Uint128::new(100), // start expected
+        Uint128::new(100), // start allowance
         AllowanceType::Amount,
         Cycle::Seconds { seconds: Uint128::new(30) },
+
+        Uint128::new(90), // updated expected
+        Uint128::new(9 * 10u128.pow(17)), // updated allowance
+        AllowanceType::Portion,
+        Cycle::Seconds { seconds: Uint128::new(30) },
         "1995-11-13T00:00:00.00Z",
-        "1995-11-13T00:00:29.00Z",
         "1995-11-13T00:00:30.00Z",
-    ),
-    portion_minutes_30: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Cycle::Minutes { minutes: Uint128::new(30) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-13T00:15:00.00Z",
-        "1995-11-13T00:30:00.00Z",
-    ),
-    amount_minutes_30: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(100), // allowance
-        AllowanceType::Amount,
-        Cycle::Minutes { minutes: Uint128::new(30) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-13T00:15:00.00Z",
-        "1995-11-13T00:30:00.00Z",
-    ),
-    portion_daily_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Cycle::Daily { days: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-13T12:00:00.00Z",
-        "1995-11-14T00:00:00.00Z",
-    ),
-    amount_daily_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(100), // allowance
-        AllowanceType::Amount,
-        Cycle::Daily { days: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-13T12:00:00.00Z",
-        "1995-11-14T00:00:00.00Z",
-    ),
-    portion_monthly_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Cycle::Monthly { months: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-13T12:00:00.00Z",
-        "1995-12-13T00:00:00.00Z",
-    ),
-    amount_monthly_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(100), // allowance
-        AllowanceType::Amount,
-        Cycle::Monthly { months: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-11-20T00:00:00.00Z",
-        "1995-12-13T00:00:00.00Z",
-    ),
-    portion_yearly_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Cycle::Yearly { years: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-12-29T12:00:00.00Z",
-        "1996-01-01T00:00:00.00Z",
-    ),
-    amount_yearly_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(100), // removed
-        Uint128::new(100), // expected
-        Uint128::new(100), // allowance
-        AllowanceType::Amount,
-        Cycle::Yearly { years: Uint128::new(1) },
-        "1995-11-13T00:00:00.00Z",
-        "1995-12-29T12:00:00.00Z",
-        "1996-01-01T00:00:00.00Z",
     ),
 }

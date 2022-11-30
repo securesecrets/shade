@@ -75,6 +75,7 @@ pub fn init_dao(
             cycle[i].clone(),
             allowance_amount[i].clone(),
             allowance_tolerance[i].clone(),
+            true,
         )?;
         for j in 0..num_adapters {
             let mock_adap_contract = Contract::from(

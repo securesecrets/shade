@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{Coin, Addr};
-use shade_protocol::utils::{ExecuteCallback};
+use shade_protocol::utils::{ExecuteCallback, Query, MultiTestable};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, TotalSupply};

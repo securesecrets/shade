@@ -10,6 +10,11 @@ use std::convert::TryInto;
 pub enum Cycle {
     Once,
     Constant,
+    /*
+    Block {
+        blocks: Uint128,
+    },
+    */
     Yearly { years: Uint128 },
     Monthly { months: Uint128 },
     Daily { days: Uint128 },
