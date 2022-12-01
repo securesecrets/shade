@@ -63,45 +63,48 @@ pub fn is_profitable(
 
     let config = Config::load(deps.storage)?;
     let arb_pair = dex_pairs[pair_index].clone();
-    let dex_pool = query_dex_pool(deps, arb_pair)?;
-    let mint_price: Float = query_mint_price(config.derivative, deps)?;
+    let dex_pools = query_dex_pool(deps, arb_pair)?;
+    let derivative_price: Float = query_derivative_price(config.derivative, deps)?;
 
-    let unbond_rate: Float = Float::from(Decimal::one().sub(config.trading_fees.unbond_fee));
-    let stake_rate: Float = Float::from(Decimal::one().sub(config.trading_fees.stake_fee));
-    let dex_rate: Float = Float::from(Decimal::one().sub(config.trading_fees.dex_fee));
+    // Subtracts will not overflow if trading fees are properly checked
+    let unbond_rate: Float = Float::from(Decimal::one() - config.trading_fees.unbond_fee);
+    let stake_rate: Float = Float::from(Decimal::one() - config.trading_fees.stake_fee);
+    let dex_rate: Float = Float::from(Decimal::one() - config.trading_fees.dex_fee);
 
 	// Calculate optimal amounts for arbitrage, equations obtained by finding the zero of the
     // derivative of the constant product equation for the two exchange operations:
     // 
-    //     unbond_optimal_amount = sqrt(dex_pool.0 * dex_pool.1 * mint_price * dex_rate *
-    //                                  unbond_rate) - dex_pool.0
-    //     stake_optimal_amount = (stake_price / stake_rate) * (sqrt(dex_pool.0 * dex_pool.1 *
-    //                                  stake_rate * dex_rate / stake_price) - dex_pool.0)
+    //     unbond_optimal_amount = sqrt(dex_pools.0 * dex_pools.1 * derivative_price * dex_rate *
+    //                                  unbond_rate) - dex_pools.0
+    //     stake_optimal_amount = (derivative_price / stake_rate) * (sqrt(dex_pools.0 * dex_pools.1 *
+    //                                  dex_rate * stake_rate / stake_price) - dex_pools.0)
     // 
-    // Where unbond means: buy on dex, start derivative unbond
-    //    and stake means: mint derivative, sell on dex
+    // Where unbond means: buy on dex, then start derivative unbond
+    //    and stake means: mint derivative, then sell on dex
     // If either of these values are positive (they should never both be positive) there is a
     // profitable trade in that direction
 
-	// TODO look into checked math options potentially in the future
     // Float used here for easy math
-    let common_radical = dex_pool.0 * dex_pool.1 * dex_rate;
-	let unbond_optimal_amount = (common_radical * unbond_rate * mint_price)
+    // Checked math not used because of the absurd range of Float
+    let common_radical = dex_pools.0 * dex_pools.1 * dex_rate;
+	let unbond_optimal_amount = (common_radical * derivative_price * unbond_rate)
                                     .sqrt()
-                                    .checked_sub(dex_pool.0);
+                                    .checked_sub(dex_pools.0);
 	match unbond_optimal_amount {
 		Ok(amount) => {
             let swap_amount = match max_swap {
                 Some(max) => Float::max(amount, Float::from(max)),
                 None => amount,
             };
+            // derivative resulting from dex swap
             let expected_return_1 = cp_result(
-                                        swap_amount, 
-                                        dex_pool.0, 
-                                        dex_pool.1, 
-                                        Some(dex_rate)
+                                        swap_amount,
+                                        dex_pools.0, 
+                                        dex_pools.1,
+                                        dex_rate,
                                     )?;
-            let expected_return_2 = expected_return_1 * mint_price * unbond_rate;
+            // base currency resulting from unbond
+            let expected_return_2 = expected_return_1 * derivative_price * unbond_rate;
 			return Ok(QueryAnswer::IsProfitable {
 				is_profitable: true,
                 swap_amounts: Some(vec![
@@ -115,22 +118,24 @@ pub fn is_profitable(
 		Err(_err) => { }, // unbond optimal amount negative, not profitable here
 	};
 
-	let stake_optimal_inner = (common_radical * stake_rate * mint_price)
+	let stake_optimal_inner = (common_radical * stake_rate / derivative_price)
                                     .sqrt()
-                                    .checked_sub(dex_pool.0);
+                                    .checked_sub(dex_pools.0);
 	match stake_optimal_inner {
 		Ok(amount) => {
-			let optimal_amount = mint_price / stake_rate * amount;
+			let optimal_amount = derivative_price / stake_rate * amount;
             let swap_amount = match max_swap {
                 Some(max) => Float::max(optimal_amount, Float::from(max)),
                 None => amount,
             };
-            let expected_return_1 = swap_amount / mint_price * stake_rate;
+            // derivative resulting from derivative mint/stake
+            let expected_return_1 = swap_amount / derivative_price * stake_rate;
+            // base currency resulting from dex swap
             let expected_return_2 = cp_result(
                                         expected_return_1, 
-                                        dex_pool.1, 
-                                        dex_pool.0, 
-                                        Some(dex_rate)
+                                        dex_pools.1, 
+                                        dex_pools.0, 
+                                        dex_rate
                                     )?;
 			Ok(QueryAnswer::IsProfitable {
 				is_profitable: true,
@@ -142,8 +147,8 @@ pub fn is_profitable(
 				direction: Some(Direction::Stake),
 			})
 		},
-		Err(_err) => Ok(QueryAnswer::IsProfitable { // mint optimal amount negative, no profitable options
-			is_profitable: false,
+		Err(_err) => Ok(QueryAnswer::IsProfitable { // mint optimal amount negative,
+			is_profitable: false,                   // no profitable options
             swap_amounts: None,
 			direction: None,
 		})
@@ -233,13 +238,10 @@ fn cp_result(
     amount: Float, 
     pool_1: Float, 
     pool_2: Float, 
-    swap_fee: Option<Float>
+    swap_fee: Float
 ) -> StdResult<Float> {
     let expected_res = pool_2 - (pool_1 * pool_2) / (pool_1 + amount);
-    match swap_fee {
-        Some(fee) => Ok(expected_res * fee),
-        None => Ok(expected_res),
-    }
+    Ok(expected_res * swap_fee)
 }
 
 fn query_dex_pool(deps: Deps, mut dex_pair: ArbPair) -> StdResult<(Float, Float)> {
@@ -256,7 +258,7 @@ fn query_dex_pool(deps: Deps, mut dex_pair: ArbPair) -> StdResult<(Float, Float)
     }
 }
 
-fn query_mint_price(derivative: Derivative, deps: Deps) -> StdResult<Float> {
-    Ok(Float::from(derivative.query_mint_price(deps)?))
+fn query_derivative_price(derivative: Derivative, deps: Deps) -> StdResult<Float> {
+    Ok(Float::from(derivative.query_exchange_price(deps)?))
 }
 
