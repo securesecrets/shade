@@ -296,20 +296,20 @@ pub fn try_arb_pair(
             messages.push(dex_pairs[index].to_cosmos_msg(
                 Offer {
                     asset: deriv.original_token.clone(),
-                    amount: swap_amounts[0],
+                    amount: swap_amounts.0,
                 },
-                swap_amounts[1],
+                swap_amounts.1,
             )?);
-            messages.push(deriv.unbond_msg(swap_amounts[1])?);
+            messages.push(deriv.unbond_msg(swap_amounts.1)?);
         },
         Direction::Stake => {
-            messages.push(deriv.stake_msg(swap_amounts[0])?);
+            messages.push(deriv.stake_msg(swap_amounts.0)?);
             messages.push(dex_pairs[index].to_cosmos_msg(
                 Offer {
                     asset: deriv.contract,
-                    amount: swap_amounts[1],
+                    amount: swap_amounts.1,
                 },
-                swap_amounts[0],
+                swap_amounts.0,
             )?);
         },
     };

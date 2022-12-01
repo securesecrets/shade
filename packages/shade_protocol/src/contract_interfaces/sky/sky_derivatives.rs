@@ -34,6 +34,7 @@ pub struct Config {
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub max_arb_amount: Uint128,
+    // TODO: maybe we don't need the period?
     /// Number of seconds between each scheduled arb execution
     pub arb_period: u32,
 }
@@ -180,12 +181,13 @@ pub enum QueryAnswer {
     },
     IsProfitable {
         is_profitable: bool,
-        swap_amounts: Option<Vec<Uint128>>,
+        // TODO: turn into struct
+        swap_amounts: Option<(Uint128, Uint128, Uint128)>,
         direction: Option<Direction>,
     },
     IsAnyPairProfitable {
         is_profitable: Vec<bool>,
-        swap_amounts: Vec<Option<Vec<Uint128>>>,
+        swap_amounts: Vec<Option<(Uint128, Uint128, Uint128)>>,
         direction: Vec<Option<Direction>>,
     },
 }
