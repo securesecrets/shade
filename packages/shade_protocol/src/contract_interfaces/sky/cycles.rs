@@ -353,7 +353,7 @@ impl Derivative {
         }
     }
 
-    pub fn query_mint_price(
+    pub fn query_exchange_price(
         &self, 
         deps: Deps,
     ) -> StdResult<Decimal> {
@@ -373,8 +373,8 @@ impl Derivative {
             },
         }
     }
-
 }
+
 #[cw_serde]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
