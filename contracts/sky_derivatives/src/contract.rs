@@ -144,10 +144,7 @@ pub fn query(
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::DexPairs {} => to_binary(&query::dex_pairs(deps)?),
         QueryMsg::CurrentRollover {} => to_binary(&query::current_rollover(deps)?),
-        QueryMsg::IsProfitable { 
-            index,
-            max_swap,
-        } => {
+        QueryMsg::IsProfitable { index, max_swap } => {
             match index {
                 Some(i) => to_binary(&query::is_profitable(deps, i, max_swap)?),
                 None => to_binary(&query::is_profitable(deps, 0, max_swap)?),
