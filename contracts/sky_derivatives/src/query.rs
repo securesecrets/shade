@@ -80,8 +80,8 @@ pub fn is_profitable(
 // 
 //     unbond_optimal_amount = sqrt(dex_pools.0 * dex_pools.1 * derivative_price * dex_rate *
 //                                  unbond_rate) - dex_pools.0
-//     stake_optimal_amount = (derivative_price / stake_rate) * (sqrt(dex_pools.0 * dex_pools.1 *
-//                                  dex_rate * stake_rate / stake_price) - dex_pools.0)
+//     stake_optimal_amount  = (derivative_price / stake_rate) * (sqrt(dex_pools.0 * dex_pools.1 *
+//                                  dex_rate * stake_rate / stake_price) - dex_pools.1)
 // 
 // Where unbond means: buy on dex, then start derivative unbond
 //    and stake means: mint derivative, then sell on dex
@@ -131,7 +131,7 @@ pub fn optimization_math(
 
 	let stake_optimal_inner = (common_radical * stake_rate / derivative_price)
                                     .sqrt()
-                                    .checked_sub(dex_pools.0);
+                                    .checked_sub(dex_pools.1);
 	match stake_optimal_inner {
 		Ok(amount) => {
 			let optimal_amount = derivative_price / stake_rate * amount;
@@ -256,14 +256,21 @@ fn cp_result(
     Ok(expected_res * swap_fee)
 }
 
+// Queries pool amounts for dex pair and divides by the token decimals to convert to float
 fn query_dex_pool(deps: Deps, mut dex_pair: ArbPair) -> StdResult<(Float, Float)> {
     let config = Config::load(deps.storage)?;
     let dex_pool_amts = dex_pair.pool_amounts(deps)?;
     if dex_pair.token0 == config.derivative.contract {
-        return Ok((Float::from(dex_pool_amts.0), Float::from(dex_pool_amts.1)))
+        Ok((
+            Float::from(dex_pool_amts.0),
+            Float::from(dex_pool_amts.1),
+        ))
     } 
     else if dex_pair.token0 == config.derivative.original_token {
-        return Ok((Float::from(dex_pool_amts.1), Float::from(dex_pool_amts.0)))
+        Ok((
+            Float::from(dex_pool_amts.1),
+            Float::from(dex_pool_amts.0),
+        ))
     } 
     else {
         return Err(StdError::generic_err("Invalid dex_pair config"));
