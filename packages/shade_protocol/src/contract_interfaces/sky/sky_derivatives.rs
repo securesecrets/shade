@@ -181,14 +181,20 @@ pub enum QueryAnswer {
     },
     IsProfitable {
         is_profitable: bool,
-        // TODO: turn into struct
-        swap_amounts: Option<(Uint128, Uint128, Uint128)>,
+        swap_amounts: Option<SwapAmounts>,
         direction: Option<Direction>,
     },
     IsAnyPairProfitable {
         is_profitable: Vec<bool>,
-        swap_amounts: Vec<Option<(Uint128, Uint128, Uint128)>>,
+        swap_amounts: Vec<Option<SwapAmounts>>,
         direction: Vec<Option<Direction>>,
     },
+}
+
+#[cw_serde]
+pub struct SwapAmounts {
+    pub optimal_swap: Uint128,
+    pub swap1_result: Uint128,
+    pub swap2_result: Uint128,
 }
 

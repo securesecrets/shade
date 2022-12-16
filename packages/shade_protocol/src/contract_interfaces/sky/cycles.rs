@@ -324,7 +324,7 @@ pub enum DerivativeType {
 #[cw_serde]
 pub struct Derivative {
     pub contract: Contract,
-    pub original_token: Contract,
+    pub original_token: Option<Contract>,
     pub staking_type: DerivativeType,
 }
 

@@ -40,12 +40,9 @@ use shade_protocol::{
 };
 use crate::query;
 
+// token0 must be the original token, token1 must be the derivative
 pub fn validate_dex_pair(derivative: &Derivative, pair: &ArbPair) -> bool {
-    if (pair.token0 != derivative.original_token || pair.token1 != derivative.contract)
-            && (pair.token0 != derivative.contract || pair.token1 != derivative.original_token) {
-        return false;
-    }
-    true
+    pair.token1 == derivative.contract
 }
 
 pub fn try_update_config(
@@ -296,20 +293,20 @@ pub fn try_arb_pair(
             messages.push(dex_pairs[index].to_cosmos_msg(
                 Offer {
                     asset: deriv.original_token.clone(),
-                    amount: swap_amounts.0,
+                    amount: swap_amounts.optimal_swap,
                 },
-                swap_amounts.1,
+                swap_amounts.swap1_result,
             )?);
-            messages.push(deriv.unbond_msg(swap_amounts.1)?);
+            messages.push(deriv.unbond_msg(swap_amounts.swap1_result)?);
         },
         Direction::Stake => {
-            messages.push(deriv.stake_msg(swap_amounts.0)?);
+            messages.push(deriv.stake_msg(swap_amounts.optimal_swap)?);
             messages.push(dex_pairs[index].to_cosmos_msg(
                 Offer {
                     asset: deriv.contract,
-                    amount: swap_amounts.1,
+                    amount: swap_amounts.swap1_result,
                 },
-                swap_amounts.0,
+                swap_amounts.optimal_swap,
             )?);
         },
     };
