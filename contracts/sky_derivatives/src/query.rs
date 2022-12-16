@@ -26,6 +26,7 @@ use shade_protocol::{
                 DexPairs,
 		        QueryAnswer,
                 Rollover,
+                SwapAmounts,
             },
         },
 	},
@@ -62,8 +63,9 @@ pub fn is_profitable(
     }
 
     let config = Config::load(deps.storage)?;
-    let arb_pair = dex_pairs[pair_index].clone();
-    let dex_pools = query_dex_pool(deps, arb_pair)?;
+    let dex_pair = dex_pairs[pair_index].clone();
+    let dex_pools = dex_pair.pool_amounts(deps)?;
+
     let derivative_price: Float = query_derivative_price(config.derivative, deps)?;
     let max_swap = max_swap.and_then(|max| Some(Float::from(max)));
 
@@ -72,7 +74,58 @@ pub fn is_profitable(
     let stake_rate: Float = Float::from(Decimal::one() - config.trading_fees.stake_fee);
     let dex_rate: Float = Float::from(Decimal::one() - config.trading_fees.dex_fee);
 
-    optimization_math(dex_pools, derivative_price, unbond_rate, stake_rate, dex_rate, max_swap)
+    let dex_pools_float: (Float, Float) = (
+        Float::from(dex_pools.0)
+            .shift_decimal(-(u128::from(dex_pair.token0_decimals) as i32))?,
+        Float::from(dex_pools.1)
+            .shift_decimal(-(u128::from(dex_pair.token1_decimals) as i32))?,
+    );
+
+    // Actuall calculate optimal amount
+    let opt_res = optimization_math(
+        dex_pools_float, 
+        derivative_price, 
+        unbond_rate, 
+        stake_rate, 
+        dex_rate, 
+        max_swap
+    );
+
+    // Convert back to Uint types
+    match opt_res? {
+        Some(optimization) => {
+            Ok(QueryAnswer::IsProfitable {
+                is_profitable: true,
+                swap_amounts: Some(SwapAmounts {
+                    optimal_swap: optimization.optimal_swap
+                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                        .try_into()?,
+                    swap1_result: optimization.swap1_result
+                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                        .try_into()?,
+                    swap2_result: optimization.swap2_result
+                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                        .try_into()?,
+                }),
+                direction: Some(optimization.direction),
+            })
+        },
+        None => {
+            Ok(QueryAnswer::IsProfitable {
+                is_profitable: false,
+                swap_amounts: None,
+                direction: None,
+            })
+        },
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct OptimizationResult {
+    direction: Direction,
+    optimal_swap: Float,
+    swap1_result: Float,
+    swap2_result: Float,
 }
 
 // Calculate optimal amounts for arbitrage, equations obtained by finding the zero of the
@@ -94,7 +147,7 @@ pub fn optimization_math(
     stake_rate: Float,
     dex_rate: Float,
     max_swap: Option<Float>,
-) -> StdResult<QueryAnswer> {
+) -> StdResult<Option<OptimizationResult>> {
     // Float used here for easy math
     // Checked math not used because of the absurd range of Float
     let common_radical = dex_pools.0 * dex_pools.1 * dex_rate;
@@ -116,15 +169,12 @@ pub fn optimization_math(
                                     )?;
             // base currency resulting from unbond
             let expected_return_2 = expected_return_1 * derivative_price * unbond_rate;
-			return Ok(QueryAnswer::IsProfitable {
-				is_profitable: true,
-                swap_amounts: Some((
-                                   swap_amount.try_into()?, 
-                                   expected_return_1.try_into()?, 
-                                   expected_return_2.try_into()?,
-                )),
-				direction: Some(Direction::Unbond),
-			})
+			return Ok(Some(OptimizationResult {
+                direction: Direction::Unbond,
+                optimal_swap: swap_amount,
+                swap1_result: expected_return_1,
+                swap2_result: expected_return_2,
+			}))
 		},
 		Err(_err) => { }, // unbond optimal amount negative, not profitable here
 	};
@@ -149,21 +199,14 @@ pub fn optimization_math(
                                         dex_pools.0, 
                                         dex_rate
                                     )?;
-			Ok(QueryAnswer::IsProfitable {
-				is_profitable: true,
-                swap_amounts: Some((
-                                   swap_amount.try_into()?, 
-                                   expected_return_1.try_into()?,
-                                   expected_return_2.try_into()?,
-                )),
-				direction: Some(Direction::Stake),
-			})
+			Ok(Some(OptimizationResult {
+                direction: Direction::Stake,
+                optimal_swap: swap_amount,
+                swap1_result: expected_return_1,
+                swap2_result: expected_return_2,
+            }))
 		},
-		Err(_err) => Ok(QueryAnswer::IsProfitable { // mint optimal amount negative,
-			is_profitable: false,                   // no profitable options
-            swap_amounts: None,
-			direction: None,
-		})
+		Err(_err) => Ok(None) // mint optimal amount negative,
 	}
 }
 
@@ -256,28 +299,57 @@ fn cp_result(
     Ok(expected_res * swap_fee)
 }
 
-// Queries pool amounts for dex pair and divides by the token decimals to convert to float
-fn query_dex_pool(deps: Deps, mut dex_pair: ArbPair) -> StdResult<(Float, Float)> {
-    let config = Config::load(deps.storage)?;
-    let dex_pool_amts = dex_pair.pool_amounts(deps)?;
-    if dex_pair.token0 == config.derivative.contract {
-        Ok((
-            Float::from(dex_pool_amts.0),
-            Float::from(dex_pool_amts.1),
-        ))
-    } 
-    else if dex_pair.token0 == config.derivative.original_token {
-        Ok((
-            Float::from(dex_pool_amts.1),
-            Float::from(dex_pool_amts.0),
-        ))
-    } 
-    else {
-        return Err(StdError::generic_err("Invalid dex_pair config"));
-    }
-}
-
 fn query_derivative_price(derivative: Derivative, deps: Deps) -> StdResult<Float> {
     Ok(Float::from(derivative.query_exchange_price(deps)?))
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::query;
+    use cosmwasm_floating_point::float::Float; 
+    use shade_protocol::contract_interfaces::sky::sky_derivatives::Direction;
+
+    #[test]
+    fn optimization_math() {
+        // Result from Wolfram Alpha:
+        //     optimal_swap: 3602.9945957676956911787695567953165463581381660696721658187575524
+        //     swap1_result: 3345.9161627365989274204451376517893115307531970706239652492688967
+        //     swap2_result: 3615.1269042323043088212304432046834536418618339303278341812424474 
+        // Results below are within ~10^-13% of each other, due to Float round-off
+        // Which is more than good enough for this type of operation
+        assert_eq!(
+            query::optimization_math(
+                (Float::from(1_070_000u32), Float::from(1_000_000u32)),
+                Float::from_float(1.081),
+                Float::from_float(0.9995),
+                Float::from_float(0.998),
+                Float::from_float(0.997),
+                None,
+            ).unwrap().unwrap(),
+            query::OptimizationResult {
+                direction: Direction::Unbond,
+                optimal_swap: Float::new(3_602_994_595_767_695_000, -15).unwrap(),
+                swap1_result: Float::new(3_345_916_162_736_598_468, -15).unwrap(),
+                swap2_result: Float::new(3_615_126_904_232_303_811, -15).unwrap(),
+            },
+        );
+
+        // Same thing here, answers are correct to ~15 significant digits
+        assert_eq!(
+            query::optimization_math(
+                (Float::from(1_087_500u128), Float::from(1_000_000u128)),
+                Float::from_float(1.081),
+                Float::from_float(0.9995),
+                Float::from_float(0.998),
+                Float::from_float(0.997),
+                None,
+            ).unwrap().unwrap(),
+            query::OptimizationResult {
+                direction: Direction::Stake,
+                optimal_swap: Float::new(5_354_513_201_098_882_984, -16).unwrap(),
+                swap1_result: Float::new(4_943_389_615_815_619_997, -16).unwrap(),
+                swap2_result: Float::new(5_357_160_145_594_486_580, -16).unwrap(),
+            },
+        );
+    }
+}

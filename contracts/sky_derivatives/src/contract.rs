@@ -74,8 +74,11 @@ pub fn instantiate(
     // Clear current pairs, then add individual (validating each)
     let mut new_pairs = vec![];
     for pair in msg.dex_pairs {
+        // derivative must be the 2nd entry in the dex_pair
         if !execute::validate_dex_pair(&msg.derivative, &pair) {
-            return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+            return Err(StdError::generic_err(
+                "Invalid pair - original tokeken must be token 0 and derivative must be token 1"
+            ));
         }
         new_pairs.push(pair);
     }
@@ -88,11 +91,13 @@ pub fn instantiate(
         None,
         &msg.derivative.contract,
     )?));
-    messages.push(SubMsg::new(set_viewing_key_msg(
-        msg.viewing_key,
-        None,
-        &msg.derivative.original_token,
-    )?));
+    if let Some(token) = msg.derivative.original_token {
+        messages.push(SubMsg::new(set_viewing_key_msg(
+            msg.viewing_key,
+            None,
+            &token,
+        )?));
+    }
 
     Ok(Response::new().add_submessages(messages))
 }
