@@ -91,13 +91,11 @@ pub fn instantiate(
         None,
         &msg.derivative.contract,
     )?));
-    if let Some(token) = msg.derivative.original_token {
-        messages.push(SubMsg::new(set_viewing_key_msg(
-            msg.viewing_key,
-            None,
-            &token,
-        )?));
-    }
+    messages.push(SubMsg::new(set_viewing_key_msg(
+        msg.viewing_key,
+        None,
+        &msg.derivative.original_token,
+    )?));
 
     Ok(Response::new().add_submessages(messages))
 }
