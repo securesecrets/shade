@@ -63,10 +63,10 @@ pub fn is_profitable(
     }
 
     let config = Config::load(deps.storage)?;
-    let dex_pair = dex_pairs[pair_index].clone();
+    let mut dex_pair = dex_pairs[pair_index].clone();
     let dex_pools = dex_pair.pool_amounts(deps)?;
-
-    let derivative_price: Float = query_derivative_price(config.derivative, deps)?;
+    
+    let derivative_price = Float::from(config.derivative.query_exchange_price(deps)?);
     let max_swap = max_swap.and_then(|max| Some(Float::from(max)));
 
     // Subtracts will not overflow if trading fees are properly checked
@@ -81,7 +81,7 @@ pub fn is_profitable(
             .shift_decimal(-(u128::from(dex_pair.token1_decimals) as i32))?,
     );
 
-    // Actuall calculate optimal amount
+    // Actual calculate optimal amount
     let opt_res = optimization_math(
         dex_pools_float, 
         derivative_price, 
@@ -299,9 +299,6 @@ fn cp_result(
     Ok(expected_res * swap_fee)
 }
 
-fn query_derivative_price(derivative: Derivative, deps: Deps) -> StdResult<Float> {
-    Ok(Float::from(derivative.query_exchange_price(deps)?))
-}
 
 #[cfg(test)]
 mod tests {
@@ -349,6 +346,25 @@ mod tests {
                 optimal_swap: Float::new(5_354_513_201_098_882_984, -16).unwrap(),
                 swap1_result: Float::new(4_943_389_615_815_619_997, -16).unwrap(),
                 swap2_result: Float::new(5_357_160_145_594_486_580, -16).unwrap(),
+            },
+        );
+
+        // Market conditions on 12/19/22
+        assert_eq!(
+            query::optimization_math(
+                (Float::from(389168442081u128).shift_decimal(-6).unwrap(),
+                 Float::from(362059840107u128).shift_decimal(-6).unwrap()),
+                Float::from_float(1.183813),
+                Float::from_float(0.9995),
+                Float::from_float(0.998),
+                Float::from_float(0.997),
+                None,
+            ).unwrap().unwrap(),
+            query::OptimizationResult {
+                direction: Direction::Unbond,
+                optimal_swap: Float::decimal(1_853_043_600_579_028_130, 4).unwrap(),
+                swap1_result: Float::decimal(1_640_671_504_583_677_894, 4).unwrap(),
+                swap2_result: Float::decimal(1_941_277_131_727_789_619, 4).unwrap(),
             },
         );
     }
