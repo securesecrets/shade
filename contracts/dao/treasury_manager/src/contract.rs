@@ -67,6 +67,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::Allocate { asset, allocation } => {
             let asset = deps.api.addr_validate(&asset)?;
+            let allocation = allocation.valid(deps.api)?;
             execute::allocate(deps, &env, info, asset, allocation)
         }
         ExecuteMsg::AddHolder { holder } => {

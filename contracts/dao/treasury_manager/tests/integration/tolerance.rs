@@ -1,34 +1,22 @@
 use mock_adapter;
-use shade_multi_test::{
-    multi::{
-        admin::init_admin_auth,
-        mock_adapter::MockAdapter,
-        snip20::Snip20,
-        //treasury::Treasury,
-        treasury_manager::TreasuryManager,
-    },
+use shade_multi_test::multi::{
+    admin::init_admin_auth,
+    mock_adapter::MockAdapter,
+    snip20::Snip20,
+    treasury_manager::TreasuryManager,
 };
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        Uint128,
-    },
+    c_std::{to_binary, Addr, Uint128},
     contract_interfaces::{
         dao::{
             adapter,
             manager,
-            treasury_manager::{self, Allocation, AllocationType},
+            treasury_manager::{self, AllocationType, RawAllocation},
         },
         snip20,
     },
-    multi_test::{App},
-    utils::{
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
+    multi_test::App,
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 fn underfunded_tolerance(
@@ -119,9 +107,9 @@ fn underfunded_tolerance(
     // treasury allocation to spender
     treasury_manager::ExecuteMsg::Allocate {
         asset: token.address.to_string().clone(),
-        allocation: Allocation {
+        allocation: RawAllocation {
             nick: Some("Manager".to_string()),
-            contract: adapter.clone().into(),
+            contract: RawContract::from(adapter.clone()),
             alloc_type,
             amount: allocation,
             // 100% (adapter balance will 2x before unbond)
@@ -337,9 +325,9 @@ fn overfunded_tolerance(
     // treasury allocation to spender
     treasury_manager::ExecuteMsg::Allocate {
         asset: token.address.to_string().clone(),
-        allocation: Allocation {
+        allocation: RawAllocation {
             nick: Some("Manager".to_string()),
-            contract: adapter.clone().into(),
+            contract: RawContract::from(adapter.clone()),
             alloc_type: alloc_type.clone(),
             amount: allocation,
             // 100% (adapter balance will 2x before unbond)
@@ -384,9 +372,9 @@ fn overfunded_tolerance(
     // reduce allocation
     treasury_manager::ExecuteMsg::Allocate {
         asset: token.address.to_string().clone(),
-        allocation: Allocation {
+        allocation: RawAllocation {
             nick: Some("Manager".to_string()),
-            contract: adapter.clone().into(),
+            contract: RawContract::from(adapter.clone()),
             alloc_type,
             amount: reduced,
             // 100% (adapter balance will 2x before unbond)

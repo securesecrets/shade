@@ -643,9 +643,9 @@ pub fn allocate_exec(
             .clone()
             .address
             .to_string(),
-        allocation: treasury_manager::Allocation {
+        allocation: treasury_manager::RawAllocation {
             nick: nickname,
-            contract: contracts.get(contract_to_allocate_to).unwrap().clone(),
+            contract: RawContract::from(contracts.get(contract_to_allocate_to).unwrap().clone()),
             alloc_type,
             amount,
             tolerance,

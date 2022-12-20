@@ -1,5 +1,5 @@
 use crate::{
-    c_std::{Addr, Binary, Uint128},
+    c_std::{Addr, Api, Binary, StdResult, Uint128},
     contract_interfaces::dao::manager,
     utils::{
         asset::{Contract, RawContract},
@@ -80,6 +80,27 @@ pub struct Unbonding {
 }
 
 #[cw_serde]
+pub struct RawAllocation {
+    pub nick: Option<String>,
+    pub contract: RawContract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+impl RawAllocation {
+    pub fn valid(self, api: &dyn Api) -> StdResult<Allocation> {
+        Ok(Allocation {
+            nick: self.nick,
+            contract: self.contract.into_valid(api)?,
+            alloc_type: self.alloc_type,
+            amount: self.amount,
+            tolerance: self.tolerance,
+        })
+    }
+}
+
+#[cw_serde]
 pub struct Allocation {
     pub nick: Option<String>,
     pub contract: Contract,
@@ -145,7 +166,7 @@ pub enum ExecuteMsg {
     },
     Allocate {
         asset: String,
-        allocation: Allocation,
+        allocation: RawAllocation,
     },
     AddHolder {
         holder: String,
