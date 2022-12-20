@@ -173,6 +173,9 @@ pub enum ExecuteAnswer {
     RegisterAsset {
         status: ResponseStatus,
     },
+    RegisterManager {
+        status: ResponseStatus,
+    },
     RegisterWrap {
         status: ResponseStatus,
     },

@@ -660,7 +660,7 @@ pub fn register_manager(
     MANAGER.save(deps.storage, contract.address.clone(), &contract)?;
 
     Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterManager {
             status: ResponseStatus::Success,
         })?),
     )
