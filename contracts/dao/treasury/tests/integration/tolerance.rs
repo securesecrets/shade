@@ -79,9 +79,9 @@ fn underfunded_tolerance(
     // treasury allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
+            spender: spender.clone().to_string(),
             allowance_type: allow_type,
             cycle: Cycle::Constant,
             amount: allowance,
@@ -289,9 +289,9 @@ fn overfunded_tolerance(
     // treasury allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
+            spender: spender.clone().to_string(),
             allowance_type: allow_type.clone(),
             cycle: Cycle::Constant,
             amount: allowance,
@@ -340,8 +340,8 @@ fn overfunded_tolerance(
     // Reduce allowance to simulate overfunding
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
-            spender: spender.clone(),
+        allowance: treasury::RawAllowance {
+            spender: spender.clone().to_string(),
             allowance_type: allow_type,
             cycle: Cycle::Constant,
             amount: reduced,

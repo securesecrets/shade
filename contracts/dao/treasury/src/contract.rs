@@ -70,6 +70,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             refresh_now,
         } => {
             let asset = deps.api.addr_validate(&asset)?;
+            let allowance = allowance.valid(deps.api)?;
             execute::allowance(deps, &env, info, asset, allowance, refresh_now)
         }
         ExecuteMsg::Update { asset } => {

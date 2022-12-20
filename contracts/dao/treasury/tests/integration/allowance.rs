@@ -93,9 +93,9 @@ fn allowance_cycle(
     // treasury allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
+            spender: spender.clone().to_string(),
             allowance_type: allow_type,
             cycle,
             amount: allowance,

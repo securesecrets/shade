@@ -96,9 +96,9 @@ fn allowance_cycle(
     // treasury starting allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
+            spender: spender.clone().to_string(),
             allowance_type: start_allow_type,
             cycle: start_cycle,
             amount: start_allowance,
@@ -192,9 +192,9 @@ fn allowance_cycle(
     // Update allowance to spender
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
+            spender: spender.clone().to_string(),
             allowance_type: updated_allow_type,
             cycle: updated_cycle,
             amount: updated_allowance,

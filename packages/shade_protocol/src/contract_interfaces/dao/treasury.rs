@@ -4,7 +4,7 @@ use crate::utils::{
     generic_response::ResponseStatus,
 };
 
-use crate::c_std::{Addr, Binary, Coin, Uint128};
+use crate::c_std::{Addr, Api, Binary, Coin, StdResult, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
@@ -65,6 +65,27 @@ pub enum AllowanceType {
 }
 
 #[cw_serde]
+pub struct RawAllowance {
+    pub spender: String,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+impl RawAllowance {
+    pub fn valid(self, api: &dyn Api) -> StdResult<Allowance> {
+        Ok(Allowance {
+            spender: api.addr_validate(self.spender.as_str())?,
+            allowance_type: self.allowance_type,
+            cycle: self.cycle,
+            amount: self.amount,
+            tolerance: self.tolerance,
+        })
+    }
+}
+
+#[cw_serde]
 pub struct Allowance {
     pub spender: Addr,
     pub allowance_type: AllowanceType,
@@ -121,7 +142,7 @@ pub enum ExecuteMsg {
     // Setup a new allowance
     Allowance {
         asset: String,
-        allowance: Allowance,
+        allowance: RawAllowance,
         refresh_now: bool,
     },
     Update {

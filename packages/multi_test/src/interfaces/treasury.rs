@@ -360,12 +360,13 @@ pub fn allowance_exec(
             .clone()
             .address
             .to_string(),
-        allowance: treasury::Allowance {
+        allowance: treasury::RawAllowance {
             spender: contracts
                 .get(&SupportedContracts::TreasuryManager(manager_id))
                 .unwrap()
                 .clone()
-                .address,
+                .address
+                .to_string(),
             allowance_type,
             cycle,
             amount,
