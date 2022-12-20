@@ -1,13 +1,14 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg},
     governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
+        errors::Error,
         profile::Profile,
         stored_id::ID,
         Config,
+        ExecuteAnswer,
         ExecuteMsg::ReceiveMigrationData,
-        HandleAnswer,
         InstantiateMsg,
         MigrationData,
         MigrationDataAsk,
@@ -29,7 +30,7 @@ pub fn try_migrate(
     env: Env,
     _info: MessageInfo,
     id: u64,
-    label: String,
+    mut label: String,
     code_hash: String,
 ) -> StdResult<Response> {
     // TODO: maybe randomly generate migration label
@@ -38,6 +39,8 @@ pub fn try_migrate(
     let config = Config::load(deps.storage)?;
 
     RuntimeState::Migrated {}.save(deps.storage)?;
+
+    label.push_str(&env.block.time.nanos().to_string());
 
     let res = Response::new();
     Ok(res
@@ -62,7 +65,7 @@ pub fn try_migrate(
             .to_cosmos_msg(label, id, code_hash, vec![])?,
             0,
         ))
-        .set_data(to_binary(&HandleAnswer::Migrate {
+        .set_data(to_binary(&ExecuteAnswer::Migrate {
             status: ResponseStatus::Success,
         })?))
 }
@@ -81,7 +84,7 @@ pub fn try_migrate_data(
     match RuntimeState::load(deps.storage)? {
         // Fail if not migrating
         RuntimeState::Normal | RuntimeState::SpecificAssemblies { .. } => {
-            return Err(StdError::generic_err("No migration has started"));
+            return Err(Error::migration_not_started(vec![]));
         }
         RuntimeState::Migrated => {
             if let Some(target) = config.migrated_to {
@@ -155,11 +158,11 @@ pub fn try_migrate_data(
                     .add_message(
                         ReceiveMigrationData { data: res_data }.to_cosmos_msg(&target, vec![])?,
                     )
-                    .set_data(to_binary(&HandleAnswer::MigrateData {
+                    .set_data(to_binary(&ExecuteAnswer::MigrateData {
                         status: ResponseStatus::Success,
                     })?));
             } else {
-                return Err(StdError::generic_err("No migration target found"));
+                return Err(Error::migration_tartet(vec![]));
             }
         }
     };
@@ -177,7 +180,7 @@ pub fn try_receive_migration_data(
 
     if let Some(from) = config.migrated_from {
         if from.address != info.sender {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(Error::no_migrator(vec![]));
         }
 
         match data {
@@ -203,10 +206,12 @@ pub fn try_receive_migration_data(
             }
         }
     } else {
-        return Err(StdError::generic_err("No target found"));
+        return Err(Error::migration_tartet(vec![]));
     }
 
-    Ok(res.set_data(to_binary(&HandleAnswer::ReceiveMigrationData {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(
+        res.set_data(to_binary(&ExecuteAnswer::ReceiveMigrationData {
+            status: ResponseStatus::Success,
+        })?),
+    )
 }

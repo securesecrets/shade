@@ -1,10 +1,11 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,
-        HandleAnswer,
+        ExecuteAnswer,
     },
+    governance::errors::Error,
     utils::generic_response::ResponseStatus,
 };
 
@@ -18,7 +19,7 @@ pub fn try_add_profile(
     profile.save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddProfile {
             status: ResponseStatus::Success,
         })?),
     )
@@ -32,7 +33,7 @@ pub fn try_set_profile(
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
     let mut profile = match Profile::may_load(deps.storage, id)? {
-        None => return Err(StdError::generic_err("Profile not found")),
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "Profile"])),
         Some(p) => p,
     };
 
@@ -69,7 +70,7 @@ pub fn try_set_profile(
     profile.save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetProfile {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetProfile {
             status: ResponseStatus::Success,
         })?),
     )

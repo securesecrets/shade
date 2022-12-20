@@ -9,7 +9,6 @@ use shade_protocol::{
         Env,
         MessageInfo,
         Response,
-        StdError,
         StdResult,
         SubMsg,
         Uint128,
@@ -24,10 +23,11 @@ use shade_protocol::{
             stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
-            HandleAnswer,
+            ExecuteAnswer,
         },
         staking::snip20_staking,
     },
+    governance::errors::Error,
     snip20::helpers::send_msg,
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage, Query},
 };
@@ -64,12 +64,12 @@ pub fn try_trigger(
             }
         }
     } else {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(Error::not_passed(vec![]));
     }
 
     Ok(Response::new()
         .add_submessages(messages)
-        .set_data(to_binary(&HandleAnswer::Trigger {
+        .set_data(to_binary(&ExecuteAnswer::Trigger {
             status: ResponseStatus::Success,
         })?))
 }
@@ -84,17 +84,17 @@ pub fn try_cancel(
     let status = Proposal::status(deps.storage, proposal)?;
     if let Status::Passed { start: _, end } = status {
         if env.block.time.seconds() < end {
-            return Err(StdError::generic_err("unauthorized"));
+            return Err(Error::cannot_cancel(vec![&end.to_string()]));
         }
         let mut history = Proposal::status_history(deps.storage, proposal)?;
         history.push(status);
         Proposal::save_status_history(deps.storage, proposal, history)?;
         Proposal::save_status(deps.storage, proposal, Status::Canceled)?;
     } else {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(Error::cannot_cancel(vec![&(-1).to_string()]));
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Cancel {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Cancel {
         status: ResponseStatus::Success,
     })?))
 }
@@ -161,7 +161,7 @@ pub fn try_update(
     match status.clone() {
         Status::AssemblyVote { start: _, end } => {
             if end > env.block.time.seconds() {
-                return Err(StdError::generic_err("unauthorized"));
+                return Err(Error::cannot_update(vec!["AssemblyVote", &end.to_string()]));
             }
 
             let votes = Proposal::assembly_votes(deps.storage, proposal)?;
@@ -219,7 +219,7 @@ pub fn try_update(
                             + Profile::data(deps.storage, profile)?.cancel_deadline,
                     }
                 } else if end > env.block.time.seconds() {
-                    return Err(StdError::generic_err("unauthorized"));
+                    return Err(Error::cannot_update(vec!["Funding", &end.to_string()]));
                 } else {
                     new_status = Status::Expired;
                 }
@@ -242,7 +242,7 @@ pub fn try_update(
         }
         Status::Voting { start: _, end } => {
             if end > env.block.time.seconds() {
-                return Err(StdError::generic_err("unauthorized"));
+                return Err(Error::cannot_update(vec!["Voting", &end.to_string()]));
             }
 
             let config = Config::load(deps.storage)?;
@@ -254,7 +254,7 @@ pub fn try_update(
             // Get total staking power
             let total_power = match query {
                 snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
-                _ => return Err(StdError::generic_err("Wrong query returned")),
+                _ => return Err(Error::unexpected_query_response(vec![])),
             };
 
             let mut vote_conclusion: Status;
@@ -304,7 +304,7 @@ pub fn try_update(
 
             new_status = vote_conclusion;
         }
-        _ => return Err(StdError::generic_err("Cant update")),
+        _ => return Err(Error::state_update(vec![])),
     }
 
     // Add old status to history
@@ -313,7 +313,7 @@ pub fn try_update(
     // Save new status
     Proposal::save_status(deps.storage, proposal, new_status.clone())?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Update {
         status: ResponseStatus::Success,
     })?))
 }
@@ -333,10 +333,10 @@ pub fn try_receive_funding(
     if let Some(token) = Config::load(deps.storage)?.funding_token {
         funding_token = token.clone();
         if info.sender != token.address {
-            return Err(StdError::generic_err("Must be the set funding token"));
+            return Err(Error::missing_funding_token(vec![]));
         }
     } else {
-        return Err(StdError::generic_err("Funding token not set"));
+        return Err(Error::missing_funding_token(vec![]));
     }
 
     // Check if msg contains the proposal information
@@ -344,7 +344,7 @@ pub fn try_receive_funding(
     if let Some(msg) = msg {
         proposal = from_binary(&msg)?;
     } else {
-        return Err(StdError::generic_err("Msg must be set"));
+        return Err(Error::funding_msg_not_set(vec![]));
     }
 
     // Check if proposal is in funding stage
@@ -359,7 +359,7 @@ pub fn try_receive_funding(
     {
         // Check if proposal funding stage is set or funding limit already set
         if env.block.time.seconds() >= end {
-            return Err(StdError::generic_err("Funding time limit reached"));
+            return Err(Error::funding_limit_reached(vec![]));
         }
 
         let mut new_fund = amount + funded;
@@ -372,7 +372,7 @@ pub fn try_receive_funding(
         let profile = Assembly::data(deps.storage, assembly)?.profile;
         if let Some(funding_profile) = Profile::funding(deps.storage, profile)? {
             if funding_profile.required == funded {
-                return Err(StdError::generic_err("Already funded"));
+                return Err(Error::completely_funded(vec![]));
             }
 
             if funding_profile.required < new_fund {
@@ -380,7 +380,7 @@ pub fn try_receive_funding(
                 new_fund = funding_profile.required;
             }
         } else {
-            return Err(StdError::generic_err("Funding profile setting was removed"));
+            return Err(Error::no_funding_profile(vec![]));
         }
 
         // Store the funder information and update the current funding data
@@ -407,7 +407,7 @@ pub fn try_receive_funding(
         // Add funding info to cross search
         UserID::add_funding(deps.storage, from.clone(), proposal.clone())?;
     } else {
-        return Err(StdError::generic_err("Not in funding status"));
+        return Err(Error::no_funding_state(vec![]));
     }
 
     let mut messages = vec![];
@@ -422,7 +422,7 @@ pub fn try_receive_funding(
         )?);
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
     })?))
 }
@@ -435,7 +435,7 @@ pub fn try_claim_funding(
 ) -> StdResult<Response> {
     let reduction = match Proposal::status(deps.storage, id)? {
         Status::AssemblyVote { .. } | Status::Funding { .. } | Status::Voting { .. } => {
-            return Err(StdError::generic_err("Cannot claim funding"));
+            return Err(Error::funding_not_claimable(vec![]));
         }
         Status::Vetoed { slash_percent } => slash_percent,
         _ => Uint128::zero(),
@@ -444,7 +444,7 @@ pub fn try_claim_funding(
     let funding = Proposal::funding(deps.storage, id, &info.sender)?;
 
     if funding.claimed {
-        return Err(StdError::generic_err("Funding already claimed"));
+        return Err(Error::funding_claimed(vec![]));
     }
 
     let return_amount = funding.amount.checked_sub(
@@ -454,11 +454,11 @@ pub fn try_claim_funding(
     )?;
 
     if return_amount == Uint128::zero() {
-        return Err(StdError::generic_err("Nothing to claim"));
+        return Err(Error::funding_nothing(vec![]));
     }
 
     let funding_token = match Config::load(deps.storage)?.funding_token {
-        None => return Err(StdError::generic_err("No funding token set")),
+        None => return Err(Error::missing_funding_token(vec![])),
         Some(token) => token,
     };
 
@@ -471,7 +471,7 @@ pub fn try_claim_funding(
             None,
             &funding_token,
         )?)
-        .set_data(to_binary(&HandleAnswer::ClaimFunding {
+        .set_data(to_binary(&ExecuteAnswer::ClaimFunding {
             status: ResponseStatus::Success,
         })?))
 }
@@ -487,10 +487,10 @@ pub fn try_receive_vote(
 ) -> StdResult<Response> {
     if let Some(token) = Config::load(deps.storage)?.vote_token {
         if info.sender != token.address {
-            return Err(StdError::generic_err("Must be the set voting token"));
+            return Err(Error::sender_funding(vec![]));
         }
     } else {
-        return Err(StdError::generic_err("Voting token not set"));
+        return Err(Error::missing_funding_token(vec![]));
     }
 
     let vote: Vote;
@@ -507,21 +507,19 @@ pub fn try_receive_vote(
         )?;
 
         if total_votes > balance {
-            return Err(StdError::generic_err(
-                "Total voting is greater than available balance",
-            ));
+            return Err(Error::voting_balance(vec![]));
         }
     } else {
-        return Err(StdError::generic_err("Msg not set"));
+        return Err(Error::voting_msg(vec![]));
     }
 
     // Check if proposal in assembly voting
     if let Status::Voting { end, .. } = Proposal::status(deps.storage, proposal)? {
         if end <= env.block.time.seconds() {
-            return Err(StdError::generic_err("Voting time has been reached"));
+            return Err(Error::voting_time(vec![&end.to_string()]));
         }
     } else {
-        return Err(StdError::generic_err("Not in public vote phase"));
+        return Err(Error::voting_not_state(vec![]));
     }
 
     let mut tally = Proposal::public_votes(deps.storage, proposal)?;
@@ -536,7 +534,7 @@ pub fn try_receive_vote(
     UserID::add_vote(deps.storage, sender.clone(), proposal)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::ReceiveBalance {
+        Response::new().set_data(to_binary(&ExecuteAnswer::ReceiveBalance {
             status: ResponseStatus::Success,
         })?),
     )

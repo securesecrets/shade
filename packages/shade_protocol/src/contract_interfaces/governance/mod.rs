@@ -1,5 +1,6 @@
 pub mod assembly;
 pub mod contract;
+pub mod errors;
 pub mod profile;
 pub mod proposal;
 #[cfg(feature = "governance-impl")]
@@ -297,7 +298,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     SetConfig { status: ResponseStatus },
     SetRuntimeState { status: ResponseStatus },
     Proposal { status: ResponseStatus },

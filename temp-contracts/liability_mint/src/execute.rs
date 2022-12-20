@@ -80,7 +80,7 @@ pub fn receive(
 
         Ok(Response::new()
             .add_messages(messages)
-            .set_data(to_binary(&HandleAnswer::Mint {
+            .set_data(to_binary(&ExecuteAnswer::Mint {
                 status: ResponseStatus::Success,
                 amount,
             })?))
@@ -108,7 +108,7 @@ pub fn try_update_config(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
             status: ResponseStatus::Success,
         })?),
     )
@@ -195,7 +195,7 @@ pub fn mint(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdR
             None,
             &TOKEN.load(deps.storage)?.contract,
         )?)
-        .set_data(to_binary(&HandleAnswer::Mint {
+        .set_data(to_binary(&ExecuteAnswer::Mint {
             status: ResponseStatus::Success,
             amount,
         })?))
@@ -219,7 +219,7 @@ pub fn add_whitelist(
     WHITELIST.save(deps.storage, &ws)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddWhitelist {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddWhitelist {
             status: ResponseStatus::Success,
         })?),
     )
@@ -249,7 +249,7 @@ pub fn rm_whitelist(
     WHITELIST.save(deps.storage, &ws)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::RemoveWhitelist {
+        Response::new().set_data(to_binary(&ExecuteAnswer::RemoveWhitelist {
             status: ResponseStatus::Success,
         })?),
     )
@@ -274,7 +274,7 @@ pub fn add_collateral(
     COLLATERAL.save(deps.storage, &collateral)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddCollateral {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddCollateral {
             status: ResponseStatus::Success,
         })?),
     )
@@ -304,7 +304,7 @@ pub fn rm_collateral(
     COLLATERAL.save(deps.storage, &collateral)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::RemoveCollateral {
+        Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCollateral {
             status: ResponseStatus::Success,
         })?),
     )

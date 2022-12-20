@@ -1,19 +1,9 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        SubMsg,
-    },
-    contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, SubMsg},
+    contract_interfaces::governance::{Config, ExecuteAnswer, RuntimeState},
     governance::{
         assembly::{Assembly, AssemblyData},
+        errors::Error,
         profile::Profile,
     },
     snip20::helpers::register_receive,
@@ -31,14 +21,12 @@ pub mod proposal;
 pub fn assembly_state_valid(storage: &dyn Storage, assembly: u16) -> StdResult<()> {
     match RuntimeState::load(storage)? {
         RuntimeState::Normal => {}
-        RuntimeState::SpecificAssemblies {
-            assemblies: committees,
-        } => {
-            if !committees.contains(&assembly) {
-                return Err(StdError::generic_err("unauthorized"));
+        RuntimeState::SpecificAssemblies { assemblies } => {
+            if !assemblies.contains(&assembly) {
+                return Err(Error::assemblies_limited(vec![]));
             }
         }
-        RuntimeState::Migrated { .. } => return Err(StdError::generic_err("unauthorized")),
+        RuntimeState::Migrated { .. } => return Err(Error::migrated(vec![])),
     };
 
     Ok(())
@@ -56,12 +44,15 @@ pub fn authorize_assembly(
 
     // Check that the user is in the non-public assembly
     if data.profile != 0 && !data.members.contains(&info.sender) {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(Error::not_in_assembly(vec![
+            info.sender.as_str(),
+            &assembly.to_string(),
+        ]));
     };
 
     // Check if enabled
     if !Profile::data(storage, data.profile)?.enabled {
-        return Err(StdError::generic_err("profile disabled"));
+        return Err(Error::profile_disabled(vec![&data.profile.to_string()]));
     }
 
     Ok(data)
@@ -70,9 +61,9 @@ pub fn authorize_assembly(
 /// Checks that the message sender is self and also not migrated
 pub fn authorized(storage: &dyn Storage, env: &Env, info: &MessageInfo) -> StdResult<()> {
     if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(Error::not_self(vec![]));
     } else if let RuntimeState::Migrated { .. } = RuntimeState::load(storage)? {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(Error::migrated(vec![]));
     }
 
     Ok(())
@@ -119,7 +110,7 @@ pub fn try_set_config(
 
     config.save(deps.storage)?;
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::SetConfig {
+        .set_data(to_binary(&ExecuteAnswer::SetConfig {
             status: ResponseStatus::Success,
         })?)
         .add_submessages(messages))
@@ -132,14 +123,12 @@ pub fn try_set_runtime_state(
     state: RuntimeState,
 ) -> StdResult<Response> {
     if let RuntimeState::Migrated { .. } = state {
-        return Err(StdError::generic_err(
-            "Cannot explicitly define the state as ",
-        ));
+        return Err(Error::migrated(vec![]));
     }
 
     state.save(deps.storage)?;
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
         })?),
     )

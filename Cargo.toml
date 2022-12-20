@@ -41,6 +41,7 @@ members = [
 
   # Tools
   "tools/doc2book",
+  "launch"
 ]
 
 exclude = ["packages/network_integration"]

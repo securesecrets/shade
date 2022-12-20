@@ -1,11 +1,12 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
-        HandleAnswer,
+        ExecuteAnswer,
         MSG_VARIABLE,
     },
+    governance::errors::Error,
     utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
@@ -22,7 +23,10 @@ pub fn try_add_assembly_msg(
     // Check that assemblys exist
     for assembly in assemblies.iter() {
         if *assembly > ID::assembly(deps.storage)? {
-            return Err(StdError::generic_err("Given assembly does not exist"));
+            return Err(Error::item_not_found(vec![
+                &assembly.to_string(),
+                "Assembly",
+            ]));
         }
     }
 
@@ -34,7 +38,7 @@ pub fn try_add_assembly_msg(
     .save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddAssemblyMsg {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
     )
@@ -50,7 +54,7 @@ pub fn try_set_assembly_msg(
     assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
     let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, id)? {
-        None => return Err(StdError::generic_err("AssemblyMsg not found")),
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "AssemblyMsg"])),
         Some(c) => c,
     };
 
@@ -69,7 +73,7 @@ pub fn try_set_assembly_msg(
     assembly_msg.save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
     )
@@ -94,7 +98,7 @@ pub fn try_add_assembly_msg_assemblies(
     AssemblyMsg::save_data(deps.storage, id, assembly_msg)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
     )

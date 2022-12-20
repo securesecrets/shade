@@ -1,0 +1,41 @@
+[package]
+name = "launch"
+version = "0.1.0"
+authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+edition = "2021"
+
+[[bin]]
+name = "shade"
+path = "src/shade.rs"
+
+[[bin]]
+name = "airdrop"
+path = "src/airdrop.rs"
+
+[features]
+default = []
+
+[dependencies]
+colored = "2.0.0"
+shade-protocol = { version = "0.1.0", path = "../packages/shade_protocol", features = [
+    "dex",
+    "airdrop",
+    "bonds",
+    "governance-impl",
+    "mint",
+    "mint_router",
+    "oracles",
+    "scrt_staking",
+    "snip20_staking",
+    "treasury",
+] }
+secretcli = { version = "0.1.0", path = "../packages/secretcli" }
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.67" }
+
+rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0" }
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+rand = { version = "0.8.4" }
+chrono = "0.4.19"

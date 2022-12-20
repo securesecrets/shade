@@ -1,6 +1,5 @@
-use crate::c_std::Uint128;
-use crate::c_std::{Addr, Binary};
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::snip20::helpers::Snip20Asset,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -70,7 +69,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,

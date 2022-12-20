@@ -1,6 +1,7 @@
 use shade_protocol::{
-    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
-    contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
+    contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, ExecuteAnswer},
+    governance::errors::Error,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
@@ -19,7 +20,10 @@ pub fn try_add_contract(
         let assembly_id = ID::assembly(deps.storage)?;
         for assembly in assemblies.iter() {
             if assembly > &assembly_id {
-                return Err(StdError::generic_err("Assembly does not exist"));
+                return Err(Error::item_not_found(vec![
+                    &assembly.to_string(),
+                    "Assembly",
+                ]));
             }
         }
     }
@@ -33,7 +37,7 @@ pub fn try_add_contract(
     .save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContract {
             status: ResponseStatus::Success,
         })?),
     )
@@ -51,7 +55,7 @@ pub fn try_set_contract(
     assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
     if id > ID::contract(deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"));
+        return Err(Error::item_not_found(vec![&id.to_string(), "Contract"]));
     }
 
     let mut allowed_contract = AllowedContract::load(deps.storage, id)?;
@@ -75,7 +79,10 @@ pub fn try_set_contract(
             let assembly_id = ID::assembly(deps.storage)?;
             for assembly in assemblies.iter() {
                 if assembly > &assembly_id {
-                    return Err(StdError::generic_err("Assembly does not exist"));
+                    return Err(Error::item_not_found(vec![
+                        &assembly.to_string(),
+                        "Assembly",
+                    ]));
                 }
             }
             allowed_contract.assemblies = Some(assemblies);
@@ -85,7 +92,7 @@ pub fn try_set_contract(
     allowed_contract.save(deps.storage, id)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContract {
             status: ResponseStatus::Success,
         })?),
     )
@@ -99,7 +106,7 @@ pub fn try_add_contract_assemblies(
     assemblies: Vec<u16>,
 ) -> StdResult<Response> {
     if id > ID::contract(deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"));
+        return Err(Error::item_not_found(vec![&id.to_string(), "Contract"]));
     }
 
     let mut allowed_contract = AllowedContract::data(deps.storage, id)?;
@@ -113,15 +120,13 @@ pub fn try_add_contract_assemblies(
         }
         allowed_contract.assemblies = Some(old_assemblies);
     } else {
-        return Err(StdError::generic_err(
-            "Assembly support is disabled in this contract",
-        ));
+        return Err(Error::contract_disabled(vec![]));
     }
 
     AllowedContract::save_data(deps.storage, id, allowed_contract)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddContractAssemblies {
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContractAssemblies {
             status: ResponseStatus::Success,
         })?),
     )
