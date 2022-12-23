@@ -2,7 +2,10 @@ use crate::{
     contract_interfaces::{
         dex::{dex::Dex, dex::DexFees, secretswap, shadeswap, sienna},
         mint::mint,
-        snip20::helpers::send_msg,
+        snip20::{
+            self,
+            helpers::send_msg,
+        },
         stkd,
     },
     utils::{asset::Contract, ExecuteCallback, Query},
@@ -10,11 +13,10 @@ use crate::{
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary,
+    Addr,
     Coin,
     CosmosMsg,
-    Decimal,
     Deps,
-    DepsMut,
     StdError,
     StdResult,
     Uint128,
@@ -356,23 +358,71 @@ impl Derivative {
     pub fn query_exchange_price(
         &self, 
         deps: Deps,
-    ) -> StdResult<Decimal> {
+    ) -> StdResult<Uint128> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
                 let response =  stkd::QueryMsg::StakingInfo {
-                    time: 1660000000,
+                    time: 0, // time appears to have no effect on price
                 }.query(
                     &deps.querier,
                     &self.contract.clone(),
                 )?;
                 match response {
                     stkd::QueryAnswer::StakingInfo { price, .. } => 
-                        Ok(Decimal::from_ratio(price, Uint128::from(1000000u128))),
+                        Ok(price),
                     _ => Err(StdError::generic_err("Invalid query return for mint cost")),
                 }
             },
         }
     }
+
+    pub fn query_original_balance(
+        &self,
+        deps: Deps, 
+        addr: Addr, 
+        viewing_key: String,
+    ) -> StdResult<Uint128> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                let response = snip20::QueryMsg::Balance {
+                    address: addr.to_string(),
+                    key: viewing_key,
+                }
+                .query(&deps.querier, &self.original_token)?;
+                
+                match response {
+                    snip20::QueryAnswer::Balance { amount } => Ok(amount),
+                    _ => Ok(Uint128::zero()),
+                }
+            }
+        }
+    }
+
+    pub fn query_unbondings(
+        &self,
+        deps: Deps,
+        addr: Addr,
+        viewing_key: String,
+    ) -> StdResult<Uint128> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                let stkd_response = stkd::QueryMsg::Unbonding {
+                    address: addr,
+                    key: viewing_key.clone(),
+                    page: None,
+                    page_size: None,
+                    time: None,
+                }
+                .query(&deps.querier, &self.contract)?;
+                match stkd_response {
+                    stkd::QueryAnswer::Unbonding { unbond_amount_in_next_batch, .. } => 
+                        Ok(unbond_amount_in_next_batch),
+                    _ => Ok(Uint128::zero()),
+                }
+            }
+        }
+    }
+
 }
 
 #[cw_serde]

@@ -13,6 +13,7 @@ use shade_protocol::{
         Uint128,
         Uint256,
     },
+    Contract,
 	contract_interfaces::{
         dao::adapter,
         sky::{
@@ -255,49 +256,23 @@ pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswe
 
     let self_addr = SelfAddr::load(deps.storage)?.0;
     let viewing_key = ViewingKey::load(deps.storage)?.0;
-    
-    let sscrt_response = snip20::QueryMsg::Balance {
-        address: self_addr.to_string(),
-        key: viewing_key.clone(),
-    }
-    .query(&deps.querier, &derivative.original_token)?;
-    let sscrt = match sscrt_response {
-        snip20::QueryAnswer::Balance { amount } => amount,
-        _ => Uint128::zero(),
-    };
+    let balance = derivative.query_original_balance(
+        deps, 
+        self_addr.clone(), 
+        viewing_key.clone(),
+    )?;
+    let unbondings = derivative.query_unbondings(
+        deps, 
+        self_addr.clone(), 
+        viewing_key.clone(),
+    )?;
+    let price = derivative.query_exchange_price(deps)?;
 
-    let stkd_response = stkd::QueryMsg::Unbonding {
-        address: self_addr,
-        key: viewing_key.clone(),
-        page: None,
-        page_size: None,
-        time: None,
-    }
-    .query(&deps.querier, &derivative.contract)?;
-    let stkd = match stkd_response {
-        stkd::QueryAnswer::Unbonding { unbond_amount_in_next_batch, .. } => 
-            unbond_amount_in_next_batch,
-        _ => Uint128::zero(),
-    };
-
-    let price_response = stkd::QueryMsg::StakingInfo {
-        time: 0u64, // not important for price, also not accessible
-    }
-    .query(&deps.querier, &derivative.contract)?;
-    let price = match price_response {
-        stkd::QueryAnswer::StakingInfo { price, .. } => price,
-        _ => Uint128::zero(), // hopefully doesn't happen
-    };
-
-    let balance = sscrt
-        .checked_add(stkd.checked_multiply_ratio(
-                price, 
-                Uint128::from(1000000u128),
-            ).map_err(|_| StdError::generic_err("Error calculating balance"))?
-        )?;
+    let derivative_value = unbondings.checked_multiply_ratio(price, Uint128::from(1000000u128))
+        .map_err(|_| StdError::generic_err("Overflow error converting unbondings to original token"))?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: balance,
+        amount: balance.checked_add(derivative_value)?,
     })
 }
 
@@ -313,19 +288,10 @@ pub fn adapter_claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAns
 
     let self_addr = SelfAddr::load(deps.storage)?.0;
     let viewing_key = ViewingKey::load(deps.storage)?.0;
- 
-    let sscrt_response = snip20::QueryMsg::Balance {
-        address: self_addr.to_string(),
-        key: viewing_key.clone(),
-    }
-    .query(&deps.querier, &derivative.original_token)?;
-    let sscrt = match sscrt_response {
-        snip20::QueryAnswer::Balance { amount } => amount,
-        _ => Uint128::zero(),
-    };
+    let balance = derivative.query_original_balance(deps, self_addr, viewing_key)?;
 
     let unbondings = Unbondings::load(deps.storage)?.0;
-    let claimable = sscrt.saturating_sub(unbondings);
+    let claimable = balance.saturating_sub(unbondings);
 
     Ok(adapter::QueryAnswer::Claimable {
         amount: claimable,
@@ -349,7 +315,7 @@ pub fn adapter_unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAns
 }
 
 pub fn adapter_unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    // All assets are unbondable
+    // Whole balance is unbondable
     if let adapter::QueryAnswer::Balance { amount } = adapter_balance(deps, asset)? {
         Ok(adapter::QueryAnswer::Unbondable {
             amount,
@@ -377,7 +343,6 @@ fn cp_result(
     let expected_res = pool_2 - (pool_1 * pool_2) / (pool_1 + amount);
     Ok(expected_res * swap_fee)
 }
-
 
 #[cfg(test)]
 mod tests {
