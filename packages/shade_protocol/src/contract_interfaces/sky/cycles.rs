@@ -3,7 +3,7 @@ use crate::{
         dex::{dex::Dex, dex::DexFees, secretswap, shadeswap, sienna},
         mint::mint,
         snip20::helpers::send_msg,
-        staking_derivative,
+        stkd,
     },
     utils::{asset::Contract, ExecuteCallback, Query},
 };
@@ -332,7 +332,7 @@ impl Derivative {
     pub fn unbond_msg(&self, redeem_amount: Uint128) -> StdResult<CosmosMsg> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
-                staking_derivative::HandleMsg::Unbond {
+                stkd::HandleMsg::Unbond {
                     redeem_amount,
                 }.to_cosmos_msg(
                     &self.contract.clone(),
@@ -345,7 +345,7 @@ impl Derivative {
     pub fn stake_msg(&self, stake_amount: Uint128) -> StdResult<CosmosMsg> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
-                staking_derivative::HandleMsg::Stake{}.to_cosmos_msg(
+                stkd::HandleMsg::Stake{}.to_cosmos_msg(
                     &self.contract.clone(),
                     vec![Coin::new(stake_amount.u128(), "uscrt")],
                 )
@@ -359,14 +359,14 @@ impl Derivative {
     ) -> StdResult<Decimal> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
-                let response = staking_derivative::QueryMsg::StakingInfo {
+                let response =  stkd::QueryMsg::StakingInfo {
                     time: 1660000000,
                 }.query(
                     &deps.querier,
                     &self.contract.clone(),
                 )?;
                 match response {
-                    staking_derivative::QueryAnswer::StakingInfo { price, .. } => 
+                    stkd::QueryAnswer::StakingInfo { price, .. } => 
                         Ok(Decimal::from_ratio(price, Uint128::from(1000000u128))),
                     _ => Err(StdError::generic_err("Invalid query return for mint cost")),
                 }

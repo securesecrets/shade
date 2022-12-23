@@ -29,7 +29,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "sky",
   "sky-utils",
   "sky_derivatives",
-  "staking_derivative",
+  "stkd",
 ] }
 better-secret-math = { git = "https://github.com/securesecrets/better-secret-math" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
