@@ -1,5 +1,5 @@
 // Types imported from staking-derivatives private repo used for interfacing with stkd-SCRT
-// and updated to v1. Types copied as needed.
+// and updated to v1. Types copied as needed, feel free to add.
 
 use cosmwasm_std::Addr;
 use cosmwasm_std::Uint128;
@@ -30,6 +30,19 @@ pub enum QueryMsg {
     StakingInfo {
         /// time in seconds since 01/01/1970.
         time: u64,
+    },
+    Unbonding {
+        /// address whose unclaimed unbondings to display
+        address: Addr,
+        /// the address' viewing key
+        key: String,
+        /// optional page number to display
+        page: Option<u32>,
+        /// optional page size
+        page_size: Option<u32>,
+        /// optional time in seconds since 01/01/1970.  If provided, response will
+        /// include the amount of SCRT that can be withdrawn at that time
+        time: Option<u64>,
     },
 }
 
@@ -65,14 +78,39 @@ pub enum QueryAnswer {
         total_derivative_token_supply: Uint128,
         /// price of derivative token in SCRT to 6 decimals
         price: Uint128,
-    }
+    },
+    /// displays user's unclaimed unbondings
+    Unbonding {
+        /// number of unclaimed unbondings
+        count: u64,
+        /// amount of claimable SCRT at the specified time (if given)
+        claimable_scrt: Option<Uint128>,
+        /// unclaimed unbondings
+        unbondings: Vec<Unbond>,
+        /// total amount of pending unbondings that will begin maturing in the next batch
+        unbond_amount_in_next_batch: Uint128,
+        /// optional estimated time the next batch of unbondings will mature.  Only provided
+        /// if the user has SCRT waiting to be unbonded in the next batch
+        estimated_time_of_maturity_for_next_batch: Option<u64>,
+    },
 }
 
-// validators and their weights
+/// validators and their weights
 #[cw_serde]
 pub struct WeightedValidator {
     /// the validator's address
     pub validator: Addr,
     /// the validator's weight in whole percents
     pub weight: u8,
+}
+
+/// Unbonding data
+#[cw_serde]
+pub struct Unbond {
+    /// amount of SCRT unbonding
+    pub amount: Uint128,
+    /// time of maturation in seconds since 01/01/1970
+    pub unbonds_at: u64,
+    /// optional bool if time was supplied, which is true if the unbonding is mature
+    pub is_mature: Option<bool>,
 }

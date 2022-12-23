@@ -25,12 +25,19 @@ use shade_protocol::{
 		        Direction,
                 DexPairs,
 		        QueryAnswer,
-                Rollover,
+                SelfAddr,
                 SwapAmounts,
+                Unbondings,
+                ViewingKey,
             },
         },
+        snip20,
+        stkd,
 	},
-    utils::storage::plus::ItemStorage,
+    utils::{
+        storage::plus::ItemStorage,
+        Query,
+    },
 };
 use cosmwasm_floating_point::float::Float;
 
@@ -43,12 +50,6 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
 pub fn dex_pairs(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::DexPairs {
         dex_pairs: DexPairs::load(deps.storage)?.0,
-    })
-}
-
-pub fn current_rollover(deps: Deps) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::CurrentRollover {
-        rollover: Rollover::load(deps.storage)?.0,
     })
 }
  
@@ -243,47 +244,125 @@ pub fn is_any_pair_profitable(
 }
 
 pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    let derivative = Config::load(deps.storage)?.derivative;
 
-    // TODO
+    // Only relevant token sky staking holds
+    if asset != derivative.original_token.address {
+        return Ok(adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        })
+    }
+
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let viewing_key = ViewingKey::load(deps.storage)?.0;
+    
+    let sscrt_response = snip20::QueryMsg::Balance {
+        address: self_addr.to_string(),
+        key: viewing_key.clone(),
+    }
+    .query(&deps.querier, &derivative.original_token)?;
+    let sscrt = match sscrt_response {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    let stkd_response = stkd::QueryMsg::Unbonding {
+        address: self_addr,
+        key: viewing_key.clone(),
+        page: None,
+        page_size: None,
+        time: None,
+    }
+    .query(&deps.querier, &derivative.contract)?;
+    let stkd = match stkd_response {
+        stkd::QueryAnswer::Unbonding { unbond_amount_in_next_batch, .. } => 
+            unbond_amount_in_next_batch,
+        _ => Uint128::zero(),
+    };
+
+    let price_response = stkd::QueryMsg::StakingInfo {
+        time: 0u64, // not important for price, also not accessible
+    }
+    .query(&deps.querier, &derivative.contract)?;
+    let price = match price_response {
+        stkd::QueryAnswer::StakingInfo { price, .. } => price,
+        _ => Uint128::zero(), // hopefully doesn't happen
+    };
+
+    let balance = sscrt
+        .checked_add(stkd.checked_multiply_ratio(
+                price, 
+                Uint128::from(1000000u128),
+            ).map_err(|_| StdError::generic_err("Error calculating balance"))?
+        )?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: shade_protocol::c_std::Uint128::zero(),
+        amount: balance,
     })
 }
 
 pub fn adapter_claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    let derivative = Config::load(deps.storage)?.derivative;
 
-    // TODO
+    // Only relevant token sky staking holds
+    if asset != derivative.original_token.address {
+        return Ok(adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        })
+    }
+
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let viewing_key = ViewingKey::load(deps.storage)?.0;
+ 
+    let sscrt_response = snip20::QueryMsg::Balance {
+        address: self_addr.to_string(),
+        key: viewing_key.clone(),
+    }
+    .query(&deps.querier, &derivative.original_token)?;
+    let sscrt = match sscrt_response {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    let unbondings = Unbondings::load(deps.storage)?.0;
+    let claimable = sscrt.saturating_sub(unbondings);
 
     Ok(adapter::QueryAnswer::Claimable {
-        amount: shade_protocol::c_std::Uint128::zero(),
+        amount: claimable,
     })
 }
 
 pub fn adapter_unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    let derivative = Config::load(deps.storage)?.derivative;
 
-    // TODO
+    // Only relevant token sky staking holds
+    if asset != derivative.original_token.address {
+        return Ok(adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        })
+    }
 
+    let unbondings = Unbondings::load(deps.storage)?.0; 
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: shade_protocol::c_std::Uint128::zero(),
+        amount: unbondings,
     })
 }
 
 pub fn adapter_unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-
-    // TODO
-
-    Ok(adapter::QueryAnswer::Unbondable {
-        amount: shade_protocol::c_std::Uint128::zero(),
-    })
+    // All assets are unbondable
+    if let adapter::QueryAnswer::Balance { amount } = adapter_balance(deps, asset)? {
+        Ok(adapter::QueryAnswer::Unbondable {
+            amount,
+        })
+    } else {
+        Err(StdError::generic_err("This should not happen!"))
+    }
 }
 
-pub fn adapter_reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-
-    // TODO
-
+pub fn adapter_reserves(_deps: Deps, _asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    // Sky Staking has no reserves
     Ok(adapter::QueryAnswer::Reserves {
-        amount: shade_protocol::c_std::Uint128::zero(),
+        amount: Uint128::zero(),
     })
 }
 

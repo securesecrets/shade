@@ -24,7 +24,7 @@ use shade_protocol::{
                 DexPairs,
                 ExecuteAnswer,
                 QueryAnswer,
-                Rollover,
+                Unbondings,
                 SelfAddr,
                 TradingFees,
             },
@@ -100,10 +100,6 @@ pub fn try_update_config(
         max_arb_amount: match max_arb_amount {
             Some(max) => max,
             None => cur_config.max_arb_amount,
-        },
-        arb_period: match arb_period {
-            Some(period) => period,
-            None => cur_config.arb_period,
         },
     };
     config.save(deps.storage)?;
@@ -250,9 +246,10 @@ pub fn try_arb_pair(
         return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", index)));
     }
 
-    let rollover = Rollover::load(deps.storage)?.0;
+    let unbondings = Unbondings::load(deps.storage)?.0;
     let periodically = Config::load(deps.storage)?.max_arb_amount;
-    let max_swap = Uint128::from(rollover + periodically);
+    // This is wrong! fix unbondings
+    let max_swap = Uint128::from(unbondings + periodically);
 
     let is_profitable_result = query::is_profitable(deps, index, Some(max_swap));
     let (profitable, swap_amounts_opt, direction_opt) = match is_profitable_result {
