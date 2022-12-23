@@ -24,7 +24,7 @@ use shade_protocol::{
             ExecuteMsg, 
             InstantiateMsg, 
             QueryMsg,
-            Rollover,
+            Unbondings,
             SelfAddr,
             ViewingKey,
         },
@@ -47,7 +47,7 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     SelfAddr(env.contract.address.clone()).save(deps.storage)?;
     ViewingKey(msg.viewing_key.clone()).save(deps.storage)?;
-    Rollover(Uint128::zero()).save(deps.storage)?;
+    Unbondings(Uint128::zero()).save(deps.storage)?;
 
     // Validate shade admin works
     validate_admin(
@@ -68,7 +68,6 @@ pub fn instantiate(
         derivative: msg.derivative.clone(),
         trading_fees: msg.trading_fees,
         max_arb_amount: msg.max_arb_amount,
-        arb_period: msg.arb_period,
     }.save(deps.storage)?;
 
     // Clear current pairs, then add individual (validating each)
@@ -146,7 +145,6 @@ pub fn query(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::DexPairs {} => to_binary(&query::dex_pairs(deps)?),
-        QueryMsg::CurrentRollover {} => to_binary(&query::current_rollover(deps)?),
         QueryMsg::IsProfitable { index, max_swap } => {
             match index {
                 Some(i) => to_binary(&query::is_profitable(deps, i, max_swap)?),
