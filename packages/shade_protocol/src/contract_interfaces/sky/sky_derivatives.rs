@@ -34,9 +34,6 @@ pub struct Config {
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub max_arb_amount: Uint128,
-    // TODO: maybe we don't need the period?
-    /// Number of seconds between each scheduled arb execution
-    pub arb_period: u32,
 }
 
 impl ItemStorage for Config {
@@ -65,10 +62,10 @@ impl ItemStorage for ViewingKey {
 }
 
 #[cw_serde]
-pub struct Rollover(pub Uint128);
+pub struct Unbondings(pub Uint128);
 
-impl ItemStorage for Rollover {
-    const ITEM: Item<'static, Rollover> = Item::new("item_rollover");
+impl ItemStorage for Unbondings {
+    const ITEM: Item<'static, Unbondings> = Item::new("item_rollover");
 }
 
 #[cw_serde]
@@ -152,7 +149,6 @@ pub enum ExecuteAnswer {
 pub enum QueryMsg {
     Config {},
     DexPairs {},
-    CurrentRollover {},
     IsProfitable {
         // Defaults to the first index
         index: Option<usize>,
