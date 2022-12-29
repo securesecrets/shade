@@ -47,6 +47,7 @@ pub enum AdminPermissions {
     SkyAdmin,
     LendAdmin,
     OraclesAdmin,
+    OraclesPriceBot,
     SilkAdmin,
 }
 
@@ -63,6 +64,7 @@ impl AdminPermissions {
             AdminPermissions::SkyAdmin => "SHADE_SKY_ADMIN",
             AdminPermissions::LendAdmin => "SHADE_LEND_ADMIN",
             AdminPermissions::OraclesAdmin => "SHADE_ORACLES_ADMIN",
+            AdminPermissions::OraclesPriceBot => "SHADE_ORACLES_PRICE_BOT",
             AdminPermissions::SilkAdmin => "SHADE_SILK_ADMIN",
         }
         .to_string()
