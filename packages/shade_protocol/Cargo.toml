@@ -105,7 +105,7 @@ debug-print = [] # TODO: remove this from all cargo configs
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
 cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
-cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+cosmwasm-schema = "1.1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
 
 schemars = "0.8.9"
