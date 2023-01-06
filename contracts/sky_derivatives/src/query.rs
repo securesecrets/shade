@@ -1,44 +1,30 @@
-use std::{
-    ops::*,
-    convert::{TryFrom, TryInto},
-};
+use std::convert::TryInto;
 use shade_protocol::{
 	c_std::{
         Addr, 
         Decimal,
         Deps,
-        Isqrt,
         StdError, 
         StdResult,
+        QuerierWrapper,
         Uint128,
-        Uint256,
     },
-    Contract,
 	contract_interfaces::{
         dao::adapter,
         sky::{
-            cycles::{
-                ArbPair,
-                Derivative,
-            },
+            cycles::ArbPair,
             sky_derivatives::{
                 Config,
-		        Direction,
+                Direction,
                 DexPairs,
-		        QueryAnswer,
+                QueryAnswer,
                 SelfAddr,
                 SwapAmounts,
                 Unbondings,
-                ViewingKey,
             },
         },
-        snip20,
-        stkd,
 	},
-    utils::{
-        storage::plus::ItemStorage,
-        Query,
-    },
+    utils::storage::plus::ItemStorage,
 };
 use cosmwasm_floating_point::float::Float;
 
@@ -53,22 +39,17 @@ pub fn dex_pairs(deps: Deps) -> StdResult<QueryAnswer> {
         dex_pairs: DexPairs::load(deps.storage)?.0,
     })
 }
- 
-pub fn is_profitable(
-    deps: Deps,
-    pair_index: usize,
+
+// Helper function for determining profitability
+pub fn is_arb_profitable(
+    querier: &QuerierWrapper,
+    config: &Config,
+    dex_pair: &ArbPair,
     max_swap: Option<Uint128>,
 ) -> StdResult<QueryAnswer> {
-    let dex_pairs = DexPairs::load(deps.storage)?.0;
-    if pair_index >= dex_pairs.len() {
-        return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", pair_index)));
-    }
-
-    let config = Config::load(deps.storage)?;
-    let mut dex_pair = dex_pairs[pair_index].clone();
-    let dex_pools = dex_pair.pool_amounts(deps)?;
+    let dex_pools = dex_pair.query_pool_amounts(querier)?;
     
-    let derivative_price = Float::from(config.derivative.query_exchange_price(deps)?);
+    let derivative_price = Float::from(config.derivative.query_exchange_price(querier)?);
     let max_swap = max_swap.and_then(|max| Some(Float::from(max)));
 
     // Subtracts will not overflow if trading fees are properly checked
@@ -120,6 +101,22 @@ pub fn is_profitable(
             })
         },
     }
+}
+ 
+pub fn is_profitable(
+    deps: Deps,
+    pair_index: usize,
+    max_swap: Option<Uint128>,
+) -> StdResult<QueryAnswer> {
+    let dex_pairs = DexPairs::load(deps.storage)?.0;
+    if pair_index >= dex_pairs.len() {
+        return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", pair_index)));
+    }
+
+    let config = Config::load(deps.storage)?;
+    let mut dex_pair = dex_pairs[pair_index].clone();
+
+    is_arb_profitable(&deps.querier, &config, &mut dex_pair, max_swap)
 }
 
 #[derive(Debug, PartialEq)]
@@ -224,9 +221,10 @@ pub fn is_any_pair_profitable(
     let mut is_profitable_vec = vec![];
     let mut swap_amounts_vec = vec![];
     let mut direction_vec = vec![];
-    for index in 0..pairs.len() {
-        match is_profitable(deps, index, max_swap)? {
-            QueryAnswer::IsProfitable { is_profitable, swap_amounts, direction} => {
+    let config = Config::load(deps.storage)?;
+    for mut dex_pair in pairs {
+        match is_arb_profitable(&deps.querier, &config, &mut dex_pair, max_swap)? {
+            QueryAnswer::IsProfitable { is_profitable, swap_amounts, direction } => {
                 is_profitable_vec.push(is_profitable);
                 swap_amounts_vec.push(swap_amounts);
                 direction_vec.push(direction);
@@ -245,28 +243,27 @@ pub fn is_any_pair_profitable(
 }
 
 pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    let derivative = Config::load(deps.storage)?.derivative;
+    let config = Config::load(deps.storage)?;
 
     // Only relevant token sky staking holds
-    if asset != derivative.original_token.address {
+    if asset != config.derivative.original_asset.address {
         return Ok(adapter::QueryAnswer::Balance {
             amount: Uint128::zero(),
         })
     }
 
     let self_addr = SelfAddr::load(deps.storage)?.0;
-    let viewing_key = ViewingKey::load(deps.storage)?.0;
-    let balance = derivative.query_original_balance(
-        deps, 
+    let balance = config.derivative.query_original_balance(
+        &deps.querier, 
         self_addr.clone(), 
-        viewing_key.clone(),
+        config.viewing_key.clone(),
     )?;
-    let unbondings = derivative.query_unbondings(
-        deps, 
+    let unbondings = config.derivative.query_unbondings(
+        &deps.querier, 
         self_addr.clone(), 
-        viewing_key.clone(),
+        config.viewing_key.clone(),
     )?;
-    let price = derivative.query_exchange_price(deps)?;
+    let price = config.derivative.query_exchange_price(&deps.querier)?;
 
     let derivative_value = unbondings.checked_multiply_ratio(price, Uint128::from(1000000u128))
         .map_err(|_| StdError::generic_err("Overflow error converting unbondings to original token"))?;
@@ -277,18 +274,21 @@ pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswe
 }
 
 pub fn adapter_claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    let derivative = Config::load(deps.storage)?.derivative;
+    let config = Config::load(deps.storage)?;
 
     // Only relevant token sky staking holds
-    if asset != derivative.original_token.address {
+    if asset != config.derivative.original_asset.address {
         return Ok(adapter::QueryAnswer::Balance {
             amount: Uint128::zero(),
         })
     }
 
     let self_addr = SelfAddr::load(deps.storage)?.0;
-    let viewing_key = ViewingKey::load(deps.storage)?.0;
-    let balance = derivative.query_original_balance(deps, self_addr, viewing_key)?;
+    let balance = config.derivative.query_original_balance(
+        &deps.querier, 
+        self_addr, 
+        config.viewing_key
+    )?;
 
     let unbondings = Unbondings::load(deps.storage)?.0;
     let claimable = balance.saturating_sub(unbondings);
@@ -302,15 +302,14 @@ pub fn adapter_unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAns
     let derivative = Config::load(deps.storage)?.derivative;
 
     // Only relevant token sky staking holds
-    if asset != derivative.original_token.address {
+    if asset != derivative.original_asset.address {
         return Ok(adapter::QueryAnswer::Balance {
             amount: Uint128::zero(),
         })
     }
 
-    let unbondings = Unbondings::load(deps.storage)?.0; 
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbondings,
+        amount: Unbondings::load(deps.storage)?.0,
     })
 }
 

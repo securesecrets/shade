@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use crate::c_std::{Addr, Decimal, Uint128};
 
 use crate::{
     contract_interfaces::dao::adapter,
@@ -31,9 +31,11 @@ pub struct TradingFees {
 #[cw_serde]
 pub struct Config {
     pub shade_admin_addr: Contract,
+    pub treasury: Contract, // TODO: router?
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub max_arb_amount: Uint128,
+    pub viewing_key: String,
 }
 
 impl ItemStorage for Config {
@@ -55,13 +57,6 @@ impl ItemStorage for DexPairs {
 }
 
 #[cw_serde]
-pub struct ViewingKey(pub String);
-
-impl ItemStorage for ViewingKey {
-    const ITEM: Item<'static, ViewingKey> = Item::new("item_viewing_key");
-}
-
-#[cw_serde]
 pub struct Unbondings(pub Uint128);
 
 impl ItemStorage for Unbondings {
@@ -71,11 +66,11 @@ impl ItemStorage for Unbondings {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub shade_admin_addr: Contract,
+    pub treasury: Contract,
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub dex_pairs: Vec<ArbPair>,
     pub max_arb_amount: Uint128,
-    pub arb_period: u32,
     pub viewing_key: String,
 }
 
@@ -86,17 +81,19 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Arbitrage {
-        index: usize,
+        // Defaults to 0
+        index: Option<usize>,
     }, 
     ArbAllPairs {},
     UpdateConfig {
         // Sender must be authorized on new contract as well
         shade_admin_addr: Option<Contract>,
+        treasury: Option<Contract>,
         // Changing the derivative erases the saved dex pairs for data validation reasons
         derivative: Option<Derivative>,
         trading_fees: Option<TradingFees>,
         max_arb_amount: Option<Uint128>,
-        arb_period: Option<u32>,
+        viewing_key: Option<String>,
     },
     SetDexPairs {
         pairs: Vec<ArbPair>,
@@ -112,7 +109,6 @@ pub enum ExecuteMsg {
     RemovePair {
         index: usize,
     },
-    // TODO - SetViewingKey???
     Adapter(adapter::SubExecuteMsg),
 }
 
