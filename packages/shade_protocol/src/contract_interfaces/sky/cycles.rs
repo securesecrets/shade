@@ -19,6 +19,7 @@ use cosmwasm_std::{
     Deps,
     StdError,
     StdResult,
+    QuerierWrapper,
     Uint128,
     Uint256,
 };
@@ -109,6 +110,68 @@ impl ArbPair {
         }
     }
 
+    // Queries pool amounts without updating token amounts. Doesn't require ArbPair to be mutable
+    // for this function.
+    pub fn query_pool_amounts(&self, querier: &QuerierWrapper) -> StdResult<(Uint128, Uint128)> {
+        self.validate_pair()?;
+        match self.dex {
+            Dex::SecretSwap => {
+                let res = secretswap::PairQuery::Pool {}
+                    .query(querier, &self.pair_contract.clone().unwrap())?;
+                match res {
+                    secretswap::PoolResponse { assets, .. } => {
+                        if assets[0].info.token.contract_addr.clone() == self.token0.address.clone()
+                        {
+                            Ok((assets[0].amount, assets[1].amount))
+                        } else {
+                            Ok((assets[1].amount, assets[0].amount))
+                        }
+                    }
+                }
+            }
+            Dex::ShadeSwap => {
+                let res = shadeswap::PairQuery::PairInfo
+                    .query(querier, &self.pair_contract.clone().unwrap())?;
+                match res {
+                    shadeswap::PairInfoResponse {
+                        pair,
+                        amount_0,
+                        amount_1,
+                        ..
+                    } => match pair.token_0 {
+                        shadeswap::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                Ok((amount_0, amount_1))
+                            } else {
+                                Ok((amount_1, amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::SiennaSwap => {
+                let res = sienna::PairQuery::PairInfo
+                    .query(querier, &self.pair_contract.clone().unwrap())?;
+
+                match res {
+                    sienna::PairInfoResponse { pair_info } => match pair_info.pair.token_0 {
+                        sienna::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                Ok((pair_info.amount_0, pair_info.amount_1))
+                            } else {
+                                Ok((pair_info.amount_1, pair_info.amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::Mint => Err(StdError::generic_err("Not available")),
+        }
+    }
+
+
     pub fn return_amount(
         &mut self,
         deps: Deps,
@@ -123,8 +186,8 @@ impl ArbPair {
             Dex::SiennaSwap => {
                 let sienna_commision = offer.amount * fees.sienna_swap;
                 let offer_amount = Uint256::from(offer.amount.checked_sub(sienna_commision)?);
-                let mut offer_pool = Uint256::zero();
-                let mut ask_pool = Uint256::zero();
+                let offer_pool;
+                let ask_pool;
                 if offer.asset.address == self.token0.address {
                     offer_pool = if let Some(amount) = self.token0_amount {
                         Uint256::from(amount)
@@ -326,7 +389,7 @@ pub enum DerivativeType {
 #[cw_serde]
 pub struct Derivative {
     pub contract: Contract,
-    pub original_token: Contract,
+    pub original_asset: Contract,
     pub staking_type: DerivativeType,
 }
 
@@ -357,14 +420,14 @@ impl Derivative {
 
     pub fn query_exchange_price(
         &self, 
-        deps: Deps,
+        querier: &QuerierWrapper,
     ) -> StdResult<Uint128> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
                 let response =  stkd::QueryMsg::StakingInfo {
                     time: 0, // time appears to have no effect on price
                 }.query(
-                    &deps.querier,
+                    querier,
                     &self.contract.clone(),
                 )?;
                 match response {
@@ -378,7 +441,7 @@ impl Derivative {
 
     pub fn query_original_balance(
         &self,
-        deps: Deps, 
+        querier: &QuerierWrapper, 
         addr: Addr, 
         viewing_key: String,
     ) -> StdResult<Uint128> {
@@ -388,7 +451,7 @@ impl Derivative {
                     address: addr.to_string(),
                     key: viewing_key,
                 }
-                .query(&deps.querier, &self.original_token)?;
+                .query(querier, &self.original_asset)?;
                 
                 match response {
                     snip20::QueryAnswer::Balance { amount } => Ok(amount),
@@ -400,7 +463,7 @@ impl Derivative {
 
     pub fn query_unbondings(
         &self,
-        deps: Deps,
+        querier: &QuerierWrapper, 
         addr: Addr,
         viewing_key: String,
     ) -> StdResult<Uint128> {
@@ -413,16 +476,21 @@ impl Derivative {
                     page_size: None,
                     time: None,
                 }
-                .query(&deps.querier, &self.contract)?;
+                .query(querier, &self.contract)?;
                 match stkd_response {
-                    stkd::QueryAnswer::Unbonding { unbond_amount_in_next_batch, .. } => 
-                        Ok(unbond_amount_in_next_batch),
+                    // TODO: loop through unbondings and add up total amount waiting to unbond
+                    stkd::QueryAnswer::Unbonding { unbondings, unbond_amount_in_next_batch, .. } => {
+                        let unbonding_amt = Uint128::zero();
+                        for unbonding in unbondings {
+                            unbonding_amt.checked_add(unbonding.amount)?;
+                        }
+                        Ok(unbonding_amt.checked_add(unbond_amount_in_next_batch)?)
+                    },
                     _ => Ok(Uint128::zero()),
                 }
             }
         }
     }
-
 }
 
 #[cw_serde]

@@ -1,15 +1,15 @@
 use shade_protocol::c_std::{
-    from_binary,
     to_binary,
     Addr,
+    CosmosMsg,
     Decimal,
-    Deps,
     DepsMut,
     Env,
     MessageInfo,
     Response,
     StdError,
     StdResult,
+    QuerierWrapper,
     Uint128,
 };
 use shade_protocol::{
@@ -30,12 +30,11 @@ use shade_protocol::{
             },
         },
     },
+    snip20::helpers::{send_msg, set_viewing_key_msg},
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus,
         storage::plus::ItemStorage,
-        ExecuteCallback,
-        Query,
     },
 };
 use crate::query;
@@ -49,10 +48,11 @@ pub fn try_update_config(
     deps: DepsMut,
     info: MessageInfo,
     shade_admin_addr: Option<Contract>,
+    treasury: Option<Contract>,
     derivative: Option<Derivative>,
     trading_fees: Option<TradingFees>,
     max_arb_amount: Option<Uint128>,
-    arb_period: Option<u32>,
+    viewing_key: Option<String>,
 ) -> StdResult<Response> {
     let cur_config = Config::load(deps.storage)?;
 
@@ -64,6 +64,7 @@ pub fn try_update_config(
         &cur_config.shade_admin_addr,
     )?;
     
+    let mut messages = vec![];
     let config = Config {
         shade_admin_addr: match shade_admin_addr {
             Some(contract) => {
@@ -79,13 +80,30 @@ pub fn try_update_config(
             },
             None => cur_config.shade_admin_addr,
         },
+        treasury: match treasury {
+            Some(contract) => contract,
+            None => cur_config.treasury,
+        },
         derivative: match derivative {
-            Some(deriv) => {
+            Some(ref deriv) => {
                 // Clear dex pairs because new derivative will invalidate pairs
                 DexPairs(vec![]).save(deps.storage)?;
-                deriv
+
+                // If viewing key is also updated, it will be changed again below
+                let vk = cur_config.viewing_key.clone();
+                messages.push(set_viewing_key_msg(
+                    vk.clone(),
+                    None,
+                    &deriv.contract,
+                )?);
+                messages.push(set_viewing_key_msg(
+                    vk,
+                    None,
+                    &deriv.original_asset,
+                )?);
+                deriv.clone()
             },
-            None => cur_config.derivative,
+            None => cur_config.derivative.clone(),
         },
         trading_fees: match trading_fees {
             Some(trading_fees) => {
@@ -101,13 +119,40 @@ pub fn try_update_config(
             Some(max) => max,
             None => cur_config.max_arb_amount,
         },
+        viewing_key: match viewing_key {
+            Some(key) => {
+                set_viewing_keys(&derivative.unwrap_or(cur_config.derivative), &key)?;
+                key
+            },
+            None => cur_config.viewing_key,
+        },
     };
     config.save(deps.storage)?;
 
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+        .set_data(to_binary(&ExecuteAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+        .add_messages(messages)
+    )
+}
+
+pub fn set_viewing_keys(
+    derivative: &Derivative,
+    viewing_key: &String,
+) -> StdResult<Vec<CosmosMsg>> {
+    Ok(vec![
+        set_viewing_key_msg(
+            viewing_key.clone(),
+            None,
+            &derivative.original_asset,
+        )?,
+        set_viewing_key_msg(
+            viewing_key.clone(),
+            None,
+            &derivative.contract,
+        )?,
+    ])
 }
 
 pub fn try_set_dex_pairs(
@@ -136,9 +181,10 @@ pub fn try_set_dex_pairs(
     DexPairs(new_pairs).save(deps.storage)?;
 
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::SetDexPairs {
+        .set_data(to_binary(&ExecuteAnswer::SetDexPairs {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }
 
 pub fn try_set_pair(
@@ -173,12 +219,14 @@ pub fn try_set_pair(
     pairs[i] = pair;
 
     // TODO - Test if this is necessary
+    // NOTE - this definitely should be necessary
     // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
 
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::SetPair {
+        .set_data(to_binary(&ExecuteAnswer::SetPair {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }
 
 pub fn try_add_pair(
@@ -204,12 +252,14 @@ pub fn try_add_pair(
     pairs.push(pair);
 
     // TODO - Test if this is necessary
+    // NOTE - this definitely should be necessary
     // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
 
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::SetDexPairs {
+        .set_data(to_binary(&ExecuteAnswer::AddPair {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }
 
 pub fn try_remove_pair(
@@ -232,26 +282,37 @@ pub fn try_remove_pair(
     pairs.remove(index);
     
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::RemovePair {
+        .set_data(to_binary(&ExecuteAnswer::RemovePair {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }
 
-pub fn try_arb_pair(
-    deps: Deps, // mutable not needed
-    index: usize,
-) -> StdResult<Response> {
-    let dex_pairs = DexPairs::load(deps.storage)?.0;
-    if index >= dex_pairs.len() {
-        return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", index)));
+// Helper function to return messages for arbitrage depending on profitability
+fn arbitrage(
+    querier: &QuerierWrapper,
+    dex_pair: &ArbPair,
+    config: &Config,
+    self_addr: &Addr,
+    unbondings: Uint128,
+) -> StdResult<Vec<CosmosMsg>> {
+    // Query balance to make sure arb doesn't use more than availabe balance
+    let balance = config.derivative.query_original_balance(
+        querier,
+        self_addr.clone(),
+        config.viewing_key.clone(),
+    )?;
+
+    let max_swap = Uint128::max(
+        balance.saturating_sub(unbondings),
+        config.max_arb_amount,
+    );
+    if max_swap.is_zero() {  // return early if no balance
+        return Ok(vec![]) 
     }
 
-    let unbondings = Unbondings::load(deps.storage)?.0;
-    let periodically = Config::load(deps.storage)?.max_arb_amount;
-    // This is wrong! fix unbondings
-    let max_swap = Uint128::from(unbondings + periodically);
-
-    let is_profitable_result = query::is_profitable(deps, index, Some(max_swap));
+    // Check profitability
+    let is_profitable_result = query::is_arb_profitable(querier, &config, &dex_pair, Some(max_swap));
     let (profitable, swap_amounts_opt, direction_opt) = match is_profitable_result {
         Ok( QueryAnswer::IsProfitable { is_profitable, swap_amounts, direction } ) => 
             (is_profitable, swap_amounts, direction),
@@ -259,14 +320,8 @@ pub fn try_arb_pair(
             return Err(StdError::generic_err("Invalid query return")); // This shouldn't happen
         }
     };
-
-    // Return failure (error not neccesary) if not profitable.
-    if !profitable {
-        return Ok(Response::new()
-            .set_data(to_binary(&ExecuteAnswer::Arbitrage {
-                status: ResponseStatus::Failure,
-            })?)
-        )
+    if !profitable {  // Return failure (error not neccesary) if not profitable.
+        return Ok(vec![])
     }
 
     let swap_amounts = match swap_amounts_opt {
@@ -282,107 +337,229 @@ pub fn try_arb_pair(
         }
     };
 
-    // create arbitrage messages depending on direction
-    let deriv = Config::load(deps.storage)?.derivative;
-    let mut messages = vec![];
+    // Execute arbitrage, create arbitrage messages depending on direction
     match direction {
         Direction::Unbond => {
-            messages.push(dex_pairs[index].to_cosmos_msg(
-                Offer {
-                    asset: deriv.original_token.clone(),
-                    amount: swap_amounts.optimal_swap,
-                },
-                swap_amounts.swap1_result,
-            )?);
-            messages.push(deriv.unbond_msg(swap_amounts.swap1_result)?);
+            Ok(vec![
+                dex_pair.to_cosmos_msg(
+                    Offer {
+                        asset: config.derivative.original_asset.clone(),
+                        amount: swap_amounts.optimal_swap,
+                    },
+                    swap_amounts.swap1_result,
+                )?,
+                config.derivative.unbond_msg(swap_amounts.swap1_result)?,
+            ])
         },
         Direction::Stake => {
-            messages.push(deriv.stake_msg(swap_amounts.optimal_swap)?);
-            messages.push(dex_pairs[index].to_cosmos_msg(
-                Offer {
-                    asset: deriv.contract,
-                    amount: swap_amounts.swap1_result,
-                },
-                swap_amounts.optimal_swap,
-            )?);
+            Ok(vec![
+                config.derivative.stake_msg(swap_amounts.optimal_swap)?,
+                dex_pair.to_cosmos_msg(
+                    Offer {
+                        asset: config.derivative.contract.clone(),
+                        amount: swap_amounts.swap1_result,
+                    },
+                    swap_amounts.optimal_swap,
+                )?
+            ])
         },
+    }
+}
+
+pub fn try_arb_pair(
+    deps: DepsMut,
+    _info: MessageInfo,
+    index: Option<usize>,
+) -> StdResult<Response> {
+    let index = match index {
+        Some(i) => i,
+        None => 0,
     };
-    
+    let dex_pairs = DexPairs::load(deps.storage)?.0;
+    if index >= dex_pairs.len() {
+        return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", index)));
+    }
+
+    let config = Config::load(deps.storage)?;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let unbondings = Unbondings::load(deps.storage)?.0;
+    let messages = arbitrage(&deps.querier, &dex_pairs[index], &config, &self_addr, unbondings)?;
+    let status = if messages.is_empty() {
+        ResponseStatus::Success
+    } else {
+        ResponseStatus::Failure
+    };
+
     Ok(Response::new()
         .add_messages(messages)
         .set_data(to_binary(&ExecuteAnswer::Arbitrage {
-            status: ResponseStatus::Success,
-        })?))
+            status,
+        })?)
+    )
 }
 
 pub fn try_arb_all_pairs(
-    deps: Deps, // mutable not needed
+    deps: DepsMut, 
+    _info: MessageInfo
 ) -> StdResult<Response> {
     let pairs = DexPairs::load(deps.storage)?.0;
     let mut statuses = vec![];
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let config = Config::load(deps.storage)?;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let unbondings = Unbondings::load(deps.storage)?.0;
     for index in 0..pairs.len() {
-        statuses.push(match try_arb_pair(deps, index)?.data {
-            Some(data) => {
-                match from_binary(&data)? {
-                    ExecuteAnswer::Arbitrage { status } => status,
-                    _ => {
-                        return Err(StdError::generic_err("Something went wrong with arbitrage"));
-                    }
+        let response = arbitrage(&deps.querier, &pairs[index], &config, &self_addr, unbondings);
+        match response {
+            Ok(mut msgs) => {
+                if msgs.is_empty() {
+                    statuses.push(ResponseStatus::Success);
+                } else {
+                    statuses.push(ResponseStatus::Failure);
                 }
+                messages.append(&mut msgs);
             },
-            _ => {
-                return Err(StdError::generic_err("Something went wrong with arbitrage"));
+            Err(_) => {
+                return Err(StdError::generic_err(
+                        format!("Arbitrage issue on pair {}", index)
+                        ));
             }
-        });
+        }
     }
 
     Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::ArbAllPairs {
+        .add_messages(messages)
+        .set_data(to_binary(&ExecuteAnswer::ArbAllPairs {
             statuses,
-        })?))
+        })?)
+    )
 }
 
 pub fn try_adapter_unbond(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
+    // TODO: Verify message comes from the treasury
 
-    // TODO
+    // Send all of balance held up to amount. If remaining amount not accounted for, add that
+    // amount to unbondings
+    let config = Config::load(deps.storage)?;
+    let derivative = config.derivative;
+    if asset != derivative.original_asset.address {  // Only relevant token held
+        return Err(StdError::generic_err("Unrecognized asset"));
+    }
+
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let balance = derivative.query_original_balance(
+        &deps.querier, 
+        self_addr.clone(), 
+        config.viewing_key.clone(),
+    )?;
+    
+    if balance.is_zero() {
+        let unbondings = Unbondings::load(deps.storage)?.0;
+        Unbondings(unbondings.checked_add(amount)?).save(deps.storage)?;
+
+        return Ok(Response::new()
+           .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+               status: ResponseStatus::Success,
+               amount, // TODO: verify this amount makes sense even though none is claimed
+           })?)
+        )
+    }
+
+    let claimed = match amount.checked_sub(balance) {
+        Ok(difference) => {
+            let unbondings = Unbondings::load(deps.storage)?.0;
+            Unbondings(unbondings.checked_add(difference)?).save(deps.storage)?;
+            balance
+        },
+        _ => amount,
+    };
+
+    let message = send_msg(
+        config.treasury.address,
+        claimed,
+        None,
+        None,
+        None,
+        &derivative.original_asset,
+    )?;
 
     Ok(Response::new()
-       .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+        .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: shade_protocol::c_std::Uint128::from(amount.u128()),
-        })?))
+            amount,
+        })?)
+        .add_message(message)
+    )
 }
 
 pub fn try_adapter_claim(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
+    // Send all of balance up to "Unbondings" 
+    let config = Config::load(deps.storage)?;
 
-    // TODO
-    
+    // TODO: verify comes from treasury
+
+    let derivative = config.derivative;
+    if asset != derivative.original_asset.address {  // Only relevant token held
+        return Err(StdError::generic_err("Unrecognized asset"));
+    }
+
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let balance = derivative.query_original_balance(
+        &deps.querier, 
+        self_addr.clone(), 
+        config.viewing_key.clone(),
+    )?;
+
+    if balance.is_zero() {
+        return Ok(Response::new()
+           .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+               status: ResponseStatus::Success,
+               amount: Uint128::zero(),
+           })?)
+        )
+    }
+
+    let unbondings = Unbondings::load(deps.storage)?.0;
+    let amount = Uint128::max(unbondings, balance);
+    let message = send_msg(
+        config.treasury.address,
+        amount,
+        None,
+        None,
+        None,
+        &derivative.original_asset,
+    )?;
+
     Ok(Response::new()
-       .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
+        .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
-            amount: shade_protocol::c_std::Uint128::zero(),
-        })?))
+            amount,
+        })?)
+        .add_message(message)
+    )
 }
 
 pub fn try_adapter_update(
-    deps: DepsMut,
-    env: Env,
-    asset: Addr,
+    _deps: DepsMut,
+    _env: Env,
+    _asset: Addr,
 ) -> StdResult<Response> {
 
-    // TODO
+    // Not necessary
+    // TODO: verify this makes sense
 
     Ok(Response::new()
        .set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }

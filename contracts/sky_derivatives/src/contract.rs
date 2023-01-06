@@ -26,7 +26,6 @@ use shade_protocol::{
             QueryMsg,
             Unbondings,
             SelfAddr,
-            ViewingKey,
         },
     },
     snip20::helpers::set_viewing_key_msg,
@@ -46,7 +45,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     SelfAddr(env.contract.address.clone()).save(deps.storage)?;
-    ViewingKey(msg.viewing_key.clone()).save(deps.storage)?;
     Unbondings(Uint128::zero()).save(deps.storage)?;
 
     // Validate shade admin works
@@ -63,11 +61,15 @@ pub fn instantiate(
         return Err(StdError::generic_err("Trading fee cannot be over 100%"));
     }
 
+    // TODO: verify config?
+    // Don't verify config. If config is messed up, you're screwed. Start over.
     Config {
         shade_admin_addr: msg.shade_admin_addr,
+        treasury: msg.treasury,
         derivative: msg.derivative.clone(),
         trading_fees: msg.trading_fees,
         max_arb_amount: msg.max_arb_amount,
+        viewing_key: msg.viewing_key.clone(),
     }.save(deps.storage)?;
 
     // Clear current pairs, then add individual (validating each)
@@ -93,7 +95,7 @@ pub fn instantiate(
     messages.push(SubMsg::new(set_viewing_key_msg(
         msg.viewing_key,
         None,
-        &msg.derivative.original_token,
+        &msg.derivative.original_asset,
     )?));
 
     Ok(Response::new().add_submessages(messages))
@@ -109,25 +111,27 @@ pub fn execute(
     match msg {
         ExecuteMsg::UpdateConfig { 
             shade_admin_addr,
+            treasury,
             derivative,
             trading_fees,
             max_arb_amount,
-            arb_period,
+            viewing_key,
         } => execute::try_update_config(
             deps, 
             info,
             shade_admin_addr, 
+            treasury,
             derivative, 
             trading_fees,
             max_arb_amount,
-            arb_period,
+            viewing_key,
         ),
         ExecuteMsg::SetDexPairs { pairs } => execute::try_set_dex_pairs(deps, info, pairs),
         ExecuteMsg::SetPair { pair, index } => execute::try_set_pair(deps, info, pair, index),
         ExecuteMsg::AddPair { pair } => execute::try_add_pair(deps, info, pair),
         ExecuteMsg::RemovePair { index } => execute::try_remove_pair(deps, info, index),
-        ExecuteMsg::Arbitrage { index } => execute::try_arb_pair(deps.as_ref(), index),
-        ExecuteMsg::ArbAllPairs {} => execute::try_arb_all_pairs(deps.as_ref()),
+        ExecuteMsg::Arbitrage { index } => execute::try_arb_pair(deps, info, index),
+        ExecuteMsg::ArbAllPairs {} => execute::try_arb_all_pairs(deps, info),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } =>
                 execute::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128())),
