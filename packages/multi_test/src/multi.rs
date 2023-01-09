@@ -26,6 +26,12 @@ pub mod liability_mint {
     multi_derive::implement_multi!(LiabilityMint, liability_mint);
 }
 
+#[cfg(feature = "airdrop")]
+pub mod airdrop {
+    use airdrop;
+    multi_derive::implement_multi!(Airdrop, airdrop);
+}
+
 // #[cfg(feature = "mint")]
 // pub mod mint {
 //     use mint;
