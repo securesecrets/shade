@@ -33,4 +33,10 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 cosmwasm_floating_point = { git = "https://github.com/a-stgeorge/cosmwasm-floating-point" }
 
-
+[dev-dependencies]
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test"] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [
+  "admin",
+  "sky_derivatives",
+  "snip20",
+] }

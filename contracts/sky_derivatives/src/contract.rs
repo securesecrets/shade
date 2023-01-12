@@ -10,7 +10,6 @@ use shade_protocol::c_std::{
     Response,
     StdError,
     StdResult,
-    SubMsg,
     Uint128,
 };
 
@@ -22,14 +21,17 @@ use shade_protocol::{
             Config,
             DexPairs,
             ExecuteMsg, 
+            ExecuteAnswer,
             InstantiateMsg, 
             QueryMsg,
             Unbondings,
             SelfAddr,
         },
     },
-    snip20::helpers::set_viewing_key_msg,
-    utils::storage::plus::ItemStorage,
+    utils::{
+        generic_response::ResponseStatus,
+        storage::plus::ItemStorage,
+    },
 };
 
 use crate::{
@@ -86,19 +88,14 @@ pub fn instantiate(
     DexPairs(new_pairs).save(deps.storage)?;
 
     // Viewing keys
-    let mut messages = vec![];
-    messages.push(SubMsg::new(set_viewing_key_msg(
-        msg.viewing_key.clone(),
-        None,
-        &msg.derivative.contract,
-    )?));
-    messages.push(SubMsg::new(set_viewing_key_msg(
-        msg.viewing_key,
-        None,
-        &msg.derivative.original_asset,
-    )?));
+    let messages = execute::set_viewing_keys(&msg.derivative, &msg.viewing_key)?;
 
-    Ok(Response::new().add_submessages(messages))
+    Ok(Response::new()
+       .set_data(to_binary(&ExecuteAnswer::Init {
+           status: ResponseStatus::Success,
+       })?)
+       .add_messages(messages)
+    )
 }
 
 #[shd_entry_point]
@@ -144,6 +141,7 @@ pub fn execute(
 #[shd_entry_point]
 pub fn query(
     deps: Deps,
+    _env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
