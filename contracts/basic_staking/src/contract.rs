@@ -1,4 +1,5 @@
 use shade_protocol::{
+    basic_staking::{ExecuteMsg, InstantiateMsg, QueryMsg},
     c_std::{
         entry_point,
         to_binary,
@@ -16,7 +17,6 @@ use shade_protocol::{
         Uint128,
     },
     snip20::helpers::{register_receive, set_viewing_key_msg},
-    staking::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
 use crate::{execute, query, storage::*};

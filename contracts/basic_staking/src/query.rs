@@ -1,4 +1,5 @@
 use shade_protocol::{
+    basic_staking::QueryAnswer,
     c_std::{
         Addr,
         Api,
@@ -13,11 +14,10 @@ use shade_protocol::{
         Storage,
         Uint128,
     },
-    dao::{adapter, scrt_staking::QueryAnswer},
     utils::asset::scrt_balance,
 };
 
-use crate::storage::{CONFIG, SELF_ADDRESS, UNBONDING};
+use crate::storage::*;
 
 pub fn config(deps: Deps, env: Env, info: MessageInfo) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {

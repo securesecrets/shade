@@ -1,5 +1,5 @@
 [package]
-name = "staking"
+name = "basic_staking"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
@@ -22,13 +22,14 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "basic_staking",
   "math",
   "storage_plus",
 ] }
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
 
 [dev-dependencies]
-shade-multi-test = { path = "../../../packages/multi_test", features = [ 
-  "staking", 
+shade-multi-test = { path = "../../packages/multi_test", features = [ 
+  "basic_staking", 
 ] }

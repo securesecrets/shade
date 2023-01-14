@@ -22,7 +22,8 @@ governance = ["dep:governance"]
 # snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
 # bonds = ["dep:bonds"]
- query_auth = ["dep:query_auth"]
+query_auth = ["dep:query_auth"]
+basic_staking = ["dep:basic_staking"]
 scrt_staking = ["dep:scrt_staking"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
@@ -34,6 +35,7 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
+basic_staking = { version = "0.1.0", path = "../../contracts/basic_staking", optional = true }
 # spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }

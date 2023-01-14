@@ -83,6 +83,13 @@ pub mod query_auth {
     multi_derive::implement_multi!(QueryAuth, query_auth);
 }
 
+#[cfg(feature = "basic_staking")]
+pub mod basic_staking {
+    use basic_staking;
+
+    multi_derive::implement_multi!(BasicStaking, basic_staking);
+}
+
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager {
     use treasury_manager;

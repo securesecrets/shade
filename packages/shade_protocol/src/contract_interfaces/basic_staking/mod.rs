@@ -1,6 +1,9 @@
 use crate::{
-    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    c_std::{Addr, Binary, Decimal, Uint128},
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+    },
 };
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
@@ -33,6 +36,8 @@ pub struct RewardPool {
     start: Uint128,
     end: Uint128,
     token: Contract,
+    rate: Uint128,
+    reward_per_token: Uint128,
 }
 
 #[cw_serde]

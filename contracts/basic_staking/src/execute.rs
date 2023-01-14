@@ -25,7 +25,7 @@ use shade_protocol::c_std::{
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg, send_msg};
 
 use shade_protocol::{
-    staking::{Config, ExecuteAnswer},
+    basic_staking::{Config, ExecuteAnswer},
     utils::{
         asset::{scrt_balance, Contract},
         generic_response::ResponseStatus,
@@ -133,11 +133,22 @@ pub fn receive(
                     .iter()
                     .find(|contract| => contract.address == info.sender) {
 
+                    if start >= end {
+                        return Err(StdError::generic_err("'start' must be after 'end'"));
+                    }
+
+                    if start > env.block.time.seconds() {
+                        return Err(StdError::generic_err("Cannot start emitting in the past"));
+                    }
+
                     let reward_pools = REWARD_POOLS.load(deps.storage)?;
                     let uuid = match reward_pools.is_empty() {
                         true => Uint128::zero(),
                         false => reward_pools.last().uuid + 1,
                     };
+
+                    // Tokens per second emitted from this pool
+                    let rate = amount * 10u128.pow(18) / (end - start);
 
                     reward_pools.push(RewardPool {
                         id: uuid,
@@ -145,14 +156,10 @@ pub fn receive(
                         start,
                         end,
                         token,
+                        rate,
+                        reward_per_token: Uint128::zero(),
                     });
                     REWARD_POOLS.save(deps.storage, &reward_pools)?;
-
-                    let total_staked = TOTAL_STAKED.load(deps.storage)?;
-                    let reward_per_sec = amount / (end - start);
-                    let reward_per_token_per_sec = reward_per_sec / total_staked;
-
-                    REWARD_PER_TOKEN.save(deps.storage, uuid, &reward_per_token_per_sec);
 
                     Ok(Response::new()
                         .set_data(
@@ -180,34 +187,43 @@ pub fn claim(
 ) -> StdResult<Response> {
 
     let user_last_claim = USER_LAST_CLAIM.load(deps.storage)?;
+    let user_staked = USER_STAKED.load(deps.storage, &info.sender)?;
     let reward_pools = REWARD_POOLS.load(deps.storage)?;
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
     let now = env.block.time.seconds();
 
     let mut response = Response::new();
 
-    for reward_pool in reward_pools {
-        let reward_per_token = REWARD_PER_TOKEN.load(deps.storage, reward_pool.uuid)?;
-        let interval_start = max(user_last_claim, reward_pool.start);
+    for mut reward_pool in reward_pools {
 
-        if now < interval_start {
+        if now < reward_pool.start {
             // reward pool hasn't started emitting yet
             continue;
         }
 
-        let time_past = now - max(user_last_claim, reward_pool.start);
+        let reward_per_token = reward_pool.reward_per_token + (reward_pool.rate * (reward_pool.end - reward_pool.start)) / total_staked;
 
+        let user_reward = (reward_per_token - reward_pool.reward_per_token) * user_staked;
+
+        // Send reward
         response.add_message(
             send_msg(
                 info.sender,
-                reward_amount,
+                user_reward,
                 None,
                 None,
                 None,
                 &reward_pool.token,
             )
-        )
+        );
+
+        reward_pool.reward_per_token += reward_per_token;
+        USER_REWARD_PER_TOKEN.save(deps.storage, &reward_per_token)?;
+
+        // TODO adjust reward_pool.reward_per_token in place
     }
 
+    //TODO save updated reward pools
     USER_LAST_CLAIM.save(deps.storage, &now)?;
 
     Ok(response.set_data(
