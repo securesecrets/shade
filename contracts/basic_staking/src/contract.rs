@@ -1,5 +1,5 @@
 use shade_protocol::{
-    basic_staking::{Auth, Config, ExecuteMsg, InstantiateMsg, QueryMsg},
+    basic_staking::{Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, QueryMsg},
     c_std::{
         shd_entry_point,
         to_binary,
@@ -16,6 +16,7 @@ use shade_protocol::{
     },
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::{register_receive, set_viewing_key_msg},
+    utils::asset::Contract,
 };
 
 use crate::{execute, query, storage::*};
@@ -39,7 +40,7 @@ pub fn instantiate(
     STAKE_TOKEN.save(deps.storage, &stake_token)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
-    REWARD_TOKENS.save(deps.storage, &vec![stake_token])?;
+    REWARD_TOKENS.save(deps.storage, &vec![stake_token.clone()])?;
     REWARD_POOLS.save(deps.storage, &vec![])?;
 
     TOTAL_STAKED.save(deps.storage, &Uint128::zero());
@@ -57,7 +58,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     match msg {
         ExecuteMsg::UpdateConfig { config } => execute::update_config(deps, env, info, config),
         ExecuteMsg::RegisterRewards { token } => {
-            execute::register_reward(deps, env, info, token.into_valid(deps.api)?)
+            let api = deps.api;
+            execute::register_reward(deps, env, info, token.into_valid(api)?)
         }
         ExecuteMsg::Receive {
             sender,
@@ -73,17 +75,18 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-pub fn authenticate(deps: Deps, auth: Auth) -> StdResult<Addr> {
+pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<Addr> {
     match auth {
         Auth::ViewingKey { key, address } => {
             let address = deps.api.addr_validate(&address)?;
-            if !authenticate_vk(address, key, &deps.querier, &authenticator)? {
+            if !authenticate_vk(address.clone(), key, &deps.querier, &query_auth)? {
                 return Err(StdError::generic_err("Invalid Viewing Key"));
             }
             Ok(address)
         }
         Auth::Permit(permit) => {
-            let res = authenticate_permit(permit, &deps.querier, authenticator)?;
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, query_auth)?;
             if res.revoked {
                 return Err(StdError::generic_err("Permit Revoked"));
             }
@@ -100,18 +103,36 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps, env)?),
         QueryMsg::RewardPool {} => to_binary(&query::reward_pool(deps, env)?),
         QueryMsg::Balance { auth } => {
-            to_binary(&query::user_balance(deps, env, authenticate(deps, auth)?)?)
+            let config = CONFIG.load(deps.storage)?;
+            to_binary(&query::user_balance(
+                deps,
+                env,
+                authenticate(deps, auth, config.query_auth)?,
+            )?)
         }
         QueryMsg::Share { auth } => {
-            to_binary(&query::user_share(deps, env, authenticate(deps, auth)?)?)
+            let config = CONFIG.load(deps.storage)?;
+            to_binary(&query::user_share(
+                deps,
+                env,
+                authenticate(deps, auth, config.query_auth)?,
+            )?)
         }
         QueryMsg::Rewards { auth } => {
-            to_binary(&query::user_rewards(deps, env, authenticate(deps, auth)?)?)
+            let config = CONFIG.load(deps.storage)?;
+            to_binary(&query::user_rewards(
+                deps,
+                env,
+                authenticate(deps, auth, config.query_auth)?,
+            )?)
         }
-        QueryMsg::Unbonding { auth } => to_binary(&query::user_unbonding(
-            deps,
-            env,
-            authenticate(deps, auth)?,
-        )?),
+        QueryMsg::Unbonding { auth } => {
+            let config = CONFIG.load(deps.storage)?;
+            to_binary(&query::user_unbonding(
+                deps,
+                env,
+                authenticate(deps, auth, config.query_auth)?,
+            )?)
+        }
     }
 }

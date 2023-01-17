@@ -22,7 +22,7 @@ pub fn reward_tokens(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
         tokens: REWARD_TOKENS
             .load(deps.storage)?
             .iter()
-            .map(|contract| contract.address)
+            .map(|contract| contract.address.clone())
             .collect(),
     })
 }

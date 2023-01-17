@@ -93,10 +93,10 @@ pub fn receive(
                 }
 
                 // TODO claim rewards based on old stake amount
-                USER_LAST_CLAIM.save(deps.storage, from, &now)?;
+                USER_LAST_CLAIM.save(deps.storage, from.clone(), &now)?;
 
-                if let Some(user_stake) = USER_STAKED.may_load(deps.storage, from)? {
-                    USER_STAKED.save(deps.storage, from, &(user_stake + amount))?;
+                if let Some(user_stake) = USER_STAKED.may_load(deps.storage, from.clone())? {
+                    USER_STAKED.save(deps.storage, from.clone(), &(user_stake + amount))?;
                 } else {
                     USER_STAKED.save(deps.storage, from, &amount)?;
                 }
@@ -123,7 +123,7 @@ pub fn receive(
                         return Err(StdError::generic_err("Cannot start emitting in the past"));
                     }
 
-                    let reward_pools = REWARD_POOLS.load(deps.storage)?;
+                    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
                     let uuid = match reward_pools.last() {
                         Some(pool) => pool.uuid + Uint128::one(),
                         None => Uint128::zero(),
@@ -161,8 +161,8 @@ pub fn receive(
 }
 
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    let user_last_claim = USER_LAST_CLAIM.load(deps.storage, info.sender)?;
-    let user_staked = USER_STAKED.load(deps.storage, info.sender)?;
+    let user_last_claim = USER_LAST_CLAIM.load(deps.storage, info.sender.clone())?;
+    let user_staked = USER_STAKED.load(deps.storage, info.sender.clone())?;
     let reward_pools = REWARD_POOLS.load(deps.storage)?;
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
     let now = Uint128::new(env.block.time.seconds() as u128);
@@ -181,8 +181,8 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
         let user_reward = (reward_per_token - reward_pool.reward_per_token) * user_staked;
 
         // Send reward
-        response.add_message(send_msg(
-            info.sender,
+        response = response.add_message(send_msg(
+            info.sender.clone(),
             user_reward,
             None,
             None,
@@ -191,7 +191,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
         )?);
 
         reward_pool.reward_per_token += reward_per_token;
-        USER_REWARD_PER_TOKEN.save(deps.storage, info.sender, &reward_per_token)?;
+        USER_REWARD_PER_TOKEN.save(deps.storage, info.sender.clone(), &reward_per_token)?;
 
         // TODO adjust reward_pool.reward_per_token in place
     }
@@ -207,7 +207,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    if let Some(user_staked) = USER_STAKED.may_load(deps.storage, info.sender)? {
+    if let Some(user_staked) = USER_STAKED.may_load(deps.storage, info.sender.clone())? {
         if user_staked.is_zero() {
             return Err(StdError::generic_err("User has no staked tokens"));
         }
@@ -223,9 +223,9 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         let total_staked = TOTAL_STAKED.load(deps.storage)?;
         TOTAL_STAKED.save(deps.storage, &(total_staked - amount))?;
 
-        USER_STAKED.save(deps.storage, info.sender, &(user_staked - amount))?;
+        USER_STAKED.save(deps.storage, info.sender.clone(), &(user_staked - amount))?;
 
-        let user_unbondings = USER_UNBONDINGS.load(deps.storage, info.sender)?;
+        let mut user_unbondings = USER_UNBONDINGS.load(deps.storage, info.sender.clone())?;
         user_unbondings.push(Unbonding {
             amount,
             complete: Uint128::new(env.block.time.seconds() as u128) + config.unbond_period,
@@ -243,7 +243,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
-    let user_unbonding = USER_UNBONDINGS.load(deps.storage, info.sender)?;
+    let user_unbonding = USER_UNBONDINGS.load(deps.storage, info.sender.clone())?;
 
     let mut withdraw_amount = Uint128::zero();
 
@@ -259,7 +259,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         }
     }
 
-    USER_UNBONDINGS.save(deps.storage, info.sender, &remaining_unbondings)?;
+    USER_UNBONDINGS.save(deps.storage, info.sender.clone(), &remaining_unbondings)?;
 
     if withdraw_amount.is_zero() {
         return Err(StdError::generic_err("No completed unbondings"));
