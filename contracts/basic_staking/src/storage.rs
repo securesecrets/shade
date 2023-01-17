@@ -1,6 +1,7 @@
 use shade_protocol::{
     basic_staking,
-    c_std::{Addr, Storage, Uint128},
+    c_std::{Addr, Uint128},
+    utils::asset::Contract,
 };
 
 use shade_protocol::secret_storage_plus::{Item, Map};
@@ -18,5 +19,5 @@ pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPool>> = Item::new("reward
 
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");
-pub const USER_UNBONDING: Map<Addr, Vec<basic_staking::Unbonding>> = Map::new("user_unbonding");
+pub const USER_UNBONDINGS: Map<Addr, Vec<basic_staking::Unbonding>> = Map::new("user_unbonding");
 pub const USER_REWARD_PER_TOKEN: Map<Addr, Uint128> = Map::new("user_reward_per_token");

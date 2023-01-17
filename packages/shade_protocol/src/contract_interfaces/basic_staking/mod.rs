@@ -1,5 +1,9 @@
 use crate::{
     c_std::{Addr, Binary, Decimal, Uint128},
+    query_auth::{
+        helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
+        QueryPermit,
+    },
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
@@ -11,7 +15,8 @@ use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
-    pub admin_auth: Addr,
+    pub admin_auth: Contract,
+    pub query_auth: Contract,
     pub unbond_period: Uint128,
 }
 
@@ -25,24 +30,25 @@ pub enum Action {
 
 #[cw_serde]
 pub struct Unbonding {
-    amount: Uint128,
-    complete: String,
+    pub amount: Uint128,
+    pub complete: Uint128,
 }
 
 #[cw_serde]
 pub struct RewardPool {
-    uuid: Uint128,
-    amount: Uint128,
-    start: Uint128,
-    end: Uint128,
-    token: Contract,
-    rate: Uint128,
-    reward_per_token: Uint128,
+    pub uuid: Uint128,
+    pub amount: Uint128,
+    pub start: Uint128,
+    pub end: Uint128,
+    pub token: Contract,
+    pub rate: Uint128,
+    pub reward_per_token: Uint128,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin_auth: Addr,
+    pub admin_auth: RawContract,
+    pub query_auth: RawContract,
     pub stake_token: RawContract,
     pub unbond_period: Uint128,
     pub viewing_key: String,
@@ -72,6 +78,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     Withdraw {},
+    Compound {},
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -100,14 +107,25 @@ pub enum ExecuteAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        delegations: Vec<Addr>,
     },
     Withdraw {
+        status: ResponseStatus,
+    },
+    Compound {
         status: ResponseStatus,
     },
     RegisterRewards {
         status: ResponseStatus,
     },
+}
+
+#[cw_serde]
+pub struct AuthPermit {}
+
+#[cw_serde]
+pub enum Auth {
+    ViewingKey { key: String, address: String },
+    Permit(QueryPermit),
 }
 
 #[cw_serde]
@@ -121,10 +139,10 @@ pub enum QueryMsg {
 
     // User permissioned (vk/permit)
     // Single query for all data?
-    Balance {},
-    Share {},
-    Rewards {},
-    Unbonding {},
+    Balance { auth: Auth },
+    Share { auth: Auth },
+    Rewards { auth: Auth },
+    Unbonding { auth: Auth },
 }
 
 impl Query for QueryMsg {
