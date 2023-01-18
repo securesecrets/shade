@@ -70,7 +70,7 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
     // TODO CRITICAL differentiate different denoms
     for reward_pool in reward_pools {
         let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
-            .may_load(deps.storage, user.clone())?
+            .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.uuid))?
             .unwrap_or(Uint128::zero());
         let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
         let reward = rewards_earned(

@@ -22,4 +22,9 @@ pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");
 pub const USER_UNBONDINGS: Map<Addr, Vec<basic_staking::Unbonding>> = Map::new("user_unbonding");
 // { (user_address, reward_pool.uuid): reward_paid }
 // TODO: How to index with reward pool uuid & user addr?
-pub const USER_REWARD_PER_TOKEN_PAID: Map<Addr, Uint128> = Map::new("user_reward_per_token_paid");
+
+pub fn user_pool_key(user: Addr, pool_id: Uint128) -> String {
+    format!("{}-{}", user, pool_id)
+}
+
+pub const USER_REWARD_PER_TOKEN_PAID: Map<String, Uint128> = Map::new("user_reward_per_token_paid");

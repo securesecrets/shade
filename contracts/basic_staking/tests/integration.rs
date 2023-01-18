@@ -24,8 +24,9 @@ use shade_multi_test::multi::{
 use shade_protocol::multi_test::{App, StakingSudo, SudoMsg};
 
 // Add other adapters here as they come
-fn single_stake_with_rewards(
+fn single_staker_single_pool(
     stake_amount: Uint128,
+    unbond_period: Uint128,
     reward_amount: Uint128,
     reward_start: Uint128,
     reward_end: Uint128,
@@ -42,16 +43,23 @@ fn single_stake_with_rewards(
     let viewing_key = "unguessable".to_string();
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
+    let reward_user = Addr::unchecked("reward_user");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
         admin: Some(admin_user.to_string().clone()),
         symbol: "STKN".into(),
         decimals: 6,
-        initial_balances: Some(vec![snip20::InitialBalance {
-            amount: stake_amount + reward_amount,
-            address: staking_user.to_string(),
-        }]),
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                amount: stake_amount,
+                address: staking_user.to_string(),
+            },
+            snip20::InitialBalance {
+                amount: reward_amount,
+                address: reward_user.to_string(),
+            },
+        ]),
         query_auth: None,
         prng_seed: to_binary("").ok().unwrap(),
         config: Some(snip20::InitConfig {
@@ -107,7 +115,7 @@ fn single_stake_with_rewards(
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
-        unbond_period: Uint128::new(100),
+        unbond_period,
         viewing_key: viewing_key.clone(),
     }
     .test_init(
@@ -183,7 +191,7 @@ fn single_stake_with_rewards(
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .test_exec(&token, &mut app, reward_user.clone(), &[])
     .unwrap();
 
     // Check reward pool
@@ -208,17 +216,63 @@ fn single_stake_with_rewards(
         chain_id: "chain_id".to_string(),
     });
 
-    // let reward_duration = reward_end - reward_start;
-    // Total Steps + 2  to ensure we claim at least 1x after rewards period is over
-    // let step_size = (reward_duration / claim_steps).u128();
-    // let rewards_per_step = reward_amount / claim_steps;
+    // No rewards should be pending
+    match (basic_staking::QueryMsg::Rewards {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Rewards { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Rewards claimable at beginning");
+        }
+        _ => {
+            panic!("Staking rewards query failed");
+        }
+    };
+
+    let reward_duration = reward_end - reward_start;
+
+    // Move to middle of reward period
+    println!("Fast-forward to reward middle");
+    app.set_block(BlockInfo {
+        height: 2,
+        time: Timestamp::from_seconds((reward_start.u128() + reward_duration.u128() / 2) as u64),
+        chain_id: "chain_id".to_string(),
+    });
+
+    // Half-ish rewards should be pending
+    match (basic_staking::QueryMsg::Rewards {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Rewards { amount } => {
+            let expected = reward_amount / Uint128::new(2);
+            assert!(
+                amount >= expected - Uint128::one() && amount <= expected,
+                "Rewards claimable in the middle within error of 1 unit token {} != {}",
+                amount,
+                expected
+            );
+        }
+        _ => {
+            panic!("Staking rewards query failed");
+        }
+    };
 
     // Move to end of rewards
-    let set_end: u64 = reward_end.u128() as u64; // + 100000000;
-    println!("Fast-forward to end {}", set_end);
+    println!("Fast-forward to reward end");
     app.set_block(BlockInfo {
-        height: 10,
-        time: Timestamp::from_seconds(set_end),
+        height: 3,
+        time: Timestamp::from_seconds(reward_end.u128() as u64),
         chain_id: "chain_id".to_string(),
     });
 
@@ -233,27 +287,123 @@ fn single_stake_with_rewards(
     .unwrap()
     {
         basic_staking::QueryAnswer::Rewards { amount } => {
-            assert_eq!(amount, reward_amount, "Rewards claimable at end");
+            assert!(
+                amount >= reward_amount - Uint128::one() && amount <= reward_amount,
+                "Rewards claimable at the end within error of 1 unit token {} != {}",
+                amount,
+                reward_amount,
+            );
         }
         _ => {
-            panic!("Staking balance query failed");
+            panic!("Staking rewards query failed");
+        }
+    };
+
+    // Claim rewards
+    basic_staking::ExecuteMsg::Claim {}
+        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+        .unwrap();
+
+    // Check rewards were claimed
+    match (snip20::QueryMsg::Balance {
+        key: viewing_key.clone(),
+        address: staking_user.clone().into(),
+    })
+    .test_query(&token, &app)
+    .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => {
+            assert!(
+                amount >= reward_amount - Uint128::one() && amount <= reward_amount,
+                "Rewards claimed at the end within error of 1 unit token {} != {}",
+                amount,
+                reward_amount,
+            );
+        }
+        _ => {
+            panic!("Snip20 balance query failed");
+        }
+    };
+
+    // Unbond
+    basic_staking::ExecuteMsg::Unbond {
+        amount: stake_amount,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
+
+    // All rewards should be pending
+    match (basic_staking::QueryMsg::Unbonding {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Unbonding { unbondings } => {
+            assert_eq!(unbondings.len(), 1, "1 unbonding");
+            assert_eq!(unbondings[0].amount, stake_amount, "Unbonding full amount");
+            assert_eq!(
+                unbondings[0].complete,
+                reward_end + unbond_period,
+                "Unbonding complete expectedt"
+            );
+        }
+        _ => {
+            panic!("Staking unbonding query failed");
+        }
+    };
+    println!("Fast-forward to end of unbonding period");
+    app.set_block(BlockInfo {
+        height: 10,
+        time: Timestamp::from_seconds((reward_end + unbond_period).u128() as u64),
+        chain_id: "chain_id".to_string(),
+    });
+
+    basic_staking::ExecuteMsg::Withdraw {}
+        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+        .unwrap();
+
+    // Check unbonding withdrawn
+    match (snip20::QueryMsg::Balance {
+        key: viewing_key.clone(),
+        address: staking_user.clone().into(),
+    })
+    .test_query(&token, &app)
+    .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => {
+            let expected = stake_amount + reward_amount;
+            assert!(
+                amount >= expected - Uint128::one() && amount <= expected,
+                "Final user balance within error of 1 unit token {} != {}",
+                amount,
+                expected,
+            );
+        }
+        _ => {
+            panic!("Snip20 balance query failed");
         }
     };
 }
 
-macro_rules! single_stake_with_rewards {
+macro_rules! single_staker_single_pool {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
             fn $name() {
                 let (
                     stake_amount,
+                    unbond_period,
                     reward_amount,
                     reward_start,
                     reward_end,
                 ) = $value;
-                single_stake_with_rewards(
+                single_staker_single_pool(
                     stake_amount,
+                    unbond_period,
                     reward_amount,
                     reward_start,
                     reward_end,
@@ -263,45 +413,51 @@ macro_rules! single_stake_with_rewards {
     }
 }
 
-single_stake_with_rewards! {
-    single_stake_with_rewards_0: (
+single_staker_single_pool! {
+    single_staker_single_pool_0: (
         Uint128::new(1), //   stake_amount
+        Uint128::new(100), // unbond_period
         Uint128::new(100), // reward_amount
         Uint128::new(0), //   reward_start (0-*)
         Uint128::new(100), // reward_end
     ),
-    single_stake_with_rewards_1: (
+    single_staker_single_pool_1: (
+        Uint128::new(100),
         Uint128::new(100),
         Uint128::new(1000),
         Uint128::new(0),
         Uint128::new(100),
     ),
-    single_stake_with_rewards_2: (
+    single_staker_single_pool_2: (
         Uint128::new(1000),
+        Uint128::new(100),
         Uint128::new(300),
         Uint128::new(0),
         Uint128::new(100),
     ),
-    single_stake_with_rewards_3: (
+    single_staker_single_pool_3: (
         Uint128::new(10),
+        Uint128::new(100),
         Uint128::new(50000),
         Uint128::new(0),
         Uint128::new(2500000),
     ),
-    /*
     // fails bc 1 unit is un rewarded (499 < 500)
-    single_stake_with_rewards_broken_0: (
+    single_staker_single_pool_4: (
         Uint128::new(1234567),
+        Uint128::new(10000),
         Uint128::new(500),
         Uint128::new(0),
         Uint128::new(10000),
     ),
-    // fails bc timeframe is so small
-    single_stake_with_rewards_broken_1: (
+    // fails bc numbers don't work out well
+    // Rewards sent to users will exceed provided amount
+    // results in total_stake being reduced by reward emission
+    single_staker_single_pool_5: (
         Uint128::new(99999999999),
+        Uint128::new(100),
         Uint128::new(8192),
         Uint128::new(20),
-        Uint128::new(80),
+        Uint128::new(8000),
     ),
-    */
 }
