@@ -114,6 +114,7 @@ fn single_staker_single_pool(
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
         unbond_period,
+        max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
     }
     .test_init(

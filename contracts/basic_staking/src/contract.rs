@@ -32,6 +32,7 @@ pub fn instantiate(
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         query_auth: msg.query_auth.into_valid(deps.api)?,
         unbond_period: msg.unbond_period,
+        max_user_pools: msg.max_user_pools,
     };
 
     let stake_token = msg.stake_token.into_valid(deps.api)?;

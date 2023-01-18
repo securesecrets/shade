@@ -18,6 +18,7 @@ pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
     pub unbond_period: Uint128,
+    pub max_user_pools: Uint128,
 }
 
 // For the Snip20 msg field
@@ -44,6 +45,8 @@ pub struct RewardPool {
     pub rate: Uint128,
     pub reward_per_token: Uint128,
     pub last_update: Uint128,
+    pub creator: Addr,
+    pub admin_created: bool,
 }
 
 #[cw_serde]
@@ -52,6 +55,7 @@ pub struct InstantiateMsg {
     pub query_auth: RawContract,
     pub stake_token: RawContract,
     pub unbond_period: Uint128,
+    pub max_user_pools: Uint128,
     pub viewing_key: String,
 }
 

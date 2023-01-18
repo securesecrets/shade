@@ -1,5 +1,5 @@
 use shade_protocol::{
-    admin::helpers::{validate_admin, AdminPermissions},
+    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
     basic_staking::{Action, Config, ExecuteAnswer, RewardPool, Unbonding},
     c_std::{
         from_binary,
@@ -54,6 +54,14 @@ pub fn register_reward(
     info: MessageInfo,
     token: Contract,
 ) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &config.admin_auth,
+    )?;
+
     let reward_tokens = REWARD_TOKENS.load(deps.storage)?;
 
     if reward_tokens.contains(&token) {
@@ -150,6 +158,32 @@ pub fn receive(
                     .iter()
                     .find(|contract| contract.address == info.sender)
                 {
+                    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
+
+                    let config = CONFIG.load(deps.storage)?;
+                    let is_admin = admin_is_valid(
+                        &deps.querier,
+                        AdminPermissions::StakingAdmin,
+                        from.to_string(),
+                        &config.admin_auth,
+                    )?;
+
+                    // check user_pool limit
+                    if !is_admin {
+                        let user_pools_count = reward_pools
+                            .iter()
+                            .filter(|pool| !pool.admin_created)
+                            .collect::<Vec<&RewardPool>>()
+                            .len();
+                        if Uint128::new(user_pools_count as u128) >= config.max_user_pools {
+                            println!(
+                                "user pools exceeded {} >= {}",
+                                user_pools_count, config.max_user_pools
+                            );
+                            return Err(StdError::generic_err("Max user pools exceeded"));
+                        }
+                    }
+
                     // Disallow end before start
                     if start >= end {
                         return Err(StdError::generic_err("'start' must be after 'end'"));
@@ -169,7 +203,6 @@ pub fn receive(
                     }
                     */
 
-                    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
                     let uuid = match reward_pools.last() {
                         Some(pool) => pool.uuid + Uint128::one(),
                         None => Uint128::zero(),
@@ -187,6 +220,8 @@ pub fn receive(
                         rate,
                         reward_per_token: Uint128::zero(),
                         last_update: now,
+                        creator: from,
+                        admin_created: true,
                     });
                     REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
