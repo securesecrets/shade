@@ -20,4 +20,6 @@ pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPool>> = Item::new("reward
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");
 pub const USER_UNBONDINGS: Map<Addr, Vec<basic_staking::Unbonding>> = Map::new("user_unbonding");
-pub const USER_REWARD_PER_TOKEN: Map<Addr, Uint128> = Map::new("user_reward_per_token");
+// { (user_address, reward_pool.uuid): reward_paid }
+// TODO: How to index with reward pool uuid & user addr?
+pub const USER_REWARD_PER_TOKEN_PAID: Map<Addr, Uint128> = Map::new("user_reward_per_token_paid");

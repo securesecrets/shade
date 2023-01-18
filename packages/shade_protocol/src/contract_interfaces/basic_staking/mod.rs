@@ -43,6 +43,7 @@ pub struct RewardPool {
     pub token: Contract,
     pub rate: Uint128,
     pub reward_per_token: Uint128,
+    pub last_update: Uint128,
 }
 
 #[cw_serde]

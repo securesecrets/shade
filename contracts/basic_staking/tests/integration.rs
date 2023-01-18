@@ -1,379 +1,298 @@
 use shade_protocol::c_std::{
     to_binary,
-    Addr, Uint128, Coin, Decimal,
-    Validator, Delegation,
+    Addr,
+    BlockInfo,
+    Coin,
+    Decimal,
+    Delegation,
+    Timestamp,
+    Uint128,
+    Validator,
 };
 
 use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            scrt_staking,
-            adapter,
-        },
-        snip20,
-    },
-    utils::{
-        asset::Contract,
-        MultiTestable,
-        InstantiateCallback,
-        ExecuteCallback,
-        Query,
-    },
+    contract_interfaces::{admin, basic_staking, query_auth, snip20},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-use shade_protocol::multi_test::{ App, StakingSudo, SudoMsg };
-use shade_multi_test::{
-    multi::{
-        scrt_staking::ScrtStaking,
-        snip20::Snip20,
-    },
+use shade_multi_test::multi::{
+    admin::{init_admin_auth, Admin},
+    basic_staking::BasicStaking,
+    query_auth::QueryAuth,
+    snip20::Snip20,
 };
-
+use shade_protocol::multi_test::{App, StakingSudo, SudoMsg};
 
 // Add other adapters here as they come
-fn basic_scrt_staking_integration(
-    deposit: Uint128, 
-    rewards: Uint128,
-    expected_scrt_staking: Uint128,
+fn single_stake_with_rewards(
+    stake_amount: Uint128,
+    reward_amount: Uint128,
+    reward_start: Uint128,
+    reward_end: Uint128,
 ) {
-
     let mut app = App::default();
 
+    // init block time for predictable behavior
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(0),
+        chain_id: "chain_id".to_string(),
+    });
+
     let viewing_key = "unguessable".to_string();
-    let admin = Addr::unchecked("admin");
-    let validator = Addr::unchecked("validator");
+    let admin_user = Addr::unchecked("admin");
+    let staking_user = Addr::unchecked("staker");
 
     let token = snip20::InstantiateMsg {
-        name: "secretSCRT".into(),
-        admin: Some("admin".into()),
-        symbol: "SSCRT".into(),
+        name: "stake_token".into(),
+        admin: Some(admin_user.to_string().clone()),
+        symbol: "STKN".into(),
         decimals: 6,
-        initial_balances: None,
+        initial_balances: Some(vec![snip20::InitialBalance {
+            amount: stake_amount + reward_amount,
+            address: staking_user.to_string(),
+        }]),
+        query_auth: None,
         prng_seed: to_binary("").ok().unwrap(),
         config: Some(snip20::InitConfig {
             public_total_supply: Some(true),
-            enable_deposit: Some(true),
-            enable_redeem: Some(true),
+            enable_deposit: Some(false),
+            enable_redeem: Some(false),
             enable_mint: Some(false),
             enable_burn: Some(false),
             enable_transfer: Some(true),
         }),
-    }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
+    }
+    .test_init(
+        Snip20::default(),
+        &mut app,
+        admin_user.clone(),
+        "stake_token",
+        &[],
+    )
+    .unwrap();
 
-    let scrt_staking = scrt_staking::InstantiateMsg {
-        admins: None,
-        owner: admin.clone(),
-        sscrt: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
-        validator_bounds: None,
-        viewing_key: viewing_key.clone(),
-    }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
-    println!("SCRT STAKING ADDR {}", scrt_staking.address);
-
-    app.sudo(SudoMsg::Staking(StakingSudo::AddValidator { validator: validator.to_string().clone() })).unwrap();
-
-    // set admin owner key
-    snip20::ExecuteMsg::SetViewingKey{
+    // set staking_user viewing key
+    snip20::ExecuteMsg::SetViewingKey {
         key: viewing_key.clone(),
         padding: None,
-    }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
-
-    if !deposit.is_zero() {
-        let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-        app.init_modules(|router, _, storage| {
-            router.bank.init_balance(storage, &admin.clone(), vec![deposit_coin.clone()]).unwrap();
-        });
-
-        // Wrap L1 into tokens
-        snip20::ExecuteMsg::Deposit {
-            padding: None,
-        }.test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin]).unwrap();
-
-        // Deposit funds in scrt staking
-        snip20::ExecuteMsg::Send {
-            recipient: scrt_staking.address.to_string().clone(),
-            recipient_code_hash: None,
-            amount: deposit,
-            msg: None,
-            memo: None,
-            padding: None,
-        }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
-
-        // Delegations
-        let delegations: Vec<Delegation> = scrt_staking::QueryMsg::Delegations {}.test_query(&scrt_staking, &app).unwrap();
-        //assert!(!delegations.is_empty(), "empty delegations! {}", delegations.len());
     }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
-    // reserves should be 0 (all staked)
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Pre-Rewards");
-        },
-        _ => panic!("Query failed"),
-    };
+    let admin_contract = init_admin_auth(&mut app, &admin_user);
 
-    // Balance
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "Balance Pre-Rewards");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Rewards
-    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}.test_query(&scrt_staking, &app).unwrap();
-    assert_eq!(cur_rewards, Uint128::zero(), "Rewards Pre-add");
-
-    //ensemble.add_rewards(rewards);
-    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards { amount: Coin { amount: rewards, denom: "uscrt".into() } })).unwrap();
-    /*
-    let block = app.block_info();
-    app.init_modules(|router, api, storage| {
-        router.staking.add_rewards(
-            api,
-            storage,
-            router,
-            &block,
-            Coin { amount: rewards, denom: "uscrt".into() }, 
-        ).unwrap();
-    });
-    */
-
-    // Rewards
-    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}.test_query(&scrt_staking, &app).unwrap();
-
-    if deposit.is_zero() {
-        assert_eq!(cur_rewards, Uint128::zero(), "Rewards Post-add");
-    } else {
-        assert_eq!(cur_rewards, rewards, "Rewards Post-add");
+    let query_contract = query_auth::InstantiateMsg {
+        admin_auth: admin_contract.clone().into(),
+        prng_seed: to_binary("").ok().unwrap(),
     }
+    .test_init(
+        QueryAuth::default(),
+        &mut app,
+        admin_user.clone(),
+        "query_auth",
+        &[],
+    )
+    .unwrap();
 
-    // reserves should be rewards
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Reserves Post-Rewards");
-            } else {
-                assert_eq!(amount, rewards, "Reserves Post-Rewards");
-            }
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Balance
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Balance Post-Rewards");
-            } else {
-                assert_eq!(amount, deposit + rewards, "Balance Post-Rewards");
-            }
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Update SCRT Staking
-    adapter::ExecuteMsg::Adapter(
-        adapter::SubExecuteMsg::Update {
-            asset: token.address.clone(),
-        }
-    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
-
-    // reserves/rewards should be staked
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Post-Update");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Balance
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Balance Post-Update");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Claimable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Claimable Pre-Unbond");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Unbondable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Unbondable Pre-Unbond");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Unbond all
-    adapter::ExecuteMsg::Adapter(
-        adapter::SubExecuteMsg::Unbond {
-            amount: expected_scrt_staking,
-            asset: token.address.clone(),
-        }
-    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
-
-    // Unbonding 
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Unbonding Pre fast forward");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Claimable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Claimable Pre unbond fast forward");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {})).unwrap();
-
-    // Claimable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Claimable post fast forward");
-            } else {
-                assert_eq!(amount, deposit + rewards, "Claimable post fast forward");
-            }
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Claim
-    adapter::ExecuteMsg::Adapter(
-        adapter::SubExecuteMsg::Claim {
-            asset: token.address.clone(),
-        }
-    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
-
-    // Reserves
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Post Claim");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // Balance
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Balance Post Claim");
-        },
-        _ => panic!("Query failed"),
-    };
-
-    // ensure wrapped tokens were returned
-    match (snip20::QueryMsg::Balance {
-        address: admin.to_string().clone(),
+    // set staking user VK
+    query_auth::ExecuteMsg::SetViewingKey {
         key: viewing_key.clone(),
-    }).test_query(&token, &app).unwrap() {
-        snip20::QueryAnswer::Balance { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount.u128(), 0u128, "Final User balance");
-            } else {
-                assert_eq!(amount.u128(), deposit.u128() + rewards.u128(), "Final user balance");
-            }
+        padding: None,
+    }
+    .test_exec(&query_contract, &mut app, staking_user.clone(), &[])
+    .unwrap();
+
+    let basic_staking = basic_staking::InstantiateMsg {
+        admin_auth: admin_contract.into(),
+        query_auth: query_contract.into(),
+        stake_token: token.clone().into(),
+        unbond_period: Uint128::new(100),
+        viewing_key: viewing_key.clone(),
+    }
+    .test_init(
+        BasicStaking::default(),
+        &mut app,
+        admin_user.clone(),
+        "basic_staking",
+        &[],
+    )
+    .unwrap();
+    println!("BASIC STAKING {}", basic_staking.address);
+
+    // Pre-staking user balance
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
         },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
+        }
         _ => {
-            panic!("snip20 balance query failed");
+            panic!("Staking balance query failed");
+        }
+    };
+
+    // Stake funds
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: stake_amount,
+        msg: Some(to_binary(&basic_staking::Action::Stake {}).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
+
+    // Post-staking user balance
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, stake_amount, "Post-Stake Balance");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    // Init Rewards
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: reward_amount,
+        msg: Some(
+            to_binary(&basic_staking::Action::Rewards {
+                start: reward_start,
+                end: reward_end,
+            })
+            .unwrap(),
+        ),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
+
+    // Check reward pool
+    match (basic_staking::QueryMsg::RewardPool {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::RewardPool { rewards } => {
+            assert_eq!(rewards[0].amount, reward_amount, "Reward Pool Amount");
+            assert_eq!(rewards[0].start, reward_start, "Reward Pool Start");
+            assert_eq!(rewards[0].end, reward_end, "Reward Pool End");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    let reward_duration = reward_end - reward_start;
+
+    // Move forward to reward start
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(reward_start.u128() as u64),
+        chain_id: "chain_id".to_string(),
+    });
+
+    // Total Steps + 2  to ensure we claim at least 1x after rewards period is over
+    // let step_size = (reward_duration / claim_steps).u128();
+    // let rewards_per_step = reward_amount / claim_steps;
+
+    // Move to end of rewards
+    let set_end: u64 = reward_end.u128() as u64 / 2; //+ 100000000;
+    println!("Fast-forward to end {}", set_end);
+    app.set_block(BlockInfo {
+        height: 10,
+        time: Timestamp::from_seconds(set_end),
+        chain_id: "chain_id".to_string(),
+    });
+
+    // All rewards should be pending
+    match (basic_staking::QueryMsg::Rewards {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Rewards { amount } => {
+            assert_eq!(amount, reward_amount, "Rewards claimable at end");
+        }
+        _ => {
+            panic!("Staking balance query failed");
         }
     };
 }
 
-macro_rules! basic_scrt_staking_tests {
+macro_rules! single_stake_with_rewards {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
             fn $name() {
                 let (
-                    deposit,
-                    rewards,
-                    expected_scrt_staking,
+                    stake_amount,
+                    reward_amount,
+                    reward_start,
+                    reward_end,
                 ) = $value;
-                basic_scrt_staking_integration(deposit, rewards, expected_scrt_staking);
+                single_stake_with_rewards(
+                    stake_amount,
+                    reward_amount,
+                    reward_start,
+                    reward_end,
+                )
             }
         )*
     }
 }
 
-basic_scrt_staking_tests! {
-    basic_scrt_staking_0: (
-        Uint128::new(100), // deposit
-        Uint128::new(0),   // rewards
-        Uint128::new(100), // balance
+single_stake_with_rewards! {
+    single_stake_with_rewards_0: (
+        Uint128::new(1), //   stake_amount
+        Uint128::new(100), // reward_amount
+        Uint128::new(0), //   reward_start (0-*)
+        Uint128::new(100), // reward_end
     ),
-    basic_scrt_staking_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(50),   // rewards
-        Uint128::new(150), // balance
+    single_stake_with_rewards_1: (
+        Uint128::new(100),
+        Uint128::new(1000),
+        Uint128::new(0),
+        Uint128::new(100),
     ),
-    basic_scrt_staking_no_deposit: (
-        Uint128::new(0), // deposit
-        Uint128::new(1000),   // rewards
-        Uint128::new(0), // balance
+    single_stake_with_rewards_2: (
+        Uint128::new(1000),
+        Uint128::new(300),
+        Uint128::new(0),
+        Uint128::new(100),
+    ),
+    single_stake_with_rewards_3: (
+        Uint128::new(1234567),
+        Uint128::new(500),
+        Uint128::new(0),
+        Uint128::new(10000),
+    ),
+    single_stake_with_rewards_4: (
+        Uint128::new(99999999999),
+        Uint128::new(8192),
+        Uint128::new(20),
+        Uint128::new(86),
     ),
 }
