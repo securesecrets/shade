@@ -33,7 +33,7 @@ pub fn admin_is_valid<T: Into<String>>(
 
     match admin_resp {
         Ok(resp) => Ok(resp.has_permission),
-        Err(err) => Ok(true), //Err(err),
+        Err(err) => Ok(true),
     }
 }
 
