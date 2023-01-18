@@ -9,19 +9,19 @@ use crate::{
 };
 use std::cmp::max;
 
-pub fn config(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: CONFIG.load(deps.storage)?,
     })
 }
 
-pub fn total_staked(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
+pub fn total_staked(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::TotalStaked {
         amount: TOTAL_STAKED.load(deps.storage)?,
     })
 }
 
-pub fn reward_tokens(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
+pub fn reward_tokens(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::RewardTokens {
         tokens: REWARD_TOKENS
             .load(deps.storage)?
@@ -31,13 +31,13 @@ pub fn reward_tokens(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn reward_pool(deps: Deps, env: Env) -> StdResult<QueryAnswer> {
+pub fn reward_pool(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::RewardPool {
         rewards: REWARD_POOLS.load(deps.storage)?,
     })
 }
 
-pub fn user_balance(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
+pub fn user_balance(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Balance {
         amount: USER_STAKED
             .may_load(deps.storage, user)?
@@ -45,7 +45,7 @@ pub fn user_balance(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
     })
 }
 
-pub fn user_share(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
+pub fn user_share(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
     let user_staked = USER_STAKED.load(deps.storage, user)?;
@@ -86,7 +86,7 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
     Ok(QueryAnswer::Rewards { amount: reward_sum })
 }
 
-pub fn user_unbonding(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
+pub fn user_unbonding(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Unbonding {
         unbondings: USER_UNBONDINGS.load(deps.storage, user)?,
     })

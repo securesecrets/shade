@@ -43,7 +43,7 @@ pub fn instantiate(
     REWARD_TOKENS.save(deps.storage, &vec![stake_token.clone()])?;
     REWARD_POOLS.save(deps.storage, &vec![])?;
 
-    TOTAL_STAKED.save(deps.storage, &Uint128::zero());
+    TOTAL_STAKED.save(deps.storage, &Uint128::zero())?;
 
     let resp = Response::new().add_messages(vec![
         set_viewing_key_msg(msg.viewing_key, None, &stake_token)?,
@@ -98,15 +98,14 @@ pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<A
 #[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query::config(deps, env)?),
-        QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps, env)?),
-        QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps, env)?),
-        QueryMsg::RewardPool {} => to_binary(&query::reward_pool(deps, env)?),
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps)?),
+        QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps)?),
+        QueryMsg::RewardPool {} => to_binary(&query::reward_pool(deps)?),
         QueryMsg::Balance { auth } => {
             let config = CONFIG.load(deps.storage)?;
             to_binary(&query::user_balance(
                 deps,
-                env,
                 authenticate(deps, auth, config.query_auth)?,
             )?)
         }
@@ -114,7 +113,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let config = CONFIG.load(deps.storage)?;
             to_binary(&query::user_share(
                 deps,
-                env,
                 authenticate(deps, auth, config.query_auth)?,
             )?)
         }
@@ -130,7 +128,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let config = CONFIG.load(deps.storage)?;
             to_binary(&query::user_unbonding(
                 deps,
-                env,
                 authenticate(deps, auth, config.query_auth)?,
             )?)
         }

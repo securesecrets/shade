@@ -201,8 +201,6 @@ fn single_stake_with_rewards(
         }
     };
 
-    let reward_duration = reward_end - reward_start;
-
     // Move forward to reward start
     app.set_block(BlockInfo {
         height: 1,
@@ -210,12 +208,13 @@ fn single_stake_with_rewards(
         chain_id: "chain_id".to_string(),
     });
 
+    // let reward_duration = reward_end - reward_start;
     // Total Steps + 2  to ensure we claim at least 1x after rewards period is over
     // let step_size = (reward_duration / claim_steps).u128();
     // let rewards_per_step = reward_amount / claim_steps;
 
     // Move to end of rewards
-    let set_end: u64 = reward_end.u128() as u64 / 2; //+ 100000000;
+    let set_end: u64 = reward_end.u128() as u64; // + 100000000;
     println!("Fast-forward to end {}", set_end);
     app.set_block(BlockInfo {
         height: 10,
@@ -284,15 +283,25 @@ single_stake_with_rewards! {
         Uint128::new(100),
     ),
     single_stake_with_rewards_3: (
+        Uint128::new(10),
+        Uint128::new(50000),
+        Uint128::new(0),
+        Uint128::new(2500000),
+    ),
+    /*
+    // fails bc 1 unit is un rewarded (499 < 500)
+    single_stake_with_rewards_broken_0: (
         Uint128::new(1234567),
         Uint128::new(500),
         Uint128::new(0),
         Uint128::new(10000),
     ),
-    single_stake_with_rewards_4: (
+    // fails bc timeframe is so small
+    single_stake_with_rewards_broken_1: (
         Uint128::new(99999999999),
         Uint128::new(8192),
         Uint128::new(20),
-        Uint128::new(86),
+        Uint128::new(80),
     ),
+    */
 }

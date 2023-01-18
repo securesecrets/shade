@@ -9,6 +9,7 @@ use shade_protocol::c_std::{
     Response,
     StdError,
     StdResult,
+    Storage,
     Uint128,
 };
 
@@ -93,17 +94,62 @@ pub fn receive(
                     )));
                 }
 
-                // TODO claim rewards based on old stake amount
-                USER_LAST_CLAIM.save(deps.storage, from.clone(), &now)?;
+                let now = env.block.time.seconds();
 
-                if let Some(user_stake) = USER_STAKED.may_load(deps.storage, from.clone())? {
-                    USER_STAKED.save(deps.storage, from.clone(), &(user_stake + amount))?;
+                let mut total_staked = TOTAL_STAKED.load(deps.storage)?;
+                total_staked += amount;
+                TOTAL_STAKED.save(deps.storage, &total_staked)?;
+
+                let reward_pools = update_rewards(deps.storage, env, total_staked)?;
+                let mut response = Response::new();
+
+                if let Some(user_staked) = USER_STAKED.may_load(deps.storage, from.clone())? {
+                    // Claim Rewards
+                    for reward_pool in reward_pools {
+                        let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID.load(
+                            deps.storage,
+                            from.clone(), // reward_pool.uuid),
+                        )?;
+
+                        let user_reward = rewards_earned(
+                            user_staked,
+                            reward_pool.reward_per_token,
+                            user_reward_per_token_paid,
+                            now.clone(),
+                            &reward_pool,
+                        );
+
+                        // Send reward
+                        // TODO batch with a sum
+                        response = response.add_message(send_msg(
+                            from.clone(),
+                            user_reward,
+                            None,
+                            None,
+                            None,
+                            &reward_pool.token,
+                        )?);
+
+                        USER_REWARD_PER_TOKEN_PAID.save(
+                            deps.storage,
+                            from.clone(), // reward_pool.uuid),
+                            &reward_pool.reward_per_token,
+                        )?;
+                    }
+                    USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
                 } else {
-                    USER_STAKED.save(deps.storage, from, &amount)?;
+                    for reward_pool in reward_pools {
+                        // make sure user rewards start now
+                        USER_REWARD_PER_TOKEN_PAID.save(
+                            deps.storage,
+                            from.clone(), // reward_pool.uuid),
+                            &reward_pool.reward_per_token,
+                        )?;
+                    }
+                    USER_STAKED.save(deps.storage, from.clone(), &amount)?;
                 }
 
-                let total_staked = TOTAL_STAKED.load(deps.storage)?;
-                TOTAL_STAKED.save(deps.storage, &(total_staked + amount))?;
+                USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
                 Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Stake {
                     status: ResponseStatus::Success,
@@ -211,21 +257,32 @@ pub fn updated_reward_pool(
     pool
 }
 
+pub fn update_rewards(
+    storage: &mut dyn Storage,
+    env: Env,
+    total_staked: Uint128,
+) -> StdResult<Vec<RewardPool>> {
+    let reward_pools = REWARD_POOLS.load(storage)?;
+    let reward_pools = reward_pools
+        .iter()
+        .map(|pool| updated_reward_pool(pool, total_staked, env.block.time.seconds()))
+        .collect();
+
+    REWARD_POOLS.save(storage, &reward_pools)?;
+    Ok(reward_pools)
+}
+
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     // let user_last_claim = USER_LAST_CLAIM.load(deps.storage, info.sender.clone())?;
     let user_staked = USER_STAKED.load(deps.storage, info.sender.clone())?;
-    let reward_pools = REWARD_POOLS.load(deps.storage)?;
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
     let now = env.block.time.seconds();
 
+    let reward_pools = update_rewards(deps.storage, env, total_staked)?;
+
     let mut response = Response::new();
 
-    let mut updated_pools = vec![];
-
     for reward_pool in reward_pools.iter() {
-        updated_pools.push(updated_reward_pool(&reward_pool, total_staked, now));
-        let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
-
         let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID.load(
             deps.storage,
             info.sender.clone(), // reward_pool.uuid),
@@ -233,7 +290,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
         let user_reward = rewards_earned(
             user_staked,
-            reward_per_token,
+            reward_pool.reward_per_token,
             user_reward_per_token_paid,
             now,
             &reward_pool,
@@ -253,11 +310,9 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
         USER_REWARD_PER_TOKEN_PAID.save(
             deps.storage,
             info.sender.clone(), // reward_pool.uuid),
-            &reward_per_token,
+            &reward_pool.reward_per_token,
         )?;
     }
-
-    REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
     USER_LAST_CLAIM.save(deps.storage, info.sender, &Uint128::new(now.into()))?;
 
