@@ -1,18 +1,9 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Addr,
-    BlockInfo,
-    Coin,
-    Decimal,
-    Delegation,
-    Timestamp,
-    Uint128,
-    Validator,
-};
+use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 
 use shade_protocol::{
-    contract_interfaces::{admin, basic_staking, query_auth, snip20},
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    contract_interfaces::{basic_staking, query_auth, snip20},
+    multi_test::App,
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -21,7 +12,6 @@ use shade_multi_test::multi::{
     query_auth::QueryAuth,
     snip20::Snip20,
 };
-use shade_protocol::multi_test::{App, StakingSudo, SudoMsg};
 
 // Add other adapters here as they come
 fn single_staker_single_pool(
@@ -111,6 +101,14 @@ fn single_staker_single_pool(
     .test_exec(&query_contract, &mut app, staking_user.clone(), &[])
     .unwrap();
 
+    // set reward user VK
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: viewing_key.clone(),
+        padding: None,
+    }
+    .test_exec(&query_contract, &mut app, reward_user.clone(), &[])
+    .unwrap();
+
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
@@ -193,6 +191,24 @@ fn single_staker_single_pool(
     }
     .test_exec(&token, &mut app, reward_user.clone(), &[])
     .unwrap();
+
+    // reward user has no stake
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: reward_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Reward User Stake Balance");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
 
     // Check reward pool
     match (basic_staking::QueryMsg::RewardPool {})

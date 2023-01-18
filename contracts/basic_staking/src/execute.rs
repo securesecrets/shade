@@ -1,22 +1,21 @@
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Addr,
-    Binary,
-    CosmosMsg,
-    DepsMut,
-    Env,
-    MessageInfo,
-    Response,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-};
-
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     basic_staking::{Action, Config, ExecuteAnswer, RewardPool, Unbonding},
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Binary,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     snip20::helpers::{balance_query, register_receive, send_msg, set_viewing_key_msg},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -387,7 +386,6 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 }
 
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    let config = CONFIG.load(deps.storage)?;
     let user_unbonding = USER_UNBONDINGS.load(deps.storage, info.sender.clone())?;
 
     let mut withdraw_amount = Uint128::zero();
@@ -433,7 +431,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         })?))
 }
 
-pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+pub fn compound(_deps: DepsMut, _env: Env, _info: MessageInfo) -> StdResult<Response> {
     Err(StdError::generic_err("NOT IMPLEMENTED"))
     /*
     Ok(Response::new()
