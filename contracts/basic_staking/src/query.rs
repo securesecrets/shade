@@ -7,7 +7,6 @@ use crate::{
     execute::{reward_per_token, rewards_earned},
     storage::*,
 };
-use std::cmp::max;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -48,7 +47,9 @@ pub fn user_balance(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
 pub fn user_share(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
-    let user_staked = USER_STAKED.load(deps.storage, user)?;
+    let user_staked = USER_STAKED
+        .may_load(deps.storage, user)?
+        .unwrap_or(Uint128::zero());
 
     let user_norm = Uint128::new(user_staked.u128() * 10u128.pow(18));
     let total_norm = Uint128::new(total_staked.u128() * 10u128.pow(18));
@@ -73,13 +74,7 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
             .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.uuid))?
             .unwrap_or(Uint128::zero());
         let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
-        let reward = rewards_earned(
-            user_staked,
-            reward_per_token,
-            user_reward_per_token_paid,
-            now,
-            &reward_pool,
-        );
+        let reward = rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid);
         reward_sum += reward;
     }
 
@@ -88,6 +83,8 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
 
 pub fn user_unbonding(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Unbonding {
-        unbondings: USER_UNBONDINGS.load(deps.storage, user)?,
+        unbondings: USER_UNBONDINGS
+            .may_load(deps.storage, user)?
+            .unwrap_or(vec![]),
     })
 }

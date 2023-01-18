@@ -442,7 +442,6 @@ single_staker_single_pool! {
         Uint128::new(0),
         Uint128::new(2500000),
     ),
-    // fails bc 1 unit is un rewarded (499 < 500)
     single_staker_single_pool_4: (
         Uint128::new(1234567),
         Uint128::new(10000),
@@ -450,9 +449,6 @@ single_staker_single_pool! {
         Uint128::new(0),
         Uint128::new(10000),
     ),
-    // fails bc numbers don't work out well
-    // Rewards sent to users will exceed provided amount
-    // results in total_stake being reduced by reward emission
     single_staker_single_pool_5: (
         Uint128::new(99999999999),
         Uint128::new(100),

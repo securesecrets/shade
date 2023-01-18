@@ -200,13 +200,6 @@ pub fn receive(
     }
 }
 pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPool) -> Uint128 {
-    /*
-    if now < (pool.start.u128() as u64) {
-        // reward pool hasn't started emitting yet
-        return Uint128::zero();
-    }
-    */
-
     pool.reward_per_token
         + (min(pool.end, Uint128::new(now as u128)) - max(pool.last_update, pool.start)) * pool.rate
             / total_staked
@@ -216,16 +209,7 @@ pub fn rewards_earned(
     user_staked: Uint128,
     reward_per_token: Uint128,
     user_reward_per_token_paid: Uint128,
-    now: u64,
-    pool: &RewardPool,
 ) -> Uint128 {
-    /*
-    if now < (pool.start.u128() as u64) {
-        // reward pool hasn't started emitting yet
-        return Uint128::zero();
-    }
-    */
-
     println!(
         "rewards earned {} - {}",
         reward_per_token, user_reward_per_token_paid
@@ -278,18 +262,14 @@ pub fn reward_pool_claim(
         .unwrap_or(Uint128::zero());
     println!("user reward per token paid {}", user_reward_per_token_paid);
 
-    // TODO ensure reward doesn't eat into user stake
     let user_reward = rewards_earned(
         user_staked,
         reward_pool.reward_per_token,
         user_reward_per_token_paid,
-        env.block.time.seconds(),
-        &reward_pool,
     );
     println!("reward earned {}", user_reward);
 
     // Send reward
-    // TODO batch with a sum
     USER_REWARD_PER_TOKEN_PAID.save(
         storage,
         user_pool_key(user.clone(), reward_pool.uuid),
