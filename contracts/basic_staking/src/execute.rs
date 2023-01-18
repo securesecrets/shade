@@ -221,7 +221,7 @@ pub fn receive(
                         reward_per_token: Uint128::zero(),
                         last_update: now,
                         creator: from,
-                        admin_created: true,
+                        admin_created: is_admin,
                     });
                     REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
