@@ -105,12 +105,20 @@ pub fn receive(
                 if let Some(user_staked) = USER_STAKED.may_load(deps.storage, from.clone())? {
                     // Claim Rewards
                     for reward_pool in reward_pools {
-                        response = response.add_message(reward_pool_claim(
+                        let reward_claimed = reward_pool_claim(
                             deps.storage,
                             env.clone(),
-                            info.sender.clone(),
+                            from.clone(),
                             user_staked,
                             &reward_pool,
+                        )?;
+                        response = response.add_message(send_msg(
+                            from.clone(),
+                            reward_claimed,
+                            None,
+                            None,
+                            None,
+                            &reward_pool.token,
                         )?);
                     }
                     USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
@@ -251,7 +259,7 @@ pub fn reward_pool_claim(
     user: Addr,
     user_staked: Uint128,
     reward_pool: &RewardPool,
-) -> StdResult<CosmosMsg> {
+) -> StdResult<Uint128> {
     println!(
         "Reward Pool {} rewards {}",
         reward_pool.uuid, reward_pool.amount,
@@ -277,6 +285,8 @@ pub fn reward_pool_claim(
 
     println!("Sending {} rewards to {}", user_reward, user.clone());
 
+    Ok(user_reward)
+    /*
     send_msg(
         user.clone(),
         user_reward,
@@ -285,6 +295,7 @@ pub fn reward_pool_claim(
         None,
         &reward_pool.token,
     )
+        */
 }
 
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
@@ -312,12 +323,20 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
     let mut response = Response::new();
 
     for reward_pool in reward_pools.iter() {
-        response = response.add_message(reward_pool_claim(
+        let reward_claimed = reward_pool_claim(
             deps.storage,
             env.clone(),
             info.sender.clone(),
             user_staked,
             reward_pool,
+        )?;
+        response = response.add_message(send_msg(
+            info.sender.clone(),
+            reward_claimed,
+            None,
+            None,
+            None,
+            &reward_pool.token,
         )?);
     }
 
@@ -352,12 +371,20 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 
         let mut response = Response::new();
         for reward_pool in reward_pools {
-            response = response.add_message(reward_pool_claim(
+            let reward_claimed = reward_pool_claim(
                 deps.storage,
                 env.clone(),
                 info.sender.clone(),
                 user_staked,
                 &reward_pool,
+            )?;
+            response = response.add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
             )?);
         }
 
@@ -431,13 +458,55 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         })?))
 }
 
-pub fn compound(_deps: DepsMut, _env: Env, _info: MessageInfo) -> StdResult<Response> {
-    Err(StdError::generic_err("NOT IMPLEMENTED"))
-    /*
-    Ok(Response::new()
-        .set_data(to_binary(&ExecuteAnswer::Compound {
-            status: ResponseStatus::Success,
-        })?)
-    )
-    */
+pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    println!("Compounding rewards");
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+
+    let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
+    let user_staked = USER_STAKED
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or(Uint128::zero());
+    let stake_token = STAKE_TOKEN.load(deps.storage)?;
+
+    let mut compound_amount = Uint128::zero();
+
+    let mut response = Response::new();
+    for reward_pool in reward_pools {
+        let reward_claimed = reward_pool_claim(
+            deps.storage,
+            env.clone(),
+            info.sender.clone(),
+            user_staked,
+            &reward_pool,
+        )?;
+        if reward_pool.token == stake_token {
+            println!(
+                "Compounding {} {}",
+                reward_claimed, reward_pool.token.address
+            );
+            compound_amount += reward_claimed;
+        } else {
+            println!("Claiming {} {}", reward_claimed, reward_pool.token.address);
+            // Send/Claim non-stake_token rewards
+            response = response.add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
+            )?);
+        }
+    }
+
+    USER_STAKED.save(
+        deps.storage,
+        info.sender.clone(),
+        &(user_staked + compound_amount),
+    )?;
+    TOTAL_STAKED.save(deps.storage, &(total_staked + compound_amount))?;
+
+    Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
+        status: ResponseStatus::Success,
+    })?))
 }
