@@ -1,60 +1,63 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use shade_protocol::{
     c_std::{
+        shd_entry_point,
         to_binary,
         Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::dex::{
         dex::pool_take_amount,
         sienna::{
+            self,
             Pair,
-            PairInfo,
             PairInfoResponse,
             PairQuery,
             SimulationResponse,
             TokenType,
-            TokenTypeAmount,
         },
     },
-    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
-    utils::{asset::Contract, InstantiateCallback},
+    cosmwasm_schema::cw_serde,
+    utils::{
+        asset::Contract, ExecuteCallback, InstantiateCallback,
+        storage::plus::{Item, ItemStorage},
+    },
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct InstantiateMsg {}
 
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-pub static PAIR_INFO: &[u8] = b"pair_info";
-
-pub fn pair_info_r(storage: &dyn Storage) -> ReadonlySingleton<PairInfo> {
-    singleton_read(storage, PAIR_INFO)
+#[cw_serde]
+pub struct PairInfo {
+    pub pair: Pair,
+    pub amount_0: Uint128,
+    pub amount_1: Uint128,
 }
 
-pub fn pair_info_w(storage: &mut dyn Storage) -> Singleton<PairInfo> {
-    singleton(storage, PAIR_INFO)
+impl ItemStorage for PairInfo {
+    const ITEM: Item<'static, Self> = Item::new("item-pair_info");
 }
 
-pub fn init(_deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn instantiate(
+    _deps: DepsMut, 
+    _env: Env, 
+    _msg: InstantiateMsg
+) -> StdResult<Response> {
     Ok(Response::default())
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     MockPool {
         token_a: Contract,
@@ -64,6 +67,11 @@ pub enum ExecuteMsg {
     },
 }
 
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[shd_entry_point]
 pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::MockPool {
@@ -73,14 +81,14 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
             amount_b,
         } => {
             let pair_info = PairInfo {
-                liquidity_token: Contract {
+                /*liquidity_token: Contract {
                     address: Addr::unchecked("".to_string()),
                     code_hash: "".to_string(),
                 },
                 factory: Contract {
                     address: Addr::unchecked("".to_string()),
                     code_hash: "".to_string(),
-                },
+                },*/
                 pair: Pair {
                     token_0: TokenType::CustomToken {
                         contract_addr: token_a.address,
@@ -93,12 +101,11 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
                 },
                 amount_0: amount_a,
                 amount_1: amount_b,
-                total_liquidity: Uint128::zero(),
-                contract_version: 0,
+                //total_liquidity: Uint128::zero(),
+                //contract_version: 0,
             };
 
-            pair_info_w(deps.storage).save(&pair_info)?;
-
+            pair_info.save(deps.storage)?;
             Ok(Response::default())
         }
     }
@@ -106,15 +113,27 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
     // TODO: actual swap handle
 }
 
+#[shd_entry_point]
 pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
     match msg {
-        PairQuery::PairInfo => to_binary(&PairInfoResponse {
-            pair_info: pair_info_r(deps.storage).load()?,
-        }),
+        PairQuery::PairInfo => {
+            let pair_info = PairInfo::load(deps.storage)?;
+            to_binary(&PairInfoResponse {
+                pair_info: sienna::PairInfo {
+                    liquidity_token: Contract::new(&Addr::unchecked("lp_token"), &"hash".to_string()),
+                    factory: Contract::new(&Addr::unchecked("factory"), &"hash".to_string()),
+                    pair: pair_info.pair,
+                    amount_0: pair_info.amount_0,
+                    amount_1: pair_info.amount_1,
+                    total_liquidity: pair_info.amount_0 + pair_info.amount_1,
+                    contract_version: 0,
+                },
+            })
+        },
         PairQuery::SwapSimulation { offer } => {
             //TODO: check swap doesnt exceed pool size
 
-            let mut in_token = match offer.token {
+            let in_token = match offer.token {
                 TokenType::CustomToken {
                     contract_addr,
                     token_code_hash,
@@ -127,13 +146,10 @@ pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
                 }
             };
 
-            let pair_info = pair_info_r(deps.storage).load()?;
+            let pair_info = PairInfo::load(deps.storage)?;
 
             match pair_info.pair.token_0 {
-                TokenType::CustomToken {
-                    contract_addr,
-                    token_code_hash,
-                } => {
+                TokenType::CustomToken { contract_addr, .. } => {
                     if in_token.address == contract_addr {
                         return to_binary(&SimulationResponse {
                             return_amount: pool_take_amount(
@@ -152,10 +168,7 @@ pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
             };
 
             match pair_info.pair.token_1 {
-                TokenType::CustomToken {
-                    contract_addr,
-                    token_code_hash,
-                } => {
+                TokenType::CustomToken { contract_addr, .. } => {
                     if in_token.address == contract_addr {
                         return to_binary(&SimulationResponse {
                             return_amount: pool_take_amount(
