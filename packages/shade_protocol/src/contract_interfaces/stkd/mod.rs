@@ -18,6 +18,30 @@ pub enum HandleMsg {
     },
 }
 
+#[cw_serde]
+pub enum HandleAnswer {
+    Stake {
+        /// amount of uSCRT staked
+        scrt_staked: Uint128,
+        /// amount of derivative token minted
+        tokens_returned: Uint128,
+    },
+    Unbond {
+        /// amount of derivative tokens redeemed
+        tokens_redeemed: Uint128,
+        /// amount of scrt to be unbonded (available in 21 days after the batch processes)
+        scrt_to_be_received: Uint128,
+        /// estimated time of maturity
+        estimated_time_of_maturity: u64,
+    },
+    Claim {
+        /// amount of SCRT claimed
+        withdrawn: Uint128,
+        /// fees collected
+        fees: Uint128,
+    },
+}
+
 impl ExecuteCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
@@ -92,6 +116,9 @@ pub enum QueryAnswer {
         /// optional estimated time the next batch of unbondings will mature.  Only provided
         /// if the user has SCRT waiting to be unbonded in the next batch
         estimated_time_of_maturity_for_next_batch: Option<u64>,
+    },
+    Balance {
+        amount: Uint128,
     },
 }
 
