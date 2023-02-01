@@ -1,6 +1,18 @@
 # Shade Protocol Responsible Disclosure Policy
 
-SOME Policy legwork TBD
+Shade Protocol is an interconnected suite of privacy preserving dApps built on the Secret Network whose smart contracts leverage the privacy preserving properties of secret contracts in order to empower private DeFi. The Shade Protocol Responsible Disclosure Framework establishes and defines the following for the Shade Security Policy:
+- Vulnerability Severity Classification System (VSCS)
+- Rewards By Threat Level
+- Assets in Scope
+- Out of Scope Work
+- Proof of Concept (PoC) guidelines
+- Rules of Engagement
+- SLA Response Times
+- Security Patch Policy and Procedure
+- Rewards Payment Process
+
+For general information about reporting vulnerabilities, visit [security policy overview](./SECURITY.md)
+
 
 ## Bug Bounty Program Classes
 - **Smart Contracts**
@@ -47,8 +59,8 @@ Contract fails to deliver promised returns, but doesn’t lose value
 
 #### **High**
 - Improperly disclosing confidential user information
-- Changing sensitive details of other users (including modifying browser local storage) without already-connected wallet interaction
-Injecting/modifying the static content on the target application without Javascript (Persistent) such as:
+- Changing sensitive details of other users (including modifying browser local storage) without already-connected wallet interaction.
+- Injecting/modifying the static content on the target application without Javascript (Persistent) such as:
     - HTML injection without Javascript
     - Replacing existing text with arbitrary text
     - Arbitrary file uploads, etc.
@@ -68,7 +80,8 @@ Injecting/modifying the static content on the target application without Javascr
 
 ### Infrastructure
 #### **Critical**
- TBD
+ - Access to any central keys address controlled by the project (e.g. private keys, seed phrases, etc.)
+ - Exploit to the Central User Database
 
 #### **High**
  TBD
@@ -82,7 +95,7 @@ Injecting/modifying the static content on the target application without Javascr
 ## Rewards by Threat Level
 
 ### Smart Contract
-| Vulrability | Reward | Requirments |
+| Vulnerability | Reward | Requirements |
 | ------------ | ----------------- | --------------------- |
 | Critical | ***Payout: Up to 40k SHD*** | PoC Requirement |
 | High | Payout: Up to 5k SHD | PoC Requirement |
@@ -92,7 +105,7 @@ Injecting/modifying the static content on the target application without Javascr
 
 ### Website and applications
 
-| Vulrability | Reward | Requirments |
+| Vulnerability | Reward | Requirements |
 | ------------ | ----------------- | --------------------- |
 | Critical | ***Payout: Up to 10k SHD*** | PoC Requirement |
 | High | Payout: Up to 1k SHD | PoC Requirement |
@@ -101,7 +114,7 @@ Injecting/modifying the static content on the target application without Javascr
 
 ### Infrastructure
 
-| Vulrability | Reward | Requirments |
+| Vulnerability | Reward | Requirements |
 | ------------ | ----------------- | --------------------- |
 | Critical | ***Payout: Up to 10k SHD*** | PoC Requirement |
 | High | Payout: Up to 1k SHD | PoC Requirement |
@@ -109,9 +122,9 @@ Injecting/modifying the static content on the target application without Javascr
 | Low | Payout: Up to 10 SHD | PoC Requirement |
 
 
-Critical smart contract vulnerabilities are capped at 10% of economic damage, which primarily takes into consideration the funds at risk. In cases of repeatable attacks, only the first attack is considered unless the smart contract cannot be upgraded or paused. High smart contract vulnerabilities will be capped at up to 100% of the funds affected.
+Critical smart contract vulnerabilities are capped at 10% of economic damage, primarily taking into consideration the funds at risk. In cases of repeatable attacks, only the first attack is considered unless the smart contract cannot be upgraded or paused. High smart contract vulnerabilities will be capped at up to 100% of the funds affected.
 
-Critical website and application bug reports will be rewarded with [ x amount of funding] only if the impact leads to a direct loss in funds or a manipulation of the votes or the voting result, as well as the modification of its display leading to a misrepresentation of the result or vote. All other impacts that would be classified as Critical would be rewarded [y amount of funding].
+Critical website and application bug reports will be rewarded with 10k SHD only if the impact leads to a direct loss in funds or a manipulation of the votes or the voting result, as well as the modification of its display leading to a misrepresentation of the result or vote. All other impacts that would be classified as Critical would be rewarded 1K SHD.
 
 All calculations of the amount of funds at risk are done based on the time the bug report is submitted.
 
@@ -128,12 +141,14 @@ All calculations of the amount of funds at risk are done based on the time the b
 
 
 
-Assets considered in scope:
-Previous Audits - [ Shade Protocol Audit Log ] (https://docs.shadeprotocol.io/shade-protocol/research/audit-log)
+## Assets considered in scope:
 
-Smart Contracts:
-Shade Oracle - https://github.com/securesecrets/shade-oracle 
-Domain:
+[Shade Protocol Audit Log](https://docs.shadeprotocol.io/shade-protocol/research/audit-log)
+
+### **Smart Contracts:**
+
+#### Shade Oracle - https://github.com/securesecrets/shade-oracle 
+
 - https://github.com/securesecrets/shade-oracle/tree/release/contracts/oracle_router
 - https://github.com/securesecrets/shade-oracle/tree/release/contracts/index_oracle
 - https://github.com/securesecrets/shade-oracle/tree/release/contracts/shade_staking_derivatives_oracle 
@@ -144,8 +159,7 @@ Domain:
 
 
 
-ShadeSwap - https://github.com/securesecrets/shadeswap 
-Domain:
+#### ShadeSwap - https://github.com/securesecrets/shadeswap 
 
 - https://github.com/securesecrets/shadeswap/tree/main/contracts/amm_pair
 - https://github.com/securesecrets/shadeswap/tree/main/contracts/factory
@@ -154,8 +168,7 @@ Domain:
 - https://github.com/securesecrets/shadeswap/tree/main/contracts/snip20
 - https://github.com/securesecrets/shadeswap/tree/main/contracts/staking
 
-Shade Protocol - https://github.com/securesecrets/shade 
-Domain:
+#### Shade Protocol - https://github.com/securesecrets/shade 
 
 - https://github.com/securesecrets/shade/blob/main/contracts/governance
 - https://github.com/securesecrets/shade/blob/main/contracts/staking
@@ -167,9 +180,9 @@ Domain:
 
 *In order to be eligible for a reward, the vulnerability must exist in both the deployed contract and its respective Github repository.*
 
-Website and Applications
-https://shadeprotocol.io
-https://app.shadeprotocol.io
+#### Website and Applications
+- https://shadeprotocol.io
+- https://app.shadeprotocol.io
 
 
 ## Out of Scope Work
@@ -191,6 +204,15 @@ https://app.shadeprotocol.io
 - Feature requests
 - Best practices
 - DNS Sabotage
+- Self-XSS
+- Captcha bypass using OCR
+- Vulnerabilities used to enumerate or confirm the existence of users or tenants
+- Vulnerabilities requiring unlikely user actions
+- Lack of SSL/TLS best practices
+- Attacks requiring privileged access from within the organization
+- Vulnerabilities primarily caused by browser/plugin defects
+- Any vulnerability exploit requiring CSP bypass resulting from a browser bug
+
 
 ### The following vulnerabilities are excluded from the rewards for this bug bounty program:
 
@@ -218,9 +240,11 @@ The Shade Protocol team will take all reasonable actions to ensure the successfu
 
 ### Standard Program Rules:
 - Unless otherwise noted, users should create accounts for testing purposes.
-- Submissions must be made exclusively through the Shade Protocol Bug Bounty Program to be considered for a reward.
+- Submissions must be made exclusively through the [Official Vulnerability Disclosure Portal](https://securesecrets.atlassian.net/servicedesk/customer/portal/3/group/11/create/37) to be considered for a reward.
 - Communication regarding submissions must remain within Shade Protocol Bug Bounty support channels for the duration of the disclosure process.
 - Users must submit a Proof of Concept (PoC) in order to receive bounties for bug reports.
+	- Example PoC can be found in the [Shade Security Advisories](https://github.com/securesecrets/shade/security/advisories).
+-  This responsible disclosure framework is subject to change at the discretion of the protocol. 
 
 ### Prohibited Behaviors:
 - Any testing with mainnet or public testnet contracts. Testing on mainnet or public testnet is grounds for an immediate and permanent ban
@@ -258,6 +282,6 @@ Security patches are very sensitive by nature, and their exposure can provide a 
 
 ## Rewards Payment Process
 
-Users must have access to a Secret Network wallet address to receive any earned Bug Bounty rewards  Once a Bug Bounty report has been submitted, received, and verified, the Shade Protocol team will reconfirm the severity, reward payout amount, and wallet address to send bug bounty with the user who submitted the bug report. 
+Users must have access to a Secret Network wallet address to receive any earned Bug Bounty rewards. Once a Bug Bounty report has been submitted, received, and verified, the Shade Protocol team will reconfirm the severity, reward payout amount, and wallet address to send bug bounty with the user who submitted the bug report. 
 
 Once the bug report has been fully processed and the patch resulting from the Bug Bounty report has been successfully applied, the bug report will be considered “Closed”, at which time users will be notified via their provided email that they may begin the KYC process for the wallet receiving funds. 
