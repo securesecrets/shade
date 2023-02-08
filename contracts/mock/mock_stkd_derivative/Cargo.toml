@@ -28,3 +28,7 @@ shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol",
   "stkd",
 ] }
 cosmwasm-schema = "1.1.5"
+
+[dev-dependencies]
+shade-multi-test = { version = "0.1.0", path = "../../../packages/multi_test", features = ["mock_stkd"] }
+

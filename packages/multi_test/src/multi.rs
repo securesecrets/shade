@@ -107,3 +107,9 @@ pub mod peg_stability {
 
     multi_derive::implement_multi!(PegStability, peg_stability);
 }
+
+#[cfg(feature = "mock_stkd")]
+pub mod mock_stkd {
+    pub use mock_stkd;
+    multi_derive::implement_multi!(MockStkd, mock_stkd);
+}

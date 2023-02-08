@@ -24,7 +24,10 @@ use shade_protocol::{
     },
     contract_interfaces::stkd::{
         HandleAnswer,
+        HandleMsg,
+        MockInstantiateMsg,
         QueryAnswer,
+        QueryMsg,
         Unbond,
     }
 };
@@ -94,64 +97,37 @@ impl ItemStorage for Config {
 
 // INSTANTIATE
 
-pub struct InstantiateMsg {
-    name: String,
-    symbol: String,
-    decimals: u8,
-    price: Uint128,
-}
-
 #[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: MockInstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
         name: msg.name,
         symbol: msg.symbol,
-        admin: info.sender,
+        admin: info.sender.clone(),
         decimals: msg.decimals,
     };
     config.save(deps.storage)?;
     Price(msg.price).save(deps.storage)?;
+
+    Time(0).save(deps.storage)?;
 
     Ok(Response::new())
 }
 
 // EXECUTE
 
-pub enum ExecuteMsg {
-    Send {
-        recipient: String,
-        recipient_code_hash: Option<String>,
-        amount: Uint128,
-        msg: Option<Binary>,
-        memo: Option<String>,
-        padding: Option<String>,
-    },
-    Stake {},
-    Unbond {
-        redeem_amount: Uint128,
-    },
-    Claim {},
-    SetViewingKey {
-        key: String,
-    },
-    FastForward {
-        steps: u32,
-    },
-}
-
 pub fn execute(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg
+    msg: HandleMsg
 ) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Send { recipient, amount, .. } => {
+        HandleMsg::Send { recipient, amount, .. } => {
             let my_balance = Balance::load(deps.storage, info.sender.clone())
                 .map_err(|_| StdError::generic_err("Insufficient funds"))?.0;
             let their_balance = Balance::load(deps.storage, Addr::unchecked(recipient.clone()))
@@ -162,7 +138,7 @@ pub fn execute(
             Ok(Response::default())
         }
         // TODO: fees
-        ExecuteMsg::Stake {} => {
+        HandleMsg::Stake {} => {
             let mut amount = Uint128::zero();
             for coin in info.funds {
                 if coin.denom == "uscrt".to_string() {
@@ -186,7 +162,7 @@ pub fn execute(
                 })?)
             )
         },
-        ExecuteMsg::Unbond { redeem_amount } => {
+        HandleMsg::Unbond { redeem_amount } => {
             let balance = Balance::load(deps.storage, info.sender.clone())?.0;
             if balance < redeem_amount {
                 return Err(StdError::generic_err(format!(
@@ -197,7 +173,7 @@ pub fn execute(
             let time = Time::load(deps.storage)?.0;
             let unbonding = Unbonding {
                 amount: redeem_amount,
-                maturity: time,
+                maturity: time + 2,
             };
 
             let mut unbondings = Unbondings::load(deps.storage, info.sender.clone())
@@ -217,7 +193,7 @@ pub fn execute(
             )
 
         },
-        ExecuteMsg::Claim {} => {
+        HandleMsg::Claim {} => {
             let mut claimable = Uint128::zero();
             let unbondings = Unbondings::load(deps.storage, info.sender.clone())?.0;
             let time = Time::load(deps.storage)?.0;
@@ -229,6 +205,7 @@ pub fn execute(
                     new_unbondings.push(unbonding);
                 }
             }
+            let returned = claimable.multiply_ratio(Price::load(deps.storage)?.0, Uint128::new(1_000_000));
             Unbondings(new_unbondings).save(deps.storage, info.sender.clone())?;
             
             Ok(Response::default()
@@ -239,16 +216,16 @@ pub fn execute(
                .add_message(BankMsg::Send {
                    to_address: info.sender.to_string(),
                    amount: vec![Coin {
-                       amount: claimable,
+                       amount: returned,
                        denom: "uscrt".to_string(),
                    }]
                }))
         },
-        ExecuteMsg::SetViewingKey { key } => {
+        HandleMsg::SetViewingKey { key } => {
             ViewingKey(key).save(deps.storage, info.sender)?;
             Ok(Response::default())
         },
-        ExecuteMsg::FastForward { steps } => {
+        HandleMsg::MockFastForward { steps } => {
             let time = Time::load(deps.storage)?.0;
             Time(time + steps).save(deps.storage)?;
             Ok(Response::default())
@@ -257,20 +234,6 @@ pub fn execute(
 }
 
 // QUERY
-
-pub enum QueryMsg {
-    Balance {
-        address: Addr,
-        key: String,
-    },
-    StakingInfo {
-        time: u64, 
-    },
-    Unbonding {
-        address: Addr,
-        key: String,
-    },
-}
 
 pub fn query(
     deps: Deps,
@@ -305,7 +268,7 @@ pub fn query(
                 price: Price::load(deps.storage)?.0,
             })
         },
-        QueryMsg::Unbonding { address, key } => {
+        QueryMsg::Unbonding { address, key, .. } => {
             if key != ViewingKey::load(deps.storage, address.clone())?.0 {
                 return Err(StdError::generic_err("unauthorized"));
             }

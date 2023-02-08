@@ -1,11 +1,26 @@
 // Types imported from staking-derivatives private repo used for interfacing with stkd-SCRT
 // and updated to v1. Types copied as needed, feel free to add.
+// Types also included for mock_stkd contract
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Binary};
 use cosmwasm_std::Uint128;
 
-use crate::utils::{ExecuteCallback, Query};
+use crate::utils::{
+    InstantiateCallback, ExecuteCallback, Query, 
+};
 use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
+pub struct MockInstantiateMsg {
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub price: Uint128,
+}
+
+impl InstantiateCallback for MockInstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[cw_serde]
 pub enum HandleMsg {
@@ -15,6 +30,25 @@ pub enum HandleMsg {
     Unbond {
         /// amount of derivative tokens to redeem
         redeem_amount: Uint128,
+    },
+    /// claim matured unbondings
+    Claim {},
+
+    SetViewingKey {
+        key: String,
+    },
+    Send {
+        recipient: String,
+        recipient_code_hash: Option<String>,
+        amount: Uint128,
+        msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+
+    // For mock_stkd contract, to simulate passage of time for unbondings
+    MockFastForward {
+        steps: u32,
     },
 }
 
@@ -67,6 +101,10 @@ pub enum QueryMsg {
         /// optional time in seconds since 01/01/1970.  If provided, response will
         /// include the amount of SCRT that can be withdrawn at that time
         time: Option<u64>,
+    },
+    Balance {
+        address: Addr,
+        key: String,
     },
 }
 
