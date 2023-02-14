@@ -241,6 +241,7 @@ pub fn receive(
         }
     }
 }
+
 pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPool) -> Uint128 {
     pool.reward_per_token
         + (min(pool.end, Uint128::new(now as u128)) - max(pool.last_update, pool.start)) * pool.rate
@@ -309,7 +310,7 @@ pub fn reward_pool_claim(
         reward_pool.reward_per_token,
         user_reward_per_token_paid,
     );
-    println!("reward earned {}", user_reward);
+    // println!("reward earned {}", user_reward);
 
     // Send reward
     USER_REWARD_PER_TOKEN_PAID.save(
@@ -393,7 +394,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     if let Some(mut user_staked) = USER_STAKED.may_load(deps.storage, info.sender.clone())? {
         if user_staked < amount {
             return Err(StdError::generic_err(format!(
-                "Cannot unbond {}, staked: {}",
+                "Cannot unbond {}, only {} staked",
                 amount, user_staked
             )));
         }
@@ -405,6 +406,8 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
 
         let mut response = Response::new();
+
+        // Claim all pending rewards
         for reward_pool in reward_pools {
             let reward_claimed = reward_pool_claim(
                 deps.storage,
@@ -494,18 +497,23 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
 }
 
 pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    println!("Compounding rewards");
-    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    println!("COMPOUNDING REWARDS");
+    let mut response = Response::new();
 
-    let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
     let user_staked = USER_STAKED
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or(Uint128::zero());
+
+    if user_staked.is_zero() {
+        return Err(StdError::generic_err("User has no stake"));
+    }
+
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
     let stake_token = STAKE_TOKEN.load(deps.storage)?;
 
     let mut compound_amount = Uint128::zero();
 
-    let mut response = Response::new();
     for reward_pool in reward_pools {
         let reward_claimed = reward_pool_claim(
             deps.storage,
@@ -540,6 +548,12 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         &(user_staked + compound_amount),
     )?;
     TOTAL_STAKED.save(deps.storage, &(total_staked + compound_amount))?;
+    USER_LAST_CLAIM.save(
+        deps.storage,
+        info.sender,
+        &Uint128::new(env.block.time.seconds().into()),
+    )?;
+    println!("END COMPOUNDING");
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
         status: ResponseStatus::Success,

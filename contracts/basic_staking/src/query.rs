@@ -1,5 +1,5 @@
 use shade_protocol::{
-    basic_staking::QueryAnswer,
+    basic_staking::{QueryAnswer, Reward},
     c_std::{Addr, Deps, Env, StdResult, Uint128},
 };
 
@@ -66,19 +66,23 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
     let now = env.block.time.seconds();
 
-    let mut reward_sum = Uint128::zero();
+    let mut rewards = vec![];
 
-    // TODO CRITICAL differentiate different denoms
+    /* TODO CRITICAL differentiate different denoms
+     * The interface will need to change to support different denominations
+     */
     for reward_pool in reward_pools {
         let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
             .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.uuid))?
             .unwrap_or(Uint128::zero());
         let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
-        let reward = rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid);
-        reward_sum += reward;
+        rewards.push(Reward {
+            token: reward_pool.token.address,
+            amount: rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid),
+        });
     }
 
-    Ok(QueryAnswer::Rewards { amount: reward_sum })
+    Ok(QueryAnswer::Rewards { rewards })
 }
 
 pub fn user_unbonding(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {

@@ -36,6 +36,12 @@ pub struct Unbonding {
 }
 
 #[cw_serde]
+pub struct Reward {
+    pub token: Addr,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
 pub struct RewardPool {
     pub uuid: Uint128,
     pub amount: Uint128,
@@ -162,6 +168,6 @@ pub enum QueryAnswer {
     RewardPool { rewards: Vec<RewardPool> },
     Balance { amount: Uint128 },
     Share { share: Uint128 },
-    Rewards { amount: Uint128 },
+    Rewards { rewards: Vec<Reward> },
     Unbonding { unbondings: Vec<Unbonding> },
 }
