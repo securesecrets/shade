@@ -249,7 +249,7 @@ pub fn execute(
                    }]
                }))
         },
-        HandleMsg::SetViewingKey { key } => {
+        HandleMsg::SetViewingKey { key, .. } => {
             ViewingKey(key).save(deps.storage, info.sender)?;
             Ok(Response::default())
         },

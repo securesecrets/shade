@@ -65,6 +65,7 @@ fn test() {
 
     stkd::HandleMsg::SetViewingKey {
         key: "password".to_string(),
+        padding: None,
     }.test_exec(&stkd, &mut chain, user.clone(), &[]).unwrap();
 
     assert_eq!(
@@ -251,6 +252,7 @@ fn test() {
 
     stkd::HandleMsg::SetViewingKey {
         key: "other password".to_string(),
+        padding: None,
     }.test_exec(&stkd, &mut chain, other.clone(), &[]).unwrap();
 
     assert_eq!(
