@@ -36,6 +36,7 @@ pub enum HandleMsg {
 
     SetViewingKey {
         key: String,
+        padding: Option<String>,
     },
     Send {
         recipient: String,
