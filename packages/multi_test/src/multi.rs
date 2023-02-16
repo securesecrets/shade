@@ -104,6 +104,17 @@ pub mod scrt_staking {
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability {
     use peg_stability;
-
     multi_derive::implement_multi!(PegStability, peg_stability);
+}
+
+#[cfg(feature = "mock_sienna_pair")]
+pub mod mock_sienna_pair {
+    use mock_sienna_pair;
+    multi_derive::implement_multi!(MockSiennaPair, mock_sienna_pair);
+}
+
+#[cfg(feature = "sky_derivatives")]
+pub mod sky_derivatives {
+    use sky_derivatives;
+    multi_derive::implement_multi!(SkyDerivatives, sky_derivatives);
 }

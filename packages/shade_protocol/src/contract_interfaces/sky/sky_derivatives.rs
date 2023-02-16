@@ -31,7 +31,7 @@ pub struct TradingFees {
 #[cw_serde]
 pub struct Config {
     pub shade_admin_addr: Contract,
-    pub treasury: Contract, // TODO: router?
+    pub treasury: Addr, // TODO: router?
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub max_arb_amount: Uint128,
@@ -66,7 +66,7 @@ impl ItemStorage for Unbondings {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub shade_admin_addr: Contract,
-    pub treasury: Contract,
+    pub treasury: Addr,
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub dex_pairs: Vec<ArbPair>,
@@ -88,7 +88,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         // Sender must be authorized on new contract as well
         shade_admin_addr: Option<Contract>,
-        treasury: Option<Contract>,
+        treasury: Option<Addr>,
         // Changing the derivative erases the saved dex pairs for data validation reasons
         derivative: Option<Derivative>,
         trading_fees: Option<TradingFees>,
@@ -137,6 +137,9 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     UpdateConfig {
+        status: ResponseStatus,
+    },
+    Init {
         status: ResponseStatus,
     },
 }

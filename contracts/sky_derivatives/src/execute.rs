@@ -48,7 +48,7 @@ pub fn try_update_config(
     deps: DepsMut,
     info: MessageInfo,
     shade_admin_addr: Option<Contract>,
-    treasury: Option<Contract>,
+    treasury: Option<Addr>,
     derivative: Option<Derivative>,
     trading_fees: Option<TradingFees>,
     max_arb_amount: Option<Uint128>,
@@ -480,7 +480,7 @@ pub fn try_adapter_unbond(
     };
 
     let message = send_msg(
-        config.treasury.address,
+        config.treasury,
         claimed,
         None,
         None,
@@ -531,7 +531,7 @@ pub fn try_adapter_claim(
     let unbondings = Unbondings::load(deps.storage)?.0;
     let amount = Uint128::max(unbondings, balance);
     let message = send_msg(
-        config.treasury.address,
+        config.treasury,
         amount,
         None,
         None,
