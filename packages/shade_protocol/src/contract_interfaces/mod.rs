@@ -40,3 +40,6 @@ pub mod peg_stability;
 
 #[cfg(feature = "stkd")]
 pub mod stkd;
+
+#[cfg(feature = "mock")]
+pub mod mock;

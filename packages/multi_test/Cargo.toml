@@ -19,6 +19,7 @@ liability_mint = ["dep:liability_mint"]
 #oracle = ["dep:oracle"]
 #mock_band= ["dep:mock_band"]
 mock_stkd = ["dep:mock_stkd"]
+mock_sienna = ["dep:mock_sienna"]
 governance = ["dep:governance"]
 # snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
@@ -44,6 +45,7 @@ treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_man
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
 mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../../contracts/mock/mock_stkd_derivative", optional = true }
+mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }

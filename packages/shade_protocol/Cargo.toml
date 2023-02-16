@@ -90,6 +90,7 @@ stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
 
 stkd = []
+mock = []
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts

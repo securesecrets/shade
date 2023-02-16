@@ -113,3 +113,9 @@ pub mod mock_stkd {
     pub use mock_stkd;
     multi_derive::implement_multi!(MockStkd, mock_stkd);
 }
+
+#[cfg(feature = "mock_sienna")]
+pub mod mock_sienna {
+    pub use mock_sienna;
+    multi_derive::implement_multi!(MockSienna, mock_sienna);
+}

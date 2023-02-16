@@ -1,4 +1,5 @@
 use shade_protocol::{
+    Contract,
     c_std::{
         shd_entry_point,
         to_binary,
@@ -16,20 +17,26 @@ use shade_protocol::{
         Uint128,
     },
     cosmwasm_schema::cw_serde,
-    utils::storage::plus::{
-        Item,
-        ItemStorage,
-        Map,
-        MapStorage,
+    contract_interfaces::{
+        snip20::ReceiverHandleMsg,
+        stkd::{
+            HandleAnswer,
+            HandleMsg,
+            MockInstantiateMsg,
+            QueryAnswer,
+            QueryMsg,
+            Unbond,
+        },
     },
-    contract_interfaces::stkd::{
-        HandleAnswer,
-        HandleMsg,
-        MockInstantiateMsg,
-        QueryAnswer,
-        QueryMsg,
-        Unbond,
-    }
+    utils::{
+        ExecuteCallback,
+        storage::plus::{
+            Item,
+            ItemStorage,
+            Map,
+            MapStorage,
+        }
+    },
 };
 
 #[cw_serde]
@@ -127,15 +134,36 @@ pub fn execute(
     msg: HandleMsg
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Send { recipient, amount, .. } => {
+        HandleMsg::Send { recipient, amount, recipient_code_hash, msg, .. } => {
             let my_balance = Balance::load(deps.storage, info.sender.clone())
                 .map_err(|_| StdError::generic_err("Insufficient funds"))?.0;
             let their_balance = Balance::load(deps.storage, Addr::unchecked(recipient.clone()))
                 .unwrap_or_default().0;
 
-            Balance(my_balance - amount).save(deps.storage, info.sender)?;
-            Balance(their_balance + amount).save(deps.storage, Addr::unchecked(recipient))?;
-            Ok(Response::default())
+            Balance(my_balance - amount).save(deps.storage, info.sender.clone())?;
+            Balance(their_balance + amount).save(deps.storage, Addr::unchecked(recipient.clone()))?;
+
+            let mut messages = vec![];
+            if let Some(receiver_hash) = recipient_code_hash {
+                let recipient_addr = Addr::unchecked(recipient);
+                messages.push(
+                    ReceiverHandleMsg::new(
+                        info.sender.to_string(), 
+                        info.sender.to_string(), 
+                        amount, 
+                        None, 
+                        msg
+                    ).to_cosmos_msg(
+                        &Contract {
+                            address: recipient_addr,
+                            code_hash: receiver_hash,
+                        },
+                        vec![],
+                    )?
+                );
+            }
+            Ok(Response::default()
+               .add_messages(messages))
         }
         // TODO: fees
         HandleMsg::Stake {} => {
