@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use shade_protocol::{
 	c_std::{
         Addr, 
-        Decimal,
         Deps,
         StdError, 
         StdResult,
@@ -53,9 +52,9 @@ pub fn is_arb_profitable(
     let max_swap = max_swap.and_then(|max| Some(Float::from(max)));
 
     // Subtracts will not overflow if trading fees are properly checked
-    let unbond_rate: Float = Float::from(Decimal::one() - config.trading_fees.unbond_fee);
-    let stake_rate: Float = Float::from(Decimal::one() - config.trading_fees.stake_fee);
-    let dex_rate: Float = Float::from(Decimal::one() - config.trading_fees.dex_fee);
+    let unbond_rate: Float = Float::from(config.trading_fees.unbond_fee);
+    let stake_rate: Float = Float::from(config.trading_fees.stake_fee);
+    let dex_rate: Float = Float::from(config.trading_fees.dex_fee);
 
     let dex_pools_float: (Float, Float) = (
         Float::from(dex_pools.0)

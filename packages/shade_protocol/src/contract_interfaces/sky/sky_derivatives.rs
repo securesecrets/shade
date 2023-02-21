@@ -22,6 +22,7 @@ pub enum Direction {
 }
 
 #[cw_serde]
+/// Fees expressed percent user gets
 pub struct TradingFees {
     pub dex_fee: Decimal,
     pub stake_fee: Decimal,

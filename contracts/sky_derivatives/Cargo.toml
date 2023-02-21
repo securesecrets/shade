@@ -34,9 +34,13 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 cosmwasm_floating_point = { git = "https://github.com/a-stgeorge/cosmwasm-floating-point" }
 
 [dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test"] }
+shade-protocol-temp = { package = "shade-protocol", branch = "mock-stkd", git = "https://github.com/securesecrets/shade.git", features = ["mock"] } 
 shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [
   "admin",
   "sky_derivatives",
   "snip20",
+] }
+shade-multi-test-temp = { package = "shade-multi-test", branch = "mock-stkd", git = "https://github.com/securesecrets/shade.git", features = [
+  "mock_stkd",
+  "mock_sienna",
 ] }

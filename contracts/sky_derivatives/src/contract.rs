@@ -80,7 +80,7 @@ pub fn instantiate(
         // derivative must be the 2nd entry in the dex_pair
         if !execute::validate_dex_pair(&msg.derivative, &pair) {
             return Err(StdError::generic_err(
-                "Invalid pair - original tokeken must be token 0 and derivative must be token 1"
+                "Invalid pair - original token must be token 0 and derivative must be token 1"
             ));
         }
         new_pairs.push(pair);
@@ -131,9 +131,9 @@ pub fn execute(
         ExecuteMsg::ArbAllPairs {} => execute::try_arb_all_pairs(deps, info),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } =>
-                execute::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128())),
-            adapter::SubExecuteMsg::Claim { asset } => execute::try_adapter_claim(deps, env, asset),
-            adapter::SubExecuteMsg::Update { asset } => execute::try_adapter_update(deps, env, asset),
+                execute::try_adapter_unbond(deps, env, info, asset, Uint128::from(amount.u128())),
+            adapter::SubExecuteMsg::Claim { asset } => execute::try_adapter_claim(deps, env, info, asset),
+            adapter::SubExecuteMsg::Update { asset } => execute::try_adapter_update(deps, env, info, asset),
         },
     }
 }

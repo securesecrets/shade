@@ -90,14 +90,13 @@ pub fn try_update_config(
                 DexPairs(vec![]).save(deps.storage)?;
 
                 // If viewing key is also updated, it will be changed again below
-                let vk = cur_config.viewing_key.clone();
                 messages.push(set_viewing_key_msg(
-                    vk.clone(),
+                    cur_config.viewing_key.clone(),
                     None,
                     &deriv.contract,
                 )?);
                 messages.push(set_viewing_key_msg(
-                    vk,
+                    cur_config.viewing_key.clone(),
                     None,
                     &deriv.original_asset,
                 )?);
@@ -121,6 +120,7 @@ pub fn try_update_config(
         },
         viewing_key: match viewing_key {
             Some(key) => {
+                println!("{} ::: {}", key, cur_config.viewing_key);
                 set_viewing_keys(&derivative.unwrap_or(cur_config.derivative), &key)?;
                 key
             },
@@ -438,14 +438,18 @@ pub fn try_arb_all_pairs(
 pub fn try_adapter_unbond(
     deps: DepsMut,
     _env: Env,
+    info: MessageInfo,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
-    // TODO: Verify message comes from the treasury
+    // Verify comes from treasury
+    let config = Config::load(deps.storage)?;
+    if config.treasury != info.sender {
+        return Err(StdError::generic_err("unauthorized"));
+    }
 
     // Send all of balance held up to amount. If remaining amount not accounted for, add that
     // amount to unbondings
-    let config = Config::load(deps.storage)?;
     let derivative = config.derivative;
     if asset != derivative.original_asset.address {  // Only relevant token held
         return Err(StdError::generic_err("Unrecognized asset"));
@@ -500,18 +504,21 @@ pub fn try_adapter_unbond(
 pub fn try_adapter_claim(
     deps: DepsMut,
     _env: Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
-    // Send all of balance up to "Unbondings" 
+    // Verify comes from treasury
     let config = Config::load(deps.storage)?;
-
-    // TODO: verify comes from treasury
+    if config.treasury != info.sender {
+        return Err(StdError::generic_err("unauthorized"));
+    }
 
     let derivative = config.derivative;
     if asset != derivative.original_asset.address {  // Only relevant token held
         return Err(StdError::generic_err("Unrecognized asset"));
     }
 
+    // Send all of balance up to "Unbondings" 
     let self_addr = SelfAddr::load(deps.storage)?.0;
     let balance = derivative.query_original_balance(
         &deps.querier, 
@@ -551,6 +558,7 @@ pub fn try_adapter_claim(
 pub fn try_adapter_update(
     _deps: DepsMut,
     _env: Env,
+    _info: MessageInfo,
     _asset: Addr,
 ) -> StdResult<Response> {
 
