@@ -115,7 +115,6 @@ pub fn receive(
                     for reward_pool in reward_pools {
                         let reward_claimed = reward_pool_claim(
                             deps.storage,
-                            env.clone(),
                             from.clone(),
                             user_staked,
                             &reward_pool,
@@ -158,6 +157,16 @@ pub fn receive(
                     .iter()
                     .find(|contract| contract.address == info.sender)
                 {
+                    // Disallow end before start
+                    if start >= end {
+                        return Err(StdError::generic_err("'start' must be after 'end'"));
+                    }
+
+                    // Disallow retro-active emissions (maybe could allow?)
+                    if start < now {
+                        return Err(StdError::generic_err("Cannot start emitting in the past"));
+                    }
+
                     let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
 
                     let config = CONFIG.load(deps.storage)?;
@@ -172,10 +181,10 @@ pub fn receive(
                     if !is_admin {
                         let user_pools_count = reward_pools
                             .iter()
-                            .filter(|pool| !pool.admin_created)
+                            .filter(|pool| !pool.official)
                             .collect::<Vec<&RewardPool>>()
                             .len();
-                        if Uint128::new(user_pools_count as u128) >= config.max_user_pools {
+                        if user_pools_count as u128 >= config.max_user_pools.u128() {
                             println!(
                                 "user pools exceeded {} >= {}",
                                 user_pools_count, config.max_user_pools
@@ -183,25 +192,6 @@ pub fn receive(
                             return Err(StdError::generic_err("Max user pools exceeded"));
                         }
                     }
-
-                    // Disallow end before start
-                    if start >= end {
-                        return Err(StdError::generic_err("'start' must be after 'end'"));
-                    }
-
-                    // Disallow retro-active emissions (maybe could allow?)
-                    if start < now {
-                        return Err(StdError::generic_err("Cannot start emitting in the past"));
-                    }
-
-                    // Must emit at least 1 unit token per second (ddos protection)
-                    /*
-                    if amount < end - start {
-                        return Err(StdError::generic_err(
-                            "Cannot emit less than 1 unit token per second",
-                        ));
-                    }
-                    */
 
                     let uuid = match reward_pools.last() {
                         Some(pool) => pool.uuid + Uint128::one(),
@@ -221,7 +211,7 @@ pub fn receive(
                         reward_per_token: Uint128::zero(),
                         last_update: now,
                         creator: from,
-                        admin_created: is_admin,
+                        official: is_admin,
                     });
                     REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
@@ -253,10 +243,6 @@ pub fn rewards_earned(
     reward_per_token: Uint128,
     user_reward_per_token_paid: Uint128,
 ) -> Uint128 {
-    println!(
-        "rewards earned {} - {}",
-        reward_per_token, user_reward_per_token_paid
-    );
     user_staked * (reward_per_token - user_reward_per_token_paid) / Uint128::new(10u128.pow(18))
 }
 
@@ -289,9 +275,11 @@ pub fn update_rewards(
     Ok(reward_pools)
 }
 
+/* Updates a the pool & user data for claiming rewards
+ * Reward must be sent buy calling code
+ */
 pub fn reward_pool_claim(
     storage: &mut dyn Storage,
-    env: Env,
     user: Addr,
     user_staked: Uint128,
     reward_pool: &RewardPool,
@@ -310,9 +298,7 @@ pub fn reward_pool_claim(
         reward_pool.reward_per_token,
         user_reward_per_token_paid,
     );
-    // println!("reward earned {}", user_reward);
 
-    // Send reward
     USER_REWARD_PER_TOKEN_PAID.save(
         storage,
         user_pool_key(user.clone(), reward_pool.uuid),
@@ -322,50 +308,24 @@ pub fn reward_pool_claim(
     println!("Sending {} rewards to {}", user_reward, user.clone());
 
     Ok(user_reward)
-    /*
-    send_msg(
-        user.clone(),
-        user_reward,
-        None,
-        None,
-        None,
-        &reward_pool.token,
-    )
-        */
 }
 
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    // let user_last_claim = USER_LAST_CLAIM.load(deps.storage, info.sender.clone())?;
     let user_staked = USER_STAKED.load(deps.storage, info.sender.clone())?;
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
     println!("Total Staked {}", total_staked);
 
     let now = env.block.time.seconds();
-    /*
-    let stake_token = STAKE_TOKEN.load(deps.storage)?;
-
-    let stake_token_balance = balance_query(
-        &deps.querier,
-        env.contract.address.clone(),
-        VIEWING_KEY.load(deps.storage)?,
-        &stake_token,
-    )?;
-    println!("Contract Stake Token Balance {}", stake_token_balance);
-    */
 
     let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
 
     let mut response = Response::new();
 
     for reward_pool in reward_pools.iter() {
-        let reward_claimed = reward_pool_claim(
-            deps.storage,
-            env.clone(),
-            info.sender.clone(),
-            user_staked,
-            reward_pool,
-        )?;
+        let reward_claimed =
+            reward_pool_claim(deps.storage, info.sender.clone(), user_staked, reward_pool)?;
+
         response = response.add_message(send_msg(
             info.sender.clone(),
             reward_claimed,
@@ -409,13 +369,8 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 
         // Claim all pending rewards
         for reward_pool in reward_pools {
-            let reward_claimed = reward_pool_claim(
-                deps.storage,
-                env.clone(),
-                info.sender.clone(),
-                user_staked,
-                &reward_pool,
-            )?;
+            let reward_claimed =
+                reward_pool_claim(deps.storage, info.sender.clone(), user_staked, &reward_pool)?;
             response = response.add_message(send_msg(
                 info.sender.clone(),
                 reward_claimed,
@@ -435,6 +390,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         let mut user_unbondings = USER_UNBONDINGS
             .may_load(deps.storage, info.sender.clone())?
             .unwrap_or(vec![]);
+
         user_unbondings.push(Unbonding {
             amount,
             complete: Uint128::new(now as u128) + config.unbond_period,
@@ -470,7 +426,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     USER_UNBONDINGS.save(deps.storage, info.sender.clone(), &remaining_unbondings)?;
 
     if withdraw_amount.is_zero() {
-        return Err(StdError::generic_err("No completed unbondings"));
+        return Err(StdError::generic_err("No unbondings to withdraw"));
     }
 
     let stake_token = STAKE_TOKEN.load(deps.storage)?;
@@ -480,7 +436,6 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         VIEWING_KEY.load(deps.storage)?,
         &stake_token,
     )?;
-    println!("stake token balance {}", stake_token_balance);
     println!("Withdrawing {}", withdraw_amount);
     Ok(Response::new()
         .add_message(send_msg(
@@ -515,13 +470,8 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     let mut compound_amount = Uint128::zero();
 
     for reward_pool in reward_pools {
-        let reward_claimed = reward_pool_claim(
-            deps.storage,
-            env.clone(),
-            info.sender.clone(),
-            user_staked,
-            &reward_pool,
-        )?;
+        let reward_claimed =
+            reward_pool_claim(deps.storage, info.sender.clone(), user_staked, &reward_pool)?;
         if reward_pool.token == stake_token {
             println!(
                 "Compounding {} {}",
@@ -529,8 +479,11 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
             );
             compound_amount += reward_claimed;
         } else {
-            println!("Claiming {} {}", reward_claimed, reward_pool.token.address);
-            // Send/Claim non-stake_token rewards
+            println!(
+                "Sending non-stake reward {} {}",
+                reward_claimed, reward_pool.token.address
+            );
+            // Send non-stake_token rewards
             response = response.add_message(send_msg(
                 info.sender.clone(),
                 reward_claimed,

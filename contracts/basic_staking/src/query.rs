@@ -68,9 +68,6 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
 
     let mut rewards = vec![];
 
-    /* TODO CRITICAL differentiate different denoms
-     * The interface will need to change to support different denominations
-     */
     for reward_pool in reward_pools {
         let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
             .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.uuid))?

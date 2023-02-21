@@ -52,7 +52,7 @@ pub struct RewardPool {
     pub reward_per_token: Uint128,
     pub last_update: Uint128,
     pub creator: Addr,
-    pub admin_created: bool,
+    pub official: bool,
 }
 
 #[cw_serde]
@@ -90,6 +90,11 @@ pub enum ExecuteMsg {
     },
     Withdraw {},
     Compound {},
+    /*
+    RemovePool {
+        pool_id: Uint128,
+    },
+    */
 }
 
 impl ExecuteCallback for ExecuteMsg {
