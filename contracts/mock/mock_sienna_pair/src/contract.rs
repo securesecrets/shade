@@ -12,6 +12,7 @@ use shade_protocol::{
         Response,
         StdError,
         StdResult,
+        QuerierWrapper,
         Uint128,
     },
     contract_interfaces::{
@@ -20,32 +21,114 @@ use shade_protocol::{
             sienna::{
                 self,
                 Pair,
-                PairInfoResponse,
-                PairQuery,
-                SimulationResponse,
                 TokenType,
             },
         },
-        mock::mock_sienna::{
-            ExecuteMsg, InstantiateMsg, PairInfo,
-            ReceiverCallbackMsg,
-        },
-        snip20::helpers::send_msg,
+        snip20::helpers::{balance_query, send_msg, set_viewing_key_msg},
     },
+    cosmwasm_schema::cw_serde,
     utils::{
-        asset::Contract,
-        storage::plus::ItemStorage,
+        asset::Contract, ExecuteCallback, InstantiateCallback,
+        storage::plus::{Item, ItemStorage},
     },
 };
+pub use shade_protocol::dex::sienna::{
+    PairQuery as QueryMsg,
+    PairInfoResponse,
+    SimulationResponse,
+};
+
+#[cw_serde]
+pub struct Config {
+    pub address: Addr,
+    pub viewing_key: String,
+}
+
+impl ItemStorage for Config {
+    const ITEM: Item<'static, Self> = Item::new("item-config");
+}
+
+#[cw_serde]
+pub struct PairInfo {
+    pub token_0: Contract,
+    pub token_1: Contract,
+}
+
+impl ItemStorage for PairInfo {
+    const ITEM: Item<'static, Self> = Item::new("item-pair");
+}
+
+#[cw_serde]
+pub enum ReceiverCallbackMsg {
+    Swap {
+        expected_return: Option<Uint128>,
+        to: Option<Addr>,
+    },
+}
+
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub token_0: Contract,
+    pub token_1: Contract,
+    pub viewing_key: String,
+}
+
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[shd_entry_point]
 pub fn instantiate(
-    _deps: DepsMut, 
-    _env: Env, 
+    deps: DepsMut, 
+    env: Env, 
     _info: MessageInfo,
-    _msg: InstantiateMsg
+    msg: InstantiateMsg
 ) -> StdResult<Response> {
-    Ok(Response::default())
+    let pair_info = PairInfo {
+        token_0: msg.token_0.clone(),
+        token_1: msg.token_1.clone(),
+    };
+    pair_info.save(deps.storage)?;
+
+    let config = Config {
+        address: env.contract.address,
+        viewing_key: msg.viewing_key.clone(),
+    };
+    config.save(deps.storage)?;
+    
+    let messages = vec![
+        set_viewing_key_msg(
+            msg.viewing_key.clone(),
+            None,
+            &msg.token_0,
+        )?,
+        set_viewing_key_msg(
+            msg.viewing_key,
+            None,
+            &msg.token_1,
+        )?,
+    ];
+    Ok(Response::default()
+       .add_messages(messages))
+}
+
+#[cw_serde]
+pub enum ExecuteMsg {
+    MockPool {
+        token_a: Contract,
+        token_b: Contract,
+    },
+    // SNIP20 receiver interface
+    Receive {
+        sender: Addr,
+        from: Addr,
+        msg: Option<Binary>,
+        amount: Uint128,
+    },   
+}
+
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[shd_entry_point]
@@ -58,33 +141,11 @@ pub fn execute(
     match msg {
         ExecuteMsg::MockPool {
             token_a,
-            amount_a,
             token_b,
-            amount_b,
         } => {
             let pair_info = PairInfo {
-                /*liquidity_token: Contract {
-                    address: Addr::unchecked("".to_string()),
-                    code_hash: "".to_string(),
-                },
-                factory: Contract {
-                    address: Addr::unchecked("".to_string()),
-                    code_hash: "".to_string(),
-                },*/
-                pair: Pair {
-                    token_0: TokenType::CustomToken {
-                        contract_addr: token_a.address,
-                        token_code_hash: token_a.code_hash,
-                    },
-                    token_1: TokenType::CustomToken {
-                        contract_addr: token_b.address,
-                        token_code_hash: token_b.code_hash,
-                    },
-                },
-                amount_0: amount_a,
-                amount_1: amount_b,
-                //total_liquidity: Uint128::zero(),
-                //contract_version: 0,
+                token_0: token_a, 
+                token_1: token_b,
             };
 
             pair_info.save(deps.storage)?;
@@ -104,108 +165,69 @@ pub fn execute(
 
             match from_binary(&msg)? {
                 ReceiverCallbackMsg::Swap { expected_return, to } => {
-                    let pair_info = PairInfo::load(deps.storage)?;
-                    match pair_info.pair.token_0.clone() {
-                        TokenType::CustomToken { contract_addr, .. } => {
-                            if contract_addr == info.sender {
-                                
-                                let return_amount = pool_take_amount(
-                                    amount,
-                                    pair_info.amount_0,
-                                    pair_info.amount_1,
-                                );
-                                let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
+                    let config = Config::load(deps.storage)?;
+                    let pair = PairInfo::load(deps.storage)?;
+                    let token_0 = pair.token_0;
+                    let token_1 = pair.token_1;
+                    let (amount_0, amount_1) = query_pool_amounts(
+                        &deps.querier, 
+                        config, 
+                        token_0.clone(),
+                        token_1.clone(),
+                    )?;
 
-                                if return_amount > expected_return.unwrap_or(Uint128::MAX) {
-                                    return Err(StdError::generic_err(
-                                            "Operation fell short of expected_return
-                                    "));
-                                }
+                    if token_0.address == info.sender {
+                        let return_amount = pool_take_amount(
+                            amount,
+                            amount_0,
+                            amount_1,
+                        );
+                        let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
 
-                                PairInfo {
-                                    pair: pair_info.pair.clone(),
-                                    amount_0: pair_info.amount_0 - amount,
-                                    amount_1: pair_info.amount_1 + return_amount,
-                                }.save(deps.storage)?;
-                                                
-                                // send tokens
-                                let return_addr = to.unwrap_or(from);
-                                let return_token = match pair_info.pair.token_1 {
-                                    TokenType::CustomToken { contract_addr, token_code_hash} =>
-                                        (contract_addr, token_code_hash),
-                                    TokenType::NativeToken { .. } => {
-                                        return Err(StdError::generic_err(
-                                                "Native tokens not supported"
-                                        ))
-                                    },
-                                };
-
-                                return Ok(Response::default()
-                                    .add_message(send_msg(
-                                            return_addr,
-                                            return_amount - commission,
-                                            None,
-                                            None,
-                                            None,
-                                            &Contract {
-                                                address: return_token.0,
-                                                code_hash: return_token.1,
-                                            },
-                                    )?))
-                            }
+                        if return_amount > expected_return.unwrap_or(Uint128::MAX) {
+                            return Err(StdError::generic_err(
+                                    "Operation fell short of expected_return"
+                            ));
                         }
-                        _ => { },
+
+                        // send tokens
+                        let return_addr = to.unwrap_or(from);
+                        return Ok(Response::default()
+                            .add_message(send_msg(
+                                    return_addr,
+                                    return_amount - commission,
+                                    None,
+                                    None,
+                                    None,
+                                    &token_1,
+                            )?))
                     }
+                    
+                    if token_1.address == info.sender {
+                        let return_amount = pool_take_amount(
+                            amount,
+                            amount_1,
+                            amount_0,
+                        );
+                        let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
 
-                    match pair_info.pair.token_1.clone() {
-                        TokenType::CustomToken { contract_addr, .. } => {
-                            if contract_addr == info.sender {
-                                let return_amount = pool_take_amount(
-                                    amount,
-                                    pair_info.amount_1,
-                                    pair_info.amount_0,
-                                );
-                                let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
-
-                                if return_amount > expected_return.unwrap_or(Uint128::MAX) {
-                                    return Err(StdError::generic_err(
-                                            "Operation fell short of expected_return
-                                    "));
-                                }
-
-                                PairInfo {
-                                    pair: pair_info.pair.clone(),
-                                    amount_0: pair_info.amount_0 - return_amount,
-                                    amount_1: pair_info.amount_1 + amount,
-                                }.save(deps.storage)?;
-                                                
-                                // send tokens
-                                let return_addr = to.unwrap_or(from);
-                                let return_token = match pair_info.pair.token_0 {
-                                    TokenType::CustomToken { contract_addr, token_code_hash} =>
-                                        (contract_addr, token_code_hash),
-                                    TokenType::NativeToken { .. } => {
-                                        return Err(StdError::generic_err(
-                                                "Native tokens not supported"
-                                        ))
-                                    },
-                                };
-
-                                return Ok(Response::default()
-                                    .add_message(send_msg(
-                                            return_addr,
-                                            return_amount - commission,
-                                            None,
-                                            None,
-                                            None,
-                                            &Contract {
-                                                address: return_token.0,
-                                                code_hash: return_token.1,
-                                            },
-                                    )?))
-                            }
+                        if return_amount > expected_return.unwrap_or(Uint128::MAX) {
+                            return Err(StdError::generic_err(
+                                    "Operation fell short of expected_return
+                            "));
                         }
-                        _ => { },
+
+                        // send tokens
+                        let return_addr = to.unwrap_or(from);
+                        return Ok(Response::default()
+                            .add_message(send_msg(
+                                    return_addr,
+                                    return_amount - commission,
+                                    None,
+                                    None,
+                                    None,
+                                    &token_0,
+                            )?))
                     }
                 }
             }
@@ -217,24 +239,51 @@ pub fn execute(
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, _env: Env, msg: PairQuery) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        PairQuery::PairInfo => {
+        QueryMsg::PairInfo => {
+            let config = Config::load(deps.storage)?;
             let pair_info = PairInfo::load(deps.storage)?;
+            let (amount_0, amount_1) = query_pool_amounts(
+                &deps.querier, 
+                config, 
+                pair_info.token_0.clone(),
+                pair_info.token_1.clone(),
+            )?;
+
             to_binary(&PairInfoResponse {
                 pair_info: sienna::PairInfo {
                     liquidity_token: Contract::new(&Addr::unchecked("lp_token"), &"hash".to_string()),
                     factory: Contract::new(&Addr::unchecked("factory"), &"hash".to_string()),
-                    pair: pair_info.pair,
-                    amount_0: pair_info.amount_0,
-                    amount_1: pair_info.amount_1,
-                    total_liquidity: pair_info.amount_0 + pair_info.amount_1,
+                    pair: Pair {
+                        token_0: TokenType::CustomToken {
+                            contract_addr: pair_info.token_0.address,
+                            token_code_hash: pair_info.token_0.code_hash,
+                        },
+                        token_1: TokenType::CustomToken {
+                            contract_addr: pair_info.token_1.address,
+                            token_code_hash: pair_info.token_1.code_hash,
+                        }
+                    },
+                    amount_0,
+                    amount_1,
+                    total_liquidity: amount_0 + amount_1,
                     contract_version: 0,
                 },
             })
         },
-        PairQuery::SwapSimulation { offer } => {
+        QueryMsg::SwapSimulation { offer } => {
             //TODO: check swap doesnt exceed pool size
+            let config = Config::load(deps.storage)?;
+            let pair = PairInfo::load(deps.storage)?;
+            let token_0 = pair.token_0;
+            let token_1 = pair.token_1;
+            let (amount_0, amount_1) = query_pool_amounts(
+                &deps.querier, 
+                config, 
+                token_0.clone(),
+                token_1.clone(),
+            )?;
 
             let in_token = match offer.token {
                 TokenType::CustomToken {
@@ -249,49 +298,45 @@ pub fn query(deps: Deps, _env: Env, msg: PairQuery) -> StdResult<Binary> {
                 }
             };
 
-            let pair_info = PairInfo::load(deps.storage)?;
             let commission = offer.amount.multiply_ratio(Uint128::new(3), Uint128::new(1_000));
             let swap_amount = offer.amount - commission;
 
-            match pair_info.pair.token_0 {
-                TokenType::CustomToken { contract_addr, .. } => {
-                    if in_token.address == contract_addr {
-                        return to_binary(&SimulationResponse {
-                            return_amount: pool_take_amount(
-                                swap_amount,
-                                pair_info.amount_0,
-                                pair_info.amount_1,
-                            ),
-                            spread_amount: Uint128::zero(),
-                            commission_amount: commission,
-                        });
-                    }
-                }
-                _ => {
-                    return Err(StdError::generic_err("Only CustomToken supported"));
-                }
-            };
-
-            match pair_info.pair.token_1 {
-                TokenType::CustomToken { contract_addr, .. } => {
-                    if in_token.address == contract_addr {
-                        return to_binary(&SimulationResponse {
-                            return_amount: pool_take_amount(
-                                swap_amount,
-                                pair_info.amount_1,
-                                pair_info.amount_0,
-                            ),
-                            spread_amount: Uint128::zero(),
-                            commission_amount: commission,
-                        });
-                    }
-                }
-                _ => {
-                    return Err(StdError::generic_err("Only CustomToken supported"));
-                }
-            };
+            if in_token.address == token_0.address {
+                return to_binary(&SimulationResponse {
+                    return_amount: pool_take_amount(
+                        swap_amount,
+                        amount_0,
+                        amount_1,
+                    ),
+                    spread_amount: Uint128::zero(),
+                    commission_amount: commission,
+                });
+            }
+            if in_token.address == token_1.address {
+                return to_binary(&SimulationResponse {
+                    return_amount: pool_take_amount(
+                        swap_amount,
+                        amount_1,
+                        amount_0,
+                    ),
+                    spread_amount: Uint128::zero(),
+                    commission_amount: commission,
+                });
+            }
 
             return Err(StdError::generic_err("Failed to match offer token"));
         }
     }
+}
+
+fn query_pool_amounts(
+    querier: &QuerierWrapper,
+    config: Config,
+    token_0: Contract,
+    token_1: Contract,
+) -> StdResult<(Uint128, Uint128)> {
+    Ok((
+        balance_query(querier, config.address.clone(), config.viewing_key.clone(), &token_0)?,
+        balance_query(querier, config.address, config.viewing_key, &token_1)?,
+    ))
 }

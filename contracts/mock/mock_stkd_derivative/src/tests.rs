@@ -8,7 +8,9 @@ use shade_protocol::{
     },
     contract_interfaces::{
         stkd,
-        mock::mock_sienna,
+        dex::sienna::{
+            Pair, PairInfo, TokenType,
+        },
     },
     utils::{
         asset::Contract,
@@ -26,6 +28,7 @@ use shade_multi_test::multi::{
     snip20::Snip20,
 };
 
+use mock_sienna_pair::contract as mock_sienna;
 
 
 #[test]
@@ -293,8 +296,11 @@ fn test() {
         &[],
     ).unwrap();
 
-    let sienna_pair = mock_sienna::InstantiateMsg {}
-    .test_init(
+    let sienna_pair = mock_sienna::InstantiateMsg {
+        token_0: stkd.clone().into(),
+        token_1: other_snip.clone().into(),
+        viewing_key: "key".into(),
+    }.test_init(
         MockSienna::default(),
         &mut chain,
         Addr::unchecked("admin"),
@@ -305,7 +311,7 @@ fn test() {
     stkd::HandleMsg::Stake {}  // get stkd to seed pair
         .test_exec(&stkd, &mut chain, admin.clone(), &[init_scrt]).unwrap();
 
-    stkd::HandleMsg::Send {
+    stkd::HandleMsg::Send {  // seed pair
         recipient: sienna_pair.address.to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(500),
@@ -314,10 +320,10 @@ fn test() {
         padding: None,
     }.test_exec(&stkd, &mut chain, admin.clone(), &[]).unwrap();
 
-    snip20::ExecuteMsg::Send {
+    snip20::ExecuteMsg::Send {  // seed pair
         recipient: sienna_pair.address.to_string(),
         recipient_code_hash: None,
-        amount: Uint128::new(1000),
+        amount: Uint128::new(1_000),
         msg: None,
         memo: None,
         padding: None,
@@ -328,13 +334,42 @@ fn test() {
             address: stkd.address.clone(),
             code_hash: stkd.code_hash.clone(),
         },
-        amount_a: Uint128::new(2_000_000),
         token_b: Contract {
             address: other_snip.address.clone(),
             code_hash: other_snip.code_hash.clone(),
         },
-        amount_b: Uint128::new(4_000_000),
     }.test_exec(&sienna_pair, &mut chain, user.clone(), &[]).unwrap();
+
+    assert_eq!(
+        mock_sienna::QueryMsg::PairInfo {}
+            .test_query::<mock_sienna::PairInfoResponse>(&sienna_pair, &chain).unwrap(),
+        mock_sienna::PairInfoResponse {
+            pair_info: PairInfo {
+                liquidity_token: Contract {
+                    address: Addr::unchecked("lp_token"),
+                    code_hash: "hash".to_string(),
+                },
+                factory: Contract {
+                    address: Addr::unchecked("factory"),
+                    code_hash: "hash".to_string(),
+                },
+                pair: Pair {
+                    token_0: TokenType::CustomToken {
+                        contract_addr: stkd.address.clone(),
+                        token_code_hash: stkd.code_hash.clone(),
+                    },
+                    token_1: TokenType::CustomToken {
+                        contract_addr: other_snip.address.clone(),
+                        token_code_hash: other_snip.code_hash.clone(),
+                    },
+                },
+                amount_0: Uint128::new(500),
+                amount_1: Uint128::new(1_000),
+                total_liquidity: Uint128::new(1_500),
+                contract_version: 0,
+            },
+        },
+    );
 
     snip20::ExecuteMsg::SetViewingKey {
         key: "password".to_string(),
@@ -364,7 +399,7 @@ fn test() {
     snip20::ExecuteMsg::Send {
         recipient: sienna_pair.address.to_string(),
         recipient_code_hash: Some(sienna_pair.code_hash),
-        amount: Uint128::new(500),
+        amount: Uint128::new(10),
         msg: Some(to_binary(&mock_sienna::ReceiverCallbackMsg::Swap {
             expected_return: None,
             to: None,
@@ -379,7 +414,7 @@ fn test() {
             key: "password".to_string(),
         }.test_query::<snip20::QueryAnswer>(&other_snip, &chain).unwrap(),
         snip20::QueryAnswer::Balance {
-            amount: Uint128::new(500),
+            amount: Uint128::new(990),
         },
     );
 
@@ -389,7 +424,7 @@ fn test() {
             key: "password".to_string(),
         }.test_query::<stkd::QueryAnswer>(&stkd, &chain).unwrap(),
         stkd::QueryAnswer::Balance {
-            amount: Uint128::new(250),
+            amount: Uint128::new(5),
         },
     );
 
