@@ -365,7 +365,7 @@ fn test() {
                 },
                 amount_0: Uint128::new(500),
                 amount_1: Uint128::new(1_000),
-                total_liquidity: Uint128::new(1_500),
+                total_liquidity: Uint128::new(0),
                 contract_version: 0,
             },
         },
@@ -398,7 +398,7 @@ fn test() {
 
     snip20::ExecuteMsg::Send {
         recipient: sienna_pair.address.to_string(),
-        recipient_code_hash: Some(sienna_pair.code_hash),
+        recipient_code_hash: Some(sienna_pair.clone().code_hash),
         amount: Uint128::new(10),
         msg: Some(to_binary(&mock_sienna::ReceiverCallbackMsg::Swap {
             expected_return: None,
@@ -425,6 +425,37 @@ fn test() {
         }.test_query::<stkd::QueryAnswer>(&stkd, &chain).unwrap(),
         stkd::QueryAnswer::Balance {
             amount: Uint128::new(5),
+        },
+    );
+
+    assert_eq!(
+        mock_sienna::QueryMsg::PairInfo {}
+            .test_query::<mock_sienna::PairInfoResponse>(&sienna_pair, &chain).unwrap(),
+        mock_sienna::PairInfoResponse {
+            pair_info: PairInfo {
+                liquidity_token: Contract {
+                    address: Addr::unchecked("lp_token"),
+                    code_hash: "hash".to_string(),
+                },
+                factory: Contract {
+                    address: Addr::unchecked("factory"),
+                    code_hash: "hash".to_string(),
+                },
+                pair: Pair {
+                    token_0: TokenType::CustomToken {
+                        contract_addr: stkd.address.clone(),
+                        token_code_hash: stkd.code_hash.clone(),
+                    },
+                    token_1: TokenType::CustomToken {
+                        contract_addr: other_snip.address.clone(),
+                        token_code_hash: other_snip.code_hash.clone(),
+                    },
+                },
+                amount_0: Uint128::new(495),
+                amount_1: Uint128::new(1_010),
+                total_liquidity: Uint128::new(0),
+                contract_version: 0,
+            },
         },
     );
 

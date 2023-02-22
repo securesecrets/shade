@@ -175,14 +175,17 @@ pub fn execute(
                         token_0.clone(),
                         token_1.clone(),
                     )?;
+                    
+                    // Sienna takes commission before swap
+                    let commission = amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
+                    let swap_amount = amount - commission;
 
                     if token_0.address == info.sender {
                         let return_amount = pool_take_amount(
-                            amount,
+                            swap_amount,
                             amount_0,
                             amount_1,
                         );
-                        let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
 
                         if return_amount > expected_return.unwrap_or(Uint128::MAX) {
                             return Err(StdError::generic_err(
@@ -205,7 +208,7 @@ pub fn execute(
                     
                     if token_1.address == info.sender {
                         let return_amount = pool_take_amount(
-                            amount,
+                            swap_amount,
                             amount_1,
                             amount_0,
                         );
@@ -267,13 +270,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     },
                     amount_0,
                     amount_1,
-                    total_liquidity: amount_0 + amount_1,
+                    total_liquidity: Uint128::zero(),
                     contract_version: 0,
                 },
             })
         },
         QueryMsg::SwapSimulation { offer } => {
-            //TODO: check swap doesnt exceed pool size
             let config = Config::load(deps.storage)?;
             let pair = PairInfo::load(deps.storage)?;
             let token_0 = pair.token_0;
@@ -298,6 +300,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 }
             };
 
+            // Sienna takes commission before swap
             let commission = offer.amount.multiply_ratio(Uint128::new(3), Uint128::new(1_000));
             let swap_amount = offer.amount - commission;
 
