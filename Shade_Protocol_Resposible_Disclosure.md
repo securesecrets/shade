@@ -11,7 +11,7 @@ Shade Protocol is an interconnected suite of privacy preserving dApps built on t
 - Security Patch Policy and Procedure
 - Rewards Payment Process
 
-For general information about reporting vulnerabilities, visit [security policy overview](./SECURITY.md)
+For general information about reporting vulnerabilities, visit [security policy overview](./SECURITY.md). The Shade Protocol Responsible Disclosure Framework is subject to change at the discretion of the Shade Protocol core team.
 
 
 ## Bug Bounty Program Classes
@@ -81,7 +81,7 @@ Contract fails to deliver promised returns, but doesn’t lose value
 ### Infrastructure
 #### **Critical**
  - Access to any central keys address controlled by the project (e.g. private keys, seed phrases, etc.)
- - Exploit to the Central User Database
+ - Access to Central Database
 
 #### **High**
  TBD
@@ -135,9 +135,9 @@ All calculations of the amount of funds at risk are done based on the time the b
 | Acknowledgment of report | Critical | 48 hours |
 | | All severity levels except critical | 3-4 days (working days) | 
 | Processing of Report |  Critical + High | Up to 14 days |
-| | Medium + Low | Up to 7 days |
+| | Medium + Low | Up to 14 days |
 | Payout for valid reports | Critical + High | Within 14 days |
-| | Medium + Low | Within 7 days |
+| | Medium + Low | Within 14 days |
 
 
 
@@ -244,10 +244,9 @@ The Shade Protocol team will take all reasonable actions to ensure the successfu
 - Communication regarding submissions must remain within Shade Protocol Bug Bounty support channels for the duration of the disclosure process.
 - Users must submit a Proof of Concept (PoC) in order to receive bounties for bug reports.
 	- Example PoC can be found in the [Shade Security Advisories](https://github.com/securesecrets/shade/security/advisories).
--  This responsible disclosure framework is subject to change at the discretion of the protocol. 
 
 ### Prohibited Behaviors:
-- Any testing with mainnet or public testnet contracts. Testing on mainnet or public testnet is grounds for an immediate and permanent ban
+- Any testing with mainnet contracts. Testing on mainnet is grounds for an immediate and permanent ban
 - Misrepresenting assets in scope: claiming that a bug report impacts/targets an asset in scope when it does not
 - Misrepresenting severity: claiming that a bug report is critical when it clearly is not
 - Automated testing of services that generates significant amounts of traffic
@@ -275,7 +274,7 @@ Security patches are very sensitive by nature, and their exposure can provide a 
 
 - Due to the sensitive nature of security patches, the Shade Protocol team will **not** make the content of security patches public until the entire system has been patched.
 - Users submitting bug reports are expected **not** to publicly disclose a bug report--or even the existence of a bug report for a specific project--before it has been fixed.
-- Users submitting bug reports are expected **not** to publicly disclose a bug report deemed to be a duplicate or well-known to the Shade Protocol team..
+- Users submitting bug reports are expected **not** to publicly disclose a bug report deemed to be a duplicate or well-known to the Shade Protocol team.
 - The details of the patch will be revealed after a holdover period of 10 days from the time after the successful application of patches to relevant systems. 
     - The holdover period provides reasonable time to ensure the stability of the contract or application before patch is revealed.
     - The patch activity is considered successful if the applied patch completely mitigated the vulnerability as intended and the system remained stable.
