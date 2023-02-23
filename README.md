@@ -1,4 +1,23 @@
-# Shade Protocol Core Contracts
+# Shade Protocol 
+
+## Overview
+Shade Protocol is a decentralized, cross-chain, asset management protocol. It is designed to be a modular, composable, and extensible protocol that is the host to variety of asset management tools. The protocol is built on the [Secret Network](https://scrt.network/) and is designed to be interoperable with other blockchains within the [Cosmos Network](https://cosmos.network/) using [Inter Blockchain Protocol (IBC)](https://ibc.cosmos.network/)
+
+## Protocol Modules
+
+1. Shade Swap - A decentralized, private, cross-chain, AMM-based DEX, built on the Secret Network
+    1. Stable Swap - A decentralized, private, cross-chain, stablecoin swap protocol
+    2. Derivative Swap - A decentralized, private, cross-chain, derivative swap protocol
+2. Shade Lending - A decentralized, private, cross-chain, lending protocol
+    1. SILK - A decentralized, private, cross-chain, stablecoin.
+3. Shade Staking - A decentralized, private, cross-chain, staking protocol
+4. Shade Treasury - A decentralized, private, cross-chain, asset management protocol
+5. Shade Mint - A decentralized, private, cross-chain, asset minting and burning protocol
+6. Shade Oracle - A decentralized, private, cross-chain, asset price oracle
+
+
+
+## Core Contracts
 | Contract                    | Reference                         | Description                           |
 | --------------------------- | --------------------------------- | ------------------------------------- |
 | [`governance`](./contracts/governance)  | [doc](./contracts/governance/README.md) | Protocol's governance module |
@@ -47,3 +66,9 @@ Each contract contains Rust unit and integration tests embedded within the contr
 ```sh
 cargo unit-test
 ```
+
+## Security
+For further details about the security of the protocol, please refer to the [Security document](./SECURITY.md).
+
+## License
+The Shade Protocol Core Contracts are licensed under the [Apache License 2.0](./LICENSE).
