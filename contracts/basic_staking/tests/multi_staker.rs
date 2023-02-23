@@ -384,6 +384,7 @@ fn multi_staker_single_pool(
 
         // All funds should be unbonding
         match (basic_staking::QueryMsg::Unbonding {
+            ids: None,
             auth: basic_staking::Auth::ViewingKey {
                 key: viewing_key.clone(),
                 address: user.clone().into(),
@@ -420,7 +421,7 @@ fn multi_staker_single_pool(
         .zip(expected_rewards.clone().into_iter())
     {
         // Withdraw unbonding
-        basic_staking::ExecuteMsg::Withdraw {}
+        basic_staking::ExecuteMsg::Withdraw { ids: None }
             .test_exec(&basic_staking, &mut app, user.clone(), &[])
             .unwrap();
 

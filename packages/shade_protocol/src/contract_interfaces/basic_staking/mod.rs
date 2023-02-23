@@ -31,6 +31,7 @@ pub enum Action {
 
 #[cw_serde]
 pub struct Unbonding {
+    pub id: Uint128,
     pub amount: Uint128,
     pub complete: Uint128,
 }
@@ -43,7 +44,7 @@ pub struct Reward {
 
 #[cw_serde]
 pub struct RewardPool {
-    pub uuid: Uint128,
+    pub id: Uint128,
     pub amount: Uint128,
     pub start: Uint128,
     pub end: Uint128,
@@ -88,7 +89,9 @@ pub enum ExecuteMsg {
     Unbond {
         amount: Uint128,
     },
-    Withdraw {},
+    Withdraw {
+        ids: Option<Vec<Uint128>>,
+    },
     Compound {},
     /*
     RemovePool {
@@ -155,10 +158,19 @@ pub enum QueryMsg {
 
     // User permissioned (vk/permit)
     // Single query for all data?
-    Balance { auth: Auth },
-    Share { auth: Auth },
-    Rewards { auth: Auth },
-    Unbonding { auth: Auth },
+    Balance {
+        auth: Auth,
+    },
+    Share {
+        auth: Auth,
+    },
+    Rewards {
+        auth: Auth,
+    },
+    Unbonding {
+        auth: Auth,
+        ids: Option<Vec<Uint128>>,
+    },
 }
 
 impl Query for QueryMsg {

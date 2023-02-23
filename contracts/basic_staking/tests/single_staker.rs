@@ -360,6 +360,7 @@ fn single_staker_single_pool(
 
     // All rewards should be pending
     match (basic_staking::QueryMsg::Unbonding {
+        ids: None,
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
@@ -388,7 +389,7 @@ fn single_staker_single_pool(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw {}
+    basic_staking::ExecuteMsg::Withdraw { ids: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 

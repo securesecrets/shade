@@ -14,7 +14,7 @@ use shade_multi_test::multi::{
 };
 
 // Add other adapters here as they come
-fn single_staker_compounding(
+fn stake_0_total_bug(
     stake_amount: Uint128,
     unbond_period: Uint128,
     reward_amount: Uint128,
@@ -127,54 +127,6 @@ fn single_staker_compounding(
     .unwrap();
     println!("BASIC STAKING {}", basic_staking.address);
 
-    // Pre-staking user balance
-    match (basic_staking::QueryMsg::Balance {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
-    {
-        basic_staking::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
-        }
-        _ => {
-            panic!("Staking balance query failed");
-        }
-    };
-
-    // Stake funds
-    snip20::ExecuteMsg::Send {
-        recipient: basic_staking.address.to_string().clone(),
-        recipient_code_hash: None,
-        amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake {}).unwrap()),
-        memo: None,
-        padding: None,
-    }
-    .test_exec(&token, &mut app, staking_user.clone(), &[])
-    .unwrap();
-
-    // Post-staking user balance
-    match (basic_staking::QueryMsg::Balance {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
-    {
-        basic_staking::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, stake_amount, "Post-Stake Balance");
-        }
-        _ => {
-            panic!("Staking balance query failed");
-        }
-    };
-
     // Init Rewards
     snip20::ExecuteMsg::Send {
         recipient: basic_staking.address.to_string().clone(),
@@ -226,6 +178,36 @@ fn single_staker_compounding(
         }
     };
 
+    // Stake funds
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: stake_amount,
+        msg: Some(to_binary(&basic_staking::Action::Stake {}).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
+
+    // Post-staking user balance
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, stake_amount, "Post-Stake Balance");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
     // Move forward to reward start
     app.set_block(BlockInfo {
         height: 1,
@@ -266,9 +248,6 @@ fn single_staker_compounding(
         chain_id: "chain_id".to_string(),
     });
 
-    let expected_mid_rewards = reward_amount / Uint128::new(2);
-    let mut mid_rewards = Uint128::zero();
-
     // Half-ish rewards should be pending
     match (basic_staking::QueryMsg::Rewards {
         auth: basic_staking::Auth::ViewingKey {
@@ -282,70 +261,16 @@ fn single_staker_compounding(
         basic_staking::QueryAnswer::Rewards { rewards } => {
             assert_eq!(rewards.len(), 1, "rewards length in the middle");
             let amount = rewards[0].amount;
-            mid_rewards = amount;
+            let expected = reward_amount / Uint128::new(2);
             assert!(
-                amount >= expected_mid_rewards - Uint128::one() && amount <= expected_mid_rewards,
+                amount >= expected - Uint128::one() && amount <= expected,
                 "Rewards claimable in the middle within error of 1 unit token {} != {}",
                 amount,
-                expected_mid_rewards
+                expected
             );
         }
         _ => {
             panic!("Staking rewards query failed");
-        }
-    };
-
-    // Compound rewards
-    basic_staking::ExecuteMsg::Compound {}
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
-
-    // Re-query rewards
-    match (basic_staking::QueryMsg::Rewards {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
-    {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
-            assert_eq!(
-                rewards.len(),
-                1,
-                "rewards length in the middle post-compound"
-            );
-            assert_eq!(
-                rewards[0].amount,
-                Uint128::zero(),
-                "Rewards claimable post-compound"
-            );
-        }
-        _ => {
-            panic!("Staking rewards query failed");
-        }
-    };
-    // Stake balance reflects compounded rewards
-    match (basic_staking::QueryMsg::Balance {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
-    {
-        basic_staking::QueryAnswer::Balance { amount } => {
-            let amount = amount.u128();
-            let expected = (stake_amount + mid_rewards).u128();
-            assert!(
-                amount <= expected && expected <= amount,
-                "Reward User Stake Balance post-compound"
-            );
-        }
-        _ => {
-            panic!("Staking balance query failed");
         }
     };
 
@@ -370,16 +295,11 @@ fn single_staker_compounding(
         basic_staking::QueryAnswer::Rewards { rewards } => {
             assert_eq!(rewards.len(), 1, "rewards length at end");
             let amount = rewards[0].amount;
-            println!(
-                "reward amount {} mid rewards {}",
-                reward_amount, mid_rewards
-            );
-            let expected = reward_amount - mid_rewards;
             assert!(
-                amount >= expected - Uint128::new(2) && amount <= expected + Uint128::new(2),
-                "Rewards claimable at the end within error of 2 unit tokens {} != {}",
+                amount >= reward_amount - Uint128::one() && amount <= reward_amount,
+                "Rewards claimable at the end within error of 1 unit token {} != {}",
                 amount,
-                expected,
+                reward_amount,
             );
         }
         _ => {
@@ -401,10 +321,9 @@ fn single_staker_compounding(
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
-            let expected = reward_amount - mid_rewards;
             assert!(
-                amount >= expected - Uint128::new(2) && expected <= reward_amount,
-                "Rewards claimed at the end within error of 2 unit tokens {} != {}",
+                amount >= reward_amount - Uint128::one() && amount <= reward_amount,
+                "Rewards claimed at the end within error of 1 unit token {} != {}",
                 amount,
                 reward_amount,
             );
@@ -416,7 +335,7 @@ fn single_staker_compounding(
 
     // Unbond
     basic_staking::ExecuteMsg::Unbond {
-        amount: stake_amount + mid_rewards,
+        amount: stake_amount,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -434,11 +353,7 @@ fn single_staker_compounding(
     {
         basic_staking::QueryAnswer::Unbonding { unbondings } => {
             assert_eq!(unbondings.len(), 1, "1 unbonding");
-            assert_eq!(
-                unbondings[0].amount,
-                stake_amount + mid_rewards,
-                "Unbonding full amount"
-            );
+            assert_eq!(unbondings[0].amount, stake_amount, "Unbonding full amount");
             assert_eq!(
                 unbondings[0].complete,
                 reward_end + unbond_period,
@@ -471,8 +386,8 @@ fn single_staker_compounding(
         snip20::QueryAnswer::Balance { amount } => {
             let expected = stake_amount + reward_amount;
             assert!(
-                amount >= expected - Uint128::new(2) && amount <= expected,
-                "Final user balance within error of 2 unit tokens {} != {}",
+                amount >= expected - Uint128::one() && amount <= expected,
+                "Final user balance within error of 1 unit token {} != {}",
                 amount,
                 expected,
             );
@@ -483,7 +398,7 @@ fn single_staker_compounding(
     };
 }
 
-macro_rules! single_staker_compounding {
+macro_rules! stake_0_total_bug {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -495,7 +410,7 @@ macro_rules! single_staker_compounding {
                     reward_start,
                     reward_end,
                 ) = $value;
-                single_staker_compounding(
+                stake_0_total_bug(
                     stake_amount,
                     unbond_period,
                     reward_amount,
@@ -507,47 +422,12 @@ macro_rules! single_staker_compounding {
     }
 }
 
-single_staker_compounding! {
-    single_staker_compounding_0: (
+stake_0_total_bug! {
+    stake_0_total_bug_0: (
         Uint128::new(1), //   stake_amount
         Uint128::new(100), // unbond_period
         Uint128::new(100), // reward_amount
         Uint128::new(0), //   reward_start (0-*)
         Uint128::new(100), // reward_end
-    ),
-    single_staker_compounding_1: (
-        Uint128::new(100),
-        Uint128::new(100),
-        Uint128::new(1000),
-        Uint128::new(0),
-        Uint128::new(100),
-    ),
-    single_staker_compounding_2: (
-        Uint128::new(1000),
-        Uint128::new(100),
-        Uint128::new(300),
-        Uint128::new(0),
-        Uint128::new(100),
-    ),
-    single_staker_compounding_3: (
-        Uint128::new(10),
-        Uint128::new(100),
-        Uint128::new(50000),
-        Uint128::new(0),
-        Uint128::new(2500000),
-    ),
-    single_staker_compounding_4: (
-        Uint128::new(1234567),
-        Uint128::new(10000),
-        Uint128::new(500),
-        Uint128::new(0),
-        Uint128::new(10000),
-    ),
-    single_staker_compounding_5: (
-        Uint128::new(99999999999),
-        Uint128::new(100),
-        Uint128::new(8192),
-        Uint128::new(20),
-        Uint128::new(8000),
     ),
 }

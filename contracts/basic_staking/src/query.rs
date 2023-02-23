@@ -1,6 +1,6 @@
 use shade_protocol::{
     basic_staking::{QueryAnswer, Reward},
-    c_std::{Addr, Deps, Env, StdResult, Uint128},
+    c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
 };
 
 use crate::{
@@ -61,31 +61,42 @@ pub fn user_share(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
 
 pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
     // let user_last_claim = USER_LAST_CLAIM.load(deps.storage, user.clone())?;
-    let user_staked = USER_STAKED.load(deps.storage, user.clone())?;
-    let reward_pools = REWARD_POOLS.load(deps.storage)?;
-    let total_staked = TOTAL_STAKED.load(deps.storage)?;
-    let now = env.block.time.seconds();
+    if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
+        let reward_pools = REWARD_POOLS.load(deps.storage)?;
+        let total_staked = TOTAL_STAKED.load(deps.storage)?;
+        let now = env.block.time.seconds();
 
-    let mut rewards = vec![];
+        let mut rewards = vec![];
 
-    for reward_pool in reward_pools {
-        let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
-            .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.uuid))?
-            .unwrap_or(Uint128::zero());
-        let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
-        rewards.push(Reward {
-            token: reward_pool.token.address,
-            amount: rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid),
-        });
+        for reward_pool in reward_pools {
+            let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
+                .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.id))?
+                .unwrap_or(Uint128::zero());
+            let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
+            rewards.push(Reward {
+                token: reward_pool.token.address,
+                amount: rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid),
+            });
+        }
+
+        Ok(QueryAnswer::Rewards { rewards })
+    } else {
+        Ok(QueryAnswer::Rewards { rewards: vec![] })
     }
-
-    Ok(QueryAnswer::Rewards { rewards })
 }
 
-pub fn user_unbonding(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::Unbonding {
-        unbondings: USER_UNBONDINGS
-            .may_load(deps.storage, user)?
-            .unwrap_or(vec![]),
-    })
+pub fn user_unbondings(deps: Deps, user: Addr, ids: Vec<Uint128>) -> StdResult<QueryAnswer> {
+    let mut unbondings = vec![];
+
+    for id in ids.iter() {
+        if let Some(unbonding) =
+            USER_UNBONDING.may_load(deps.storage, user_unbonding_key(user.clone(), *id))?
+        {
+            unbondings.push(unbonding);
+        } else {
+            return Err(StdError::generic_err(format!("Bad ID {}", id)));
+        }
+    }
+
+    Ok(QueryAnswer::Unbonding { unbondings })
 }

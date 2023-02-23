@@ -6,7 +6,6 @@ use shade_protocol::{
         to_binary,
         Addr,
         Binary,
-        CosmosMsg,
         DepsMut,
         Env,
         MessageInfo,
@@ -106,19 +105,23 @@ pub fn receive(
 
                 let mut total_staked = TOTAL_STAKED.load(deps.storage)?;
 
+                println!("update rewards");
                 let reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
+                println!("done");
 
                 let mut response = Response::new();
 
                 if let Some(user_staked) = USER_STAKED.may_load(deps.storage, from.clone())? {
                     // Claim Rewards
                     for reward_pool in reward_pools {
+                        println!("reward pool claim");
                         let reward_claimed = reward_pool_claim(
                             deps.storage,
                             from.clone(),
                             user_staked,
                             &reward_pool,
                         )?;
+                        println!("done");
                         response = response.add_message(send_msg(
                             from.clone(),
                             reward_claimed,
@@ -127,6 +130,7 @@ pub fn receive(
                             None,
                             &reward_pool.token,
                         )?);
+                        println!("reward sent");
                     }
                     USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
                 } else {
@@ -134,7 +138,7 @@ pub fn receive(
                         // make sure user rewards start now
                         USER_REWARD_PER_TOKEN_PAID.save(
                             deps.storage,
-                            user_pool_key(from.clone(), reward_pool.uuid),
+                            user_pool_key(from.clone(), reward_pool.id),
                             &reward_pool.reward_per_token,
                         )?;
                     }
@@ -146,7 +150,7 @@ pub fn receive(
 
                 USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
-                Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Stake {
+                Ok(response.set_data(to_binary(&ExecuteAnswer::Stake {
                     status: ResponseStatus::Success,
                 })?))
             }
@@ -193,8 +197,8 @@ pub fn receive(
                         }
                     }
 
-                    let uuid = match reward_pools.last() {
-                        Some(pool) => pool.uuid + Uint128::one(),
+                    let new_id = match reward_pools.last() {
+                        Some(pool) => pool.id + Uint128::one(),
                         None => Uint128::zero(),
                     };
 
@@ -202,7 +206,7 @@ pub fn receive(
                     let rate = amount * Uint128::new(10u128.pow(18)) / (end - start);
 
                     reward_pools.push(RewardPool {
-                        uuid,
+                        id: new_id,
                         amount,
                         start,
                         end,
@@ -233,6 +237,9 @@ pub fn receive(
 }
 
 pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPool) -> Uint128 {
+    if total_staked.is_zero() {
+        return Uint128::zero();
+    }
     pool.reward_per_token
         + (min(pool.end, Uint128::new(now as u128)) - max(pool.last_update, pool.start)) * pool.rate
             / total_staked
@@ -286,10 +293,10 @@ pub fn reward_pool_claim(
 ) -> StdResult<Uint128> {
     println!(
         "Reward Pool {} rewards {}",
-        reward_pool.uuid, reward_pool.amount,
+        reward_pool.id, reward_pool.amount,
     );
     let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
-        .may_load(storage, user_pool_key(user.clone(), reward_pool.uuid))?
+        .may_load(storage, user_pool_key(user.clone(), reward_pool.id))?
         .unwrap_or(Uint128::zero());
     println!("user reward per token paid {}", user_reward_per_token_paid);
 
@@ -301,7 +308,7 @@ pub fn reward_pool_claim(
 
     USER_REWARD_PER_TOKEN_PAID.save(
         storage,
-        user_pool_key(user.clone(), reward_pool.uuid),
+        user_pool_key(user.clone(), reward_pool.id),
         &reward_pool.reward_per_token,
     )?;
 
@@ -387,16 +394,25 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         user_staked -= amount;
         USER_STAKED.save(deps.storage, info.sender.clone(), &user_staked)?;
 
-        let mut user_unbondings = USER_UNBONDINGS
+        let mut user_unbonding_ids = USER_UNBONDING_IDS
             .may_load(deps.storage, info.sender.clone())?
             .unwrap_or(vec![]);
 
-        user_unbondings.push(Unbonding {
-            amount,
-            complete: Uint128::new(now as u128) + config.unbond_period,
-        });
+        let next_id = *user_unbonding_ids.iter().max().unwrap_or(&Uint128::zero()) + Uint128::one();
 
-        USER_UNBONDINGS.save(deps.storage, info.sender, &user_unbondings)?;
+        user_unbonding_ids.push(next_id);
+
+        USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &user_unbonding_ids)?;
+
+        USER_UNBONDING.save(
+            deps.storage,
+            user_unbonding_key(info.sender, next_id),
+            &Unbonding {
+                id: next_id,
+                amount,
+                complete: Uint128::new(now as u128) + config.unbond_period,
+            },
+        );
 
         Ok(response.set_data(to_binary(&ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
@@ -406,36 +422,98 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     }
 }
 
-pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    let user_unbonding = USER_UNBONDINGS.load(deps.storage, info.sender.clone())?;
+pub fn withdraw_all(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    let user_unbonding_ids = USER_UNBONDING_IDS
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or(vec![]);
 
     let mut withdraw_amount = Uint128::zero();
 
-    let mut remaining_unbondings = vec![];
-
     let now = Uint128::new(env.block.time.seconds() as u128);
 
-    for unbonding in user_unbonding {
-        if now >= unbonding.complete {
-            withdraw_amount += unbonding.amount;
+    let mut remaining_unbonding_ids = vec![];
+
+    for id in user_unbonding_ids.into_iter() {
+        if let Some(unbonding) =
+            USER_UNBONDING.may_load(deps.storage, user_unbonding_key(info.sender.clone(), id))?
+        {
+            if now >= unbonding.complete {
+                withdraw_amount += unbonding.amount;
+            } else {
+                remaining_unbonding_ids.push(id);
+            }
         } else {
-            remaining_unbondings.push(unbonding);
+            return Err(StdError::generic_err(format!("Bad ID {}", id)));
         }
     }
-
-    USER_UNBONDINGS.save(deps.storage, info.sender.clone(), &remaining_unbondings)?;
 
     if withdraw_amount.is_zero() {
         return Err(StdError::generic_err("No unbondings to withdraw"));
     }
 
-    let stake_token = STAKE_TOKEN.load(deps.storage)?;
-    let stake_token_balance = balance_query(
-        &deps.querier,
-        env.contract.address.clone(),
-        VIEWING_KEY.load(deps.storage)?,
-        &stake_token,
-    )?;
+    USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &remaining_unbonding_ids)?;
+
+    println!("Withdrawing All {}", withdraw_amount);
+    Ok(Response::new()
+        .add_message(send_msg(
+            info.sender,
+            withdraw_amount,
+            None,
+            None,
+            None,
+            &STAKE_TOKEN.load(deps.storage)?,
+        )?)
+        .set_data(to_binary(&ExecuteAnswer::Withdraw {
+            status: ResponseStatus::Success,
+        })?))
+}
+
+pub fn withdraw(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    ids: Vec<Uint128>,
+) -> StdResult<Response> {
+    let mut user_unbonding_ids = USER_UNBONDING_IDS
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or(vec![]);
+
+    let mut withdraw_amount = Uint128::zero();
+
+    let now = Uint128::new(env.block.time.seconds() as u128);
+
+    let mut withdrawn_ids = vec![];
+
+    for id in ids.into_iter() {
+        if let Some(unbonding) =
+            USER_UNBONDING.may_load(deps.storage, user_unbonding_key(info.sender.clone(), id))?
+        {
+            if now >= unbonding.complete {
+                withdraw_amount += unbonding.amount;
+                withdrawn_ids.push(id);
+            }
+        } else {
+            return Err(StdError::generic_err(format!("Bad ID {}", id)));
+        }
+    }
+
+    if withdraw_amount.is_zero() {
+        return Err(StdError::generic_err("No unbondings to withdraw"));
+    }
+
+    withdrawn_ids.sort();
+
+    // Remove withdrawn ids from user list
+    //TODO optimize with hashset or sorted lists
+    for withdrawn_id in withdrawn_ids.iter() {
+        if let Some(i) = user_unbonding_ids.iter().position(|id| id == withdrawn_id) {
+            user_unbonding_ids.swap_remove(i);
+        }
+    }
+    user_unbonding_ids.sort();
+
+    USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &user_unbonding_ids)?;
+
     println!("Withdrawing {}", withdraw_amount);
     Ok(Response::new()
         .add_message(send_msg(

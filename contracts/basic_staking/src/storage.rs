@@ -19,9 +19,13 @@ pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPool>> = Item::new("reward
 
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");
-pub const USER_UNBONDINGS: Map<Addr, Vec<basic_staking::Unbonding>> = Map::new("user_unbonding");
-// { (user_address, reward_pool.uuid): reward_paid }
-// TODO: How to index with reward pool uuid & user addr?
+
+// TODO upgrade ID's to 256
+pub fn user_unbonding_key(user: Addr, unbond_id: Uint128) -> String {
+    format!("{}-{}", user, unbond_id)
+}
+pub const USER_UNBONDING_IDS: Map<Addr, Vec<Uint128>> = Map::new("user_unbonding_ids");
+pub const USER_UNBONDING: Map<String, basic_staking::Unbonding> = Map::new("user_unbonding");
 
 pub fn user_pool_key(user: Addr, pool_id: Uint128) -> String {
     format!("{}-{}", user, pool_id)

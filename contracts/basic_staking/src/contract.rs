@@ -71,7 +71,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         } => execute::receive(deps, env, info, sender, from, amount, msg),
         ExecuteMsg::Claim {} => execute::claim(deps, env, info),
         ExecuteMsg::Unbond { amount } => execute::unbond(deps, env, info, amount),
-        ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
+        ExecuteMsg::Withdraw { ids } => match ids {
+            Some(ids) => execute::withdraw(deps, env, info, ids),
+            None => execute::withdraw_all(deps, env, info),
+        },
         ExecuteMsg::Compound {} => execute::compound(deps, env, info),
     }
 }
@@ -125,11 +128,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 authenticate(deps, auth, config.query_auth)?,
             )?)
         }
-        QueryMsg::Unbonding { auth } => {
+        QueryMsg::Unbonding { auth, ids } => {
             let config = CONFIG.load(deps.storage)?;
-            to_binary(&query::user_unbonding(
+            let user = authenticate(deps, auth, config.query_auth)?;
+            to_binary(&query::user_unbondings(
                 deps,
-                authenticate(deps, auth, config.query_auth)?,
+                user.clone(),
+                ids.unwrap_or(USER_UNBONDING_IDS.load(deps.storage, user)?),
             )?)
         }
     }
