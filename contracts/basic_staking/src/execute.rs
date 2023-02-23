@@ -501,16 +501,24 @@ pub fn withdraw(
         return Err(StdError::generic_err("No unbondings to withdraw"));
     }
 
-    withdrawn_ids.sort();
-
     // Remove withdrawn ids from user list
     //TODO optimize with hashset or sorted lists
-    for withdrawn_id in withdrawn_ids.iter() {
-        if let Some(i) = user_unbonding_ids.iter().position(|id| id == withdrawn_id) {
-            user_unbonding_ids.swap_remove(i);
+    withdrawn_ids.sort();
+    user_unbonding_ids.sort();
+    let mut withdrawn_i = 0;
+    for i in 0..user_unbonding_ids.len() {
+        if user_unbonding_ids[i] == withdrawn_ids[i] {
+            user_unbonding_ids.remove(i);
+
+            // advance withdrawn
+            withdrawn_i += 1;
+
+            // done if end of withdrawn
+            if withdrawn_i >= withdrawn_ids.len() {
+                break;
+            }
         }
     }
-    user_unbonding_ids.sort();
 
     USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &user_unbonding_ids)?;
 
