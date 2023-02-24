@@ -459,4 +459,20 @@ fn test() {
         },
     );
 
+    // test No balance
+    stkd::HandleMsg::SetViewingKey {
+        key: "key".into(),
+        padding: None,
+    }.test_exec(&stkd, &mut chain, Addr::unchecked("new"), &[]).unwrap();
+
+    assert_eq!(
+        stkd::QueryMsg::Balance {
+            address: Addr::unchecked("new"),
+            key: "key".to_string(),
+        }.test_query::<stkd::QueryAnswer>(&stkd, &chain).unwrap(),
+        stkd::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        },
+    );
+
 }

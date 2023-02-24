@@ -250,6 +250,7 @@ pub fn execute(
                }))
         },
         HandleMsg::SetViewingKey { key, .. } => {
+            println!("it happened!");
             ViewingKey(key).save(deps.storage, info.sender)?;
             Ok(Response::default())
         },
@@ -275,7 +276,7 @@ pub fn query(
             }
             
             to_binary(&QueryAnswer::Balance {
-                amount: Balance::load(deps.storage, address)?.0,
+                amount: Balance::load(deps.storage, address).unwrap_or_default().0,
             })
         },
         QueryMsg::StakingInfo { .. } => {
