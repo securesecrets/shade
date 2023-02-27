@@ -15,7 +15,7 @@ use shade_protocol::{
         Storage,
         Uint128,
     },
-    snip20::helpers::{balance_query, register_receive, send_msg, set_viewing_key_msg},
+    snip20::helpers::{register_receive, send_msg, set_viewing_key_msg},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
@@ -505,6 +505,7 @@ pub fn withdraw(
     //TODO optimize with hashset or sorted lists
     withdrawn_ids.sort();
     user_unbonding_ids.sort();
+
     let mut withdrawn_i = 0;
     for i in 0..user_unbonding_ids.len() {
         if user_unbonding_ids[i] == withdrawn_ids[i] {
