@@ -250,7 +250,6 @@ pub fn execute(
                }))
         },
         HandleMsg::SetViewingKey { key, .. } => {
-            println!("it happened!");
             ViewingKey(key).save(deps.storage, info.sender)?;
             Ok(Response::default())
         },
