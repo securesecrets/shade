@@ -25,7 +25,7 @@ use crate::{execute, query, storage::*};
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
@@ -105,7 +105,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps)?),
         QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps)?),
-        QueryMsg::RewardPool {} => to_binary(&query::reward_pool(deps)?),
+        QueryMsg::RewardPools {} => to_binary(&query::reward_pools(deps)?),
         QueryMsg::Balance { auth } => {
             let config = CONFIG.load(deps.storage)?;
             to_binary(&query::user_balance(

@@ -30,8 +30,8 @@ pub fn reward_tokens(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn reward_pool(deps: Deps) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::RewardPool {
+pub fn reward_pools(deps: Deps) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::RewardPools {
         rewards: REWARD_POOLS.load(deps.storage)?,
     })
 }

@@ -154,7 +154,7 @@ pub enum QueryMsg {
     TotalStaked {},
     RewardTokens {},
     // All reward pools in progress
-    RewardPool {},
+    RewardPools {},
 
     // User permissioned (vk/permit)
     // Single query for all data?
@@ -182,7 +182,7 @@ pub enum QueryAnswer {
     Config { config: Config },
     TotalStaked { amount: Uint128 },
     RewardTokens { tokens: Vec<Addr> },
-    RewardPool { rewards: Vec<RewardPool> },
+    RewardPools { rewards: Vec<RewardPool> },
     Balance { amount: Uint128 },
     Share { share: Uint128 },
     Rewards { rewards: Vec<Reward> },

@@ -226,11 +226,11 @@ fn multi_staker_single_pool(
     };
 
     // Check reward pool
-    match (basic_staking::QueryMsg::RewardPool {})
+    match (basic_staking::QueryMsg::RewardPools {})
         .test_query(&basic_staking, &app)
         .unwrap()
     {
-        basic_staking::QueryAnswer::RewardPool { rewards } => {
+        basic_staking::QueryAnswer::RewardPools { rewards } => {
             assert_eq!(rewards[0].amount, reward_amount, "Reward Pool Amount");
             assert_eq!(rewards[0].start, reward_start, "Reward Pool Start");
             assert_eq!(rewards[0].end, reward_end, "Reward Pool End");
