@@ -125,6 +125,7 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     Unbond {
+        id: Uint128,
         status: ResponseStatus,
     },
     Withdraw {

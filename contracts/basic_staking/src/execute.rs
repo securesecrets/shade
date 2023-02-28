@@ -422,6 +422,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         )?;
 
         Ok(response.set_data(to_binary(&ExecuteAnswer::Unbond {
+            id: next_id,
             status: ResponseStatus::Success,
         })?))
     } else {
