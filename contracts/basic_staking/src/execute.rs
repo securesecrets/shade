@@ -319,6 +319,13 @@ pub fn reward_pool_claim(
 
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let user_staked = USER_STAKED.load(deps.storage, info.sender.clone())?;
+
+    if user_staked.is_zero() {
+        return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Claim {
+            status: ResponseStatus::Success,
+        })?));
+    }
+
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
     println!("Total Staked {}", total_staked);
@@ -412,7 +419,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
                 amount,
                 complete: Uint128::new(now as u128) + config.unbond_period,
             },
-        );
+        )?;
 
         Ok(response.set_data(to_binary(&ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,

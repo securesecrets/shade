@@ -62,6 +62,9 @@ pub fn user_share(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
 pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
     // let user_last_claim = USER_LAST_CLAIM.load(deps.storage, user.clone())?;
     if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
+        if user_staked.is_zero() {
+            return Ok(QueryAnswer::Rewards { rewards: vec![] });
+        }
         let reward_pools = REWARD_POOLS.load(deps.storage)?;
         let total_staked = TOTAL_STAKED.load(deps.storage)?;
         let now = env.block.time.seconds();
