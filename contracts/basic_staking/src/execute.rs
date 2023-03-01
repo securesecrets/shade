@@ -16,7 +16,10 @@ use shade_protocol::{
         Uint128,
     },
     snip20::helpers::{register_receive, send_msg, set_viewing_key_msg},
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+    },
 };
 
 use crate::storage::*;
@@ -24,18 +27,37 @@ use std::cmp::{max, min};
 
 pub fn update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
-    config: Config,
+    admin_auth: Option<RawContract>,
+    query_auth: Option<RawContract>,
+    unbond_period: Option<Uint128>,
+    max_user_pools: Option<Uint128>,
 ) -> StdResult<Response> {
-    let cur_config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
 
     validate_admin(
         &deps.querier,
         AdminPermissions::StakingAdmin,
         info.sender.to_string(),
-        &cur_config.admin_auth,
+        &config.admin_auth,
     )?;
+
+    if let Some(admin_auth) = admin_auth {
+        config.admin_auth = admin_auth.into_valid(deps.api)?;
+    }
+
+    if let Some(query_auth) = query_auth {
+        config.query_auth = query_auth.into_valid(deps.api)?;
+    }
+
+    if let Some(unbond_period) = unbond_period {
+        config.unbond_period = unbond_period;
+    }
+
+    if let Some(max_user_pools) = max_user_pools {
+        config.max_user_pools = max_user_pools;
+    }
 
     // Save new info
     CONFIG.save(deps.storage, &config)?;
