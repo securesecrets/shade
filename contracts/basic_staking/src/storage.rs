@@ -15,7 +15,8 @@ pub const TOTAL_STAKED: Item<Uint128> = Item::new("total_stake");
 pub const REWARD_TOKENS: Item<Vec<Contract>> = Item::new("reward_tokens");
 pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPool>> = Item::new("reward_pools");
 
-// pub const REWARD_PER_TOKEN: Map<Uint128, Uint128> = Map::new("reward_per_token");
+// Amount that has been claimed from a pool
+pub const REWARD_POOL_CLAIMED: Map<u128, Uint128> = Map::new("reward_pool_claimed");
 
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");

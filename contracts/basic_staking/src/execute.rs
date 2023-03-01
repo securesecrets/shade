@@ -59,7 +59,6 @@ pub fn update_config(
         config.max_user_pools = max_user_pools;
     }
 
-    // Save new info
     CONFIG.save(deps.storage, &config)?;
 
     Ok(
@@ -240,6 +239,7 @@ pub fn receive(
                         official: is_admin,
                     });
                     REWARD_POOLS.save(deps.storage, &reward_pools)?;
+                    REWARD_POOL_CLAIMED.save(deps.storage, new_id.u128(), &Uint128::zero())?;
 
                     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Rewards {
                         status: ResponseStatus::Success,
@@ -628,4 +628,41 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
         status: ResponseStatus::Success,
     })?))
+}
+
+pub fn cancel_reward_pool(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    id: Uint128,
+    force: bool,
+) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &config.admin_auth,
+    )?;
+
+    let claimed = REWARD_POOL_CLAIMED.load(deps.storage, id.u128())?;
+    if !force {
+        //TODO  check claimed amount against total pool amount
+    }
+
+    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
+
+    if let Some(i) = reward_pools.iter().position(|p| p.id == id) {
+        reward_pools.remove(i);
+    } else {
+        return Err(StdError::generic_err("Invalid pool id"));
+    }
+
+    // TODO send unclaimed funds to creator or canceller
+    Ok(Response::new()
+        // .add_message(send_msg())
+        .set_data(to_binary(&ExecuteAnswer::CancelRewardPool {
+            status: ResponseStatus::Success,
+        })?))
 }

@@ -57,7 +57,20 @@ pub fn instantiate(
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::UpdateConfig { config } => execute::update_config(deps, env, info, config),
+        ExecuteMsg::UpdateConfig {
+            admin_auth,
+            query_auth,
+            unbond_period,
+            max_user_pools,
+        } => execute::update_config(
+            deps,
+            env,
+            info,
+            admin_auth,
+            query_auth,
+            unbond_period,
+            max_user_pools,
+        ),
         ExecuteMsg::RegisterRewards { token } => {
             let api = deps.api;
             execute::register_reward(deps, env, info, token.into_valid(api)?)
@@ -76,6 +89,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             None => execute::withdraw_all(deps, env, info),
         },
         ExecuteMsg::Compound {} => execute::compound(deps, env, info),
+        ExecuteMsg::CancelRewardPool { id, force } => {
+            execute::cancel_reward_pool(deps, env, info, id, force.unwrap_or(false))
+        }
     }
 }
 
@@ -103,6 +119,7 @@ pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<A
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::StakeToken {} => to_binary(&query::stake_token(deps)?),
         QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps)?),
         QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps)?),
         QueryMsg::RewardPools {} => to_binary(&query::reward_pools(deps)?),

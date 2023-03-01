@@ -73,7 +73,10 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        query_auth: Option<RawContract>,
+        unbond_period: Option<Uint128>,
+        max_user_pools: Option<Uint128>,
     },
     RegisterRewards {
         token: RawContract,
@@ -93,11 +96,10 @@ pub enum ExecuteMsg {
         ids: Option<Vec<Uint128>>,
     },
     Compound {},
-    /*
-    RemovePool {
-        pool_id: Uint128,
+    CancelRewardPool {
+        id: Uint128,
+        force: Option<bool>,
     },
-    */
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -137,6 +139,9 @@ pub enum ExecuteAnswer {
     RegisterRewards {
         status: ResponseStatus,
     },
+    CancelRewardPool {
+        status: ResponseStatus,
+    },
 }
 
 #[cw_serde]
@@ -152,6 +157,7 @@ pub enum Auth {
 pub enum QueryMsg {
     Config {},
     // TotalShares {},
+    StakeToken {},
     TotalStaked {},
     RewardTokens {},
     // All reward pools in progress
@@ -181,6 +187,7 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
+    StakeToken { token: Addr },
     TotalStaked { amount: Uint128 },
     RewardTokens { tokens: Vec<Addr> },
     RewardPools { rewards: Vec<RewardPool> },

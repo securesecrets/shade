@@ -14,6 +14,12 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
+pub fn stake_token(deps: Deps) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::StakeToken {
+        token: STAKE_TOKEN.load(deps.storage)?.address,
+    })
+}
+
 pub fn total_staked(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::TotalStaked {
         amount: TOTAL_STAKED.load(deps.storage)?,
