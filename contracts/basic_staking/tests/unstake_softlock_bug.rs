@@ -323,6 +323,18 @@ fn unstake_softlock_bug(
             panic!("Staking rewards query failed");
         }
     };
+
+    // re-stake funds
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: stake_amount,
+        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
 }
 
 macro_rules! unstake_softlock_bug {
