@@ -1,5 +1,5 @@
 use shade_protocol::{
-    basic_staking::{QueryAnswer, Reward},
+    basic_staking::{QueryAnswer, Reward, RewardPool, RewardPoolInternal},
     c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
 };
 
@@ -38,44 +38,68 @@ pub fn reward_tokens(deps: Deps) -> StdResult<QueryAnswer> {
 
 pub fn reward_pools(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::RewardPools {
-        rewards: REWARD_POOLS.load(deps.storage)?,
+        rewards: REWARD_POOLS
+            .load(deps.storage)?
+            .into_iter()
+            .map(
+                |RewardPoolInternal {
+                     id,
+                     amount,
+                     start,
+                     end,
+                     token,
+                     rate,
+                     official,
+                     ..
+                 }| RewardPool {
+                    id,
+                    amount,
+                    start,
+                    end,
+                    token,
+                    rate,
+                    official,
+                },
+            )
+            .collect(),
     })
 }
 
-pub fn user_balance(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::Balance {
-        amount: USER_STAKED
-            .may_load(deps.storage, user)?
-            .unwrap_or(Uint128::zero()),
-    })
-}
+pub fn user_balance(
+    deps: Deps,
+    env: Env,
+    user: Addr,
+    unbonding_ids: Vec<Uint128>,
+) -> StdResult<QueryAnswer> {
+    let mut unbondings = vec![];
 
-pub fn user_share(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
-    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    for unbonding_id in unbonding_ids.iter() {
+        if let Some(unbonding) = USER_UNBONDING.may_load(
+            deps.storage,
+            user_unbonding_key(user.clone(), *unbonding_id),
+        )? {
+            unbondings.push(unbonding);
+        } else {
+            return Err(StdError::generic_err(format!(
+                "Bad Unbonding ID {}",
+                unbonding_id
+            )));
+        }
+    }
 
-    let user_staked = USER_STAKED
-        .may_load(deps.storage, user)?
-        .unwrap_or(Uint128::zero());
+    let mut rewards = vec![];
 
-    let user_norm = Uint128::new(user_staked.u128() * 10u128.pow(18));
-    let total_norm = Uint128::new(total_staked.u128() * 10u128.pow(18));
-
-    Ok(QueryAnswer::Share {
-        share: user_norm / total_norm,
-    })
-}
-
-pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
-    // let user_last_claim = USER_LAST_CLAIM.load(deps.storage, user.clone())?;
     if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
         if user_staked.is_zero() {
-            return Ok(QueryAnswer::Rewards { rewards: vec![] });
+            return Ok(QueryAnswer::Balance {
+                staked: Uint128::zero(),
+                rewards,
+                unbondings,
+            });
         }
         let reward_pools = REWARD_POOLS.load(deps.storage)?;
         let total_staked = TOTAL_STAKED.load(deps.storage)?;
         let now = env.block.time.seconds();
-
-        let mut rewards = vec![];
 
         for reward_pool in reward_pools {
             let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
@@ -88,10 +112,54 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
             });
         }
 
-        Ok(QueryAnswer::Rewards { rewards })
+        Ok(QueryAnswer::Balance {
+            staked: USER_STAKED
+                .may_load(deps.storage, user)?
+                .unwrap_or(Uint128::zero()),
+            rewards,
+            unbondings,
+        })
     } else {
-        Ok(QueryAnswer::Rewards { rewards: vec![] })
+        Ok(QueryAnswer::Balance {
+            staked: Uint128::zero(),
+            rewards,
+            unbondings,
+        })
     }
+}
+
+pub fn user_staked(deps: Deps, user: Addr) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::Staked {
+        amount: USER_STAKED
+            .may_load(deps.storage, user)?
+            .unwrap_or(Uint128::zero()),
+    })
+}
+
+pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> {
+    let mut rewards = vec![];
+
+    if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
+        if user_staked.is_zero() {
+            return Ok(QueryAnswer::Rewards { rewards });
+        }
+        let reward_pools = REWARD_POOLS.load(deps.storage)?;
+        let total_staked = TOTAL_STAKED.load(deps.storage)?;
+        let now = env.block.time.seconds();
+
+        for reward_pool in reward_pools {
+            let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
+                .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.id))?
+                .unwrap_or(Uint128::zero());
+            let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
+            rewards.push(Reward {
+                token: reward_pool.token.address,
+                amount: rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid),
+            });
+        }
+    }
+
+    Ok(QueryAnswer::Rewards { rewards })
 }
 
 pub fn user_unbondings(deps: Deps, user: Addr, ids: Vec<Uint128>) -> StdResult<QueryAnswer> {

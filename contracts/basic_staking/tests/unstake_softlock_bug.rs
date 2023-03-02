@@ -116,6 +116,7 @@ fn unstake_softlock_bug(
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
+        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -128,7 +129,7 @@ fn unstake_softlock_bug(
     println!("BASIC STAKING {}", basic_staking.address);
 
     // Pre-staking user balance
-    match (basic_staking::QueryMsg::Balance {
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
@@ -137,7 +138,7 @@ fn unstake_softlock_bug(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
         }
         _ => {
@@ -150,7 +151,7 @@ fn unstake_softlock_bug(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake {}).unwrap()),
+        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
         memo: None,
         padding: None,
     }
@@ -158,7 +159,7 @@ fn unstake_softlock_bug(
     .unwrap();
 
     // Post-staking user balance
-    match (basic_staking::QueryMsg::Balance {
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
@@ -167,7 +168,7 @@ fn unstake_softlock_bug(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, stake_amount, "Post-Stake Balance");
         }
         _ => {
@@ -194,7 +195,7 @@ fn unstake_softlock_bug(
     .unwrap();
 
     // reward user has no stake
-    match (basic_staking::QueryMsg::Balance {
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: reward_user.clone().into(),
@@ -203,7 +204,7 @@ fn unstake_softlock_bug(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, Uint128::zero(), "Reward User Stake Balance");
         }
         _ => {
@@ -295,6 +296,7 @@ fn unstake_softlock_bug(
     // Unstake all funds
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
+        compound: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();

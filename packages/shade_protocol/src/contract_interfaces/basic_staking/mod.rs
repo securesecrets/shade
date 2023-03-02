@@ -19,13 +19,14 @@ pub struct Config {
     pub query_auth: Contract,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
+    pub reward_cancel_threshold: Uint128,
 }
 
 // For the Snip20 msg field
 #[cw_serde]
 pub enum Action {
     // Deposit rewards to be distributed
-    Stake {},
+    Stake { compound: Option<bool> },
     Rewards { start: Uint128, end: Uint128 },
 }
 
@@ -42,6 +43,23 @@ pub struct Reward {
     pub amount: Uint128,
 }
 
+// Internal storage
+#[cw_serde]
+pub struct RewardPoolInternal {
+    pub id: Uint128,
+    pub amount: Uint128,
+    pub start: Uint128,
+    pub end: Uint128,
+    pub token: Contract,
+    pub rate: Uint128,
+    pub reward_per_token: Uint128,
+    pub claimed: Uint128,
+    pub last_update: Uint128,
+    pub creator: Addr,
+    pub official: bool,
+}
+
+// Query returned data
 #[cw_serde]
 pub struct RewardPool {
     pub id: Uint128,
@@ -50,9 +68,6 @@ pub struct RewardPool {
     pub end: Uint128,
     pub token: Contract,
     pub rate: Uint128,
-    pub reward_per_token: Uint128,
-    pub last_update: Uint128,
-    pub creator: Addr,
     pub official: bool,
 }
 
@@ -63,6 +78,7 @@ pub struct InstantiateMsg {
     pub stake_token: RawContract,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
+    pub reward_cancel_threshold: Uint128,
     pub viewing_key: String,
 }
 
@@ -77,6 +93,7 @@ pub enum ExecuteMsg {
         query_auth: Option<RawContract>,
         unbond_period: Option<Uint128>,
         max_user_pools: Option<Uint128>,
+        reward_cancel_threshold: Option<Uint128>,
     },
     RegisterRewards {
         token: RawContract,
@@ -88,18 +105,31 @@ pub enum ExecuteMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    Claim {},
     Unbond {
         amount: Uint128,
+        compound: Option<bool>,
     },
     Withdraw {
         ids: Option<Vec<Uint128>>,
     },
+    Claim {},
     Compound {},
     CancelRewardPool {
         id: Uint128,
         force: Option<bool>,
     },
+    /* TODO permissionless or whitelisted?
+     * potential issues:
+     *  - sending & receiving users must either claim or compound
+     *  - allows the sender to force a claim to the receiver
+     */
+    /*
+    TransferStake {
+        amount: Uint128,
+        recipient: String,
+        compound: Option<bool>,
+    },
+    */
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -163,12 +193,11 @@ pub enum QueryMsg {
     // All reward pools in progress
     RewardPools {},
 
-    // User permissioned (vk/permit)
-    // Single query for all data?
     Balance {
         auth: Auth,
+        unbonding_ids: Option<Vec<Uint128>>,
     },
-    Share {
+    Staked {
         auth: Auth,
     },
     Rewards {
@@ -186,13 +215,33 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryAnswer {
-    Config { config: Config },
-    StakeToken { token: Addr },
-    TotalStaked { amount: Uint128 },
-    RewardTokens { tokens: Vec<Addr> },
-    RewardPools { rewards: Vec<RewardPool> },
-    Balance { amount: Uint128 },
-    Share { share: Uint128 },
-    Rewards { rewards: Vec<Reward> },
-    Unbonding { unbondings: Vec<Unbonding> },
+    Config {
+        config: Config,
+    },
+    StakeToken {
+        token: Addr,
+    },
+    TotalStaked {
+        amount: Uint128,
+    },
+    RewardTokens {
+        tokens: Vec<Addr>,
+    },
+    RewardPools {
+        rewards: Vec<RewardPool>,
+    },
+    Balance {
+        staked: Uint128,
+        rewards: Vec<Reward>,
+        unbondings: Vec<Unbonding>,
+    },
+    Staked {
+        amount: Uint128,
+    },
+    Rewards {
+        rewards: Vec<Reward>,
+    },
+    Unbonding {
+        unbondings: Vec<Unbonding>,
+    },
 }

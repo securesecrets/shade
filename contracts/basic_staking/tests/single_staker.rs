@@ -116,6 +116,7 @@ fn single_staker_single_pool(
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
+        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -127,8 +128,8 @@ fn single_staker_single_pool(
     .unwrap();
     println!("BASIC STAKING {}", basic_staking.address);
 
-    // Pre-staking user balance
-    match (basic_staking::QueryMsg::Balance {
+    // Pre-staking user stake amount
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
@@ -137,7 +138,7 @@ fn single_staker_single_pool(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
         }
         _ => {
@@ -150,7 +151,7 @@ fn single_staker_single_pool(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake {}).unwrap()),
+        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
         memo: None,
         padding: None,
     }
@@ -158,7 +159,7 @@ fn single_staker_single_pool(
     .unwrap();
 
     // Post-staking user balance
-    match (basic_staking::QueryMsg::Balance {
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
@@ -167,7 +168,7 @@ fn single_staker_single_pool(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, stake_amount, "Post-Stake Balance");
         }
         _ => {
@@ -194,7 +195,7 @@ fn single_staker_single_pool(
     .unwrap();
 
     // reward user has no stake
-    match (basic_staking::QueryMsg::Balance {
+    match (basic_staking::QueryMsg::Staked {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: reward_user.clone().into(),
@@ -203,7 +204,7 @@ fn single_staker_single_pool(
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Balance { amount } => {
+        basic_staking::QueryAnswer::Staked { amount } => {
             assert_eq!(amount, Uint128::zero(), "Reward User Stake Balance");
         }
         _ => {
@@ -354,17 +355,18 @@ fn single_staker_single_pool(
     // Unbond
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
+        compound: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
 
     // All rewards should be pending
     match (basic_staking::QueryMsg::Unbonding {
-        ids: None,
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()

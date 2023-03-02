@@ -33,6 +33,7 @@ pub fn instantiate(
         query_auth: msg.query_auth.into_valid(deps.api)?,
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
+        reward_cancel_threshold: msg.reward_cancel_threshold,
     };
 
     let stake_token = msg.stake_token.into_valid(deps.api)?;
@@ -62,6 +63,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             query_auth,
             unbond_period,
             max_user_pools,
+            reward_cancel_threshold,
         } => execute::update_config(
             deps,
             env,
@@ -70,6 +72,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             query_auth,
             unbond_period,
             max_user_pools,
+            reward_cancel_threshold,
         ),
         ExecuteMsg::RegisterRewards { token } => {
             let api = deps.api;
@@ -83,7 +86,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ..
         } => execute::receive(deps, env, info, sender, from, amount, msg),
         ExecuteMsg::Claim {} => execute::claim(deps, env, info),
-        ExecuteMsg::Unbond { amount } => execute::unbond(deps, env, info, amount),
+        ExecuteMsg::Unbond { amount, compound } => {
+            execute::unbond(deps, env, info, amount, compound.unwrap_or(false))
+        }
         ExecuteMsg::Withdraw { ids } => match ids {
             Some(ids) => execute::withdraw(deps, env, info, ids),
             None => execute::withdraw_all(deps, env, info),
@@ -123,16 +128,22 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps)?),
         QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps)?),
         QueryMsg::RewardPools {} => to_binary(&query::reward_pools(deps)?),
-        QueryMsg::Balance { auth } => {
+        QueryMsg::Balance {
+            auth,
+            unbonding_ids,
+        } => {
             let config = CONFIG.load(deps.storage)?;
+            let user = authenticate(deps, auth, config.query_auth)?;
             to_binary(&query::user_balance(
                 deps,
-                authenticate(deps, auth, config.query_auth)?,
+                env,
+                user.clone(),
+                unbonding_ids.unwrap_or(USER_UNBONDING_IDS.load(deps.storage, user)?),
             )?)
         }
-        QueryMsg::Share { auth } => {
+        QueryMsg::Staked { auth } => {
             let config = CONFIG.load(deps.storage)?;
-            to_binary(&query::user_share(
+            to_binary(&query::user_staked(
                 deps,
                 authenticate(deps, auth, config.query_auth)?,
             )?)
