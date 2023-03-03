@@ -18,8 +18,18 @@ pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
     pub unbond_period: Uint128,
+    // Number of non-admin pools allowed
     pub max_user_pools: Uint128,
+    // Required amount of rewards claimed
+    // before a reward pool can be cancelled without 'force'
     pub reward_cancel_threshold: Uint128,
+}
+
+#[cw_serde]
+pub struct StakingInfo {
+    pub stake_token: Addr,
+    pub unbond_period: Uint128,
+    pub reward_pools: Vec<RewardPool>,
 }
 
 // For the Snip20 msg field
@@ -123,13 +133,11 @@ pub enum ExecuteMsg {
      *  - sending & receiving users must either claim or compound
      *  - allows the sender to force a claim to the receiver
      */
-    /*
     TransferStake {
         amount: Uint128,
         recipient: String,
         compound: Option<bool>,
     },
-    */
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -188,6 +196,7 @@ pub enum QueryMsg {
     Config {},
     // TotalShares {},
     StakeToken {},
+    StakingInfo {},
     TotalStaked {},
     RewardTokens {},
     // All reward pools in progress
@@ -220,6 +229,9 @@ pub enum QueryAnswer {
     },
     StakeToken {
         token: Addr,
+    },
+    StakingInfo {
+        info: StakingInfo,
     },
     TotalStaked {
         amount: Uint128,

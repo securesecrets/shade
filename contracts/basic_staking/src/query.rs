@@ -1,5 +1,5 @@
 use shade_protocol::{
-    basic_staking::{QueryAnswer, Reward, RewardPool, RewardPoolInternal},
+    basic_staking::{QueryAnswer, Reward, RewardPool, RewardPoolInternal, StakingInfo},
     c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
 };
 
@@ -17,6 +17,39 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
 pub fn stake_token(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::StakeToken {
         token: STAKE_TOKEN.load(deps.storage)?.address,
+    })
+}
+
+pub fn staking_info(deps: Deps) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::StakingInfo {
+        info: StakingInfo {
+            stake_token: STAKE_TOKEN.load(deps.storage)?.address,
+            unbond_period: CONFIG.load(deps.storage)?.unbond_period,
+            reward_pools: REWARD_POOLS
+                .load(deps.storage)?
+                .into_iter()
+                .map(
+                    |RewardPoolInternal {
+                         id,
+                         amount,
+                         start,
+                         end,
+                         token,
+                         rate,
+                         official,
+                         ..
+                     }| RewardPool {
+                        id,
+                        amount,
+                        start,
+                        end,
+                        token,
+                        rate,
+                        official,
+                    },
+                )
+                .collect(),
+        },
     })
 }
 

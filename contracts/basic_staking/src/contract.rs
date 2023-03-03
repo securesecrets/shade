@@ -97,6 +97,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::CancelRewardPool { id, force } => {
             execute::cancel_reward_pool(deps, env, info, id, force.unwrap_or(false))
         }
+        ExecuteMsg::TransferStake {
+            amount,
+            recipient,
+            compound,
+        } => {
+            let api = deps.api;
+            execute::transfer_stake(
+                deps,
+                env,
+                info,
+                amount,
+                api.addr_validate(&recipient)?,
+                compound.unwrap_or(false),
+            )
+        }
     }
 }
 
@@ -125,6 +140,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::StakeToken {} => to_binary(&query::stake_token(deps)?),
+        QueryMsg::StakingInfo {} => to_binary(&query::staking_info(deps)?),
         QueryMsg::TotalStaked {} => to_binary(&query::total_staked(deps)?),
         QueryMsg::RewardTokens {} => to_binary(&query::reward_tokens(deps)?),
         QueryMsg::RewardPools {} => to_binary(&query::reward_pools(deps)?),

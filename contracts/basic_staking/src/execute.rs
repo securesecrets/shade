@@ -59,6 +59,7 @@ pub fn update_config(
     if let Some(max_user_pools) = max_user_pools {
         config.max_user_pools = max_user_pools;
     }
+
     if let Some(reward_cancel_threshold) = reward_cancel_threshold {
         config.reward_cancel_threshold = reward_cancel_threshold;
     }
@@ -684,24 +685,71 @@ pub fn cancel_reward_pool(
         &config.admin_auth,
     )?;
 
-    // let claimed = REWARD_POOL_CLAIMED.load(deps.storage, id.u128())?;
+    // return Err(StdError::generic_err("Cancel Rewards Not Implemented"));
 
     let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
 
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    let mut response = Response::new();
+
     if let Some(i) = reward_pools.iter().position(|p| p.id == id) {
         if !force {
-            //TODO check that 'claimed / amount' > threshold
-            // if reward_pools[i].claimed
+            let claim_percent = Uint128::new(
+                (reward_pools[i].claimed.u128() * 10u128.pow(18)) / total_staked.u128(),
+            );
+            if claim_percent < config.reward_cancel_threshold {
+                return Err(StdError::generic_err(format!(
+                    "Percent claimed {} does not exceed threshold {}",
+                    claim_percent, config.reward_cancel_threshold
+                )));
+            }
+        }
+
+        // Send unclaimed funds to creator
+        let unclaimed = reward_pools[i].amount - reward_pools[i].claimed;
+        if !unclaimed.is_zero() {
+            response = response.add_message(send_msg(
+                reward_pools[i].creator.clone(),
+                unclaimed,
+                None,
+                None,
+                None,
+                &reward_pools[i].token,
+            )?);
         }
         reward_pools.remove(i);
     } else {
         return Err(StdError::generic_err("Invalid pool id"));
     }
 
-    // TODO send unclaimed funds to creator or canceller
+    Ok(
+        response.set_data(to_binary(&ExecuteAnswer::CancelRewardPool {
+            status: ResponseStatus::Success,
+        })?),
+    )
+}
+
+pub fn transfer_stake(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+    recipient: Addr,
+    compound: bool,
+) -> StdResult<Response> {
+    return Err(StdError::generic_err("Transfer Stake Not Implemented"));
+
+    /* TODO
+     * - compound/claim sending user
+     * - claim receiving user
+     * - move stake amount
+     */
+
+    /*
     Ok(Response::new()
         // .add_message(send_msg())
-        .set_data(to_binary(&ExecuteAnswer::CancelRewardPool {
+        .set_data(to_binary(&ExecuteAnswer::TransferStake {
             status: ResponseStatus::Success,
         })?))
+    */
 }
