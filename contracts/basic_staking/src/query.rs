@@ -106,6 +106,7 @@ pub fn user_balance(
 ) -> StdResult<QueryAnswer> {
     let mut unbondings = vec![];
 
+    println!("loading unbondings");
     for unbonding_id in unbonding_ids.iter() {
         if let Some(unbonding) = USER_UNBONDING.may_load(
             deps.storage,
@@ -122,6 +123,7 @@ pub fn user_balance(
 
     let mut rewards = vec![];
 
+    println!("loading user stake");
     if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
         if user_staked.is_zero() {
             return Ok(QueryAnswer::Balance {
@@ -145,6 +147,7 @@ pub fn user_balance(
             });
         }
 
+        println!("return 1");
         Ok(QueryAnswer::Balance {
             staked: USER_STAKED
                 .may_load(deps.storage, user)?
@@ -153,6 +156,7 @@ pub fn user_balance(
             unbondings,
         })
     } else {
+        println!("return 2");
         Ok(QueryAnswer::Balance {
             staked: Uint128::zero(),
             rewards,

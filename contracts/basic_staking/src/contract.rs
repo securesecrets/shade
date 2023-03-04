@@ -150,11 +150,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => {
             let config = CONFIG.load(deps.storage)?;
             let user = authenticate(deps, auth, config.query_auth)?;
+            let unbonding_ids = match unbonding_ids {
+                Some(ids) => ids,
+                None => {
+                    if let Some(ids) = USER_UNBONDING_IDS.may_load(deps.storage, user.clone())? {
+                        ids
+                    } else {
+                        vec![]
+                    }
+                }
+            };
             to_binary(&query::user_balance(
                 deps,
                 env,
                 user.clone(),
-                unbonding_ids.unwrap_or(USER_UNBONDING_IDS.load(deps.storage, user)?),
+                unbonding_ids,
             )?)
         }
         QueryMsg::Staked { auth } => {

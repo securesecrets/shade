@@ -139,7 +139,31 @@ fn unstake_softlock_bug(
     .unwrap()
     {
         basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
+            assert_eq!(amount, Uint128::zero(), "Pre-Stake Stake amount");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            unbondings,
+            rewards,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Pre-Stake Balance");
+            assert_eq!(unbondings.len(), 0, "Pre-Stake Balance");
+            assert_eq!(rewards.len(), 0, "Pre-Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
