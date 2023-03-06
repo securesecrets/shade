@@ -63,18 +63,17 @@ pub fn instantiate(
         return Err(StdError::generic_err("Trading fee cannot be over 100%"));
     }
 
-    // TODO: verify config?
-    // Don't verify config. If config is messed up, you're screwed. Start over.
     Config {
         shade_admin_addr: msg.shade_admin_addr,
         treasury: msg.treasury,
         derivative: msg.derivative.clone(),
         trading_fees: msg.trading_fees,
         max_arb_amount: msg.max_arb_amount,
+        min_profit_amount: msg.min_profit_amount,
         viewing_key: msg.viewing_key.clone(),
     }.save(deps.storage)?;
 
-    // Clear current pairs, then add individual (validating each)
+    // Validate each dex pair
     let mut new_pairs = vec![];
     for pair in msg.dex_pairs {
         // derivative must be the 2nd entry in the dex_pair
@@ -112,6 +111,7 @@ pub fn execute(
             derivative,
             trading_fees,
             max_arb_amount,
+            min_profit_amount,
             viewing_key,
         } => execute::try_update_config(
             deps, 
@@ -121,6 +121,7 @@ pub fn execute(
             derivative, 
             trading_fees,
             max_arb_amount,
+            min_profit_amount,
             viewing_key,
         ),
         ExecuteMsg::SetDexPairs { pairs } => execute::try_set_dex_pairs(deps, info, pairs),

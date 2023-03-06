@@ -50,6 +50,7 @@ pub fn is_arb_profitable(
     
     let derivative_price = Float::from(config.derivative.query_exchange_price(querier)?);
     let max_swap = max_swap.and_then(|max| Some(Float::from(max)));
+    let min_profit = config.min_profit_amount;
 
     // Subtracts will not overflow if trading fees are properly checked
     let unbond_rate: Float = Float::from(config.trading_fees.unbond_fee);
@@ -70,25 +71,33 @@ pub fn is_arb_profitable(
         unbond_rate, 
         stake_rate, 
         dex_rate, 
-        max_swap
+        max_swap,
     );
 
     // Convert back to Uint types
     match opt_res? {
         Some(optimization) => {
+            let swap_amounts = SwapAmounts {
+                optimal_swap: optimization.optimal_swap
+                    .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                    .try_into()?,
+                swap1_result: optimization.swap1_result
+                    .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                    .try_into()?,
+                swap2_result: optimization.swap2_result
+                    .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
+                    .try_into()?,
+            };
+            
+            // Check if profit is significant
+            let mut is_profitable = true;
+            if swap_amounts.swap2_result - swap_amounts.optimal_swap < min_profit {
+                is_profitable = false;
+            }
+
             Ok(QueryAnswer::IsProfitable {
-                is_profitable: true,
-                swap_amounts: Some(SwapAmounts {
-                    optimal_swap: optimization.optimal_swap
-                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
-                        .try_into()?,
-                    swap1_result: optimization.swap1_result
-                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
-                        .try_into()?,
-                    swap2_result: optimization.swap2_result
-                        .shift_decimal(u128::from(dex_pair.token0_decimals) as i32)?
-                        .try_into()?,
-                }),
+                is_profitable,
+                swap_amounts: Some(swap_amounts),
                 direction: Some(optimization.direction),
             })
         },

@@ -36,6 +36,7 @@ pub struct Config {
     pub derivative: Derivative,
     pub trading_fees: TradingFees,
     pub max_arb_amount: Uint128,
+    pub min_profit_amount: Uint128,
     pub viewing_key: String,
 }
 
@@ -72,6 +73,7 @@ pub struct InstantiateMsg {
     pub trading_fees: TradingFees,
     pub dex_pairs: Vec<ArbPair>,
     pub max_arb_amount: Uint128,
+    pub min_profit_amount: Uint128,
     pub viewing_key: String,
 }
 
@@ -94,6 +96,7 @@ pub enum ExecuteMsg {
         derivative: Option<Derivative>,
         trading_fees: Option<TradingFees>,
         max_arb_amount: Option<Uint128>,
+        min_profit_amount: Option<Uint128>,
         viewing_key: Option<String>,
     },
     SetDexPairs {

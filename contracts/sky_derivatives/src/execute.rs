@@ -52,6 +52,7 @@ pub fn try_update_config(
     derivative: Option<Derivative>,
     trading_fees: Option<TradingFees>,
     max_arb_amount: Option<Uint128>,
+    min_profit_amount: Option<Uint128>,
     viewing_key: Option<String>,
 ) -> StdResult<Response> {
     let cur_config = Config::load(deps.storage)?;
@@ -75,7 +76,9 @@ pub fn try_update_config(
                     AdminPermissions::SkyAdmin, // TODO does this make sense????
                     info.sender.to_string(),
                     &contract,
-                )?;
+                ).map_err(|_| StdError::generic_err(
+                        "New admin invalid, must have admin permissions on with new admin"
+                ))?;
                 contract
             },
             None => cur_config.shade_admin_addr,
@@ -90,16 +93,10 @@ pub fn try_update_config(
                 DexPairs(vec![]).save(deps.storage)?;
 
                 // If viewing key is also updated, it will be changed again below
-                messages.push(set_viewing_key_msg(
-                    cur_config.viewing_key.clone(),
-                    None,
-                    &deriv.contract,
-                )?);
-                messages.push(set_viewing_key_msg(
-                    cur_config.viewing_key.clone(),
-                    None,
-                    &deriv.original_asset,
-                )?);
+                messages = set_viewing_keys( // replace any current messages
+                    deriv, 
+                    &cur_config.viewing_key,
+                )?;
                 deriv.clone()
             },
             None => cur_config.derivative.clone(),
@@ -118,10 +115,16 @@ pub fn try_update_config(
             Some(max) => max,
             None => cur_config.max_arb_amount,
         },
+        min_profit_amount: match min_profit_amount {
+            Some(min) => min,
+            None => cur_config.min_profit_amount,
+        },
         viewing_key: match viewing_key {
             Some(key) => {
-                println!("{} ::: {}", key, cur_config.viewing_key);
-                set_viewing_keys(&derivative.unwrap_or(cur_config.derivative), &key)?;
+                messages = set_viewing_keys( // replace any current messages
+                    &derivative.unwrap_or(cur_config.derivative), 
+                    &key,
+                )?;
                 key
             },
             None => cur_config.viewing_key,
@@ -215,12 +218,9 @@ pub fn try_set_pair(
     if !validate_dex_pair(&config.derivative, &pair) {
         return Err(StdError::generic_err("Invalid pair - does not match derivative"));
     }
-    
-    pairs[i] = pair;
 
-    // TODO - Test if this is necessary
-    // NOTE - this definitely should be necessary
-    // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
+    pairs[i] = pair;
+    DexPairs(pairs).save(deps.storage)?;
 
     Ok(Response::new()
         .set_data(to_binary(&ExecuteAnswer::SetPair {
@@ -250,10 +250,7 @@ pub fn try_add_pair(
 
     let mut pairs = DexPairs::load(deps.storage)?.0;
     pairs.push(pair);
-
-    // TODO - Test if this is necessary
-    // NOTE - this definitely should be necessary
-    // storage::DEX_PAIRS.save(&mut deps.storage, pairs);
+    DexPairs(pairs).save(deps.storage)?;
 
     Ok(Response::new()
         .set_data(to_binary(&ExecuteAnswer::AddPair {
@@ -280,6 +277,7 @@ pub fn try_remove_pair(
         return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", index)));
     }
     pairs.remove(index);
+    DexPairs(pairs).save(deps.storage)?;
     
     Ok(Response::new()
         .set_data(to_binary(&ExecuteAnswer::RemovePair {
