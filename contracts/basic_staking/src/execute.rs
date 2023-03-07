@@ -403,7 +403,7 @@ pub fn unbond(
     }
 
     if let Some(mut user_staked) = USER_STAKED.may_load(deps.storage, info.sender.clone())? {
-        if user_staked < amount {
+        if user_staked.is_zero() || user_staked < amount {
             return Err(StdError::generic_err(format!(
                 "Cannot unbond {}, only {} staked",
                 amount, user_staked
@@ -495,6 +495,7 @@ pub fn unbond(
     }
 }
 
+/*
 pub fn withdraw_all(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let user_unbonding_ids = USER_UNBONDING_IDS
         .may_load(deps.storage, info.sender.clone())?
@@ -540,16 +541,20 @@ pub fn withdraw_all(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Res
             status: ResponseStatus::Success,
         })?))
 }
+*/
 
 pub fn withdraw(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    ids: Vec<Uint128>,
+    ids: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
     let mut user_unbonding_ids = USER_UNBONDING_IDS
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or(vec![]);
+
+    // If null ids, use all user unbondings
+    let ids = ids.unwrap_or(user_unbonding_ids.clone());
 
     let mut withdraw_amount = Uint128::zero();
 
@@ -574,27 +579,28 @@ pub fn withdraw(
         return Err(StdError::generic_err("No unbondings to withdraw"));
     }
 
-    // Remove withdrawn ids from user list
-    //TODO optimize with hashset or sorted lists
+    // Sort lists so the operation is O(n)
     withdrawn_ids.sort();
     user_unbonding_ids.sort();
 
+    // To store remaining ids
+    let mut new_unbonding_ids = vec![];
+
+    // Maps to the withdrawn_ids list
     let mut withdrawn_i = 0;
+
     for i in 0..user_unbonding_ids.len() {
-        if user_unbonding_ids[i] == withdrawn_ids[i] {
-            user_unbonding_ids.remove(i);
-
-            // advance withdrawn
+        // If all withdrawn handled, or it doesn't collide with withdrawn
+        if withdrawn_i >= withdrawn_ids.len() || user_unbonding_ids[i] != withdrawn_ids[withdrawn_i]
+        {
+            new_unbonding_ids.push(user_unbonding_ids[i]);
+        } else {
+            // advance withdrawn index
             withdrawn_i += 1;
-
-            // done if end of withdrawn
-            if withdrawn_i >= withdrawn_ids.len() {
-                break;
-            }
         }
     }
 
-    USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &user_unbonding_ids)?;
+    USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &new_unbonding_ids)?;
 
     println!("Withdrawing {}", withdraw_amount);
     Ok(Response::new()

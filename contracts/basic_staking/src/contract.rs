@@ -89,10 +89,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::Unbond { amount, compound } => {
             execute::unbond(deps, env, info, amount, compound.unwrap_or(false))
         }
-        ExecuteMsg::Withdraw { ids } => match ids {
-            Some(ids) => execute::withdraw(deps, env, info, ids),
-            None => execute::withdraw_all(deps, env, info),
-        },
+        ExecuteMsg::Withdraw { ids } => execute::withdraw(deps, env, info.clone(), ids),
         ExecuteMsg::Compound {} => execute::compound(deps, env, info),
         ExecuteMsg::CancelRewardPool { id, force } => {
             execute::cancel_reward_pool(deps, env, info, id, force.unwrap_or(false))

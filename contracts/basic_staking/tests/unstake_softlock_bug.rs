@@ -109,6 +109,7 @@ fn unstake_softlock_bug(
     .test_exec(&query_contract, &mut app, reward_user.clone(), &[])
     .unwrap();
 
+    // Init Staking
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
@@ -129,17 +130,22 @@ fn unstake_softlock_bug(
     println!("BASIC STAKING {}", basic_staking.address);
 
     // Pre-staking user balance
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Pre-Stake Stake amount");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Pre-Stake Stake amount");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -183,17 +189,22 @@ fn unstake_softlock_bug(
     .unwrap();
 
     // Post-staking user balance
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, stake_amount, "Post-Stake Balance");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, stake_amount, "Post-Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -219,17 +230,22 @@ fn unstake_softlock_bug(
     .unwrap();
 
     // reward user has no stake
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: reward_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reward User Stake Balance");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Reward User Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -259,16 +275,21 @@ fn unstake_softlock_bug(
     });
 
     // No rewards should be pending
-    match (basic_staking::QueryMsg::Rewards {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
             assert_eq!(rewards.len(), 1, "Rewards length at beginning");
             assert_eq!(
                 rewards[0].amount,
@@ -292,16 +313,21 @@ fn unstake_softlock_bug(
     });
 
     // Half-ish rewards should be pending
-    match (basic_staking::QueryMsg::Rewards {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
             assert_eq!(rewards.len(), 1, "rewards length in the middle");
             let amount = rewards[0].amount;
             let expected = reward_amount / Uint128::new(2);
@@ -325,26 +351,101 @@ fn unstake_softlock_bug(
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
 
+    // Check contract reflects unbonding
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Post-Unbond stake amount p");
+            assert_eq!(unbondings.len(), 1, "Post unbond unbondings");
+            assert_eq!(
+                unbondings[0].amount, stake_amount,
+                "Post unbond amount unbonding"
+            );
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
     // Claim rewards
     basic_staking::ExecuteMsg::Claim {}
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
-    // No rewards should be pending
-    match (basic_staking::QueryMsg::Rewards {
+    // Check contract reflects claim
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
-            assert_eq!(rewards.len(), 0, "No rewards after full unbond");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Post-Claim stake amount p");
+            assert_eq!(unbondings.len(), 1, "Post claim unbondings");
+            assert_eq!(
+                unbondings[0].amount, stake_amount,
+                "Post claim amount unbonding"
+            );
+            assert_eq!(rewards, vec![], "Post claim rewards pending");
         }
         _ => {
-            panic!("Staking rewards query failed");
+            panic!("Staking balance query failed");
+        }
+    };
+
+    println!("Fast-forward to end of unbonding period");
+    app.set_block(BlockInfo {
+        height: 10,
+        time: Timestamp::from_seconds((reward_end + unbond_period).u128() as u64),
+        chain_id: "chain_id".to_string(),
+    });
+
+    // Withdraw unbonding
+    basic_staking::ExecuteMsg::Withdraw { ids: None }
+        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+        .unwrap();
+
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Final Staked Balance");
+            assert_eq!(rewards, vec![], "Final Rewards");
+            assert_eq!(unbondings, vec![], "Final Unbondings");
+        }
+        _ => {
+            panic!("Staking balance query failed");
         }
     };
 

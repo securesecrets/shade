@@ -129,17 +129,22 @@ fn single_staker_single_pool(
     println!("BASIC STAKING {}", basic_staking.address);
 
     // Pre-staking user stake amount
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Pre-Stake Balance");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Pre-Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -159,17 +164,22 @@ fn single_staker_single_pool(
     .unwrap();
 
     // Post-staking user balance
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, stake_amount, "Post-Stake Balance");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, stake_amount, "Post-Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -195,17 +205,22 @@ fn single_staker_single_pool(
     .unwrap();
 
     // reward user has no stake
-    match (basic_staking::QueryMsg::Staked {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: reward_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reward User Stake Balance");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Reward User Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -268,16 +283,21 @@ fn single_staker_single_pool(
     });
 
     // Half-ish rewards should be pending
-    match (basic_staking::QueryMsg::Rewards {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
             assert_eq!(rewards.len(), 1, "rewards length in the middle");
             let amount = rewards[0].amount;
             let expected = reward_amount / Uint128::new(2);
@@ -302,16 +322,21 @@ fn single_staker_single_pool(
     });
 
     // All rewards should be pending
-    match (basic_staking::QueryMsg::Rewards {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Rewards { rewards } => {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
             assert_eq!(rewards.len(), 1, "rewards length at end");
             let amount = rewards[0].amount;
             assert!(
@@ -331,7 +356,7 @@ fn single_staker_single_pool(
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
-    // Check rewards were claimed
+    // Check rewards were received
     match (snip20::QueryMsg::Balance {
         key: viewing_key.clone(),
         address: staking_user.clone().into(),
@@ -360,18 +385,24 @@ fn single_staker_single_pool(
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
 
-    // All rewards should be pending
-    match (basic_staking::QueryMsg::Unbonding {
+    match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
             address: staking_user.clone().into(),
         },
-        ids: None,
+        unbonding_ids: None,
     })
     .test_query(&basic_staking, &app)
     .unwrap()
     {
-        basic_staking::QueryAnswer::Unbonding { unbondings } => {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "0 staked after unbonding");
+            assert_eq!(rewards, vec![], "0 rewards after unbonding");
+
             assert_eq!(unbondings.len(), 1, "1 unbonding");
             assert_eq!(unbondings[0].amount, stake_amount, "Unbonding full amount");
             assert_eq!(
@@ -395,7 +426,31 @@ fn single_staker_single_pool(
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
-    // Check unbonding withdrawn
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Final Staked Balance");
+            assert_eq!(rewards, vec![], "Final Rewards");
+            assert_eq!(unbondings, vec![], "Final Unbondings");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    // Check snip20 received by user
     match (snip20::QueryMsg::Balance {
         key: viewing_key.clone(),
         address: staking_user.clone().into(),

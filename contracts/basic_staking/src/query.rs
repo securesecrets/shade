@@ -127,7 +127,7 @@ pub fn user_balance(
     if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
         if user_staked.is_zero() {
             return Ok(QueryAnswer::Balance {
-                staked: Uint128::zero(),
+                staked: user_staked,
                 rewards,
                 unbondings,
             });
@@ -149,9 +149,7 @@ pub fn user_balance(
 
         println!("return 1");
         Ok(QueryAnswer::Balance {
-            staked: USER_STAKED
-                .may_load(deps.storage, user)?
-                .unwrap_or(Uint128::zero()),
+            staked: user_staked,
             rewards,
             unbondings,
         })
