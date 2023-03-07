@@ -88,7 +88,7 @@ fn is_super(storage: &dyn Storage, address: &Addr) -> StdResult<()> {
     if super_admin == *address {
         Ok(())
     } else {
-        Err(unauthorized_super(super_admin.as_str()))
+        Err(unauthorized_super(address.as_str()))
     }
 }
 
