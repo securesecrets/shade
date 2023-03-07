@@ -268,7 +268,6 @@ pub fn receive(
 
 pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPoolInternal) -> Uint128 {
     if total_staked.is_zero() {
-        println!("total staked 0");
         return Uint128::zero();
     }
     pool.reward_per_token
@@ -282,7 +281,6 @@ pub fn rewards_earned(
     user_reward_per_token_paid: Uint128,
 ) -> Uint128 {
     if reward_per_token.is_zero() {
-        println!("reward per token 0");
         return Uint128::zero();
     }
     user_staked * (reward_per_token - user_reward_per_token_paid) / Uint128::new(10u128.pow(18))
@@ -325,14 +323,9 @@ pub fn reward_pool_claim(
     user_staked: Uint128,
     reward_pool: &RewardPoolInternal,
 ) -> StdResult<Uint128> {
-    println!(
-        "Reward Pool {} rewards {}",
-        reward_pool.id, reward_pool.amount,
-    );
     let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
         .may_load(storage, user_pool_key(user.clone(), reward_pool.id))?
         .unwrap_or(Uint128::zero());
-    println!("user reward per token paid {}", user_reward_per_token_paid);
 
     let user_reward = rewards_earned(
         user_staked,
@@ -345,8 +338,6 @@ pub fn reward_pool_claim(
         user_pool_key(user.clone(), reward_pool.id),
         &reward_pool.reward_per_token,
     )?;
-
-    println!("Sending {} rewards to {}", user_reward, user.clone());
 
     Ok(user_reward)
 }
@@ -361,8 +352,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
     }
 
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
-
-    println!("Total Staked {}", total_staked);
 
     let now = env.block.time.seconds();
 
@@ -500,54 +489,6 @@ pub fn unbond(
     }
 }
 
-/*
-pub fn withdraw_all(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    let user_unbonding_ids = USER_UNBONDING_IDS
-        .may_load(deps.storage, info.sender.clone())?
-        .unwrap_or(vec![]);
-
-    let mut withdraw_amount = Uint128::zero();
-
-    let now = Uint128::new(env.block.time.seconds() as u128);
-
-    let mut remaining_unbonding_ids = vec![];
-
-    for id in user_unbonding_ids.into_iter() {
-        if let Some(unbonding) =
-            USER_UNBONDING.may_load(deps.storage, user_unbonding_key(info.sender.clone(), id))?
-        {
-            if now >= unbonding.complete {
-                withdraw_amount += unbonding.amount;
-            } else {
-                remaining_unbonding_ids.push(id);
-            }
-        } else {
-            return Err(StdError::generic_err(format!("Bad ID {}", id)));
-        }
-    }
-
-    if withdraw_amount.is_zero() {
-        return Err(StdError::generic_err("No unbondings to withdraw"));
-    }
-
-    USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &remaining_unbonding_ids)?;
-
-    println!("Withdrawing All {}", withdraw_amount);
-    Ok(Response::new()
-        .add_message(send_msg(
-            info.sender,
-            withdraw_amount,
-            None,
-            None,
-            None,
-            &STAKE_TOKEN.load(deps.storage)?,
-        )?)
-        .set_data(to_binary(&ExecuteAnswer::Withdraw {
-            status: ResponseStatus::Success,
-        })?))
-}
-*/
-
 pub fn withdraw(
     deps: DepsMut,
     env: Env,
@@ -607,7 +548,6 @@ pub fn withdraw(
 
     USER_UNBONDING_IDS.save(deps.storage, info.sender.clone(), &new_unbonding_ids)?;
 
-    println!("Withdrawing {}", withdraw_amount);
     Ok(Response::new()
         .add_message(send_msg(
             info.sender,
@@ -623,7 +563,6 @@ pub fn withdraw(
 }
 
 pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    println!("COMPOUNDING REWARDS");
     let mut response = Response::new();
 
     let user_staked = USER_STAKED
@@ -673,7 +612,6 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         info.sender,
         &Uint128::new(env.block.time.seconds().into()),
     )?;
-    println!("END COMPOUNDING");
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
         status: ResponseStatus::Success,

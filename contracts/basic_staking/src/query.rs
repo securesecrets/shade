@@ -106,7 +106,6 @@ pub fn user_balance(
 ) -> StdResult<QueryAnswer> {
     let mut unbondings = vec![];
 
-    println!("loading unbondings");
     for unbonding_id in unbonding_ids.iter() {
         if let Some(unbonding) = USER_UNBONDING.may_load(
             deps.storage,
@@ -123,9 +122,7 @@ pub fn user_balance(
 
     let mut rewards = vec![];
 
-    println!("loading user stake");
     if let Some(user_staked) = USER_STAKED.may_load(deps.storage, user.clone())? {
-        println!("1");
         if user_staked.is_zero() {
             return Ok(QueryAnswer::Balance {
                 staked: user_staked,
@@ -133,27 +130,17 @@ pub fn user_balance(
                 unbondings,
             });
         }
-        println!("2");
         let reward_pools = REWARD_POOLS.load(deps.storage)?;
-        println!("3");
         let total_staked = TOTAL_STAKED.load(deps.storage)?;
         let now = env.block.time.seconds();
 
         for reward_pool in reward_pools {
-            println!("per token paid");
             let user_reward_per_token_paid = USER_REWARD_PER_TOKEN_PAID
                 .may_load(deps.storage, user_pool_key(user.clone(), reward_pool.id))?
                 .unwrap_or(Uint128::zero());
-            println!("reward per token {}, {}", total_staked, now);
-            println!("now {} pool start {}", now, reward_pool.start);
             let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
-            println!(
-                "reward earned {}, {}, {}",
-                user_staked, reward_per_token, user_reward_per_token_paid
-            );
             let rewards_earned =
                 rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid);
-            println!("push");
             if !rewards_earned.is_zero() {
                 rewards.push(Reward {
                     token: reward_pool.token.address,
@@ -162,14 +149,12 @@ pub fn user_balance(
             }
         }
 
-        println!("return 1");
         Ok(QueryAnswer::Balance {
             staked: user_staked,
             rewards,
             unbondings,
         })
     } else {
-        println!("return 2");
         Ok(QueryAnswer::Balance {
             staked: Uint128::zero(),
             rewards,
