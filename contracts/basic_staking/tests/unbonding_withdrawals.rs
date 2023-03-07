@@ -288,7 +288,7 @@ unbonding_withdrawals! {
             Uint128::new(17),
             Uint128::new(23),
         ],
-        vec![0,2,1,3],
+        vec![0, 2, 1, 3],
     ),
     unbonding_withdrawals_1: (
         Uint128::new(1000), //   stake_amount
@@ -303,6 +303,6 @@ unbonding_withdrawals! {
             Uint128::new(50),
             Uint128::new(50),
         ],
-        vec![0, 7, 5, 6, 2, 4, 3, 1 ],
+        vec![7, 5, 6, 2, 4, 3, 1, 0],
     ),
 }
