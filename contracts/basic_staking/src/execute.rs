@@ -268,6 +268,7 @@ pub fn receive(
 
 pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPoolInternal) -> Uint128 {
     if total_staked.is_zero() {
+        println!("total staked 0");
         return Uint128::zero();
     }
     pool.reward_per_token
@@ -280,6 +281,10 @@ pub fn rewards_earned(
     reward_per_token: Uint128,
     user_reward_per_token_paid: Uint128,
 ) -> Uint128 {
+    if reward_per_token.is_zero() {
+        println!("reward per token 0");
+        return Uint128::zero();
+    }
     user_staked * (reward_per_token - user_reward_per_token_paid) / Uint128::new(10u128.pow(18))
 }
 
