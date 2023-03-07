@@ -33,7 +33,7 @@ pub fn admin_is_valid<T: Into<String>>(
 
     match admin_resp {
         Ok(resp) => Ok(resp.has_permission),
-        Err(err) => Ok(true),
+        Err(err) => Err(err),
     }
 }
 
@@ -49,8 +49,9 @@ pub enum AdminPermissions {
     OraclesAdmin,
     OraclesPriceBot,
     SilkAdmin,
-    StakingAdmin,
     ShadeSwapAdmin,
+    StakingAdmin,
+    DerivativeAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -68,8 +69,8 @@ impl AdminPermissions {
             AdminPermissions::OraclesAdmin => "SHADE_ORACLES_ADMIN",
             AdminPermissions::OraclesPriceBot => "SHADE_ORACLES_PRICE_BOT",
             AdminPermissions::SilkAdmin => "SHADE_SILK_ADMIN",
-            AdminPermissions::StakingAdmin => "SHADE_STAKING_ADMIN",
             AdminPermissions::ShadeSwapAdmin => "SHADE_SWAP_ADMIN",
+            AdminPermissions::StakingAdmin => "SHADE_STAKING_ADMIN",
             AdminPermissions::DerivativeAdmin => "SHADE_DERIVATIVE_ADMIN",
         }
         .to_string()
