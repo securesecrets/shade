@@ -70,6 +70,7 @@ impl AdminPermissions {
             AdminPermissions::SilkAdmin => "SHADE_SILK_ADMIN",
             AdminPermissions::StakingAdmin => "SHADE_STAKING_ADMIN",
             AdminPermissions::ShadeSwapAdmin => "SHADE_SWAP_ADMIN",
+            AdminPermissions::DerivativeAdmin => "SHADE_SWAP_ADMIN",
         }
         .to_string()
     }
