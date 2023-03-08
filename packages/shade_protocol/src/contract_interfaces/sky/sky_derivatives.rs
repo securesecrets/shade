@@ -155,11 +155,8 @@ pub enum QueryMsg {
     IsProfitable {
         // Defaults to the first index
         index: Option<usize>,
-        max_swap: Option<Uint128>,
     },
-    IsAnyPairProfitable {
-        max_swap: Option<Uint128>,
-    },
+    IsAnyPairProfitable {},
     Adapter(adapter::SubQueryMsg),
 }
 

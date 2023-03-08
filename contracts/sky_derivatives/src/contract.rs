@@ -148,14 +148,14 @@ pub fn query(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::DexPairs {} => to_binary(&query::dex_pairs(deps)?),
-        QueryMsg::IsProfitable { index, max_swap } => {
+        QueryMsg::IsProfitable { index } => {
             match index {
-                Some(i) => to_binary(&query::is_profitable(deps, i, max_swap)?),
-                None => to_binary(&query::is_profitable(deps, 0, max_swap)?),
+                Some(i) => to_binary(&query::is_profitable(deps, i)?),
+                None => to_binary(&query::is_profitable(deps, 0)?),
             }
         },
-        QueryMsg::IsAnyPairProfitable { max_swap } => 
-            to_binary(&query::is_any_pair_profitable(deps, max_swap)?),
+        QueryMsg::IsAnyPairProfitable { } => 
+            to_binary(&query::is_any_pair_profitable(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } =>
                 to_binary(&query::adapter_balance(deps, asset)?),

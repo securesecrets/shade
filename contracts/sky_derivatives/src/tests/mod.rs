@@ -142,10 +142,10 @@ fn init_with_pair() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractI
 
     let pair = seeded_pair(
         &mut chain, 
-        deriv.clone(), 
         base.clone(), 
-        Uint128::new(1_000_000), 
-        Uint128::new(2_000_000)
+        deriv.clone(), 
+        Uint128::new(2_000_000), 
+        Uint128::new(1_000_000)
     );
 
     ExecuteMsg::SetDexPairs {
@@ -160,7 +160,7 @@ fn init_with_pair() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractI
             token1_amount: None,
             dex: Dex::SiennaSwap,
         }]
-    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]);
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     (chain, base, deriv, arb, pair)
 }

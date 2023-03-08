@@ -177,7 +177,7 @@ pub fn try_set_dex_pairs(
     let mut new_pairs = vec![];
     for pair in pairs {
         if !validate_dex_pair(&config.derivative, &pair) {
-            return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+            return Err(StdError::generic_err("Invalid pair - does not match derivative, token0 bust be base token"));
         }
         new_pairs.push(pair);
     }
@@ -216,7 +216,7 @@ pub fn try_set_pair(
     }
 
     if !validate_dex_pair(&config.derivative, &pair) {
-        return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+        return Err(StdError::generic_err("Invalid pair - does not match derivative, token0 bust be base token"));
     }
 
     pairs[i] = pair;
@@ -245,7 +245,7 @@ pub fn try_add_pair(
     )?;
 
     if !validate_dex_pair(&config.derivative, &pair) {
-        return Err(StdError::generic_err("Invalid pair - does not match derivative"));
+        return Err(StdError::generic_err("Invalid pair - does not match derivative, token0 bust be base token"));
     }
 
     let mut pairs = DexPairs::load(deps.storage)?.0;
@@ -310,7 +310,7 @@ fn arbitrage(
     }
 
     // Check profitability
-    let is_profitable_result = query::is_arb_profitable(querier, &config, &dex_pair, Some(max_swap));
+    let is_profitable_result = query::is_arb_profitable(querier, &config, &dex_pair, max_swap);
     let (profitable, swap_amounts_opt, direction_opt) = match is_profitable_result {
         Ok( QueryAnswer::IsProfitable { is_profitable, swap_amounts, direction } ) => 
             (is_profitable, swap_amounts, direction),

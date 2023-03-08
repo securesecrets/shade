@@ -118,7 +118,6 @@ fn is_profitable() {
     assert_eq!( // Pair: 1_000_000 deriv; 2_000_000 base
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: false,
@@ -128,7 +127,7 @@ fn is_profitable() {
     );
 
     // Profitable staking direction
-    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 2_250_000 base
+    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 2_025_000 base
         recipient: pair.address.to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(25_000),
@@ -140,7 +139,6 @@ fn is_profitable() {
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: true,
@@ -154,7 +152,7 @@ fn is_profitable() {
     );
 
     // Profitable unbond direction
-    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 1_750_000 base
+    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 1_075_000 base
         recipient: "admin".to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(50_000),
@@ -166,7 +164,6 @@ fn is_profitable() {
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: true,
@@ -192,7 +189,6 @@ fn is_profitable() {
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: false,
@@ -214,7 +210,6 @@ fn is_profitable() {
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: false,
@@ -238,7 +233,7 @@ fn is_profitable() {
         viewing_key: None,
     }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
-    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 2_250_000 base
+    snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 2_025_000 base
         recipient: pair.address.to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(14_961),
@@ -250,7 +245,6 @@ fn is_profitable() {
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: false,
@@ -266,10 +260,10 @@ fn is_profitable() {
     // Dex pair swap reversed
     let pair = seeded_pair(
         &mut chain, 
-        base.clone(), 
-        deriv.clone(), 
+        deriv.clone(), // swapped 
+        base.clone(), // swapped
         Uint128::new(1_000_000), 
-        Uint128::new(2_000_000)
+        Uint128::new(2_025_000)
     );
 
     ExecuteMsg::SetDexPairs {
@@ -284,7 +278,7 @@ fn is_profitable() {
             token1_amount: None,
             dex: Dex::SiennaSwap,
         }]
-    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]);
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     ExecuteMsg::UpdateConfig {
         shade_admin_addr: None,
@@ -292,14 +286,13 @@ fn is_profitable() {
         derivative: None,
         trading_fees: None,
         max_arb_amount: None,
-        min_profit_amount: Some(Uint128::new(10_000)),
+        min_profit_amount: Some(Uint128::new(1)),
         viewing_key: None,
     }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     assert_eq!(
         QueryMsg::IsProfitable {
             index: None,
-            max_swap: None,
         }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
         QueryAnswer::IsProfitable {
             is_profitable: true,
@@ -312,17 +305,161 @@ fn is_profitable() {
         },
     );
 
-    // Profitable different number of decimals
-
     // Low max swap
+    println!("LOW MAX SWAP");
+    ExecuteMsg::UpdateConfig {
+        shade_admin_addr: None,
+        treasury: None,
+        derivative: None,
+        trading_fees: None,
+        max_arb_amount: Some(Uint128::new(1_000)),
+        min_profit_amount: None,
+        viewing_key: None,
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::IsProfitable {
+            index: None,
+        }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
+        QueryAnswer::IsProfitable {
+            is_profitable: true,
+            swap_amounts: Some(SwapAmounts {
+                optimal_swap: Uint128::new(1000),
+                swap1_result: Uint128::new(499),
+                swap2_result: Uint128::new(1006),
+            }),
+            direction: Some(Direction::Stake),
+        },
+    );
+
+    // Profitable different number of decimals
+    let pair = seeded_pair(
+        &mut chain, 
+        base.clone(),
+        deriv.clone(),
+        Uint128::new(2_025_000),
+        Uint128::new(100_000_000),
+    );
+
+    ExecuteMsg::SetDexPairs {
+        pairs: vec![ArbPair {
+            pair_contract: Some(pair.clone().into()),
+            mint_info: None,
+            token0: base.clone().into(),
+            token0_decimals: Uint128::new(6),
+            token0_amount: None,
+            token1: deriv.clone().into(),
+            token1_decimals: Uint128::new(8),
+            token1_amount: None,
+            dex: Dex::SiennaSwap,
+        }]
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    ExecuteMsg::UpdateConfig {
+        shade_admin_addr: None,
+        treasury: None,
+        derivative: None,
+        trading_fees: None,
+        max_arb_amount: Some(Uint128::MAX),
+        min_profit_amount: None,
+        viewing_key: None,
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::IsProfitable {
+            index: None,
+        }.test_query::<QueryAnswer>(&arb, &chain).unwrap(),
+        QueryAnswer::IsProfitable {
+            is_profitable: true,
+            swap_amounts: Some(SwapAmounts {
+                optimal_swap: Uint128::new(7444),
+                swap1_result: Uint128::new(371488),
+                swap2_result: Uint128::new(7472),
+            }),
+            direction: Some(Direction::Stake),
+        },
+    );
+}
+
+#[test]
+fn is_any_pair_profitable() {
+    let (mut chain, base, deriv, arb, pair) = init_with_pair();
+
+    let pair_1 = seeded_pair(
+        &mut chain, 
+        base.clone(),
+        deriv.clone(),
+        Uint128::new(2_025_000),
+        Uint128::new(1_000_000), 
+    );
+
+    let pair_2 = seeded_pair(
+        &mut chain, 
+        base.clone(),
+        deriv.clone(),
+        Uint128::new(1_975_000),
+        Uint128::new(1_000_000_000), 
+    );
+
+    ExecuteMsg::SetDexPairs {
+        pairs: vec![ArbPair {
+            pair_contract: Some(pair.clone().into()),
+            mint_info: None,
+            token0: base.clone().into(),
+            token0_decimals: Uint128::new(6),
+            token0_amount: None,
+            token1: deriv.clone().into(),
+            token1_decimals: Uint128::new(6),
+            token1_amount: None,
+            dex: Dex::SiennaSwap,
+        },
+        ArbPair {
+            pair_contract: Some(pair_1.clone().into()),
+            mint_info: None,
+            token0: base.clone().into(),
+            token0_decimals: Uint128::new(6),
+            token0_amount: None,
+            token1: deriv.clone().into(),
+            token1_decimals: Uint128::new(6),
+            token1_amount: None,
+            dex: Dex::SiennaSwap,
+        },
+        ArbPair {
+            pair_contract: Some(pair_2.clone().into()),
+            mint_info: None,
+            token0: base.clone().into(),
+            token0_decimals: Uint128::new(6),
+            token0_amount: None,
+            token1: deriv.clone().into(),
+            token1_decimals: Uint128::new(9),
+            token1_amount: None,
+            dex: Dex::SiennaSwap,
+        }]
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::IsAnyPairProfitable {}
+            .test_query::<QueryAnswer>(&arb, &chain).unwrap(),
+        QueryAnswer::IsAnyPairProfitable { 
+            is_profitable: vec![false, true, true], 
+            swap_amounts: vec![
+            None,
+            Some(SwapAmounts {
+                optimal_swap: Uint128::new(7444),
+                swap1_result: Uint128::new(3714),
+                swap2_result: Uint128::new(7472),
+            }),
+            Some(SwapAmounts {
+                optimal_swap: Uint128::new(8981),
+                swap1_result: Uint128::new(4513216),
+                swap2_result: Uint128::new(9021),
+            })], 
+            direction: vec![None, Some(Direction::Stake), Some(Direction::Unbond)],
+        }
+    ); 
 }
 
 /*
-#[test]
-fn is_any_pair_profitable() {
-    assert!(false);
-}
-
 // Adapter Tests
 #[test]
 fn adapter_balance() {
