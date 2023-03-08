@@ -10,13 +10,12 @@ pub const CONFIG: Item<basic_staking::Config> = Item::new("config");
 pub const STAKE_TOKEN: Item<Contract> = Item::new("stake_token");
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
 
+pub const TRANSFER_WL: Item<Vec<Addr>> = Item::new("transfer_whitelist");
+
 pub const TOTAL_STAKED: Item<Uint128> = Item::new("total_stake");
 
 pub const REWARD_TOKENS: Item<Vec<Contract>> = Item::new("reward_tokens");
 pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPoolInternal>> = Item::new("reward_pools");
-
-// Amount that has been claimed from a pool
-// pub const REWARD_POOL_CLAIMED: Map<u128, Uint128> = Map::new("reward_pool_claimed");
 
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");

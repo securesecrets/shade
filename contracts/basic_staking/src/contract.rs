@@ -28,22 +28,24 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    let config = Config {
+    CONFIG.save(deps.storage, &Config {
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         query_auth: msg.query_auth.into_valid(deps.api)?,
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
         reward_cancel_threshold: msg.reward_cancel_threshold,
-    };
+    })?;
 
     let stake_token = msg.stake_token.into_valid(deps.api)?;
 
-    CONFIG.save(deps.storage, &config)?;
     STAKE_TOKEN.save(deps.storage, &stake_token)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     REWARD_TOKENS.save(deps.storage, &vec![stake_token.clone()])?;
     REWARD_POOLS.save(deps.storage, &vec![])?;
+
+    // Maybe admin to start?
+    TRANSFER_WL.save(deps.storage, &vec![])?;
 
     TOTAL_STAKED.save(deps.storage, &Uint128::zero())?;
 

@@ -180,6 +180,9 @@ pub enum ExecuteAnswer {
     CancelRewardPool {
         status: ResponseStatus,
     },
+    TransferStake {
+        status: ResponseStatus,
+    },
 }
 
 #[cw_serde]

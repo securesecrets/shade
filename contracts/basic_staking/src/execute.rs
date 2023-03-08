@@ -112,7 +112,7 @@ pub fn receive(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    // let config = CONFIG.load(deps.storage)?;
 
     let now = Uint128::new(env.block.time.seconds() as u128);
 
@@ -133,7 +133,8 @@ pub fn receive(
 
                 let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
-                let mut reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
+                let mut reward_pools =
+                    update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
 
                 let mut response = Response::new();
 
@@ -207,12 +208,15 @@ pub fn receive(
                     let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
 
                     let config = CONFIG.load(deps.storage)?;
-                    let is_admin = admin_is_valid(
+                    let is_admin = match admin_is_valid(
                         &deps.querier,
                         AdminPermissions::StakingAdmin,
                         from.to_string(),
                         &config.admin_auth,
-                    )?;
+                    ) {
+                        Ok(_) => true,
+                        Err(_) => false,
+                    };
 
                     // check user_pool limit
                     if !is_admin {
@@ -270,9 +274,15 @@ pub fn reward_per_token(total_staked: Uint128, now: u64, pool: &RewardPoolIntern
     if total_staked.is_zero() {
         return Uint128::zero();
     }
-    pool.reward_per_token
-        + (min(pool.end, Uint128::new(now as u128)) - max(pool.last_update, pool.start)) * pool.rate
-            / total_staked
+
+    let start = max(pool.last_update, pool.start);
+    let end = min(pool.end, Uint128::new(now as u128));
+
+    if start > end {
+        return pool.reward_per_token;
+    }
+
+    pool.reward_per_token + (((end - start) * pool.rate) / total_staked)
 }
 
 pub fn rewards_earned(
@@ -301,20 +311,17 @@ pub fn updated_reward_pool(
 }
 
 pub fn update_rewards(
-    storage: &mut dyn Storage,
     env: Env,
+    reward_pools: &Vec<RewardPoolInternal>,
     total_staked: Uint128,
-) -> StdResult<Vec<RewardPoolInternal>> {
-    let reward_pools = REWARD_POOLS.load(storage)?;
-    let reward_pools = reward_pools
+) -> Vec<RewardPoolInternal> {
+    reward_pools
         .iter()
         .map(|pool| updated_reward_pool(pool, total_staked, env.block.time.seconds()))
-        .collect();
-
-    Ok(reward_pools)
+        .collect()
 }
 
-/* Updates a the pool & user data for claiming rewards
+/* returns the earned rewards
  * Reward must be sent buy calling code
  */
 pub fn reward_pool_claim(
@@ -355,7 +362,8 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
     let now = env.block.time.seconds();
 
-    let mut reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
+    let mut reward_pools =
+        update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
 
     let mut response = Response::new();
 
@@ -408,30 +416,15 @@ pub fn unbond(
 
         let mut total_staked = TOTAL_STAKED.load(deps.storage)?;
 
-        let mut reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
-
-        let mut response = Response::new();
-
-        /*
-        // Claim all pending rewards
-        for reward_pool in reward_pools.iter_mut() {
-            let reward_claimed =
-                reward_pool_claim(deps.storage, info.sender.clone(), user_staked, &reward_pool)?;
-
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
-        }
-        */
+        let mut reward_pools =
+            update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
 
         let stake_token = STAKE_TOKEN.load(deps.storage)?;
         let mut compound_amount = Uint128::zero();
 
+        let mut response = Response::new();
+
+        // Claim/Compound rewards
         for reward_pool in reward_pools.iter_mut() {
             let reward_claimed =
                 reward_pool_claim(deps.storage, info.sender.clone(), user_staked, &reward_pool)?;
@@ -453,13 +446,12 @@ pub fn unbond(
             }
         }
 
-        REWARD_POOLS.save(deps.storage, &reward_pools)?;
-
         user_staked = (user_staked + compound_amount) - amount;
         total_staked = (total_staked + compound_amount) - amount;
 
         TOTAL_STAKED.save(deps.storage, &total_staked)?;
         USER_STAKED.save(deps.storage, info.sender.clone(), &user_staked)?;
+        REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
         let mut user_unbonding_ids = USER_UNBONDING_IDS
             .may_load(deps.storage, info.sender.clone())?
@@ -485,7 +477,7 @@ pub fn unbond(
             status: ResponseStatus::Success,
         })?))
     } else {
-        return Err(StdError::generic_err("User has no staked tokens"));
+        return Err(StdError::generic_err("User is not a staker"));
     }
 }
 
@@ -562,6 +554,39 @@ pub fn withdraw(
         })?))
 }
 
+/*
+pub fn do_claim(
+    deps: DepsMut,
+    &mut reward_pools: Vec<RewardPoolInternal>,
+    user: Addr,
+    user_staked: Uint128,
+    compound: bool,
+    stake_token: Addr,
+) -> StdResult<Vec<RewardPoolInternal>> {
+    for reward_pool in reward_pools.iter_mut() {
+        let reward_claimed =
+            reward_pool_claim(deps.storage, user.clone(), user_staked, &reward_pool)?;
+        reward_pool.claimed += reward_claimed;
+
+        if reward_pool.token.address == stake_token {
+            // Compound stake_token rewards
+            compound_amount += reward_claimed;
+        } else {
+            // Claim non-stake_token rewards
+            response = response.add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
+            )?);
+        }
+    }
+    Ok(vec![])
+}
+*/
+
 pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let mut response = Response::new();
 
@@ -574,7 +599,8 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     }
 
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
-    let mut reward_pools = update_rewards(deps.storage, env.clone(), total_staked)?;
+    let mut reward_pools =
+        update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
     let stake_token = STAKE_TOKEN.load(deps.storage)?;
 
     let mut compound_amount = Uint128::zero();
@@ -634,8 +660,6 @@ pub fn cancel_reward_pool(
         &config.admin_auth,
     )?;
 
-    // return Err(StdError::generic_err("Cancel Rewards Not Implemented"));
-
     let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
 
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
@@ -686,19 +710,38 @@ pub fn transfer_stake(
     recipient: Addr,
     compound: bool,
 ) -> StdResult<Response> {
+    let whitelist = TRANSFER_WL.load(deps.storage)?;
+
+    if !whitelist.contains(&info.sender) {
+        return Err(StdError::generic_err(format!(
+            "Transfer Stake not allowed for {}",
+            info.sender
+        )));
+    }
+
+    // Claim/Compound for sending user
+
+    // Claim for receiving user
+
+    let sender_staked = USER_STAKED
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or(Uint128::zero());
+
+    let recipient_staked = USER_STAKED
+        .may_load(deps.storage, recipient.clone())?
+        .unwrap_or(Uint128::zero());
+
+    // Adjust sender staked
+    USER_STAKED.save(deps.storage, info.sender, &(sender_staked - amount))?;
+
+    // Adjust recipient staked
+    USER_STAKED.save(deps.storage, recipient, &(recipient_staked + amount))?;
+
     return Err(StdError::generic_err("Transfer Stake Not Implemented"));
 
-    /* TODO
-     * - compound/claim sending user
-     * - claim receiving user
-     * - move stake amount
-     */
-
-    /*
-    Ok(Response::new()
-        // .add_message(send_msg())
-        .set_data(to_binary(&ExecuteAnswer::TransferStake {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::TransferStake {
             status: ResponseStatus::Success,
-        })?))
-    */
+        })?),
+    )
 }
