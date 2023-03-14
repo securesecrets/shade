@@ -138,43 +138,35 @@ pub fn receive(
 
                 let mut compound_amount = Uint128::zero();
 
-                if let Some(user_staked) = USER_STAKED.may_load(deps.storage, from.clone())? {
-                    if !user_staked.is_zero() {
-                        // Claim Rewards
-                        for reward_pool in reward_pools.iter_mut() {
-                            let reward_claimed = reward_pool_claim(
-                                deps.storage,
-                                from.clone(),
-                                user_staked,
-                                &reward_pool,
-                            )?;
-                            reward_pool.claimed += reward_claimed;
-                            if compound && reward_pool.token == stake_token {
-                                // Compound stake_token rewards
-                                compound_amount += reward_claimed;
-                            } else {
-                                // Claim if not compound or not stake token rewards
-                                response = response.add_message(send_msg(
-                                    info.sender.clone(),
-                                    reward_claimed,
-                                    None,
-                                    None,
-                                    None,
-                                    &reward_pool.token,
-                                )?);
-                            }
-                        }
-                    } else {
-                        for reward_pool in reward_pools.iter() {
-                            // make sure user rewards start now
-                            USER_REWARD_PER_TOKEN_PAID.save(
-                                deps.storage,
-                                user_pool_key(from.clone(), reward_pool.id),
-                                &reward_pool.reward_per_token,
-                            )?;
+                let user_staked = USER_STAKED
+                    .may_load(deps.storage, from.clone())?
+                    .unwrap_or(Uint128::zero());
+
+                if !user_staked.is_zero() {
+                    // Claim Rewards
+                    for reward_pool in reward_pools.iter_mut() {
+                        let reward_claimed = reward_pool_claim(
+                            deps.storage,
+                            from.clone(),
+                            user_staked,
+                            &reward_pool,
+                        )?;
+                        reward_pool.claimed += reward_claimed;
+                        if compound && reward_pool.token == stake_token {
+                            // Compound stake_token rewards
+                            compound_amount += reward_claimed;
+                        } else {
+                            // Claim if not compound or not stake token rewards
+                            response = response.add_message(send_msg(
+                                info.sender.clone(),
+                                reward_claimed,
+                                None,
+                                None,
+                                None,
+                                &reward_pool.token,
+                            )?);
                         }
                     }
-                    USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
                 } else {
                     for reward_pool in reward_pools.iter() {
                         // make sure user rewards start now
@@ -184,8 +176,8 @@ pub fn receive(
                             &reward_pool.reward_per_token,
                         )?;
                     }
-                    USER_STAKED.save(deps.storage, from.clone(), &amount)?;
                 }
+                USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
 
                 REWARD_POOLS.save(deps.storage, &reward_pools.clone())?;
                 TOTAL_STAKED.save(deps.storage, &(total_staked + amount))?;
