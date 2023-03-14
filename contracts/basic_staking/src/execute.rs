@@ -1,6 +1,6 @@
 use shade_protocol::{
     admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
-    basic_staking::{Action, Config, ExecuteAnswer, RewardPool, RewardPoolInternal, Unbonding},
+    basic_staking::{Action, ExecuteAnswer, RewardPoolInternal, Unbonding},
     c_std::{
         from_binary,
         to_binary,
@@ -112,8 +112,6 @@ pub fn receive(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<Response> {
-    // let config = CONFIG.load(deps.storage)?;
-
     let now = Uint128::new(env.block.time.seconds() as u128);
 
     match msg {
@@ -165,6 +163,15 @@ pub fn receive(
                                     &reward_pool.token,
                                 )?);
                             }
+                        }
+                    } else {
+                        for reward_pool in reward_pools.iter() {
+                            // make sure user rewards start now
+                            USER_REWARD_PER_TOKEN_PAID.save(
+                                deps.storage,
+                                user_pool_key(from.clone(), reward_pool.id),
+                                &reward_pool.reward_per_token,
+                            )?;
                         }
                     }
                     USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
@@ -290,9 +297,6 @@ pub fn rewards_earned(
     reward_per_token: Uint128,
     user_reward_per_token_paid: Uint128,
 ) -> Uint128 {
-    if reward_per_token.is_zero() {
-        return Uint128::zero();
-    }
     user_staked * (reward_per_token - user_reward_per_token_paid) / Uint128::new(10u128.pow(18))
 }
 
