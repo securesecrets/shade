@@ -1,5 +1,5 @@
 use crate::utils::{
-    asset::Contract,
+    asset::{Contract, RawContract},
     generic_response::ResponseStatus,
     storage::plus::{ItemStorage, MapStorage},
     ExecuteCallback,
@@ -49,12 +49,13 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     UpdateConfig {
-        admin: Contract,
+        admin: RawContract,
         padding: Option<String>,
     },
     RegisterMigrationTokens {
-        BurnToken: Contract,
-        MintToken: Contract,
+        burn_token: RawContract,
+        mint_token: RawContract,
+        padding: Option<String>,
     },
     Receive {
         sender: String,
@@ -87,8 +88,8 @@ pub enum ExecuteAnswer {
 #[cw_serde]
 pub enum QueryMsg {
     Config {},
-    Metrics { token: Addr },
-    RegistragionStatus { token: Addr },
+    Metrics { token: String },
+    RegistragionStatus { token: String },
 }
 
 impl Query for QueryMsg {

@@ -15,7 +15,13 @@ use shade_protocol::{
         StdResult,
         Uint128,
     },
-    contract_interfaces::snip20_migration::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
+    contract_interfaces::snip20_migration::{
+        Config,
+        ExecuteMsg,
+        InstantiateMsg,
+        QueryAnswer,
+        QueryMsg,
+    },
     snip20::helpers::{mint_msg, register_receive},
     snip20_migration::{AmountMinted, ExecuteAnswer, RegisteredToken},
     utils::{
@@ -54,7 +60,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 info.sender.to_string(),
                 &config.admin,
             )?;
-            config.admin = admin;
+            config.admin = admin.into_valid(deps.api)?;
             config.save(deps.storage)?;
             Ok(
                 Response::default().set_data(to_binary(&ExecuteAnswer::SetConfig {
@@ -68,16 +74,32 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let from_addr = deps.api.addr_validate(&from)?;
             try_burn_and_mint(deps, &env, from_addr, amount)
         }
-        ExecuteMsg::RegisterMigrationTokens { .. } => Ok(Response::default()),
+        ExecuteMsg::RegisterMigrationTokens {
+            burn_token,
+            mint_token,
+            ..
+        } => {
+            let tokens = RegisteredToken {
+                burn_token: burn_token.into_valid(deps.api)?,
+                mint_token: mint_token.into_valid(deps.api)?,
+            };
+            Ok(Response::default().add_message(register_tokens(deps, tokens)?))
+        }
     }
 }
 
 #[shd_entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&{}),
-        QueryMsg::Metrics { token } => to_binary(&{}),
-        QueryMsg::RegistragionStatus { token } => to_binary(&{}),
+        QueryMsg::Config {} => to_binary(&QueryAnswer::Config {
+            config: Config::load(deps.storage)?,
+        }),
+        QueryMsg::Metrics { token } => to_binary(&QueryAnswer::Metrics {
+            amount_minted: AmountMinted::load(deps.storage, token.to_string())?.0,
+        }),
+        QueryMsg::RegistragionStatus { token } => to_binary(&QueryAnswer::RegistrationStatus {
+            status: RegisteredToken::may_load(deps.storage, token.to_string())?,
+        }),
     }
 }
 
