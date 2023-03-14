@@ -16,8 +16,8 @@ impl MapStorage<'static, u16> for AmountMinted {
 
 #[cw_serde]
 pub struct RegisteredToken {
-    burn_token: Contract,
-    mint_token: Contract,
+    pub burn_token: Contract,
+    pub mint_token: Contract,
 }
 
 impl MapStorage<'static, u16> for RegisteredToken {
