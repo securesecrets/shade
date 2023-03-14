@@ -57,8 +57,8 @@ pub enum ExecuteMsg {
         MintToken: Contract,
     },
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
