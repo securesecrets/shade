@@ -22,7 +22,7 @@ use shade_protocol::{
         QueryAnswer,
         QueryMsg,
     },
-    snip20::helpers::{mint_msg, register_receive},
+    snip20::helpers::{mint_msg, register_receive, send_msg},
     snip20_migration::{AmountMinted, ExecuteAnswer, RegisteredToken},
     utils::{
         asset::Contract,
@@ -72,7 +72,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
         ExecuteMsg::Receive { from, amount, .. } => {
             let from_addr = deps.api.addr_validate(&from)?;
-            try_burn_and_mint(deps, &env, from_addr, amount)
+            try_burn_and_mint(deps, &env, info, from_addr, amount)
         }
         ExecuteMsg::RegisterMigrationTokens {
             burn_token,
@@ -95,7 +95,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             config: Config::load(deps.storage)?,
         }),
         QueryMsg::Metrics { token } => to_binary(&QueryAnswer::Metrics {
-            amount_minted: AmountMinted::load(deps.storage, token.to_string())?.0,
+            amount_minted: match AmountMinted::may_load(deps.storage, token.to_string())? {
+                Some(minted_amount) => Some(minted_amount.0),
+                None => None,
+            },
         }),
         QueryMsg::RegistragionStatus { token } => to_binary(&QueryAnswer::RegistrationStatus {
             status: RegisteredToken::may_load(deps.storage, token.to_string())?,
@@ -106,17 +109,23 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn try_burn_and_mint(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     from: Addr,
     burn_amount: Uint128,
 ) -> StdResult<Response> {
-    let registered_token =
-        RegisteredToken::load(deps.storage, env.contract.address.clone().to_string())?;
+    let registered_token = RegisteredToken::load(deps.storage, info.sender.clone().to_string())?;
 
-    let metrics = AmountMinted::load(deps.storage, env.contract.address.clone().to_string())?;
-    AmountMinted(metrics.0 + burn_amount).save(deps.storage, env.contract.address.to_string())?;
+    let metrics = AmountMinted::load(
+        deps.storage,
+        registered_token.mint_token.address.clone().to_string(),
+    )?;
+    AmountMinted(metrics.0 + burn_amount).save(
+        deps.storage,
+        registered_token.mint_token.clone().address.to_string(),
+    )?;
 
     Ok(Response::default().add_message(mint_msg(
-        from,
+        from.clone(),
         burn_amount,
         None,
         None,
@@ -125,7 +134,7 @@ pub fn try_burn_and_mint(
 }
 
 pub fn register_tokens(deps: DepsMut, tokens: RegisteredToken) -> StdResult<CosmosMsg> {
-    tokens.save(deps.storage, tokens.clone().mint_token.address.to_string())?;
+    tokens.save(deps.storage, tokens.clone().burn_token.address.to_string())?;
     AmountMinted(Uint128::zero())
         .save(deps.storage, tokens.clone().mint_token.address.to_string())?;
     let msg = register_receive(

@@ -34,4 +34,4 @@ schemars = "0.7"
 rstest = "0.15"
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test", "admin"] }
 serde_json = { version = "1.0.67" }
-shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "governance", "snip20", "query_auth", "admin"  ] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "snip20", "snip20_migration", "admin"  ] }

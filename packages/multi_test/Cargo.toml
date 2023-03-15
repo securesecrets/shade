@@ -27,6 +27,7 @@ scrt_staking = ["dep:scrt_staking"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
 peg_stability = ["dep:peg_stability"]
+snip20_migration = ["dep:snip20_migration"]
 
 [dependencies]
 airdrop = { path = "../../contracts/airdrop", optional = true }
@@ -42,6 +43,7 @@ treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional 
 treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }

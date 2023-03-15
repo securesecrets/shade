@@ -99,6 +99,6 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    Metrics { amount_minted: Uint128 },
+    Metrics { amount_minted: Option<Uint128> },
     RegistrationStatus { status: Option<RegisteredToken> },
 }
