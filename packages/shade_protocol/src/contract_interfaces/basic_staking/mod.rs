@@ -28,6 +28,7 @@ pub struct Config {
 #[cw_serde]
 pub struct StakingInfo {
     pub stake_token: Addr,
+    pub total_staked: Uint128,
     pub unbond_period: Uint128,
     pub reward_pools: Vec<RewardPool>,
 }
@@ -155,6 +156,7 @@ pub enum ExecuteAnswer {
     },
     // Receive Response
     Stake {
+        staked: Uint128,
         status: ResponseStatus,
     },
     // Receive Response
@@ -162,16 +164,23 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     Claim {
+        //TODO multiple denoms?
+        // claimed: Uint128,
         status: ResponseStatus,
     },
     Unbond {
         id: Uint128,
+        unbonded: Uint128,
         status: ResponseStatus,
     },
     Withdraw {
+        withdrawn: Uint128,
+        // TODO non-staked denoms
+        // claimed
         status: ResponseStatus,
     },
     Compound {
+        compounded: Uint128,
         status: ResponseStatus,
     },
     RegisterRewards {
@@ -181,6 +190,7 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     TransferStake {
+        transferred: Uint128,
         status: ResponseStatus,
     },
 }

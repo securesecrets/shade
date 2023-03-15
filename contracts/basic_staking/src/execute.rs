@@ -184,6 +184,7 @@ pub fn receive(
                 USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
                 Ok(response.set_data(to_binary(&ExecuteAnswer::Stake {
+                    staked: user_staked + amount,
                     status: ResponseStatus::Success,
                 })?))
             }
@@ -350,6 +351,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
     if user_staked.is_zero() {
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Claim {
+            // claimed: Uint128::zero(),
             status: ResponseStatus::Success,
         })?));
     }
@@ -383,6 +385,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
     USER_LAST_CLAIM.save(deps.storage, info.sender, &Uint128::new(now.into()))?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Claim {
+        //claimed:
         status: ResponseStatus::Success,
     })?))
 }
@@ -470,6 +473,7 @@ pub fn unbond(
 
         Ok(response.set_data(to_binary(&ExecuteAnswer::Unbond {
             id: next_id,
+            unbonded: amount,
             status: ResponseStatus::Success,
         })?))
     } else {
@@ -490,18 +494,17 @@ pub fn withdraw(
     // If null ids, use all user unbondings
     let ids = ids.unwrap_or(user_unbonding_ids.clone());
 
-    let mut withdraw_amount = Uint128::zero();
-
     let now = Uint128::new(env.block.time.seconds() as u128);
 
     let mut withdrawn_ids = vec![];
+    let mut withdrawn_amount = Uint128::zero();
 
     for id in ids.into_iter() {
         if let Some(unbonding) =
             USER_UNBONDING.may_load(deps.storage, user_unbonding_key(info.sender.clone(), id))?
         {
             if now >= unbonding.complete {
-                withdraw_amount += unbonding.amount;
+                withdrawn_amount += unbonding.amount;
                 withdrawn_ids.push(id);
             }
         } else {
@@ -509,7 +512,7 @@ pub fn withdraw(
         }
     }
 
-    if withdraw_amount.is_zero() {
+    if withdrawn_amount.is_zero() {
         return Err(StdError::generic_err("No unbondings to withdraw"));
     }
 
@@ -539,13 +542,14 @@ pub fn withdraw(
     Ok(Response::new()
         .add_message(send_msg(
             info.sender,
-            withdraw_amount,
+            withdrawn_amount,
             None,
             None,
             None,
             &STAKE_TOKEN.load(deps.storage)?,
         )?)
         .set_data(to_binary(&ExecuteAnswer::Withdraw {
+            withdrawn: withdrawn_amount,
             status: ResponseStatus::Success,
         })?))
 }
@@ -636,6 +640,7 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     )?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
+        compounded: compound_amount,
         status: ResponseStatus::Success,
     })?))
 }
@@ -735,9 +740,12 @@ pub fn transfer_stake(
 
     return Err(StdError::generic_err("Transfer Stake Not Implemented"));
 
+    /*
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::TransferStake {
+            transferred: amount,
             status: ResponseStatus::Success,
         })?),
     )
+    */
 }

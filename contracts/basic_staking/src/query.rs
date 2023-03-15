@@ -24,6 +24,7 @@ pub fn staking_info(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::StakingInfo {
         info: StakingInfo {
             stake_token: STAKE_TOKEN.load(deps.storage)?.address,
+            total_staked: TOTAL_STAKED.load(deps.storage)?,
             unbond_period: CONFIG.load(deps.storage)?.unbond_period,
             reward_pools: REWARD_POOLS
                 .load(deps.storage)?
