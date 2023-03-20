@@ -6,21 +6,9 @@ use cosmwasm_std::{Addr, Binary};
 use cosmwasm_std::Uint128;
 
 use crate::utils::{
-    InstantiateCallback, ExecuteCallback, Query, 
+    ExecuteCallback, Query, 
 };
 use cosmwasm_schema::cw_serde;
-
-#[cw_serde]
-pub struct MockInstantiateMsg {
-    pub name: String,
-    pub symbol: String,
-    pub decimals: u8,
-    pub price: Uint128,
-}
-
-impl InstantiateCallback for MockInstantiateMsg {
-    const BLOCK_SIZE: usize = 256;
-}
 
 #[cw_serde]
 pub enum HandleMsg {

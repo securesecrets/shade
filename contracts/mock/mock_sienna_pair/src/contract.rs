@@ -1,19 +1,9 @@
 use shade_protocol::{
     c_std::{
-        shd_entry_point,
-        from_binary,
-        to_binary,
-        Addr,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        QuerierWrapper,
-        Uint128,
+        shd_entry_point, from_binary, to_binary,
+        Addr, Binary, Decimal, Deps, DepsMut,
+        Env, MessageInfo, Response, StdError,
+        StdResult, QuerierWrapper, Uint128,
     },
     contract_interfaces::{
         dex::{
@@ -42,6 +32,7 @@ pub use shade_protocol::dex::sienna::{
 pub struct Config {
     pub address: Addr,
     pub viewing_key: String,
+    pub commission: Decimal,
 }
 
 impl ItemStorage for Config {
@@ -71,6 +62,7 @@ pub struct InstantiateMsg {
     pub token_0: Contract,
     pub token_1: Contract,
     pub viewing_key: String,
+    pub commission: Decimal,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -93,6 +85,7 @@ pub fn instantiate(
     let config = Config {
         address: env.contract.address,
         viewing_key: msg.viewing_key.clone(),
+        commission: msg.commission,
     };
     config.save(deps.storage)?;
     
@@ -167,75 +160,49 @@ pub fn execute(
                 ReceiverCallbackMsg::Swap { expected_return, to } => {
                     let config = Config::load(deps.storage)?;
                     let pair = PairInfo::load(deps.storage)?;
-                    let token_0 = pair.token_0;
-                    let token_1 = pair.token_1;
-                    let (amount_0, amount_1) = query_pool_amounts(
+
+                    let (in_token, out_token) = if info.sender == pair.token_0.address {
+                        (pair.token_0, pair.token_1)
+                    } else if info.sender == pair.token_1.address {
+                        (pair.token_1, pair.token_0)
+                    } else {
+                        return Err(StdError::generic_err("unauthorized"));
+                    };
+
+                    let (in_pool, out_pool) = query_pool_amounts(
                         &deps.querier, 
-                        config, 
-                        token_0.clone(),
-                        token_1.clone(),
+                        &config, 
+                        in_token.clone(),
+                        out_token.clone(),
                     )?;
                     
                     // Sienna takes commission before swap
-                    let commission = amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
-                    let swap_amount = amount - commission;
+                    let swap_amount = amount - (amount * config.commission);
+                    let return_amount = pool_take_amount(
+                        swap_amount,
+                        in_pool,
+                        out_pool,
+                    );
 
-                    if token_0.address == info.sender {
-                        let return_amount = pool_take_amount(
-                            swap_amount,
-                            amount_0,
-                            amount_1,
-                        );
-
-                        if return_amount > expected_return.unwrap_or(Uint128::MAX) {
-                            return Err(StdError::generic_err(
-                                    "Operation fell short of expected_return"
-                            ));
-                        }
-
-                        // send tokens
-                        let return_addr = to.unwrap_or(from);
-                        return Ok(Response::default()
-                            .add_message(send_msg(
-                                    return_addr,
-                                    return_amount - commission,
-                                    None,
-                                    None,
-                                    None,
-                                    &token_1,
-                            )?))
+                    if return_amount < expected_return.unwrap_or(Uint128::zero()) {
+                        return Err(StdError::generic_err(
+                                "Operation fell short of expected_return"
+                        ));
                     }
-                    
-                    if token_1.address == info.sender {
-                        let return_amount = pool_take_amount(
-                            swap_amount,
-                            amount_1,
-                            amount_0,
-                        );
-                        let commission = return_amount.multiply_ratio(Uint128::new(3), Uint128::new(1000));
 
-                        if return_amount > expected_return.unwrap_or(Uint128::MAX) {
-                            return Err(StdError::generic_err(
-                                    "Operation fell short of expected_return
-                            "));
-                        }
-
-                        // send tokens
-                        let return_addr = to.unwrap_or(from);
-                        return Ok(Response::default()
-                            .add_message(send_msg(
-                                    return_addr,
-                                    return_amount - commission,
-                                    None,
-                                    None,
-                                    None,
-                                    &token_0,
-                            )?))
-                    }
-                }
+                    // send tokens
+                    let return_addr = to.unwrap_or(from);
+                    return Ok(Response::default()
+                        .add_message(send_msg(
+                                return_addr,
+                                return_amount,
+                                None,
+                                None,
+                                None,
+                                &out_token,
+                        )?))
+                },
             }
-
-            Err(StdError::generic_err("unauthorized"))
         }
     }
 
@@ -249,15 +216,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let pair_info = PairInfo::load(deps.storage)?;
             let (amount_0, amount_1) = query_pool_amounts(
                 &deps.querier, 
-                config, 
+                &config, 
                 pair_info.token_0.clone(),
                 pair_info.token_1.clone(),
             )?;
 
             to_binary(&PairInfoResponse {
                 pair_info: sienna::PairInfo {
-                    liquidity_token: Contract::new(&Addr::unchecked("lp_token"), &"hash".to_string()),
-                    factory: Contract::new(&Addr::unchecked("factory"), &"hash".to_string()),
+                    liquidity_token: Contract {
+                        address: Addr::unchecked("lp_token"), 
+                        code_hash: "hash".to_string(),
+                    },
+                    factory: Contract {
+                        address: Addr::unchecked("factory"), 
+                        code_hash: "hash".to_string(),
+                    },
                     pair: Pair {
                         token_0: TokenType::CustomToken {
                             contract_addr: pair_info.token_0.address,
@@ -280,66 +253,58 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let pair = PairInfo::load(deps.storage)?;
             let token_0 = pair.token_0;
             let token_1 = pair.token_1;
-            let (amount_0, amount_1) = query_pool_amounts(
-                &deps.querier, 
-                config, 
-                token_0.clone(),
-                token_1.clone(),
-            )?;
-
-            let in_token = match offer.token {
-                TokenType::CustomToken {
-                    contract_addr,
-                    token_code_hash,
-                } => Contract {
-                    address: contract_addr,
-                    code_hash: token_code_hash,
+            
+            let (in_token, out_token) = match offer.token {
+                TokenType::CustomToken { contract_addr, .. } => {
+                    if contract_addr == token_0.address {
+                        (token_0, token_1)
+                    } else if contract_addr == token_1.address {
+                        (token_1, token_0)
+                    } else {
+                        return Err(StdError::generic_err(format!(
+                                    "The supplied token {}, is not managed by this contract",
+                                    contract_addr
+                        )))
+                    }
                 },
                 _ => {
                     return Err(StdError::generic_err("Only CustomToken supported"));
                 }
             };
+            
+            let (amount_0, amount_1) = query_pool_amounts(
+                &deps.querier, 
+                &config, 
+                in_token.clone(),
+                out_token.clone(),
+            )?;
 
             // Sienna takes commission before swap
-            let commission = offer.amount.multiply_ratio(Uint128::new(3), Uint128::new(1_000));
+            let commission = offer.amount * config.commission;
             let swap_amount = offer.amount - commission;
 
-            if in_token.address == token_0.address {
-                return to_binary(&SimulationResponse {
-                    return_amount: pool_take_amount(
-                        swap_amount,
-                        amount_0,
-                        amount_1,
-                    ),
-                    spread_amount: Uint128::zero(),
-                    commission_amount: commission,
-                });
-            }
-            if in_token.address == token_1.address {
-                return to_binary(&SimulationResponse {
-                    return_amount: pool_take_amount(
-                        swap_amount,
-                        amount_1,
-                        amount_0,
-                    ),
-                    spread_amount: Uint128::zero(),
-                    commission_amount: commission,
-                });
-            }
+            return to_binary(&SimulationResponse {
+                return_amount: pool_take_amount(
+                    swap_amount,
+                    amount_0,
+                    amount_1,
+                ),
+                spread_amount: Uint128::zero(),
+                commission_amount: commission,
+            });
 
-            return Err(StdError::generic_err("Failed to match offer token"));
         }
     }
 }
 
 fn query_pool_amounts(
     querier: &QuerierWrapper,
-    config: Config,
+    config: &Config,
     token_0: Contract,
     token_1: Contract,
 ) -> StdResult<(Uint128, Uint128)> {
     Ok((
         balance_query(querier, config.address.clone(), config.viewing_key.clone(), &token_0)?,
-        balance_query(querier, config.address, config.viewing_key, &token_1)?,
+        balance_query(querier, config.address.clone(), config.viewing_key.clone(), &token_1)?,
     ))
 }

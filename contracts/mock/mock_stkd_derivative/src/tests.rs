@@ -4,13 +4,10 @@ use shade_protocol::{
         Addr, Coin, StdError,
         Binary, StdResult, Env,
         Uint128, QueryRequest, BankQuery,
-        BalanceResponse,
+        BalanceResponse, Decimal
     },
-    contract_interfaces::{
-        stkd,
-        dex::sienna::{
-            Pair, PairInfo, TokenType,
-        },
+    contract_interfaces::dex::sienna::{
+        Pair, PairInfo, TokenType,
     },
     utils::{
         asset::Contract,
@@ -27,6 +24,7 @@ use shade_multi_test::multi::{
     mock_sienna::MockSienna,
     snip20::Snip20,
 };
+use crate::contract as stkd;
 
 use mock_sienna_pair::contract as mock_sienna;
 
@@ -55,18 +53,20 @@ fn test() {
         router.bank.init_balance(storage, &admin, vec![init_scrt.clone()]).unwrap(); 
     });
     
-    let stkd = stkd::MockInstantiateMsg {
+    let stkd = stkd::InstantiateMsg {
         name: "Staking Derivative".to_string(),
         symbol: "stkd-SCRT".to_string(),
         decimals: 6,
         price: Uint128::from(2_000_000u64),
+        unbonding_time: 21,
+        unbonding_batch_interval: 3,
     }.test_init(MockStkd::default(), &mut chain, admin.clone(), "stkd", &[]).unwrap();
 
     // Test Staking
-    stkd::HandleMsg::Stake {}
+    stkd::ExecuteMsg::Stake {}
         .test_exec(&stkd, &mut chain, user.clone(), &[some_scrt]).unwrap();
 
-    stkd::HandleMsg::SetViewingKey {
+    stkd::ExecuteMsg::SetViewingKey {
         key: "password".to_string(),
         padding: None,
     }.test_exec(&stkd, &mut chain, user.clone(), &[]).unwrap();
@@ -77,9 +77,9 @@ fn test() {
         }.test_query::<stkd::QueryAnswer>(&stkd, &chain).unwrap(),
         stkd::QueryAnswer::StakingInfo {
             validators: vec![],
-            unbonding_time: 2u32,
-            unbonding_batch_interval: 1u32,
-            next_unbonding_batch_time: 1u64,
+            unbonding_time: 21u32,
+            unbonding_batch_interval: 3u32,
+            next_unbonding_batch_time: 3u64,
             unbond_amount_of_next_batch: Uint128::zero(),
             batch_unbond_in_progress: false,
             bonded_scrt: Uint128::zero(),
@@ -115,9 +115,13 @@ fn test() {
     );
  
     // Test Unbonding
-    stkd::HandleMsg::Unbond {
+    stkd::ExecuteMsg::Unbond {
         redeem_amount: Uint128::new(25),
     }.test_exec(&stkd, &mut chain, user.clone(), &[]).unwrap();
+
+    stkd::ExecuteMsg::MockFastForward {
+        steps: 1,
+    }.test_exec(&stkd, &mut chain, admin.clone(), &[]).unwrap();
 
     assert_eq!(
         stkd::QueryMsg::Unbonding {
@@ -136,8 +140,8 @@ fn test() {
         },
     );
 
-    stkd::HandleMsg::MockFastForward {
-        steps: 1
+    stkd::ExecuteMsg::MockFastForward {
+        steps: 2,
     }.test_exec(&stkd, &mut chain, admin.clone(), &[]).unwrap();
 
     assert_eq!(
@@ -153,7 +157,7 @@ fn test() {
             claimable_scrt: None,
             unbondings: vec![stkd::Unbond {
                 amount: Uint128::new(25),
-                unbonds_at: 2u64,
+                unbonds_at: 24u64,
                 is_mature: None,
             }],
             unbond_amount_in_next_batch: Uint128::zero(),
@@ -161,7 +165,7 @@ fn test() {
         },
     );
 
-    stkd::HandleMsg::MockFastForward {
+    stkd::ExecuteMsg::MockFastForward {
         steps: 1
     }.test_exec(&stkd, &mut chain, admin.clone(), &[]).unwrap();
 
@@ -178,7 +182,32 @@ fn test() {
             claimable_scrt: None,
             unbondings: vec![stkd::Unbond {
                 amount: Uint128::new(25),
-                unbonds_at: 2u64,
+                unbonds_at: 24u64,
+                is_mature: None,
+            }],
+            unbond_amount_in_next_batch: Uint128::zero(),
+            estimated_time_of_maturity_for_next_batch: None,
+        },
+    );
+
+    stkd::ExecuteMsg::MockFastForward {
+        steps: 21
+    }.test_exec(&stkd, &mut chain, admin.clone(), &[]).unwrap();
+
+    assert_eq!(
+        stkd::QueryMsg::Unbonding {
+            address: user.clone(),
+            key: "password".to_string(),
+            page: None,
+            page_size: None,
+            time: None,
+        }.test_query::<stkd::QueryAnswer>(&stkd, &chain).unwrap(),
+        stkd::QueryAnswer::Unbonding {
+            count: 1,
+            claimable_scrt: None,
+            unbondings: vec![stkd::Unbond {
+                amount: Uint128::new(25),
+                unbonds_at: 24u64,
                 is_mature: None,
             }],
             unbond_amount_in_next_batch: Uint128::zero(),
@@ -187,7 +216,7 @@ fn test() {
     );
 
     // Test Claiming
-    stkd::HandleMsg::Claim {}
+    stkd::ExecuteMsg::Claim {}
         .test_exec(&stkd, &mut chain, user.clone(), &[]).unwrap();
 
     assert_eq!(
@@ -234,7 +263,7 @@ fn test() {
     );
 
     // Test Sending
-    stkd::HandleMsg::Send {
+    stkd::ExecuteMsg::Send {
         recipient: other.to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(25),
@@ -253,7 +282,7 @@ fn test() {
         },
     );
 
-    stkd::HandleMsg::SetViewingKey {
+    stkd::ExecuteMsg::SetViewingKey {
         key: "other password".to_string(),
         padding: None,
     }.test_exec(&stkd, &mut chain, other.clone(), &[]).unwrap();
@@ -300,6 +329,7 @@ fn test() {
         token_0: stkd.clone().into(),
         token_1: other_snip.clone().into(),
         viewing_key: "key".into(),
+        commission: Decimal::permille(3),
     }.test_init(
         MockSienna::default(),
         &mut chain,
@@ -308,10 +338,10 @@ fn test() {
         &[],
     ).unwrap();
 
-    stkd::HandleMsg::Stake {}  // get stkd to seed pair
+    stkd::ExecuteMsg::Stake {}  // get stkd to seed pair
         .test_exec(&stkd, &mut chain, admin.clone(), &[init_scrt]).unwrap();
 
-    stkd::HandleMsg::Send {  // seed pair
+    stkd::ExecuteMsg::Send {  // seed pair
         recipient: sienna_pair.address.to_string(),
         recipient_code_hash: None,
         amount: Uint128::new(500),
@@ -460,7 +490,7 @@ fn test() {
     );
 
     // test No balance
-    stkd::HandleMsg::SetViewingKey {
+    stkd::ExecuteMsg::SetViewingKey {
         key: "key".into(),
         padding: None,
     }.test_exec(&stkd, &mut chain, Addr::unchecked("new"), &[]).unwrap();
