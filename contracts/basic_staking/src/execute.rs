@@ -400,11 +400,12 @@ pub fn unbond(
     let config = CONFIG.load(deps.storage)?;
 
     if amount.is_zero() {
-        return Err(StdError::generic_err("Cannot unbond 0"));
+        return Err(StdError::generic_err("Must unbond non-zero amount"));
     }
 
     if let Some(mut user_staked) = USER_STAKED.may_load(deps.storage, info.sender.clone())? {
-        if user_staked.is_zero() || user_staked < amount {
+        // if not compounding, check staked >= unbond amount
+        if !compound && user_staked < amount {
             return Err(StdError::generic_err(format!(
                 "Cannot unbond {}, only {} staked",
                 amount, user_staked
@@ -443,6 +444,15 @@ pub fn unbond(
                     &reward_pool.token,
                 )?);
             }
+        }
+
+        // if compounding, check staked + compounded >= unbond amount
+        if compound && user_staked + compound_amount < amount {
+            return Err(StdError::generic_err(format!(
+                "Cannot unbond {}, only {} staked (after compounding)",
+                amount,
+                user_staked + compound_amount,
+            )));
         }
 
         user_staked = (user_staked + compound_amount) - amount;
