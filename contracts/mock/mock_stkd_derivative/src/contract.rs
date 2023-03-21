@@ -325,7 +325,7 @@ pub fn query(
             let mut amount_in_next_batch = Uint128::zero();
             let time = Time::load(deps.storage)?.0;
             let config = Config::load(deps.storage)?;
-            let unbondings = Unbondings::load(deps.storage, address)?.0;
+            let unbondings = Unbondings::load(deps.storage, address).unwrap_or_default().0;
             for unbonding in unbondings {
                 if unbonding.maturity <= time + config.unbonding_time {
                     count += 1;
