@@ -33,7 +33,7 @@ pub fn migration_test() {
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
             address: admin.clone().into(),
-            amount: Uint128::new(1000000000),
+            amount: Uint128::new(1_000_000_000_000_000_000_000),
         }]),
         prng_seed: to_binary("").ok().unwrap(),
         query_auth: None,
@@ -104,39 +104,27 @@ pub fn migration_test() {
             let expected_config = snip20_migration::Config {
                 admin: admin_auth.clone().into(),
             };
-            if config == expected_config {
-                assert!(true);
-            } else {
-                assert!(false);
-            }
+            assert!(config == expected_config, "conifg matches expected");
         }
-        _ => assert!(false),
+        _ => panic!("config not found"),
     }
 
     match (snip20_migration::QueryMsg::Metrics {
         token: "lala".into(),
     }
-    .test_query(&migration_contract, &mut chain)
-    .unwrap())
+    .test_query::<snip20_migration::QueryAnswer>(&migration_contract, &mut chain))
     {
-        snip20_migration::QueryAnswer::Metrics { amount_minted } => match amount_minted {
-            None => assert!(true),
-            _ => assert!(false),
-        },
-        _ => assert!(false),
+        Ok(some_val) => panic!("token found when not expected to be found"),
+        _ => assert!(true, "metrics query errored"),
     }
 
-    match (snip20_migration::QueryMsg::RegistragionStatus {
+    match (snip20_migration::QueryMsg::RegistrationStatus {
         token: "lala".into(),
     }
-    .test_query(&migration_contract, &mut chain)
-    .unwrap())
+    .test_query::<snip20_migration::QueryAnswer>(&migration_contract, &mut chain))
     {
-        snip20_migration::QueryAnswer::RegistrationStatus { status } => match status {
-            None => assert!(true),
-            _ => assert!(false),
-        },
-        _ => assert!(false),
+        Ok(some_val) => panic!("token was found when not expected to be found"),
+        _ => assert!(true, "registration status query error"),
     }
 
     snip20::ExecuteMsg::AddMinters {
@@ -154,26 +142,20 @@ pub fn migration_test() {
     .test_exec(&migration_contract, &mut chain, admin.clone().into(), &[])
     .unwrap();
 
-    println!("{}", token0.address.clone().to_string());
-    match (snip20_migration::QueryMsg::RegistragionStatus {
+    match (snip20_migration::QueryMsg::RegistrationStatus {
         token: token0.address.clone().into(),
     }
     .test_query(&migration_contract, &mut chain)
     .unwrap())
     {
-        snip20_migration::QueryAnswer::RegistrationStatus { status } => match status {
-            Some(tokens) => {
-                if (tokens.burn_token.clone() == token0.clone().into()
-                    && tokens.mint_token == token1.clone().into())
-                {
-                    assert!(true);
-                } else {
-                    assert!(false);
-                }
-            }
-            None => assert!(false),
-        },
-        _ => assert!(false),
+        snip20_migration::QueryAnswer::RegistrationStatus { status } => {
+            assert!(
+                status.burn_token.clone() == token0.clone().into()
+                    && status.mint_token == token1.clone().into(),
+                "token is registered"
+            );
+        }
+        _ => panic!("registration status query error"),
     }
 
     match (snip20_migration::QueryMsg::Metrics {
@@ -182,17 +164,10 @@ pub fn migration_test() {
     .test_query(&migration_contract, &mut chain)
     .unwrap())
     {
-        snip20_migration::QueryAnswer::Metrics { amount_minted } => match amount_minted {
-            Some(tokens) => {
-                if tokens == Uint128::zero() {
-                    assert!(true);
-                } else {
-                    assert!(false);
-                }
-            }
-            None => assert!(false),
-        },
-        _ => assert!(false),
+        snip20_migration::QueryAnswer::Metrics { amount_minted } => {
+            assert!(amount_minted == Uint128::zero(), "metrics is zero");
+        }
+        _ => panic!("metrics query error"),
     }
 
     snip20::ExecuteMsg::Send {
@@ -213,8 +188,11 @@ pub fn migration_test() {
     .test_query(&token1, &mut chain)
     .unwrap())
     {
-        snip20::QueryAnswer::Balance { amount } => assert!(amount == Uint128::new(1000000)),
-        _ => assert!(false),
+        snip20::QueryAnswer::Balance { amount } => assert!(
+            amount == Uint128::new(1000000),
+            "balance is expected amount"
+        ),
+        _ => panic!("wrong query answer"),
     }
 
     match (snip20_migration::QueryMsg::Metrics {
@@ -223,13 +201,54 @@ pub fn migration_test() {
     .test_query(&migration_contract, &mut chain)
     .unwrap())
     {
-        snip20_migration::QueryAnswer::Metrics { amount_minted } => match amount_minted {
-            Some(amount) => {
-                println!("{}", amount);
-                assert!(amount == Uint128::new(1000000));
-            }
-            None => assert!(false),
-        },
-        _ => assert!(false),
+        snip20_migration::QueryAnswer::Metrics { amount_minted } => {
+            assert!(
+                amount_minted == Uint128::zero(),
+                "metrics equals the minted amount"
+            );
+        }
+        _ => panic!("wrong type"),
+    }
+
+    snip20::ExecuteMsg::Send {
+        recipient: migration_contract.clone().address.into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1_000_000_000_000_000),
+        msg: None,
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token0, &mut chain, admin.clone().into(), &[])
+    .unwrap();
+
+    match (snip20::QueryMsg::Balance {
+        address: admin.clone().into(),
+        key: "vk".into(),
+    }
+    .test_query(&token1, &mut chain)
+    .unwrap())
+    {
+        snip20::QueryAnswer::Balance { amount } => {
+            assert!(
+                amount == Uint128::new(1_000_000_001_000_000),
+                "balance is expected amount"
+            )
+        }
+        _ => panic!("wrong query answer"),
+    }
+
+    match (snip20_migration::QueryMsg::Metrics {
+        token: token1.address.clone().into(),
+    }
+    .test_query(&migration_contract, &mut chain)
+    .unwrap())
+    {
+        snip20_migration::QueryAnswer::Metrics { amount_minted } => {
+            assert!(
+                amount_minted == Uint128::new(1_000_000_000_000_000),
+                "metrics equals the minted amount"
+            );
+        }
+        _ => panic!("wrong type"),
     }
 }

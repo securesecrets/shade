@@ -1,21 +1,12 @@
 use crate::utils::{
     asset::{Contract, RawContract},
     generic_response::ResponseStatus,
-    storage::plus::{ItemStorage, MapStorage},
     ExecuteCallback,
     InstantiateCallback,
     Query,
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, Uint128};
-use secret_storage_plus::{Item, Map};
-
-#[cw_serde]
-pub struct AmountMinted(pub Uint128);
-
-impl MapStorage<'static, String> for AmountMinted {
-    const MAP: Map<'static, String, Self> = Map::new("amount_minted-");
-}
 
 #[cw_serde]
 pub struct RegisteredToken {
@@ -23,17 +14,9 @@ pub struct RegisteredToken {
     pub mint_token: Contract,
 }
 
-impl MapStorage<'static, String> for RegisteredToken {
-    const MAP: Map<'static, String, Self> = Map::new("registered_tokens-");
-}
-
 #[cw_serde]
 pub struct Config {
     pub admin: Contract,
-}
-
-impl ItemStorage for Config {
-    const ITEM: Item<'static, Config> = Item::new("item_config");
 }
 
 #[cw_serde]
@@ -89,7 +72,7 @@ pub enum ExecuteAnswer {
 pub enum QueryMsg {
     Config {},
     Metrics { token: String },
-    RegistragionStatus { token: String },
+    RegistrationStatus { token: String },
 }
 
 impl Query for QueryMsg {
@@ -99,6 +82,6 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    Metrics { amount_minted: Option<Uint128> },
-    RegistrationStatus { status: Option<RegisteredToken> },
+    Metrics { amount_minted: Uint128 },
+    RegistrationStatus { status: RegisteredToken },
 }
