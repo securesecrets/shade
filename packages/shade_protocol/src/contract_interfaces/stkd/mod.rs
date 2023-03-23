@@ -27,7 +27,7 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     Send {
-        recipient: String,
+        recipient: Addr,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,

@@ -60,6 +60,8 @@ fn test() {
         price: Uint128::from(2_000_000u64),
         unbonding_time: 21,
         unbonding_batch_interval: 3,
+        staking_commission: Decimal::permille(2),
+        unbond_commission: Decimal::from_ratio(5u32, 10_000u32),
     }.test_init(MockStkd::default(), &mut chain, admin.clone(), "stkd", &[]).unwrap();
 
     // Test Staking
@@ -264,7 +266,7 @@ fn test() {
 
     // Test Sending
     stkd::ExecuteMsg::Send {
-        recipient: other.to_string(),
+        recipient: other.clone(),
         recipient_code_hash: None,
         amount: Uint128::new(25),
         msg: None,
@@ -342,9 +344,9 @@ fn test() {
         .test_exec(&stkd, &mut chain, admin.clone(), &[init_scrt]).unwrap();
 
     stkd::ExecuteMsg::Send {  // seed pair
-        recipient: sienna_pair.address.to_string(),
+        recipient: sienna_pair.address.clone(),
         recipient_code_hash: None,
-        amount: Uint128::new(500),
+        amount: Uint128::new(499),
         msg: None,
         memo: None,
         padding: None,
@@ -353,7 +355,7 @@ fn test() {
     snip20::ExecuteMsg::Send {  // seed pair
         recipient: sienna_pair.address.to_string(),
         recipient_code_hash: None,
-        amount: Uint128::new(1_000),
+        amount: Uint128::new(998),
         msg: None,
         memo: None,
         padding: None,
@@ -393,8 +395,8 @@ fn test() {
                         token_code_hash: other_snip.code_hash.clone(),
                     },
                 },
-                amount_0: Uint128::new(500),
-                amount_1: Uint128::new(1_000),
+                amount_0: Uint128::new(499),
+                amount_1: Uint128::new(998),
                 total_liquidity: Uint128::new(0),
                 contract_version: 0,
             },
@@ -481,8 +483,8 @@ fn test() {
                         token_code_hash: other_snip.code_hash.clone(),
                     },
                 },
-                amount_0: Uint128::new(495),
-                amount_1: Uint128::new(1_010),
+                amount_0: Uint128::new(494),
+                amount_1: Uint128::new(1_008),
                 total_liquidity: Uint128::new(0),
                 contract_version: 0,
             },

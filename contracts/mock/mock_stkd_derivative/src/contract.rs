@@ -7,6 +7,7 @@ use shade_protocol::{
         BankMsg,
         Binary,
         Coin,
+        Decimal,
         Deps,
         DepsMut,
         Env,
@@ -93,6 +94,8 @@ pub struct Config {
     admin: Addr,
     unbonding_time: u32,
     unbonding_batch_interval: u32,
+    staking_commission: Decimal,
+    unbond_commission: Decimal,
 }
 
 impl ItemStorage for Config {
@@ -109,6 +112,8 @@ pub struct InstantiateMsg {
     pub price: Uint128,
     pub unbonding_time: u32,
     pub unbonding_batch_interval: u32,
+    pub staking_commission: Decimal,
+    pub unbond_commission: Decimal,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -129,6 +134,8 @@ pub fn instantiate(
         admin: info.sender.clone(),
         unbonding_time: msg.unbonding_time,
         unbonding_batch_interval: msg.unbonding_batch_interval,
+        staking_commission: msg.staking_commission,
+        unbond_commission: msg.unbond_commission,
     };
     config.save(deps.storage)?;
     Price(msg.price).save(deps.storage)?;
@@ -150,11 +157,13 @@ pub fn execute(
         ExecuteMsg::Send { recipient, amount, recipient_code_hash, msg, .. } => {
             let my_balance = Balance::load(deps.storage, info.sender.clone())
                 .map_err(|_| StdError::generic_err("Insufficient funds"))?.0;
-            let their_balance = Balance::load(deps.storage, Addr::unchecked(recipient.clone()))
+            let their_balance = Balance::load(deps.storage, recipient.clone())
                 .unwrap_or_default().0;
 
-            Balance(my_balance - amount).save(deps.storage, info.sender.clone())?;
-            Balance(their_balance + amount).save(deps.storage, Addr::unchecked(recipient.clone()))?;
+            Balance(my_balance.checked_sub(amount)
+                    .map_err(|_| StdError::generic_err("Insufficient funds"))?)
+                .save(deps.storage, info.sender.clone())?;
+            Balance(their_balance + amount).save(deps.storage, recipient.clone())?;
 
             let mut messages = vec![];
             if let Some(receiver_hash) = recipient_code_hash {
@@ -190,6 +199,8 @@ pub fn execute(
                 return Err(StdError::generic_err("No SCRT was sent for staking"));
             }
 
+            let config = Config::load(deps.storage)?;
+            let amount = amount - (amount * config.staking_commission);
             let deriv_amount = amount.multiply_ratio(Uint128::from(1_000_000u32), Price::load(deps.storage)?.0);
             
             let balance = Balance::load(deps.storage, info.sender.clone())
@@ -228,6 +239,7 @@ pub fn execute(
             Balance(balance - redeem_amount).save(deps.storage, info.sender)?;
             let scrt_amount = redeem_amount
                 .multiply_ratio(Price::load(deps.storage)?.0, Uint128::from(1_000_000u32));
+            let scrt_amount = scrt_amount - (scrt_amount * config.unbond_commission);
             Ok(Response::default()
                 .set_data(to_binary(&ExecuteAnswer::Unbond {
                     tokens_redeemed: redeem_amount,
