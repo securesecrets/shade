@@ -23,7 +23,7 @@ use shade_protocol::{
         QueryAnswer,
         QueryMsg,
     },
-    snip20::helpers::{mint_msg, register_receive},
+    snip20::helpers::{burn_msg, mint_msg, register_receive, token_config},
     snip20_migration::{ExecuteAnswer, RegisteredToken},
     utils::generic_response::ResponseStatus,
 };
@@ -76,6 +76,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let tokens = RegisteredToken {
                 burn_token: burn_token.into_valid(deps.api)?,
                 mint_token: mint_token.into_valid(deps.api)?,
+                burnable: None,
             };
             Ok(Response::default().add_message(register_tokens(deps, env, tokens)?))
         }
@@ -118,7 +119,31 @@ pub fn try_burn_and_mint(
     from: Addr,
     burn_amount: Uint128,
 ) -> StdResult<Response> {
+    let mut msgs = vec![];
+
     let registered_token = REGISTERD_TOKENS.load(deps.storage, info.sender.clone())?;
+
+    match registered_token.burnable {
+        Some(burnable) => {
+            if burnable {
+                msgs.push(burn_msg(
+                    burn_amount.clone(),
+                    None,
+                    None,
+                    &registered_token.burn_token,
+                )?);
+            }
+        }
+        None => {}
+    }
+
+    msgs.push(mint_msg(
+        from.clone(),
+        burn_amount,
+        None,
+        None,
+        &registered_token.mint_token,
+    )?);
 
     let metrics = AMOUNT_MINTED.load(deps.storage, registered_token.mint_token.address.clone())?;
     AMOUNT_MINTED.save(
@@ -127,22 +152,26 @@ pub fn try_burn_and_mint(
         &(metrics + burn_amount),
     )?;
 
-    Ok(Response::default().add_message(mint_msg(
-        from.clone(),
-        burn_amount,
-        None,
-        None,
-        &registered_token.mint_token,
-    )?))
+    Ok(Response::default().add_messages(msgs))
 }
 
 pub fn register_tokens(deps: DepsMut, env: Env, tokens: RegisteredToken) -> StdResult<CosmosMsg> {
-    REGISTERD_TOKENS.save(deps.storage, tokens.clone().burn_token.address, &tokens)?;
+    let is_burnable = Some(token_config(&deps.querier, &tokens.burn_token)?.burn_enabled);
+    let new_tokens = RegisteredToken {
+        burn_token: tokens.burn_token.clone(),
+        mint_token: tokens.mint_token,
+        burnable: is_burnable,
+    };
+    REGISTERD_TOKENS.save(
+        deps.storage,
+        new_tokens.clone().burn_token.address,
+        &new_tokens,
+    )?;
     AMOUNT_MINTED.save(
         deps.storage,
-        tokens.clone().mint_token.address,
+        new_tokens.clone().mint_token.address,
         &Uint128::zero(),
     )?;
-    let msg = register_receive(env.contract.code_hash, None, &tokens.burn_token)?;
+    let msg = register_receive(env.contract.code_hash, None, &new_tokens.burn_token)?;
     StdResult::Ok(msg)
 }

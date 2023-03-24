@@ -42,7 +42,7 @@ pub fn migration_test() {
             enable_deposit: Some(true),
             enable_redeem: Some(true),
             enable_mint: Some(true),
-            enable_burn: Some(false),
+            enable_burn: Some(true),
             enable_transfer: Some(true),
         }),
     }
@@ -249,6 +249,22 @@ pub fn migration_test() {
                 "metrics equals the minted amount"
             );
         }
+        _ => panic!("wrong type"),
+    }
+
+    match (snip20::QueryMsg::TokenInfo {}
+        .test_query(&token0, &mut chain)
+        .unwrap())
+    {
+        snip20::QueryAnswer::TokenInfo { total_supply, .. } => match total_supply {
+            Some(total_supply) => {
+                assert!(
+                    Uint128::new(999998999999999000000) == total_supply,
+                    "total supply not expected value"
+                );
+            }
+            None => panic!("no total_supply unexpected"),
+        },
         _ => panic!("wrong type"),
     }
 }

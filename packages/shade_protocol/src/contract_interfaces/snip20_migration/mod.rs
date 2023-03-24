@@ -12,6 +12,7 @@ use cosmwasm_std::{Addr, Binary, Uint128};
 pub struct RegisteredToken {
     pub burn_token: Contract,
     pub mint_token: Contract,
+    pub burnable: Option<bool>,
 }
 
 #[cw_serde]
