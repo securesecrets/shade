@@ -63,7 +63,7 @@ rm ./${CURRENT_CRATE}.wasm
 [tasks.schemas]
 workspace = false
 script = '''
-cargo run --bin schemas --features="admin airdrop bonds dao dex governance-impl mint oracles peg_stability query_auth sky snip20 staking mint_router"
+cargo run --bin schemas --features="snip20_migration admin airdrop bonds dao dex governance-impl mint oracles peg_stability query_auth sky snip20 staking mint_router"
 '''
 
 # Testing
