@@ -11,6 +11,7 @@ use shade_protocol::{
             sienna::{
                 self,
                 Pair,
+                ReceiverCallbackMsg,
                 TokenType,
             },
         },
@@ -47,14 +48,6 @@ pub struct PairInfo {
 
 impl ItemStorage for PairInfo {
     const ITEM: Item<'static, Self> = Item::new("item-pair");
-}
-
-#[cw_serde]
-pub enum ReceiverCallbackMsg {
-    Swap {
-        expected_return: Option<Uint128>,
-        to: Option<Addr>,
-    },
 }
 
 #[cw_serde]

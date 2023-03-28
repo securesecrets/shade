@@ -226,6 +226,7 @@ pub fn execute(
             let time = Time::load(deps.storage)?.0;
             let maturity = time + config.unbonding_time 
                 + config.unbonding_batch_interval - (time % config.unbonding_batch_interval);
+            let redeem_amount = redeem_amount - (redeem_amount * config.unbond_commission);
             let unbonding = Unbonding {
                 amount: redeem_amount,
                 maturity,
@@ -239,7 +240,6 @@ pub fn execute(
             Balance(balance - redeem_amount).save(deps.storage, info.sender)?;
             let scrt_amount = redeem_amount
                 .multiply_ratio(Price::load(deps.storage)?.0, Uint128::from(1_000_000u32));
-            let scrt_amount = scrt_amount - (scrt_amount * config.unbond_commission);
             Ok(Response::default()
                 .set_data(to_binary(&ExecuteAnswer::Unbond {
                     tokens_redeemed: redeem_amount,
