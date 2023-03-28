@@ -523,7 +523,12 @@ pub fn withdraw(
     }
 
     if withdrawn_amount.is_zero() {
-        return Err(StdError::generic_err("No unbondings to withdraw"));
+        return Ok(
+            Response::new().set_data(to_binary(&ExecuteAnswer::Withdraw {
+                withdrawn: withdrawn_amount,
+                status: ResponseStatus::Success,
+            })?),
+        );
     }
 
     // Sort lists so the operation is O(n)
