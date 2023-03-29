@@ -129,11 +129,12 @@ pub enum ExecuteMsg {
         id: Uint128,
         force: Option<bool>,
     },
-    /* TODO permissionless or whitelisted?
-     * potential issues:
-     *  - sending & receiving users must either claim or compound
-     *  - allows the sender to force a claim to the receiver
-     */
+    AddTransferWhitelist {
+        user: String,
+    },
+    RemoveTransferWhitelist {
+        user: String,
+    },
     TransferStake {
         amount: Uint128,
         recipient: String,
@@ -175,8 +176,6 @@ pub enum ExecuteAnswer {
     },
     Withdraw {
         withdrawn: Uint128,
-        // TODO non-staked denoms
-        // claimed
         status: ResponseStatus,
     },
     Compound {
@@ -187,6 +186,12 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     CancelRewardPool {
+        status: ResponseStatus,
+    },
+    RemoveTransferWhitelist {
+        status: ResponseStatus,
+    },
+    AddTransferWhitelist {
         status: ResponseStatus,
     },
     TransferStake {
@@ -229,6 +234,7 @@ pub enum QueryMsg {
         auth: Auth,
         ids: Option<Vec<Uint128>>,
     },
+    TransferWhitelist {},
 }
 
 impl Query for QueryMsg {
@@ -268,5 +274,8 @@ pub enum QueryAnswer {
     },
     Unbonding {
         unbondings: Vec<Unbonding>,
+    },
+    TransferWhitelist {
+        whitelist: Vec<Addr>,
     },
 }

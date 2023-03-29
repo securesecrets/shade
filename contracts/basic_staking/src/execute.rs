@@ -718,9 +718,76 @@ pub fn cancel_reward_pool(
     )
 }
 
-pub fn transfer_stake(
+pub fn add_transfer_whitelist(
     deps: DepsMut,
     _env: Env,
+    info: MessageInfo,
+    user: Addr,
+) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &config.admin_auth,
+    )?;
+
+    let mut whitelist = TRANSFER_WL.load(deps.storage)?;
+
+    if whitelist.contains(&user) {
+        return Err(StdError::generic_err("User already whitelisted"));
+    }
+
+    whitelist.push(user);
+
+    TRANSFER_WL.save(deps.storage, &whitelist)?;
+
+    Ok(
+        Response::default().set_data(to_binary(&ExecuteAnswer::AddTransferWhitelist {
+            status: ResponseStatus::Success,
+        })?),
+    )
+}
+
+pub fn rm_transfer_whitelist(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    user: Addr,
+) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &config.admin_auth,
+    )?;
+
+    let mut whitelist = TRANSFER_WL.load(deps.storage)?;
+
+    match whitelist.iter().position(|u| *u == user) {
+        Some(i) => {
+            whitelist.remove(i);
+        }
+        None => {
+            return Err(StdError::generic_err("User not in whitelist"));
+        }
+    }
+
+    TRANSFER_WL.save(deps.storage, &whitelist)?;
+
+    Ok(
+        Response::default().set_data(to_binary(&ExecuteAnswer::AddTransferWhitelist {
+            status: ResponseStatus::Success,
+        })?),
+    )
+}
+
+pub fn transfer_stake(
+    deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     amount: Uint128,
     recipient: Addr,
@@ -736,31 +803,86 @@ pub fn transfer_stake(
     }
 
     // Claim/Compound for sending user
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
-    // Claim for receiving user
+    let mut reward_pools =
+        update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
+
+    let stake_token = STAKE_TOKEN.load(deps.storage)?;
+
+    let mut response = Response::new();
 
     let sender_staked = USER_STAKED
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or(Uint128::zero());
+    let mut sender_compound_amount = Uint128::zero();
 
+    // Claim/Compound rewards for Sender
+    for reward_pool in reward_pools.iter_mut() {
+        let reward_claimed = reward_pool_claim(
+            deps.storage,
+            info.sender.clone(),
+            sender_staked,
+            &reward_pool,
+        )?;
+        reward_pool.claimed += reward_claimed;
+
+        if compound && reward_pool.token == stake_token {
+            // Compound stake_token rewards
+            sender_compound_amount += reward_claimed;
+        } else {
+            // Claim if not compound or not stake token rewards
+            response = response.add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
+            )?);
+        }
+    }
+
+    // Claim for receiving user
     let recipient_staked = USER_STAKED
         .may_load(deps.storage, recipient.clone())?
         .unwrap_or(Uint128::zero());
 
+    // Claim rewards for Sender (no compound)
+    for reward_pool in reward_pools.iter_mut() {
+        let reward_claimed = reward_pool_claim(
+            deps.storage,
+            recipient.clone(),
+            recipient_staked,
+            &reward_pool,
+        )?;
+        reward_pool.claimed += reward_claimed;
+
+        // Claim if not compound or not stake token rewards
+        response = response.add_message(send_msg(
+            recipient.clone(),
+            reward_claimed,
+            None,
+            None,
+            None,
+            &reward_pool.token,
+        )?);
+    }
+
     // Adjust sender staked
-    USER_STAKED.save(deps.storage, info.sender, &(sender_staked - amount))?;
+    USER_STAKED.save(
+        deps.storage,
+        info.sender,
+        &(sender_staked + sender_compound_amount - amount),
+    )?;
 
     // Adjust recipient staked
     USER_STAKED.save(deps.storage, recipient, &(recipient_staked + amount))?;
 
-    return Err(StdError::generic_err("Transfer Stake Not Implemented"));
-
-    /*
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::TransferStake {
             transferred: amount,
             status: ResponseStatus::Success,
         })?),
     )
-    */
 }

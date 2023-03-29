@@ -10,6 +10,7 @@ pub const CONFIG: Item<basic_staking::Config> = Item::new("config");
 pub const STAKE_TOKEN: Item<Contract> = Item::new("stake_token");
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
 
+// Whitelist for transferring stake
 pub const TRANSFER_WL: Item<Vec<Addr>> = Item::new("transfer_whitelist");
 
 pub const TOTAL_STAKED: Item<Uint128> = Item::new("total_stake");
@@ -20,7 +21,6 @@ pub const REWARD_POOLS: Item<Vec<basic_staking::RewardPoolInternal>> = Item::new
 pub const USER_STAKED: Map<Addr, Uint128> = Map::new("user_stake");
 pub const USER_LAST_CLAIM: Map<Addr, Uint128> = Map::new("user_last_claim");
 
-// TODO upgrade ID's to 256
 pub fn user_unbonding_key(user: Addr, unbond_id: Uint128) -> String {
     format!("{}-{}", user, unbond_id)
 }

@@ -1,5 +1,5 @@
 use shade_protocol::{
-    basic_staking::{Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, QueryMsg},
+    basic_staking::{Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
     c_std::{
         shd_entry_point,
         to_binary,
@@ -44,7 +44,6 @@ pub fn instantiate(
     REWARD_TOKENS.save(deps.storage, &vec![stake_token.clone()])?;
     REWARD_POOLS.save(deps.storage, &vec![])?;
 
-    // Maybe admin to start?
     TRANSFER_WL.save(deps.storage, &vec![])?;
 
     TOTAL_STAKED.save(deps.storage, &Uint128::zero())?;
@@ -79,6 +78,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::RegisterRewards { token } => {
             let api = deps.api;
             execute::register_reward(deps, env, info, token.into_valid(api)?)
+        }
+        ExecuteMsg::AddTransferWhitelist { user } => {
+            let api = deps.api;
+            execute::add_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
+        }
+        ExecuteMsg::RemoveTransferWhitelist { user } => {
+            let api = deps.api;
+            execute::rm_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
         }
         ExecuteMsg::Receive {
             sender,
@@ -190,5 +197,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 ids.unwrap_or(USER_UNBONDING_IDS.load(deps.storage, user)?),
             )?)
         }
+        QueryMsg::TransferWhitelist {} => to_binary(&QueryAnswer::TransferWhitelist {
+            whitelist: TRANSFER_WL.load(deps.storage)?,
+        }),
     }
 }
