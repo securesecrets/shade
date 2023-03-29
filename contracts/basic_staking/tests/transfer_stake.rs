@@ -28,6 +28,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let transfer_user = Addr::unchecked("transfer");
+    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -114,6 +115,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
+        treasury: treasury.into(),
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
@@ -153,6 +155,20 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     .test_exec(&token, &mut app, transfer_user.clone(), &[])
     .unwrap();
 
+    // Transfer should fail, not on whitelist
+    match (basic_staking::ExecuteMsg::TransferStake {
+        amount: transfer_amount,
+        recipient: staking_user.clone().into(),
+        compound: Some(true),
+    }
+    .test_exec(&basic_staking, &mut app, transfer_user.clone(), &[]))
+    {
+        Err(_) => {}
+        Ok(_) => {
+            panic!("Shouldn't allow transfer if source not on whitelist");
+        }
+    }
+
     // Add transfer user to whitelist
     basic_staking::ExecuteMsg::AddTransferWhitelist {
         user: transfer_user.clone().into(),
@@ -167,6 +183,23 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     }
     .test_exec(&basic_staking, &mut app, transfer_user.clone(), &[])
     .unwrap();
+
+    // Check whitelist
+    match (basic_staking::QueryMsg::TransferWhitelist {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::TransferWhitelist { whitelist } => {
+            assert_eq!(
+                whitelist,
+                vec![transfer_user.clone()],
+                "Whitelist contains trasfer user"
+            );
+        }
+        _ => {
+            panic!("Unexpected transfer whitelist response");
+        }
+    }
 
     // staking user balance after transfer
     match (basic_staking::QueryMsg::Balance {

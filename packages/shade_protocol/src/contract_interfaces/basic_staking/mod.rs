@@ -17,6 +17,7 @@ use cosmwasm_schema::cw_serde;
 pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
+    pub treasury: Addr,
     pub unbond_period: Uint128,
     // Number of non-admin pools allowed
     pub max_user_pools: Uint128,
@@ -87,6 +88,7 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
     pub stake_token: RawContract,
+    pub treasury: String,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
     pub reward_cancel_threshold: Uint128,
@@ -125,7 +127,7 @@ pub enum ExecuteMsg {
     },
     Claim {},
     Compound {},
-    CancelRewardPool {
+    EndRewardPool {
         id: Uint128,
         force: Option<bool>,
     },
@@ -185,7 +187,9 @@ pub enum ExecuteAnswer {
     RegisterRewards {
         status: ResponseStatus,
     },
-    CancelRewardPool {
+    EndRewardPool {
+        deleted: bool,
+        extracted: Uint128,
         status: ResponseStatus,
     },
     RemoveTransferWhitelist {

@@ -660,9 +660,9 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     })?))
 }
 
-pub fn cancel_reward_pool(
+pub fn end_reward_pool(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     id: Uint128,
     force: bool,
@@ -681,41 +681,68 @@ pub fn cancel_reward_pool(
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
     let mut response = Response::new();
 
-    if let Some(i) = reward_pools.iter().position(|p| p.id == id) {
-        if !force {
-            let claim_percent = Uint128::new(
-                (reward_pools[i].claimed.u128() * 10u128.pow(18)) / total_staked.u128(),
-            );
-            if claim_percent < config.reward_cancel_threshold {
-                return Err(StdError::generic_err(format!(
-                    "Percent claimed {} does not exceed threshold {}",
-                    claim_percent, config.reward_cancel_threshold
-                )));
-            }
-        }
+    // Amount of rewards pulled from contract
+    let mut extract_amount = Uint128::zero();
 
-        // Send unclaimed funds to creator
-        let unclaimed = reward_pools[i].amount - reward_pools[i].claimed;
-        if !unclaimed.is_zero() {
-            response = response.add_message(send_msg(
-                reward_pools[i].creator.clone(),
-                unclaimed,
-                None,
-                None,
-                None,
-                &reward_pools[i].token,
-            )?);
+    let now = Uint128::new(env.block.time.seconds() as u128);
+
+    let pool_i = match reward_pools.iter().position(|p| p.id == id) {
+        Some(i) => i,
+        None => {
+            return Err(StdError::generic_err(
+                "Could not match id on second attempt",
+            ));
         }
-        reward_pools.remove(i);
+    };
+
+    let mut reward_pool = reward_pools[pool_i].clone();
+
+    // Remove reward pool, will edit & push it later
+    reward_pools.remove(pool_i);
+
+    let mut deleted: bool;
+
+    // Delete reward pool if it hasn't started
+    if reward_pool.start < now {
+        extract_amount = reward_pool.amount;
+        deleted = true;
+    }
+    // Trim off un-emitted tokens if reward pool hasn't ended
+    else if reward_pool.end > now {
+        // remove rewards from now -> end
+        extract_amount = reward_pool.rate * (reward_pool.end - now) / Uint128::new(10u128.pow(18));
+        reward_pool.end = now;
+        reward_pool.amount -= extract_amount;
+
+        reward_pools.push(reward_pool.clone());
+        deleted = false;
+    }
+    // Delete reward pool if reward pool is fully claimed, or forced
+    else if reward_pool.claimed == reward_pool.amount || force {
+        extract_amount += reward_pool.amount - reward_pool.claimed;
+        deleted = true;
     } else {
-        return Err(StdError::generic_err("Invalid pool id"));
+        return Err(StdError::generic_err(
+            "Reward pool is complete but claims are still pending",
+        ));
     }
 
-    Ok(
-        response.set_data(to_binary(&ExecuteAnswer::CancelRewardPool {
+    REWARD_POOLS.save(deps.storage, &reward_pools)?;
+
+    Ok(response
+        .add_message(send_msg(
+            CONFIG.load(deps.storage)?.treasury,
+            extract_amount,
+            None,
+            None,
+            None,
+            &reward_pool.token,
+        )?)
+        .set_data(to_binary(&ExecuteAnswer::EndRewardPool {
+            deleted,
+            extracted: extract_amount,
             status: ResponseStatus::Success,
-        })?),
-    )
+        })?))
 }
 
 pub fn add_transfer_whitelist(

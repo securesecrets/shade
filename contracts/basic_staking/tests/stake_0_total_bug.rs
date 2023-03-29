@@ -34,6 +34,7 @@ fn stake_0_total_bug(
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
+    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -113,6 +114,7 @@ fn stake_0_total_bug(
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
+        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

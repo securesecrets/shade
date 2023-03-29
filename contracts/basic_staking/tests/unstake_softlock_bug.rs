@@ -29,6 +29,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
+    let treasury = Addr::unchecked("treasury");
 
     let extra_amount = Uint128::new(100000000000);
 
@@ -111,6 +112,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
+        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

@@ -39,6 +39,7 @@ fn multi_staker_single_pool(
         .enumerate()
         .map(|(i, x)| Addr::unchecked(format!("staker-{}", i)))
         .collect::<Vec<Addr>>();
+    let treasury = Addr::unchecked("treasury");
 
     let mut initial_balances = staking_users
         .iter()
@@ -125,6 +126,7 @@ fn multi_staker_single_pool(
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
+        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

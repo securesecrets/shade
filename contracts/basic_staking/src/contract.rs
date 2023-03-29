@@ -31,6 +31,7 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &Config {
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         query_auth: msg.query_auth.into_valid(deps.api)?,
+        treasury: deps.api.addr_validate(&msg.treasury)?,
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
         reward_cancel_threshold: msg.reward_cancel_threshold,
@@ -100,8 +101,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::Withdraw { ids } => execute::withdraw(deps, env, info.clone(), ids),
         ExecuteMsg::Compound {} => execute::compound(deps, env, info),
-        ExecuteMsg::CancelRewardPool { id, force } => {
-            execute::cancel_reward_pool(deps, env, info, id, force.unwrap_or(false))
+        ExecuteMsg::EndRewardPool { id, force } => {
+            execute::end_reward_pool(deps, env, info, id, force.unwrap_or(false))
         }
         ExecuteMsg::TransferStake {
             amount,
