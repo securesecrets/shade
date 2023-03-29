@@ -193,7 +193,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
             assert_eq!(
                 whitelist,
                 vec![transfer_user.clone()],
-                "Whitelist contains trasfer user"
+                "Whitelist contains transfer user"
             );
         }
         _ => {
@@ -201,7 +201,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         }
     }
 
-    // staking user balance after transfer
+    // check staking user balance after transfer
     match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
@@ -228,7 +228,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         }
     };
 
-    // transfer user balance after transfer
+    // check transfer user balance after transfer
     match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
             key: viewing_key.clone(),
@@ -250,6 +250,26 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
             panic!("Staking balance query failed");
         }
     };
+
+    // Remove from whitelist
+    basic_staking::ExecuteMsg::RemoveTransferWhitelist {
+        user: transfer_user.clone().into(),
+    }
+    .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
+    .unwrap();
+
+    // Check whitelist
+    match (basic_staking::QueryMsg::TransferWhitelist {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::TransferWhitelist { whitelist } => {
+            assert!(whitelist.is_empty(), "Whitelist empty after removal");
+        }
+        _ => {
+            panic!("Unexpected transfer whitelist response");
+        }
+    }
 }
 
 macro_rules! transfer_stake {
