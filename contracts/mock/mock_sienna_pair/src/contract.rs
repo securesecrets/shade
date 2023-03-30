@@ -173,7 +173,7 @@ pub fn execute(
                     let swap_amount = amount - (amount * config.commission);
                     let return_amount = pool_take_amount(
                         swap_amount,
-                        in_pool,
+                        in_pool - amount, // amount has already been added to this pool
                         out_pool,
                     );
 
