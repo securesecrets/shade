@@ -215,8 +215,9 @@ pub fn execute(
             )
         },
         ExecuteMsg::Unbond { redeem_amount } => {
-            let balance = Balance::load(deps.storage, info.sender.clone())?.0;
-            if balance < redeem_amount {
+            let balance = Balance::load(deps.storage, info.sender.clone())
+                .unwrap_or_default().0;
+            if balance <= redeem_amount {
                 return Err(StdError::generic_err(format!(
                     "insufficient funds to burn: balance={}, required={}", balance, redeem_amount
                 )));
