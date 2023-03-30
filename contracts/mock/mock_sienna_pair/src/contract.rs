@@ -185,6 +185,8 @@ pub fn execute(
                         ));
                     }
 
+                    println!("In: {} Out: {}", amount, return_amount);
+
                     // send tokens
                     let return_addr = to.unwrap_or(from);
                     return Ok(Response::default()
