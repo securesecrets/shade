@@ -145,8 +145,6 @@ pub fn execute(
             amount,
             ..
         } => {
-            println!("Receive msg recieved!");
-
             let msg = msg.ok_or_else(|| {
                 StdError::generic_err("Receiver callback \"msg\" parameter cannot be empty.")
             })?;
@@ -209,7 +207,6 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::PairInfo => {
-            println!("Getting info! (print works)");
             let config = Config::load(deps.storage)?;
             let pair_info = PairInfo::load(deps.storage)?;
             let (amount_0, amount_1) = query_pool_amounts(
