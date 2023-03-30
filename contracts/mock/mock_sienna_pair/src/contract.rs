@@ -185,7 +185,9 @@ pub fn execute(
                         ));
                     }
 
-                    println!("In: {} Out: {}", amount, return_amount);
+                    println!("In: {}, Out: {}", amount, return_amount);
+                    println!("In Pool: {}, Out Pool: {}", in_pool, out_pool);
+                    println!("Commish: {}, ExpRet: {:?}, SwapAmt: {}", config.commission, expected_return, swap_amount);
 
                     // send tokens
                     let return_addr = to.unwrap_or(from);
