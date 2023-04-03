@@ -14,8 +14,7 @@ use shade_protocol::{
     },
     contract_interfaces::snip20::{
         batch,
-        errors::transfer_disabled,
-        manager::{Allowance, Balance, CoinInfo, Config, ReceiverHash},
+        manager::{Allowance, Balance, CoinInfo, ReceiverHash},
         transaction_history::store_transfer,
         ExecuteAnswer,
         ReceiverHandleMsg,
@@ -38,9 +37,6 @@ pub fn try_transfer_impl(
     denom: String,
     block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
-    if !Config::transfer_enabled(storage)? {
-        return Err(transfer_disabled());
-    }
 
     let some_owner = match owner {
         None => sender,

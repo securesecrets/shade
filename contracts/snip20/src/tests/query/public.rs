@@ -30,7 +30,6 @@ fn token_config() {
             redeem_enabled,
             mint_enabled,
             burn_enabled,
-            transfer_enabled
         } => {
             assert_eq!(public_total_supply, false);
             assert_eq!(deposit_enabled, false);
@@ -47,7 +46,6 @@ fn token_config() {
         enable_redeem: Some(true),
         enable_mint: None,
         enable_burn: None,
-        enable_transfer: None
     })).unwrap();
     let answer: QueryAnswer = QueryMsg::TokenConfig {  }.test_query(&snip, &chain).unwrap();
 
@@ -58,7 +56,6 @@ fn token_config() {
             redeem_enabled,
             mint_enabled,
             burn_enabled,
-            transfer_enabled
         } => {
             assert_eq!(public_total_supply, true);
             assert_eq!(deposit_enabled, true);

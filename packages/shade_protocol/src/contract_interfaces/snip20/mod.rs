@@ -67,14 +67,21 @@ pub struct InstantiateMsg {
 
 fn is_valid_name(name: &str) -> bool {
     let len = name.len();
-    (3..=30).contains(&len)
+    (3..=200).contains(&len)
 }
 
 fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
-    let len_is_valid = (3..=6).contains(&len);
+    let len_is_valid = (3..=18).contains(&len);
+    let mut cond = Vec::new();
+    cond.push(b'A'..=b'Z');
+    cond.push(b'a'..=b'z');
+    let special = vec![b'-', b' ',b'/'];
 
-    len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
+    len_is_valid
+        && symbol
+            .bytes()
+            .all(|x| cond.iter().any(|c| c.contains(&x) || special.contains(&x)))
 }
 
 #[cfg(feature = "snip20-impl")]
@@ -98,8 +105,8 @@ impl InstantiateMsg {
             return Err(invalid_decimals());
         }
 
-        let config = self.config.clone().unwrap_or_default();
-        config.save(storage)?;
+        let config = self.config.clone().unwrap_or_default().clone();
+        config.clone().save(storage)?;
 
         CoinInfo {
             name: self.name.clone(),
@@ -142,7 +149,11 @@ impl InstantiateMsg {
 
         ContractStatusLevel::NormalRun.save(storage)?;
 
-        Minters(vec![]).save(storage)?;
+        if !config.mint_enabled() {
+            Minters(vec![]).save(storage)?;
+        } else {
+            Minters(vec![admin_addr]).save(storage)?;
+        }
 
         if let Some(query_auth) = self.query_auth.clone() {
             QueryAuth(query_auth).save(storage)?;
@@ -169,9 +180,6 @@ pub struct InitConfig {
     /// Indicates whether burn functionality should be enabled
     /// default: False
     pub enable_burn: Option<bool>,
-    /// Indicates whether transferring tokens should be enables
-    /// default: True
-    pub enable_transfer: Option<bool>,
 }
 
 impl Default for InitConfig {
@@ -182,7 +190,6 @@ impl Default for InitConfig {
             enable_redeem: None,
             enable_mint: None,
             enable_burn: None,
-            enable_transfer: None,
         }
     }
 }
@@ -196,7 +203,6 @@ impl InitConfig {
             enable_redeem: self.redeem_enabled(),
             enable_mint: self.mint_enabled(),
             enable_burn: self.burn_enabled(),
-            enable_transfer: self.transfer_enabled(),
         }
         .save(storage)?;
         Ok(())
@@ -220,10 +226,6 @@ impl InitConfig {
 
     pub fn burn_enabled(&self) -> bool {
         self.enable_burn.unwrap_or(false)
-    }
-
-    pub fn transfer_enabled(&self) -> bool {
-        self.enable_transfer.unwrap_or(true)
     }
 }
 
@@ -614,7 +616,6 @@ pub enum QueryAnswer {
         redeem_enabled: bool,
         mint_enabled: bool,
         burn_enabled: bool,
-        transfer_enabled: bool,
     },
     ContractStatus {
         status: ContractStatusLevel,

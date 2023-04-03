@@ -108,8 +108,6 @@ const ENABLE_REDEEM: Item<'static, Setting> = Item::new("enable-redeem-");
 const ENABLE_MINT: Item<'static, Setting> = Item::new("enable-mint-");
 #[cfg(feature = "snip20-impl")]
 const ENABLE_BURN: Item<'static, Setting> = Item::new("enable-burn-");
-#[cfg(feature = "snip20-impl")]
-const ENABLE_TRANSFER: Item<'static, Setting> = Item::new("enable-transfer-");
 
 #[cw_serde]
 pub struct Config {
@@ -118,7 +116,6 @@ pub struct Config {
     pub enable_redeem: bool,
     pub enable_mint: bool,
     pub enable_burn: bool,
-    pub enable_transfer: bool,
 }
 
 #[cfg(feature = "snip20-impl")]
@@ -129,7 +126,6 @@ impl Config {
         Self::set_redeem_enabled(storage, self.enable_redeem)?;
         Self::set_mint_enabled(storage, self.enable_mint)?;
         Self::set_burn_enabled(storage, self.enable_burn)?;
-        Self::set_transfer_enabled(storage, self.enable_transfer)?;
         Ok(())
     }
 
@@ -178,14 +174,6 @@ impl Config {
         Ok(())
     }
 
-    pub fn transfer_enabled(storage: &dyn Storage) -> StdResult<bool> {
-        Ok(Setting::load(storage, ENABLE_TRANSFER)?.0)
-    }
-
-    pub fn set_transfer_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
-        Setting(setting).save(storage, ENABLE_TRANSFER)?;
-        Ok(())
-    }
 }
 
 #[cw_serde]
