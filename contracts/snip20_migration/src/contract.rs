@@ -23,7 +23,7 @@ use shade_protocol::{
         QueryAnswer,
         QueryMsg,
     },
-    snip20::helpers::{burn_msg, mint_msg, register_receive, token_config},
+    snip20::helpers::{burn_msg, mint_msg, register_receive},
     snip20_migration::{ExecuteAnswer, RegisteredToken},
     utils::generic_response::ResponseStatus,
 };
@@ -71,12 +71,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::RegisterMigrationTokens {
             burn_token,
             mint_token,
+            burnable,
             ..
         } => {
             let tokens = RegisteredToken {
                 burn_token: burn_token.into_valid(deps.api)?,
                 mint_token: mint_token.into_valid(deps.api)?,
-                burnable: None,
+                burnable,
             };
             Ok(Response::default().add_message(register_tokens(deps, env, tokens)?))
         }
@@ -156,22 +157,12 @@ pub fn try_burn_and_mint(
 }
 
 pub fn register_tokens(deps: DepsMut, env: Env, tokens: RegisteredToken) -> StdResult<CosmosMsg> {
-    let is_burnable = Some(token_config(&deps.querier, &tokens.burn_token)?.burn_enabled);
-    let new_tokens = RegisteredToken {
-        burn_token: tokens.burn_token.clone(),
-        mint_token: tokens.mint_token,
-        burnable: is_burnable,
-    };
-    REGISTERD_TOKENS.save(
-        deps.storage,
-        new_tokens.clone().burn_token.address,
-        &new_tokens,
-    )?;
+    REGISTERD_TOKENS.save(deps.storage, tokens.clone().burn_token.address, &tokens)?;
     AMOUNT_MINTED.save(
         deps.storage,
-        new_tokens.clone().mint_token.address,
+        tokens.clone().mint_token.address,
         &Uint128::zero(),
     )?;
-    let msg = register_receive(env.contract.code_hash, None, &new_tokens.burn_token)?;
+    let msg = register_receive(env.contract.code_hash, None, &tokens.burn_token)?;
     StdResult::Ok(msg)
 }
