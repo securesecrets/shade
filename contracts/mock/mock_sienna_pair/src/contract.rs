@@ -149,8 +149,6 @@ pub fn execute(
                 StdError::generic_err("Receiver callback \"msg\" parameter cannot be empty.")
             })?;
 
-            println!("Here we are!!! {:?}", msg);
-
             match from_binary(&msg)? {
                 ReceiverCallbackMsg::Swap { expected_return, to } => {
                     let config = Config::load(deps.storage)?;
@@ -184,10 +182,6 @@ pub fn execute(
                                 "Operation fell short of expected_return"
                         ));
                     }
-
-                    println!("In: {}, Out: {}", amount, return_amount);
-                    println!("In Pool: {}, Out Pool: {}", in_pool, out_pool);
-                    println!("Commish: {}, ExpRet: {:?}, SwapAmt: {}", config.commission, expected_return, swap_amount);
 
                     // send tokens
                     let return_addr = to.unwrap_or(from);

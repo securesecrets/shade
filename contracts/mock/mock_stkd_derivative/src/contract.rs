@@ -166,9 +166,7 @@ pub fn execute(
             Balance(their_balance + amount).save(deps.storage, recipient.clone())?;
 
             let mut messages = vec![];
-            println!("We made it this far! (STKD){:?}\n{:?}\n{:?}", recipient, recipient_code_hash, msg);
             if let Some(receiver_hash) = recipient_code_hash {
-                println!("We now made it further!");
                 let recipient_addr = Addr::unchecked(recipient);
                 messages.push(
                     ReceiverHandleMsg::new(
