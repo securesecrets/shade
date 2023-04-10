@@ -144,7 +144,7 @@ pub fn user_balance(
                 rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid);
             if !rewards_earned.is_zero() {
                 rewards.push(Reward {
-                    token: reward_pool.token.address,
+                    token: reward_pool.token,
                     amount: rewards_earned,
                 });
             }
@@ -189,7 +189,7 @@ pub fn user_rewards(deps: Deps, env: Env, user: Addr) -> StdResult<QueryAnswer> 
                 .unwrap_or(Uint128::zero());
             let reward_per_token = reward_per_token(total_staked, now, &reward_pool);
             rewards.push(Reward {
-                token: reward_pool.token.address,
+                token: reward_pool.token,
                 amount: rewards_earned(user_staked, reward_per_token, user_reward_per_token_paid),
             });
         }

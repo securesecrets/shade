@@ -87,11 +87,14 @@ pub fn register_reward(
         &config.admin_auth,
     )?;
 
-    let reward_tokens = REWARD_TOKENS.load(deps.storage)?;
+    let mut reward_tokens = REWARD_TOKENS.load(deps.storage)?;
 
     if reward_tokens.contains(&token) {
         return Err(StdError::generic_err("Reward token already registered"));
     }
+
+    reward_tokens.push(token.clone());
+    REWARD_TOKENS.save(deps.storage, &reward_tokens)?;
 
     Ok(Response::new()
         .add_messages(vec![

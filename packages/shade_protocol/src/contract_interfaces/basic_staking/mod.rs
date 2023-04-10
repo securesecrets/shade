@@ -51,7 +51,7 @@ pub struct Unbonding {
 
 #[cw_serde]
 pub struct Reward {
-    pub token: Addr,
+    pub token: Contract,
     pub amount: Uint128,
 }
 
