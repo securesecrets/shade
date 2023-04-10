@@ -39,6 +39,7 @@ pub enum ExecuteMsg {
     RegisterMigrationTokens {
         burn_token: RawContract,
         mint_token: RawContract,
+        burnable: Option<bool>,
         padding: Option<String>,
     },
     Receive {

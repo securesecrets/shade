@@ -137,6 +137,7 @@ pub fn migration_test() {
     snip20_migration::ExecuteMsg::RegisterMigrationTokens {
         burn_token: token0.clone().into(),
         mint_token: token1.clone().into(),
+        burnable: Some(true),
         padding: None,
     }
     .test_exec(&migration_contract, &mut chain, admin.clone().into(), &[])
