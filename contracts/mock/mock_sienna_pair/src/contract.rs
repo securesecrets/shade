@@ -11,7 +11,6 @@ use shade_protocol::{
             sienna::{
                 self,
                 Pair,
-                ReceiverCallbackMsg,
                 TokenType,
             },
         },
@@ -27,6 +26,7 @@ pub use shade_protocol::dex::sienna::{
     PairQuery as QueryMsg,
     PairInfoResponse,
     SimulationResponse,
+    ReceiverCallbackMsg,
 };
 
 #[cw_serde]
