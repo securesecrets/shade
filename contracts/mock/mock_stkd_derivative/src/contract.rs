@@ -143,9 +143,9 @@ pub fn instantiate(
     let mut price = msg.price;
     if msg.decimals != 6 {
         if msg.decimals > 6 {
-            price = price * Uint128::new(10).pow(msg.decimals as u32 - 6);
+            price = price / Uint128::new(10).pow(msg.decimals as u32 - 6);
         } else {
-            price = price / Uint128::new(10).pow(6 - msg.decimals as u32);
+            price = price * Uint128::new(10).pow(6 - msg.decimals as u32);
         }
     }
     println!("INIT DERIV PRICE --- {}", price);
@@ -328,9 +328,9 @@ pub fn query(
             let mut price = Price::load(deps.storage)?.0;
             if config.decimals != 6 {
                 if config.decimals > 6 {
-                    price = price / Uint128::new(10).pow(config.decimals as u32 - 6);
+                    price = price * Uint128::new(10).pow(config.decimals as u32 - 6);
                 } else {
-                    price = price * Uint128::new(10).pow(6 - config.decimals as u32);
+                    price = price / Uint128::new(10).pow(6 - config.decimals as u32);
                 }
             }
             to_binary(&QueryAnswer::StakingInfo {
