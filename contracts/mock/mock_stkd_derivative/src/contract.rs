@@ -143,9 +143,9 @@ pub fn instantiate(
     let mut price = msg.price;
     if msg.decimals != 6 {
         if msg.decimals > 6 {
-            price = price * Uint128::new(10).pow(msg.decimals as u32 - 6);
+            price = price / Uint128::new(10).pow(msg.decimals as u32 - 6);
         } else {
-            price = price / Uint128::new(10).pow(6 - msg.decimals as u32);
+            price = price * Uint128::new(10).pow(6 - msg.decimals as u32);
         }
     }
     Price(price).save(deps.storage)?;
@@ -322,6 +322,17 @@ pub fn query(
             let config = Config::load(deps.storage)?;
             let next_unbonding_batch_time = time + config.unbonding_batch_interval 
                 - (time % config.unbonding_batch_interval);
+
+            // Convert back to basis of 6 decimals
+            let mut price = Price::load(deps.storage)?.0;
+            if config.decimals != 6 {
+                if config.decimals > 6 {
+                    price = price * Uint128::new(10).pow(config.decimals as u32 - 6);
+                } else {
+                    price = price / Uint128::new(10).pow(6 - config.decimals as u32);
+                }
+            }
+
             to_binary(&QueryAnswer::StakingInfo {
                 validators: vec![],
                 unbonding_time: config.unbonding_time,
@@ -335,7 +346,7 @@ pub fn query(
                 available_scrt: Uint128::zero(),
                 rewards: Uint128::zero(),
                 total_derivative_token_supply: Uint128::zero(),
-                price: Price::load(deps.storage)?.0,
+                price,
             })
         },
         QueryMsg::Unbonding { address, key, .. } => {
