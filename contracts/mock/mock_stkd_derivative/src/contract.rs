@@ -138,7 +138,17 @@ pub fn instantiate(
         unbond_commission: msg.unbond_commission,
     };
     config.save(deps.storage)?;
-    Price(msg.price).save(deps.storage)?;
+
+    // Adjust price relative to uscrt for the off chance that msg.decimals isn't 6
+    let mut price = msg.price;
+    if msg.decimals != 6 {
+        if msg.decimals > 6 {
+            price = price * Uint128::new(10).pow(msg.decimals as u32 - 6);
+        } else {
+            price = price / Uint128::new(10).pow(6 - msg.decimals as u32);
+        }
+    }
+    Price(price).save(deps.storage)?;
 
     Time(0).save(deps.storage)?;
 
