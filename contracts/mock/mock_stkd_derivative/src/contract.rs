@@ -148,7 +148,6 @@ pub fn instantiate(
             price = price * Uint128::new(10).pow(6 - msg.decimals as u32);
         }
     }
-    println!("INIT DERIV PRICE --- {}", price);
     Price(price).save(deps.storage)?;
 
     Time(0).save(deps.storage)?;
