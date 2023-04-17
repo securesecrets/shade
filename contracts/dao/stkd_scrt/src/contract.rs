@@ -1,5 +1,15 @@
 use shade_protocol::{
-    c_std::{entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+    },
     dao::{
         adapter,
         stkd_scrt::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -10,7 +20,7 @@ use shade_protocol::{
 
 use crate::{execute, query, storage::*};
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -35,7 +45,7 @@ pub fn instantiate(
     ]))
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive {
@@ -68,7 +78,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),

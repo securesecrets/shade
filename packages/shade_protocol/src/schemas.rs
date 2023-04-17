@@ -60,7 +60,7 @@ pub fn main() {
 
     generate_nested_schemas!(dao, treasury_manager, treasury, scrt_staking);
 
-    generate_nested_schemas!(staking, snip20_staking);
+    // generate_nested_schemas!(staking, snip20_staking);
 
     // TODO: make admin interface up to standard
     use shade_protocol::contract_interfaces::admin;
