@@ -20,8 +20,11 @@ members = [
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
-  "contracts/basic_staking",
   "contracts/snip20_migration",
+
+  # Staking
+  "contracts/basic_staking",
+  "contracts/snip20_derivative",
 
   # DAO
   # - Core
