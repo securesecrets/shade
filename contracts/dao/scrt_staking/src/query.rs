@@ -1,23 +1,10 @@
 use shade_protocol::{
-    c_std::{
-        Addr,
-        Api,
-        BankQuery,
-        Delegation,
-        Deps,
-        DistributionMsg,
-        FullDelegation,
-        Querier,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-    },
+    c_std::{Addr, Delegation, Deps, StdError, StdResult, Uint128},
     dao::{adapter, scrt_staking::QueryAnswer},
     utils::asset::scrt_balance,
 };
 
-use crate::storage::{CONFIG, SELF_ADDRESS, UNBONDING};
+use crate::storage::*;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -75,12 +62,10 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
-    println!("delegated balance {}", delegated.clone());
 
     let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
-    println!("rewards balance {}", rewards.clone());
 
     Ok(adapter::QueryAnswer::Balance {
         amount: delegated + rewards + scrt_balance,
@@ -124,10 +109,14 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
+    let mut unbonding = UNBONDING.load(deps.storage)?;
 
-    Ok(adapter::QueryAnswer::Unbonding {
-        amount: UNBONDING.load(deps.storage)? - (scrt_balance + rewards),
-    })
+    if unbonding >= (scrt_balance + rewards) {
+        unbonding -= scrt_balance + rewards;
+    } else {
+        unbonding = Uint128::zero();
+    }
+    Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
 }
 
 pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
@@ -145,19 +134,23 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
      *    Once the unbonding funds are here they will show, making it difficult to present
      *    unbondable funds that arent being currently unbonded
      */
-    let unbondable = match balance(deps, asset)? {
-        adapter::QueryAnswer::Balance { amount } => amount,
-        _ => {
-            return Err(StdError::generic_err("Failed to query balance"));
-        }
-    };
+    let delegated = Uint128::new(
+        delegations(deps)?
+            .into_iter()
+            .map(|d| d.amount.amount.u128())
+            .sum::<u128>(),
+    );
 
-    /*
-    let unbonding = unbonding_r(deps.storage).load()?;
-    if !unbonding.is_zero() {
-        panic!("unbondable {}, unbonding {}", unbondable, unbonding);
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
+    let rewards = rewards(deps)?;
+
+    let unbonding = UNBONDING.load(deps.storage)?;
+
+    let mut unbondable = delegated;
+
+    if unbonding < scrt_balance + rewards {
+        unbondable += scrt_balance + rewards - unbonding;
     }
-    */
 
     /*TODO: Query current unbondings
      * u >= 7 = 0
@@ -177,11 +170,8 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     }
 
     let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
-    println!("scrt: {}", scrt_balance.clone());
 
     let rewards = rewards(deps)?;
-    println!("rewards: {}", rewards.clone());
-    //assert!(false, "rewards {}", rewards);
 
     if !scrt_balance.is_zero() {
         assert!(false, "scrt bal {}", scrt_balance);

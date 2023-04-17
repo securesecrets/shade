@@ -1,12 +1,11 @@
-use shade_oracles::{common::OraclePrice, interfaces::router};
+
 use shade_protocol::{
-    c_std::{Deps, Isqrt, OwnedDeps, StdError, StdResult, Uint128, Uint256},
+    c_std::{Deps, Isqrt, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::{
         peg_stability::{CalculateRes, Config, QueryAnswer, ViewingKey},
         sky::cycles::Offer,
         snip20,
     },
-    cosmwasm_schema::cw_serde,
     snip20::helpers::balance_query,
     utils::{
         callback::Query,
@@ -25,7 +24,7 @@ pub fn get_balance(deps: Deps) -> StdResult<QueryAnswer> {
     let viewing_key = ViewingKey::load(deps.storage)?;
     let config = Config::load(deps.storage)?;
 
-    let mut res = snip20::QueryMsg::Balance {
+    let res = snip20::QueryMsg::Balance {
         address: config.self_addr.clone().to_string(),
         key: viewing_key,
     }
@@ -159,9 +158,9 @@ fn calculate_swap_amount(
     match res {
         Ok(amount) => match Uint128::try_from(amount) {
             Ok(amount) => amount,
-            Err(error) => Uint128::MAX,
+            Err(_error) => Uint128::MAX,
         },
-        Err(error) => Uint128::zero(),
+        Err(_error) => Uint128::zero(),
     }
 }
 
@@ -169,9 +168,7 @@ fn calculate_swap_amount(
 mod test {
     use crate::query::calculate_swap_amount;
     use shade_protocol::{
-        c_std::{Addr, Decimal, OwnedDeps, Uint128},
-        contract_interfaces::{peg_stability::Config, sky::cycles::ArbPair},
-        utils::asset::Contract,
+        c_std::{Uint128},
     };
 
     #[test]

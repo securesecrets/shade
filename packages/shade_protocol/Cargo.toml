@@ -22,7 +22,7 @@ required-features = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["utils"]
+default = ["utils", "shade_oracles"]
 
 # Utils
 utils = ["chrono"]
@@ -30,8 +30,8 @@ dao-utils = ["snip20"]
 errors = []
 flexible_msg = []
 math = []
-storage = []
-storage_plus = ["storage", "dep:secret-storage-plus"]
+storage = ["dao-utils"]
+storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 
@@ -40,7 +40,6 @@ multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 # When creating a new contract; try to keep all interface (Init, Handle and Query) related content in the `mod.rs` file
 # and move all implementation related content into separate files inside the package.
 # When defining a new interface, first create a feature that imports this:
-#TODO: add admin in here too
 interface = ["utils", "errors"]
 # Like so
 # contract_name = ["interface"]
@@ -49,7 +48,7 @@ interface = ["utils", "errors"]
 # pub mod contract_name;
 
 # For the implementation you need to import this in your feature and prepend the feature name with `_impl`
-implementation = ["storage_plus", "storage"]
+implementation = ["storage_plus", "storage", "admin"]
 # Like so
 # contract_name_impl = ["contract_name", "implementation"]
 
@@ -67,14 +66,15 @@ basic_staking    = ["snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
-liability_mint   = ["snip20", "adapter", "dao", "shade-oracles"]
+#liability_mint   = ["snip20", "adapter", "dao", "dep:shade-oracles"]
 mint_router      = ["snip20"]
 oracles          = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
+stkd_scrt        = ["adapter"]
 treasury         = ["adapter", "dao-utils"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
-lp_shade_swap    = ["interface"]
+lp_shdswap       = ["interface"]
 adapter          = ["interface"]
 manager          = ["interface"]
 snip20           = ["query_auth_impl", "dep:base64"]
@@ -82,6 +82,7 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
+shade_oracles    = ["dep:shade-oracles"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
@@ -116,6 +117,7 @@ thiserror = "1.0"
 
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+
 # Testing
 anyhow = { version = "1", optional = true }
 
@@ -129,5 +131,10 @@ sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
 
+# for EnumIter
+strum = "0.24"
+strum_macros = "0.24"
+const_format = "0.2.26"
+#strum = { version = "0.24", features = ["derive"] }
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }

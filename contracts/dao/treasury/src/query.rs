@@ -1,227 +1,173 @@
-use shade_protocol::{
-    c_std::{Api, Deps, Addr, Querier, StdError, StdResult, Storage, Uint128},
-    snip20::helpers::{allowance_query, balance_query},
-    contract_interfaces::{
-        dao::{
-            manager, 
-            treasury,
-        },
-    },
-};
-
 use crate::storage::*;
+use shade_protocol::{
+    c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
+    contract_interfaces::dao::{adapter, manager, treasury},
+    snip20::helpers::{allowance_query, balance_query},
+    utils::{asset::Contract, cycle::parse_utc_datetime, storage::plus::period_storage::Period},
+};
+use std::collections::HashSet;
 
-pub fn config(
-    deps: Deps,
-) -> StdResult<treasury::QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
         config: CONFIG.load(deps.storage)?,
     })
 }
 
-pub fn balance(
+pub fn metrics(
     deps: Deps,
-    asset: Addr,
-) -> StdResult<manager::QueryAnswer> {
-    //TODO: restrict to admin?
-
-    let managers = MANAGERS.load(deps.storage)?;
-
-    match ASSETS.may_load(deps.storage, asset.clone())? {
-        Some(a) => {
-            let mut balance = balance_query(
-                &deps.querier,
-                SELF_ADDRESS.load(deps.storage)?,
-                VIEWING_KEY.load(deps.storage)?,
-                &a.contract.clone(),
-            )?;
-
-            //panic!("BALANCE {}", balance);
-
-            let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-            for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-                match allowance {
-                    treasury::Allowance::Portion { spender, .. } => {
-                        let manager = managers
-                            .clone()
-                            .into_iter()
-                            .find(|m| m.contract.address == spender)
-                            .unwrap();
-                        balance += manager::balance_query(
-                            deps.querier,
-                            &asset.clone(),
-                            self_address.clone(),
-                            manager.contract,
-                        )?;
-                    }
-                    _ => {}
-                };
-            }
-            Ok(manager::QueryAnswer::Balance { amount: balance })
-        }
-        None => Err(StdError::generic_err(format!("Asset not found: {}", asset.to_string()))),
+    env: Env,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<treasury::QueryAnswer> {
+    if date.is_some() && epoch.is_some() {
+        return Err(StdError::generic_err("cannot pass both epoch and date"));
     }
+    let key = {
+        if let Some(d) = date {
+            parse_utc_datetime(&d)?.timestamp() as u64
+        } else if let Some(e) = epoch {
+            e.u128() as u64
+        } else {
+            env.block.time.seconds()
+        }
+    };
+    Ok(treasury::QueryAnswer::Metrics {
+        metrics: METRICS.load_period(deps.storage, key, period)?,
+    })
 }
 
-pub fn reserves(
-    deps: Deps,
-    asset: Addr,
-) -> StdResult<manager::QueryAnswer> {
-    //TODO: restrict to admin?
+pub fn batch_balance(deps: Deps, env: Env, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
+    let mut balances = vec![];
+    let mut managers: HashSet<Contract> = HashSet::new();
 
-    let managers = MANAGERS.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    match ASSETS.may_load(deps.storage, asset.clone())? {
-        Some(a) => {
-            let mut reserves = balance_query(
-                &deps.querier,
-                self_address,
-                VIEWING_KEY.load(deps.storage)?,
-                &a.contract.clone(),
-            )?;
-
-            /*
-            for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-                match allowance {
-                    treasury::Allowance::Portion { spender, .. } => {
-                        let manager = managers
-                            .clone().into_iter()
-                            .find(|m| m.contract.address == spender).unwrap();
-                        reserves += manager::reserves_query(
-                            &deps,
-                            &asset.clone(),
-                            self_address.clone(),
-                            manager.contract
-                        )?;
-                    }
-                    _ => {}
-                };
+    for asset in assets.clone() {
+        let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
+            Some(a) => a,
+            None => {
+                return Err(StdError::generic_err("Unrecognized Asset"));
             }
-            */
-            Ok(manager::QueryAnswer::Reserves { amount: reserves })
-        }
-        None => Err(StdError::generic_err(format!("Asset not found {}", asset))),
-    }
-}
-
-pub fn unbonding(
-    deps: Deps,
-    asset: Addr,
-) -> StdResult<manager::QueryAnswer> {
-    let managers = MANAGERS.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-    let mut unbonding = Uint128::zero();
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        match allowance {
-            treasury::Allowance::Portion { spender, .. } => {
-                let manager = managers
-                    .clone()
-                    .into_iter()
-                    .find(|m| m.contract.address == spender)
-                    .unwrap();
-                unbonding += manager::unbonding_query(deps.querier, &asset, self_address.clone(), manager.contract)?;
-            }
-            _ => {}
         };
+
+        let balance = balance_query(
+            &deps.querier,
+            env.contract.address.clone(),
+            VIEWING_KEY.load(deps.storage)?,
+            &full_asset.contract.clone(),
+        )?;
+
+        balances.push(balance);
+
+        // build list of unique managers to query balances
+        for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
+            if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
+                managers.insert(m);
+            }
+        }
     }
-
-    Ok(manager::QueryAnswer::Unbonding { amount: unbonding })
-}
-
-pub fn unbondable(
-    deps: Deps,
-    asset: Addr,
-) -> StdResult<manager::QueryAnswer> {
-    let managers = MANAGERS.load(deps.storage)?;
-    let mut unbondable = Uint128::zero();
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
     for manager in managers {
-        unbondable += manager::unbondable_query(deps.querier, &asset, self_address.clone(), manager.contract)?;
+        let manager_balances = manager::batch_balance_query(
+            deps.querier,
+            &assets.clone(),
+            env.contract.address.clone(),
+            manager,
+        )?;
+        balances = balances
+            .into_iter()
+            .zip(manager_balances.into_iter())
+            .map(|(a, b)| a + b)
+            .collect();
     }
-    /*
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        match allowance {
-            treasury::Allowance::Portion { spender, .. } => {
-                let manager = managers
-                    .clone()
-                    .into_iter()
-                    .find(|m| m.contract.address == spender)
-                    .unwrap();
-                unbondable += manager::unbondable_query(&deps, &asset, manager.contract)?;
-            }
-            _ => {}
-        };
-    }
-    */
 
-    Ok(manager::QueryAnswer::Unbondable { amount: unbondable })
+    Ok(balances)
 }
 
-pub fn claimable(
-    deps: Deps,
-    asset: Addr,
-) -> StdResult<manager::QueryAnswer> {
-    let managers = MANAGERS.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-    let claimable = managers
-        .into_iter()
-        .map(|m| manager::claimable_query(
-                deps.querier, 
-                &asset, 
-                self_address.clone(),
-                m.contract
-            ).ok().unwrap().u128())
-        .sum();
+pub fn balance(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Unrecognized Asset"));
+        }
+    };
 
-    Ok(manager::QueryAnswer::Claimable { amount: Uint128::new(claimable) })
+    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
+
+    let mut balance = balance_query(
+        &deps.querier,
+        env.contract.address.clone(),
+        VIEWING_KEY.load(deps.storage)?,
+        &full_asset.contract.clone(),
+    )?;
+
+    for allowance in allowances {
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
+            balance += manager::balance_query(
+                deps.querier,
+                &asset.clone(),
+                env.contract.address.clone(),
+                m,
+            )?;
+        }
+    }
+    Ok(adapter::QueryAnswer::Balance { amount: balance })
+}
+
+pub fn reserves(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+    //TODO: restrict to admin?
+
+    let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Unrecognized Asset"));
+        }
+    };
+
+    let reserves = balance_query(
+        &deps.querier,
+        env.contract.address.clone(),
+        VIEWING_KEY.load(deps.storage)?,
+        &full_asset.contract.clone(),
+    )?;
+
+    Ok(adapter::QueryAnswer::Reserves { amount: reserves })
 }
 
 pub fn allowance(
     deps: Deps,
+    env: Env,
     asset: Addr,
     spender: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
     let key = VIEWING_KEY.load(deps.storage)?;
 
-    if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
-        let cur_allowance = allowance_query(
+    let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Unrecognized Asset"));
+        }
+    };
+
+    return Ok(treasury::QueryAnswer::Allowance {
+        amount: allowance_query(
             &deps.querier,
-            self_address,
+            env.contract.address,
             spender.clone(),
             key,
             1,
             &full_asset.contract.clone(),
-        )?;
-
-        return Ok(treasury::QueryAnswer::Allowance {
-            amount: cur_allowance.amount,
-        });
-    }
-
-    Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
+        )?
+        .allowance,
+    });
 }
 
-pub fn assets(
-    deps: Deps,
-) -> StdResult<treasury::QueryAnswer> {
+pub fn assets(deps: Deps) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
-        assets: ASSET_LIST.load(deps.storage)?,
+        assets: ASSET_LIST.iter(deps.storage).collect(),
     })
 }
 
-pub fn allowances(
-    deps: Deps,
-    asset: Addr,
-) -> StdResult<treasury::QueryAnswer> {
+pub fn allowances(deps: Deps, asset: Addr) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {
-        allowances: match ALLOWANCES.may_load(deps.storage, asset)? {
-            None => vec![],
-            Some(a) => a,
-        },
+        allowances: ALLOWANCES.may_load(deps.storage, asset)?.unwrap_or(vec![]),
     })
 }

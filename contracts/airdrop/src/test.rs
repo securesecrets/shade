@@ -1,17 +1,13 @@
 #[cfg(test)]
 pub mod tests {
     use crate::handle::inverse_normalizer;
-    use shade_protocol::c_std::Uint128;
-    use shade_protocol::c_std::{from_binary, Binary, Addr};
-    use shade_protocol::c_std::testing::mock_dependencies;
-    use shade_protocol::query_authentication::{
-        permit::bech32_to_canonical,
-        transaction::{PermitSignature, PubKey},
-    };
-    use shade_protocol::contract_interfaces::airdrop::account::{
-        AddressProofMsg,
-        AddressProofPermit,
-        FillerMsg,
+    use shade_protocol::{
+        airdrop::account::{AddressProofMsg, AddressProofPermit, FillerMsg},
+        c_std::{from_binary, testing::mock_dependencies, Addr, Binary, Uint128},
+        query_authentication::{
+            permit::bech32_to_canonical,
+            transaction::{PermitSignature, PubKey},
+        },
     };
 
     #[test]
@@ -154,7 +150,7 @@ pub mod tests {
 
         let deps = mock_dependencies();
         let addr = permit
-            .validate(&deps.api , Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -171,7 +167,7 @@ pub mod tests {
     }
 
     #[test]
-    fn keplr_SN_non_ledger() {
+    fn keplr_sn_non_ledger() {
         let mut permit = AddressProofPermit {
             params: FillerMsg::default(),
             chain_id: Some("secret-4".to_string()),
@@ -205,7 +201,7 @@ pub mod tests {
     }
 
     #[test]
-    fn keplr_SN_ledger() {
+    fn keplr_sn_ledger() {
         let mut permit = AddressProofPermit {
             params: FillerMsg::default(),
             chain_id: Some("secret-4".to_string()),

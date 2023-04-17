@@ -1,6 +1,6 @@
 use crate::{
-    c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128},
-    contract_interfaces::{dex::dex, mint::mint, oracles::band},
+    c_std::{Addr, Deps, StdResult, Uint128},
+    contract_interfaces::{dex::dex, oracles::band},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
@@ -83,10 +83,7 @@ pub struct CallbackSwap {
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::Pair {}).query::<PairResponse>(
-            &deps.querier,
-            &pair
-        ) {
+        match (PairQuery::Pair {}).query::<PairResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
