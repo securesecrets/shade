@@ -1,5 +1,6 @@
 pub mod iter_item;
 pub mod iter_map;
+pub mod period_storage;
 
 use crate::{
     c_std::{StdError, StdResult, Storage},

@@ -26,10 +26,10 @@ pub mod liability_mint {
     multi_derive::implement_multi!(LiabilityMint, liability_mint);
 }
 
-#[cfg(feature = "airdrop")]
-pub mod airdrop {
-    use airdrop;
-    multi_derive::implement_multi!(Airdrop, airdrop);
+#[cfg(feature = "stkd_scrt")]
+pub mod stkd_scrt {
+    use stkd_scrt;
+    multi_derive::implement_multi!(StkdScrt, stkd_scrt);
 }
 
 // #[cfg(feature = "mint")]
@@ -93,6 +93,12 @@ pub mod treasury_manager {
 pub mod treasury {
     use treasury;
     multi_derive::implement_multi!(Treasury, treasury);
+}
+
+#[cfg(feature = "mock_adapter")]
+pub mod mock_adapter {
+    use mock_adapter;
+    multi_derive::implement_multi!(MockAdapter, mock_adapter);
 }
 
 #[cfg(feature = "scrt_staking")]

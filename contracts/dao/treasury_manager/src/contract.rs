@@ -1,74 +1,50 @@
+use crate::{execute, query, storage::*};
 use shade_protocol::{
     c_std::{
-        Deps,
-        MessageInfo,
+        shd_entry_point,
         to_binary,
-        Api,
         Binary,
-        Env,
+        Deps,
         DepsMut,
+        Env,
+        MessageInfo,
         Response,
-        Querier,
         StdResult,
-        Storage,
-        entry_point,
     },
     dao::{
         manager,
-        treasury_manager::{
-            Config,
-            ExecuteMsg,
-            InstantiateMsg,
-            QueryMsg,
-            Holding,
-            Status,
-        },
-    }
+        treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
+    },
 };
 
-
-use crate::{
-    execute,
-    query,
-    storage::*,
-};
-
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    let treasury = deps.api.addr_validate(msg.treasury.as_str())?;
 
     CONFIG.save(deps.storage, &Config {
-        admin: msg.admin.unwrap_or(info.sender.clone()),
-        treasury: msg.treasury.clone(),
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        treasury: treasury.clone(),
     })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
-    SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
     ASSET_LIST.save(deps.storage, &Vec::new())?;
-    HOLDERS.save(deps.storage, &vec![msg.treasury.clone()])?;
-    HOLDING.save(deps.storage,
-        msg.treasury,
-        &Holding {
-            balances: vec![],
-            unbondings: vec![],
-            status: Status::Active,
-        },
-    )?;
+    HOLDERS.save(deps.storage, &vec![treasury.clone()])?;
+    HOLDING.save(deps.storage, treasury, &Holding {
+        balances: vec![],
+        unbondings: vec![],
+        status: Status::Active,
+    })?;
 
     Ok(Response::new())
 }
 
-#[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive {
             sender,
@@ -76,44 +52,109 @@ pub fn execute(
             amount,
             msg,
             ..
-        } => execute::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
-        ExecuteMsg::RegisterAsset { contract } => execute::try_register_asset(deps, &env, info, &contract),
+        } => {
+            let sender = deps.api.addr_validate(&sender)?;
+            let from = deps.api.addr_validate(&from)?;
+            execute::receive(deps, env, info, sender, from, amount, msg)
+        }
+        ExecuteMsg::UpdateConfig {
+            admin_auth,
+            treasury,
+        } => execute::update_config(deps, env, info, admin_auth, treasury),
+        ExecuteMsg::RegisterAsset { contract } => {
+            let contract = contract.into_valid(deps.api)?;
+            execute::register_asset(deps, &env, info, &contract)
+        }
         ExecuteMsg::Allocate { asset, allocation } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            let allocation = allocation.valid(deps.api)?;
             execute::allocate(deps, &env, info, asset, allocation)
-        },
-        ExecuteMsg::AddHolder { holder } => execute::add_holder(deps, &env, info, holder),
-        ExecuteMsg::RemoveHolder { holder } => execute::remove_holder(deps, &env, info, holder),
+        }
+        ExecuteMsg::AddHolder { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            execute::add_holder(deps, &env, info, holder)
+        }
+        ExecuteMsg::RemoveHolder { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            execute::remove_holder(deps, &env, info, holder)
+        }
         ExecuteMsg::Manager(a) => match a {
             manager::SubExecuteMsg::Unbond { asset, amount } => {
+                let asset = deps.api.addr_validate(&asset)?;
                 execute::unbond(deps, &env, info, asset, amount)
             }
-            manager::SubExecuteMsg::Claim { asset } => execute::claim(deps, &env, info, asset),
-            manager::SubExecuteMsg::Update { asset } => execute::update(deps, &env, info, asset),
+            manager::SubExecuteMsg::Claim { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::claim(deps, &env, info, asset)
+            }
+            manager::SubExecuteMsg::Update { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::update(deps, &env, info, asset)
+            }
         },
     }
 }
 
-#[entry_point]
-pub fn query(
-    deps: Deps,
-    env: Env,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
+        QueryMsg::Allocations { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::allocations(deps, asset)?)
+        }
+        QueryMsg::PendingAllowance { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::pending_allowance(deps, env, asset)?)
+        }
         QueryMsg::Holders {} => to_binary(&query::holders(deps)?),
-        QueryMsg::Holding { holder } => to_binary(&query::holding(deps, holder)?),
+        QueryMsg::Holding { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            to_binary(&query::holding(deps, holder)?)
+        }
+        QueryMsg::Metrics {
+            date,
+            epoch,
+            period,
+        } => to_binary(&query::metrics(deps, env, date, epoch, period)?),
 
         QueryMsg::Manager(a) => match a {
-            manager::SubQueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, holder)?),
-            manager::SubQueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, holder)?),
-            manager::SubQueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, holder)?),
-            manager::SubQueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, holder)?),
-            manager::SubQueryMsg::Reserves { asset, holder } => to_binary(&query::reserves(deps, asset, holder)?),
-        }
+            manager::SubQueryMsg::Balance { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::balance(deps, asset, holder)?)
+            }
+            manager::SubQueryMsg::BatchBalance { assets, holder } => {
+                let mut val_assets = vec![];
+
+                for a in assets {
+                    val_assets.push(deps.api.addr_validate(&a)?);
+                }
+                let holder = deps.api.addr_validate(&holder)?;
+
+                to_binary(&query::batch_balance(deps, val_assets, holder)?)
+            }
+            manager::SubQueryMsg::Unbonding { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::unbonding(deps, asset, holder)?)
+            }
+            manager::SubQueryMsg::Unbondable { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::unbondable(deps, env, asset, holder)?)
+            }
+            manager::SubQueryMsg::Claimable { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::claimable(deps, env, asset, holder)?)
+            }
+            manager::SubQueryMsg::Reserves { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::reserves(deps, env, asset, holder)?)
+            }
+        },
     }
 }

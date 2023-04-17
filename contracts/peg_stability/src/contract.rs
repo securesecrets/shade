@@ -9,12 +9,9 @@ use shade_protocol::{
         Env,
         MessageInfo,
         Response,
-        StdError,
         StdResult,
-        SubMsg,
     },
     contract_interfaces::{
-        dao::adapter,
         peg_stability::{Config, ExecuteAnswer, ExecuteMsg, InstantiateMsg, QueryMsg, ViewingKey},
     },
     snip20::helpers::set_viewing_key_msg,
@@ -28,7 +25,7 @@ use shade_protocol::{
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
@@ -87,7 +84,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::get_config(deps)?),
         QueryMsg::Balance {} => to_binary(&query::get_balance(deps)?),

@@ -16,7 +16,7 @@ use shade_protocol::{
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     admin_auth: Option<Contract>,
     snip20: Option<Contract>,
@@ -69,7 +69,7 @@ pub fn try_update_config(
 
 pub fn try_set_pairs(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     pairs: Vec<ArbPair>,
 ) -> StdResult<Response> {
@@ -163,7 +163,7 @@ pub fn try_append_pairs(
 
 pub fn try_remove_pair(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     pair_address: String,
 ) -> StdResult<Response> {
@@ -203,7 +203,7 @@ pub fn try_remove_pair(
     )
 }
 
-pub fn try_swap(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+pub fn try_swap(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResult<Response> {
     let res: CalculateRes = calculate_profit(deps.as_ref())?;
     let other_asset;
     if res.config.snip20 == res.config.pairs[0].token0 {

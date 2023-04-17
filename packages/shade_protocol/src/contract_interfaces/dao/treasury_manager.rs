@@ -1,15 +1,52 @@
 use crate::{
+    c_std::{Addr, Api, Binary, StdResult, Uint128},
     contract_interfaces::dao::manager,
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+        storage::plus::period_storage::Period,
+    },
 };
-use crate::c_std::{Binary, Addr, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
+pub enum Context {
+    Receive,
+    Update,
+    Unbond,
+    Claim,
+    Holders,
+}
+
+#[cw_serde]
+pub enum Action {
+    Unbond,
+    Claim,
+    FundsReceived,
+    SendFunds,
+    SendFundsFrom,
+    RealizeGains,
+    RealizeLosses,
+    //TODO
+    AddHolder,
+    RemoveHolder,
+}
+
+#[cw_serde]
+pub struct Metric {
+    pub action: Action,
+    pub context: Context,
+    pub timestamp: u64,
+    pub token: Addr,
+    pub amount: Uint128,
+    pub user: Addr,
+}
 
 #[cw_serde]
 pub struct Config {
-    pub admin: Addr,
+    pub admin_auth: Contract,
     pub treasury: Addr,
 }
 
@@ -43,6 +80,27 @@ pub struct Unbonding {
 }
 
 #[cw_serde]
+pub struct RawAllocation {
+    pub nick: Option<String>,
+    pub contract: RawContract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+impl RawAllocation {
+    pub fn valid(self, api: &dyn Api) -> StdResult<Allocation> {
+        Ok(Allocation {
+            nick: self.nick,
+            contract: self.contract.into_valid(api)?,
+            alloc_type: self.alloc_type,
+            amount: self.amount,
+            tolerance: self.tolerance,
+        })
+    }
+}
+
+#[cw_serde]
 pub struct Allocation {
     pub nick: Option<String>,
     pub contract: Contract,
@@ -58,6 +116,7 @@ pub enum AllocationType {
     Amount,
 }
 
+//TODO remove - same as Allocation
 #[cw_serde]
 pub struct AllocationMeta {
     pub nick: Option<String>,
@@ -65,14 +124,24 @@ pub struct AllocationMeta {
     pub alloc_type: AllocationType,
     pub amount: Uint128,
     pub tolerance: Uint128,
+}
+
+#[cw_serde]
+pub struct AllocationTempData {
+    pub contract: Contract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
     pub balance: Uint128,
+    pub unbondable: Uint128,
+    pub unbonding: Uint128,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin: Option<Addr>,
+    pub admin_auth: RawContract,
     pub viewing_key: String,
-    pub treasury: Addr,
+    pub treasury: String,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -82,27 +151,28 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        treasury: Option<String>,
     },
     RegisterAsset {
-        contract: Contract,
+        contract: RawContract,
     },
     Allocate {
-        asset: Addr,
-        allocation: Allocation,
+        asset: String,
+        allocation: RawAllocation,
     },
     AddHolder {
-        holder: Addr,
+        holder: String,
     },
     RemoveHolder {
-        holder: Addr,
+        holder: String,
     },
     Manager(manager::SubExecuteMsg),
 }
@@ -115,12 +185,13 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     Receive {
         status: ResponseStatus,
     },
     UpdateConfig {
+        config: Config,
         status: ResponseStatus,
     },
     RegisterAsset {
@@ -142,16 +213,21 @@ pub enum ExecuteAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: Addr },
-    PendingAllowance { asset: Addr },
-    Holders { },
-    Holding { holder: Addr },
-    /*
-    Balance { asset: Addr, holder: Addr },
-    Unbonding { asset: Addr, holder: Addr },
-    Unbondable { asset: Addr, holder: Addr },
-    Claimable { asset: Addr, holder: Addr },
-    */
+    Allocations {
+        asset: String,
+    },
+    PendingAllowance {
+        asset: String,
+    },
+    Holders {},
+    Holding {
+        holder: String,
+    },
+    Metrics {
+        date: Option<String>,
+        epoch: Option<Uint128>,
+        period: Period,
+    },
     Manager(manager::SubQueryMsg),
 }
 
@@ -166,6 +242,6 @@ pub enum QueryAnswer {
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<Addr> },
-    Holding { holding: Holding},
-    Manager(manager::QueryAnswer),
+    Holding { holding: Holding },
+    Metrics { metrics: Vec<Metric> },
 }

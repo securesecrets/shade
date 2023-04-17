@@ -1,15 +1,15 @@
 use crate::tests::{get_config, get_permit, init_contract, validate_permit, validate_vk};
 use shade_protocol::{
-    c_std::{testing::*, Addr},
+    c_std::{Addr},
     contract_interfaces::{query_auth, query_auth::ContractStatus},
-    utils::{ExecuteCallback, Query},
+    utils::{ExecuteCallback},
 };
 
 #[test]
 fn config() {
     let (chain, auth) = init_contract().unwrap();
 
-    let (admin, state) = get_config(&chain, &auth).unwrap();
+    let (_admin, state) = get_config(&chain, &auth).unwrap();
 
     assert_eq!(state, ContractStatus::Default);
 }
@@ -36,7 +36,7 @@ fn vk_validation() {
 
 #[test]
 fn permit_validation() {
-    let permit = get_permit();
+    let _permit = get_permit();
 
     let (chain, auth) = init_contract().unwrap();
 
