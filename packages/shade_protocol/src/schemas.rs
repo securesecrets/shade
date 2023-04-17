@@ -54,7 +54,7 @@ pub fn main() {
         snip20
     );
 
-    generate_nested_schemas!(mint, liability_mint, mint, mint_router);
+    // generate_nested_schemas!(mint, liability_mint, mint, mint_router);
 
     generate_nested_schemas!(oracles, oracle);
 
