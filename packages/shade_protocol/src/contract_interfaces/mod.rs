@@ -38,3 +38,6 @@ pub mod peg_stability;
 
 #[cfg(feature = "basic_staking")]
 pub mod basic_staking;
+
+#[cfg(feature = "snip20_migration")]
+pub mod snip20_migration;

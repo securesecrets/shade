@@ -22,6 +22,7 @@ members = [
   "contracts/query_auth",
   "contracts/admin",
   "contracts/basic_staking",
+  "contracts/snip20_migration",
 
   # DAO
   # - Core

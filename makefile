@@ -17,8 +17,7 @@ CONTRACTS = \
 		treasury treasury_manager scrt_staking rewards_emission \
 		oracle snip20 query_auth sky peg_stability admin\
 		mock_band mock_secretswap_pair mock_sienna_pair mock_adapter\
-		basic_staking
-# lp_shade_swap 
+		basic_staking snip20_migration\
 
 PACKAGES = \
 	  shade_protocol contract_harness cosmwasm_math_compat \
