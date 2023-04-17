@@ -50,11 +50,8 @@ treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional 
 treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
-<<<<<<< HEAD
-shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
-=======
 snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
->>>>>>> origin/cosmwasm_v1_upgrade
+shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
