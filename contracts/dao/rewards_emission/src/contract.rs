@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    entry_point,
+    shd_entry_point,
     to_binary,
     Addr,
     Binary,
@@ -23,7 +23,7 @@ use shade_protocol::snip20::helpers::fetch_snip20;
 
 use crate::{execute, query, storage::*};
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -56,7 +56,7 @@ pub fn instantiate(
     Ok(Response::new())
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive {
@@ -87,7 +87,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),

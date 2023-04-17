@@ -113,7 +113,7 @@ pub fn update(deps: DepsMut, env: Env, _info: MessageInfo, asset: Addr) -> StdRe
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps, SELF_ADDRESS.load(deps.storage)?)?;
 
     // Claim Rewards
     let rewards = query::rewards(deps.as_ref())?;
@@ -189,7 +189,7 @@ pub fn unbond(
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
-    let scrt_balance = scrt_balance(deps.querier, self_address)?;
+    let scrt_balance = scrt_balance(deps, self_address)?;
     let rewards = query::rewards(deps.as_ref())?;
 
     let mut messages = vec![];
@@ -354,7 +354,7 @@ pub fn claim(deps: DepsMut, _env: Env, _info: MessageInfo, asset: Addr) -> StdRe
     let unbond_amount = UNBONDING.load(deps.storage)?;
     let claim_amount;
 
-    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let scrt_balance = scrt_balance(deps.as_ref(), SELF_ADDRESS.load(deps.storage)?)?;
 
     if scrt_balance >= unbond_amount {
         claim_amount = unbond_amount;

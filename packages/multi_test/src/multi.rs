@@ -107,6 +107,12 @@ pub mod scrt_staking {
     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
 }
 
+#[cfg(feature = "basic_staking")]
+pub mod basic_staking {
+    use basic_staking;
+    multi_derive::implement_multi!(BasicStaking, basic_staking);
+}
+
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability {
     use peg_stability;

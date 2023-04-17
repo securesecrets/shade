@@ -62,6 +62,7 @@ sienna     = ["interface", "math"]
 
 # Protocol contracts NOTE: interfaces that have other interfaces as features already automatically have `interface` as a feature
 airdrop          = ["query_auth", "snip20"]
+basic_staking    = ["snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]

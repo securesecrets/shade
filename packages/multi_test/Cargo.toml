@@ -22,12 +22,13 @@ governance = ["dep:governance"]
 # snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
 # bonds = ["dep:bonds"]
-treasury = ["dep:treasury", "admin"]
-treasury_manager = ["dep:treasury_manager", "admin", "treasury", "mock_adapter", "snip20"]
-mock_adapter = ["dep:mock_adapter"]
+query_auth = ["dep:query_auth"]
+basic_staking = ["dep:basic_staking"]
+scrt_staking = ["dep:scrt_staking"]
+treasury = ["dep:treasury"]
+treasury_manager = ["dep:treasury_manager"]
 stkd_scrt = ["dep:stkd_scrt"]
 dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
-query_auth = ["dep:query_auth"]
 # shade-oracles = ["dep:shade-oracles"]
 peg_stability = ["dep:peg_stability"]
 snip20_migration = ["dep:snip20_migration"]
@@ -40,6 +41,7 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
+basic_staking = { version = "0.1.0", path = "../../contracts/basic_staking", optional = true }
 # spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
