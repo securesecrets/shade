@@ -15,7 +15,7 @@ path = "src/schemas.rs"
 # Must have all of the contract_interfaces
 required-features = [
   "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
-  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router"
+  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration",
 ]
 
 [lib]
@@ -84,6 +84,7 @@ dao              = ["interface", "cosmwasm-std/staking"]
 shade_oracles    = ["dep:shade-oracles"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
+snip20_migration = []
 
 chrono = ["dep:chrono"]
 
@@ -104,9 +105,9 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = [] # TODO: remove this from all cargo configs
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", package = "secret-cosmwasm-storage" }
-cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
+cosmwasm-schema = "1.1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
 
 schemars = "0.8.9"

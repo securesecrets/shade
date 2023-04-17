@@ -113,3 +113,10 @@ pub mod peg_stability {
 
     multi_derive::implement_multi!(PegStability, peg_stability);
 }
+
+#[cfg(feature = "snip20_migration")]
+pub mod snip20_migration {
+    use snip20_migration;
+
+    multi_derive::implement_multi!(Snip20Migration, snip20_migration);
+}

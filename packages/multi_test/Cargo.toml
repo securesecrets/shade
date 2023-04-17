@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
+airdrop = ["dep:airdrop"]
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
 #liability_mint = ["dep:liability_mint"]
@@ -29,8 +30,10 @@ dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
 query_auth = ["dep:query_auth"]
 # shade-oracles = ["dep:shade-oracles"]
 peg_stability = ["dep:peg_stability"]
+snip20_migration = ["dep:snip20_migration"]
 
 [dependencies]
+airdrop = { path = "../../contracts/airdrop", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 #liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
@@ -45,10 +48,13 @@ stkd_scrt = { version = "0.1.0", path = "../../contracts/dao/stkd_scrt", optiona
 scrt_staking = { version = "0.1.0", path = "../../contracts/dao/scrt_staking", optional = true }
 treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
-# shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+<<<<<<< HEAD
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
+=======
+snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
+>>>>>>> origin/cosmwasm_v1_upgrade
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }

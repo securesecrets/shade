@@ -20,6 +20,7 @@ members = [
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
+  "contracts/snip20_migration",
 
   # DAO
   # - Core

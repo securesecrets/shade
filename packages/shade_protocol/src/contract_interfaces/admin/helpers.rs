@@ -49,6 +49,8 @@ pub enum AdminPermissions {
     OraclesAdmin,
     OraclesPriceBot,
     SilkAdmin,
+    ShadeSwapAdmin,
+    Snip20MigrationAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -66,6 +68,8 @@ impl AdminPermissions {
             AdminPermissions::OraclesAdmin => "SHADE_ORACLES_ADMIN",
             AdminPermissions::OraclesPriceBot => "SHADE_ORACLES_PRICE_BOT",
             AdminPermissions::SilkAdmin => "SHADE_SILK_ADMIN",
+            AdminPermissions::ShadeSwapAdmin => "SHADE_SWAP_ADMIN",
+            AdminPermissions::Snip20MigrationAdmin => "SNIP20_MIGRATION_ADMIN",
         }
         .to_string()
     }

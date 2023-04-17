@@ -37,3 +37,6 @@ pub mod admin;
 
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability;
+
+#[cfg(feature = "snip20_migration")]
+pub mod snip20_migration;
