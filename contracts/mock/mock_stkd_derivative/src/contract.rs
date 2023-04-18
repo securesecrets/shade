@@ -40,7 +40,7 @@ pub use shade_protocol::contract_interfaces::stkd::{
 };
 
 #[cw_serde]
-pub struct Unbonding {
+struct Unbonding {
     amount: Uint128,
     // Time for maturity, when bonding is claimable
     maturity: u32,
@@ -49,7 +49,7 @@ pub struct Unbonding {
 // Keep track of a user's balance
 #[cw_serde]
 #[derive(Default)]
-pub struct Balance (pub Uint128);
+struct Balance (pub Uint128);
 
 impl MapStorage<'static, Addr> for Balance {
     const MAP: Map<'static, Addr, Self> = Map::new("balance-");
@@ -58,21 +58,21 @@ impl MapStorage<'static, Addr> for Balance {
 // Keep track of a user's unbondings
 #[cw_serde]
 #[derive(Default)]
-pub struct Unbondings(pub Vec<Unbonding>);
+struct Unbondings(pub Vec<Unbonding>);
 
 impl MapStorage<'static, Addr> for Unbondings {
     const MAP: Map<'static, Addr, Self> = Map::new("unbondings-");
 }
 
 #[cw_serde]
-pub struct ViewingKey(pub String);
+struct ViewingKey(pub String);
 
 impl MapStorage<'static, Addr> for ViewingKey {
     const MAP: Map<'static, Addr, Self> = Map::new("vk-");
 }
 
 #[cw_serde]
-pub struct Price(pub Uint128);
+struct Price(pub Uint128);
 
 impl ItemStorage for Price {
     const ITEM: Item<'static, Self> = Item::new("item-price");
@@ -80,7 +80,7 @@ impl ItemStorage for Price {
 
 // Global time tracker
 #[cw_serde]
-pub struct Time(pub u32);
+struct Time(pub u32);
 
 impl ItemStorage for Time {
     const ITEM: Item<'static, Self> = Item::new("item-time");
@@ -227,7 +227,7 @@ pub fn execute(
         ExecuteMsg::Unbond { redeem_amount } => {
             let balance = Balance::load(deps.storage, info.sender.clone())
                 .unwrap_or_default().0;
-            if balance <= redeem_amount {
+            if balance < redeem_amount {
                 return Err(StdError::generic_err(format!(
                     "insufficient funds to burn: balance={}, required={}", balance, redeem_amount
                 )));
@@ -237,9 +237,9 @@ pub fn execute(
             let time = Time::load(deps.storage)?.0;
             let maturity = time + config.unbonding_time 
                 + config.unbonding_batch_interval - (time % config.unbonding_batch_interval);
-            let redeem_amount = redeem_amount - (redeem_amount * config.unbond_commission);
+            let unbond_amount = redeem_amount - (redeem_amount * config.unbond_commission);
             let unbonding = Unbonding {
-                amount: redeem_amount,
+                amount: unbond_amount,
                 maturity,
             };
 
