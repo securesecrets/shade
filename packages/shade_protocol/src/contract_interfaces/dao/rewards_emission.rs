@@ -1,7 +1,10 @@
 use crate::{
-    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
-    contract_interfaces::dao::adapter,
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    c_std::{Addr, Binary, Uint128},
+    utils::{
+        asset::{Contract, RawContract},
+        cycle::Cycle,
+        generic_response::ResponseStatus,
+    },
 };
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
@@ -9,23 +12,27 @@ use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Reward {
-    pub asset: Addr,
+    //pub token: Addr,
+    pub distributor: Contract,
     pub amount: Uint128,
+    pub cycle: Cycle,
+    pub last_refresh: String,
+    // datetime string
+    pub expiration: Option<String>,
 }
 
 #[cw_serde]
 pub struct Config {
     pub admins: Vec<Addr>,
     pub treasury: Addr,
-    pub asset: Contract,
-    pub distributor: Addr,
-    pub rewards: Vec<Reward>,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub config: Config,
+    pub admins: Vec<String>,
     pub viewing_key: String,
+    pub treasury: String,
+    pub token: RawContract,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -34,6 +41,9 @@ impl InstantiateCallback for InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    UpdateConfig {
+        config: Config,
+    },
     Receive {
         sender: Addr,
         from: Addr,
@@ -41,16 +51,14 @@ pub enum ExecuteMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    RefillRewards {
-        rewards: Vec<Reward>,
+    RefillRewards {},
+    RegisterRewards {
+        token: Addr, // Just for verification
+        distributor: Contract,
+        amount: Uint128,
+        cycle: Cycle,
+        expiration: Option<String>,
     },
-    UpdateConfig {
-        config: Config,
-    },
-    RegisterAsset {
-        asset: Contract,
-    },
-    Adapter(adapter::SubHandleMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -69,7 +77,7 @@ pub enum ExecuteAnswer {
     Receive {
         status: ResponseStatus,
     },
-    RegisterAsset {
+    RegisterReward {
         status: ResponseStatus,
     },
     RefillRewards {
@@ -80,8 +88,7 @@ pub enum ExecuteAnswer {
 #[cw_serde]
 pub enum QueryMsg {
     Config {},
-    PendingAllowance { asset: Addr },
-    Adapter(adapter::SubQueryMsg),
+    //PendingAllowance { asset: Addr },
 }
 
 impl Query for QueryMsg {
@@ -91,5 +98,5 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    PendingAllowance { amount: Uint128 },
+    //PendingAllowance { amount: Uint128 },
 }

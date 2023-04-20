@@ -16,20 +16,25 @@ members = [
   "contracts/governance",
   # "contracts/bonds", //TODO: migrate to v1
   # "contracts/liability_mint", //TODO: migrate
-  # "contracts/oracle", //TODO: delete or migrate
   "contracts/sky", 
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
+  "contracts/snip20_migration",
+
+  # Staking
+  "contracts/basic_staking",
+  "contracts/snip20_derivative",
 
   # DAO
   # - Core
-  # "contracts/dao/treasury", //TODO: migrate to v1
-  # "contracts/dao/treasury_manager", //TODO: migrate to v1
+  "contracts/dao/treasury", 
+  "contracts/dao/treasury_manager", 
   # - Adapters
-  # "contracts/dao/scrt_staking", //TODO: migrate to v1
-  # "contracts/dao/rewards_emission", //TODO: migrate to v1
-  # "contracts/dao/lp_shade_swap",
+  "contracts/dao/scrt_staking",
+  "contracts/dao/stkd_scrt",
+  "contracts/dao/rewards_emission",
+  "contracts/dao/lp_shdswap",
 
   # "contracts/snip20_staking", //TODO: migrate to v1
   

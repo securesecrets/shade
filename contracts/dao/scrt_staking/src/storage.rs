@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Addr, Storage, Uint128};
+use shade_protocol::c_std::{Addr, Uint128};
 use shade_protocol::dao::scrt_staking;
 
 use shade_protocol::secret_storage_plus::Item;

@@ -319,10 +319,27 @@ pub fn allowance_query(
         } => Ok(AllowanceResponse {
             spender,
             owner,
+            allowance,
             expiration,
-            amount: todo!(),
         }),
         QueryAnswer::ViewingKeyError { .. } => Err(StdError::generic_err("Unauthorized")),
         _ => Err(StdError::generic_err("Invalid Allowance query response")),
     }
+}
+
+pub fn transfer_from_msg(
+    owner: String,
+    recipient: String,
+    amount: Uint128,
+    memo: Option<String>,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::TransferFrom { 
+        owner,
+        recipient,
+        amount,
+        memo,
+        padding,
+    }.to_cosmos_msg(contract, vec![])
 }

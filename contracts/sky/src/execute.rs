@@ -36,7 +36,7 @@ use shade_protocol::{
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     shade_admin: Option<Contract>,
     shd_token: Option<Contract>,
@@ -100,7 +100,7 @@ pub fn try_update_config(
 
 pub fn try_set_cycles(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     cycles_to_set: Vec<Cycle>,
 ) -> StdResult<Response> {
@@ -130,7 +130,7 @@ pub fn try_set_cycles(
 
 pub fn try_append_cycle(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     cycles_to_add: Vec<Cycle>,
 ) -> StdResult<Response> {
@@ -162,7 +162,7 @@ pub fn try_append_cycle(
 
 pub fn try_update_cycle(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     cycle: Cycle,
     index: Uint128,
@@ -190,7 +190,7 @@ pub fn try_update_cycle(
 
 pub fn try_remove_cycle(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     index: Uint128,
 ) -> StdResult<Response> {
@@ -219,7 +219,7 @@ pub fn try_remove_cycle(
 
 pub fn try_arb_cycle(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     amount: Uint128,
     index: Uint128,

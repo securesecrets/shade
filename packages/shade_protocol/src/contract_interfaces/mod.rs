@@ -9,8 +9,6 @@ pub mod oracles;
 #[cfg(feature = "mint")]
 pub mod mint;
 
-pub mod staking;
-
 #[cfg(feature = "sky")]
 pub mod sky;
 
@@ -40,3 +38,9 @@ pub mod peg_stability;
 
 #[cfg(feature = "stkd")]
 pub mod stkd;
+
+#[cfg(feature = "basic_staking")]
+pub mod basic_staking;
+
+#[cfg(feature = "snip20_migration")]
+pub mod snip20_migration;

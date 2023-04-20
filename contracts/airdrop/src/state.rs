@@ -1,12 +1,7 @@
 use shade_protocol::c_std::{Deps, Uint128};
 use shade_protocol::c_std::{
-    from_binary,
     Api,
-    Binary,
-    DepsMut,
     Addr,
-    Querier,
-    StdError,
     StdResult,
     Storage,
 };
