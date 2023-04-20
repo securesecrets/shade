@@ -36,6 +36,9 @@ pub mod admin;
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability;
 
+#[cfg(feature = "stkd")]
+pub mod stkd;
+
 #[cfg(feature = "basic_staking")]
 pub mod basic_staking;
 

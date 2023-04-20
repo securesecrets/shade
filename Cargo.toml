@@ -41,8 +41,9 @@ members = [
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1
   # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
-  # "contracts/mock/mock_sienna_pair", //TODO: migrate to v1
+  "contracts/mock/mock_sienna_pair",
   # "contracts/mock/mock_adapter", //TODO: migrate to v1
+  "contracts/mock/mock_stkd_derivative",
 
   # Tools
   "tools/doc2book",
