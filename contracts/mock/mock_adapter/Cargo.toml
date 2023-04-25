@@ -31,7 +31,11 @@ shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol",
   "dao",
   "snip20",
 ] }
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
-cosmwasm-schema = "1.1.5"
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 schemars = "0.8.9"
+
+[dev-dependencies]
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+  "dao", 
+] }

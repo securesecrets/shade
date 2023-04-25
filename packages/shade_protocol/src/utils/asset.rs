@@ -195,7 +195,7 @@ pub fn set_allowance(
                 1,
                 asset,
             )?
-            .amount
+            .allowance
         }
     };
 

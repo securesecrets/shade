@@ -61,7 +61,7 @@ impl ArbPair {
                 }
             }
             Dex::ShadeSwap => {
-                let res = shadeswap::PairQuery::PairInfo
+                let res = shadeswap::PairQuery::GetPairInfo {}
                     .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
                 match res {
                     shadeswap::PairInfoResponse {

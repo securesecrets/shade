@@ -1,10 +1,13 @@
 // Types imported from staking-derivatives private repo used for interfacing with stkd-SCRT
 // and updated to v1. Types copied as needed, feel free to add.
+// Types also included for mock_stkd contract
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Binary};
 use cosmwasm_std::Uint128;
 
-use crate::utils::{ExecuteCallback, Query};
+use crate::utils::{
+    ExecuteCallback, Query, 
+};
 use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
@@ -15,6 +18,50 @@ pub enum HandleMsg {
     Unbond {
         /// amount of derivative tokens to redeem
         redeem_amount: Uint128,
+    },
+    /// claim matured unbondings
+    Claim {},
+
+    SetViewingKey {
+        key: String,
+        padding: Option<String>,
+    },
+    Send {
+        recipient: Addr,
+        recipient_code_hash: Option<String>,
+        amount: Uint128,
+        msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+
+    // For mock_stkd contract, to simulate passage of time for unbondings
+    MockFastForward {
+        steps: u32,
+    },
+}
+
+#[cw_serde]
+pub enum HandleAnswer {
+    Stake {
+        /// amount of uSCRT staked
+        scrt_staked: Uint128,
+        /// amount of derivative token minted
+        tokens_returned: Uint128,
+    },
+    Unbond {
+        /// amount of derivative tokens redeemed
+        tokens_redeemed: Uint128,
+        /// amount of scrt to be unbonded (available in 21 days after the batch processes)
+        scrt_to_be_received: Uint128,
+        /// estimated time of maturity
+        estimated_time_of_maturity: u64,
+    },
+    Claim {
+        /// amount of SCRT claimed
+        withdrawn: Uint128,
+        /// fees collected
+        fees: Uint128,
     },
 }
 
@@ -43,6 +90,10 @@ pub enum QueryMsg {
         /// optional time in seconds since 01/01/1970.  If provided, response will
         /// include the amount of SCRT that can be withdrawn at that time
         time: Option<u64>,
+    },
+    Balance {
+        address: Addr,
+        key: String,
     },
 }
 
@@ -92,6 +143,9 @@ pub enum QueryAnswer {
         /// optional estimated time the next batch of unbondings will mature.  Only provided
         /// if the user has SCRT waiting to be unbonded in the next batch
         estimated_time_of_maturity_for_next_batch: Option<u64>,
+    },
+    Balance {
+        amount: Uint128,
     },
 }
 

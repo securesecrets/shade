@@ -1,23 +1,33 @@
-use shade_protocol::c_std::{
-    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, DepsMut, Env, Querier, Response,
-    StdError, StdResult, Storage,
-};
-use shade_protocol::c_std::{Deps, MessageInfo, QuerierWrapper, Uint128};
-use shade_protocol::chrono::prelude::*;
-use shade_protocol::snip20::helpers::{self, burn_msg, mint_msg, send_msg, TokenConfig};
-use shade_protocol::snip20::helpers::{token_config, token_info};
-use shade_protocol::utils::Query;
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        QuerierWrapper,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
+    chrono::prelude::*,
     contract_interfaces::{
         mint::mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
         snip20::helpers::Snip20Asset,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    snip20::helpers::{self, burn_msg, mint_msg, send_msg, token_config, token_info, TokenConfig},
+    utils::{asset::Contract, generic_response::ResponseStatus, Query},
 };
-use std::borrow::BorrowMut;
-use std::fmt::format;
-use std::{cmp::Ordering, convert::TryFrom};
+use std::{borrow::BorrowMut, cmp::Ordering, convert::TryFrom, fmt::format};
 
 use crate::state::{
     asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_r, limit_refresh_r,
@@ -314,27 +324,24 @@ pub fn try_register_asset(
 
     deps.api
         .debug(&format!("Registering {}", asset_info.symbol));
-    assets_w(deps.storage).save(
-        contract_str.as_bytes(),
-        &SupportedAsset {
-            asset: Snip20Asset {
-                contract: contract.clone(),
-                token_info: asset_info,
-                token_config: asset_config,
-            },
-            // If capture is not set then default to 0
-            capture: match capture {
-                None => Uint128::zero(),
-                Some(value) => value,
-            },
-            fee: match fee {
-                None => Uint128::zero(),
-                Some(value) => value,
-            },
-            unlimited: match unlimited {
-                None => false,
-                Some(u) => u,
-            },
+    assets_w(deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
+        asset: Snip20Asset {
+            contract: contract.clone(),
+            token_info: asset_info,
+            token_config: asset_config,
+        },
+        // If capture is not set then default to 0
+        capture: match capture {
+            None => Uint128::zero(),
+            Some(value) => value,
+        },
+        fee: match fee {
+            None => Uint128::zero(),
+            Some(value) => value,
+        },
+        unlimited: match unlimited {
+            None => false,
+            Some(u) => u,
         },
     )?;
 

@@ -17,6 +17,7 @@ target/
 .vscode/
 .idea/
 *.iml
+node_modules/
 
 # Auto-gen
 .cargo-ok

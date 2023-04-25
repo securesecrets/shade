@@ -17,29 +17,10 @@ use crate::state::{
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use shade_protocol::{
-    c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Api,
-        Binary,
-        Decimal,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        SubMsg,
-        Uint128,
-    },
-    contract_interfaces::airdrop::{
+    airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
         claim_info::RequiredTask,
         errors::{
-            account_already_created,
             account_does_not_exist,
             address_already_in_account,
             airdrop_ended,
@@ -53,11 +34,25 @@ use shade_protocol::{
             invalid_task_percentage,
             not_admin,
             nothing_to_claim,
-            permit_rejected,
             unexpected_error,
         },
         Config,
         ExecuteAnswer,
+    },
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Decimal,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Storage,
+        Uint128,
     },
     query_authentication::viewing_keys::ViewingKey,
     snip20::helpers::send_msg,
@@ -178,7 +173,7 @@ pub fn try_update_config(
 
 pub fn try_add_tasks(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     tasks: Vec<RequiredTask>,
 ) -> StdResult<Response> {
@@ -344,7 +339,7 @@ pub fn try_account(
 
 pub fn try_disable_permit_key(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     key: String,
 ) -> StdResult<Response> {
@@ -359,7 +354,7 @@ pub fn try_disable_permit_key(
 
 pub fn try_set_viewing_key(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     key: String,
 ) -> StdResult<Response> {
@@ -375,7 +370,7 @@ pub fn try_set_viewing_key(
 
 pub fn try_complete_task(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     account: Addr,
 ) -> StdResult<Response> {
@@ -449,7 +444,7 @@ pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Resp
         )?))
 }
 
-pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
+pub fn try_claim_decay(deps: DepsMut, env: &Env, _info: &MessageInfo) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
 
     // Check if airdrop ended

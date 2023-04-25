@@ -1,5 +1,5 @@
 use crate::{
-    c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128},
+    c_std::{Addr, Deps, StdResult, Uint128},
     contract_interfaces::{dex::dex, oracles::band},
     utils::{
         asset::Contract,
@@ -50,6 +50,14 @@ pub struct SwapOffer {
     pub recipient: Addr,
     pub amount: Uint128,
     pub msg: Binary,
+}
+
+#[cw_serde]
+pub enum ReceiverCallbackMsg {
+    Swap {
+        expected_return: Option<Uint128>,
+        to: Option<Addr>,
+    },
 }
 
 #[cw_serde]

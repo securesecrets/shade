@@ -14,38 +14,52 @@ default = []
 airdrop = ["dep:airdrop"]
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
-liability_mint = ["dep:liability_mint"]
+#liability_mint = ["dep:liability_mint"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
 #mock_band= ["dep:mock_band"]
+mock_stkd = ["dep:mock_stkd"]
+mock_sienna = ["dep:mock_sienna"]
 governance = ["dep:governance"]
 # snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
 # bonds = ["dep:bonds"]
- query_auth = ["dep:query_auth"]
+query_auth = ["dep:query_auth"]
+basic_staking = ["dep:basic_staking"]
 scrt_staking = ["dep:scrt_staking"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
+stkd_scrt = ["dep:stkd_scrt"]
+dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
+# shade-oracles = ["dep:shade-oracles"]
 peg_stability = ["dep:peg_stability"]
 sky_derivatives = ["dep:sky_derivatives"]
 mock_sienna_pair = ["dep:mock_sienna_pair"]
+snip20_migration = ["dep:snip20_migration"]
 
 [dependencies]
 airdrop = { path = "../../contracts/airdrop", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
-liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
+#liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
+#mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
+#oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
+basic_staking = { version = "0.1.0", path = "../../contracts/basic_staking", optional = true }
 # spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
+mock_adapter = { version = "0.1.0", path = "../../contracts/mock/mock_adapter", optional = true }
+stkd_scrt = { version = "0.1.0", path = "../../contracts/dao/stkd_scrt", optional = true }
 scrt_staking = { version = "0.1.0", path = "../../contracts/dao/scrt_staking", optional = true }
 treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
 sky_derivatives = { version = "0.1.0", path = "../../contracts/sky_derivatives", optional = true }
-mock_sienna_pair = { version = "0.1.0", path = "../../contracts/mock/mock_sienna_pair", optional = true }
+mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../../contracts/mock/mock_stkd_derivative", optional = true }
+mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
+snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }

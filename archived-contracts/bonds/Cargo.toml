@@ -1,0 +1,47 @@
+[package]
+name = "bonds"
+version = "0.1.0"
+authors = [
+  "Guy Garcia <guysebastiangarcia@gmail.com>",
+  "Jackson Swenson <jacksonswenson22@gmail.com>",
+  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>"
+]
+edition = "2018"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
+
+[dependencies]
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "bonds",
+  "math",
+  "query_auth_lib",
+  "chrono",
+] }
+schemars = "0.7"
+time = "0.1.44"
+admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11"}
+
+[dev-dependencies]
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
+fadroma-platform-scrt = { branch = "v100",  commit = 76867e0, git = "https://github.com/hackbg/fadroma.git" }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "snip20", "bonds", "oracle", "mock_band", "query_auth", "admin", "shade-oracles-ensemble" ] }
+mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
+shade-oracles-ensemble = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11"}
+

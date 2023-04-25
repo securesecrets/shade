@@ -23,6 +23,7 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std", features = ["staking"] }
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["rewards_emission", "snip20", "dao"] }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["rewards_emission", "snip20", "dao", "utils", "dao-utils", "chrono"] }
 schemars = "0.7"

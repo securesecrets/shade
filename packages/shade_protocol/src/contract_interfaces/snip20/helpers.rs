@@ -319,8 +319,8 @@ pub fn allowance_query(
         } => Ok(AllowanceResponse {
             spender,
             owner,
+            allowance,
             expiration,
-            amount: todo!(),
         }),
         QueryAnswer::ViewingKeyError { .. } => Err(StdError::generic_err("Unauthorized")),
         _ => Err(StdError::generic_err("Invalid Allowance query response")),

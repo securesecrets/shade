@@ -1,35 +1,22 @@
 use cosmwasm_std::{
-    Api,
-    QuerierWrapper,
-    DepsMut,
-    Deps,
-    Binary,
-    CosmosMsg,
-    Decimal,
-    Delegation,
     Addr,
-    Querier,
+    CosmosMsg,
+    QuerierWrapper,
     StdError,
     StdResult,
-    Storage,
     Uint128,
-    Validator,
 };
 
-use crate::utils::{
-    asset::Contract, 
-    generic_response::ResponseStatus,
-    ExecuteCallback, Query,
-};
-use cosmwasm_schema::{cw_serde};
+use crate::utils::{asset::Contract, generic_response::ResponseStatus, ExecuteCallback, Query};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub enum SubExecuteMsg {
     // Begin unbonding amount
-    Unbond { asset: Addr, amount: Uint128 },
-    Claim { asset: Addr },
+    Unbond { asset: String, amount: Uint128 },
+    Claim { asset: String },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { asset: Addr },
+    Update { asset: String },
 }
 
 impl ExecuteCallback for SubExecuteMsg {
@@ -49,7 +36,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     Unbond {
         status: ResponseStatus,
@@ -66,11 +53,12 @@ pub enum ExecuteAnswer {
 
 #[cw_serde]
 pub enum SubQueryMsg {
-    Balance { asset: Addr, holder: Addr, },
-    Unbonding { asset: Addr, holder: Addr, },
-    Claimable { asset: Addr, holder: Addr,  },
-    Unbondable { asset: Addr, holder: Addr, },
-    Reserves { asset: Addr, holder: Addr, },
+    BatchBalance { assets: Vec<String>, holder: String },
+    Balance { asset: String, holder: String },
+    Unbonding { asset: String, holder: String },
+    Claimable { asset: String, holder: String },
+    Unbondable { asset: String, holder: String },
+    Reserves { asset: String, holder: String },
 }
 
 #[cw_serde]
@@ -84,6 +72,7 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryAnswer {
+    BatchBalance { amounts: Vec<Uint128> },
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
@@ -97,11 +86,11 @@ pub fn claimable_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Claimable {
-        asset: asset.clone(),
-        holder: holder.clone(),
+    match QueryMsg::Manager(SubQueryMsg::Claimable {
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -117,11 +106,11 @@ pub fn unbonding_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Unbonding {
-        asset: asset.clone(),
-        holder: holder.clone(),
+    match QueryMsg::Manager(SubQueryMsg::Unbonding {
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -137,11 +126,11 @@ pub fn unbondable_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Unbondable {
-        asset: asset.clone(),
-        holder: holder.clone(),
+    match QueryMsg::Manager(SubQueryMsg::Unbondable {
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)?
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -157,15 +146,17 @@ pub fn reserves_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-
-    match (QueryMsg::Manager(SubQueryMsg::Reserves {
-        asset: asset.clone(),
-        holder: holder.clone(),
-    }).query(&querier, &manager)?) {
+    match QueryMsg::Manager(SubQueryMsg::Reserves {
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .query(&querier, &manager)?
+    {
         QueryAnswer::Reserves { amount } => Ok(amount),
-        _ => Err(StdError::generic_err(
-            format!("Failed to query manager unbondable from {}", manager.address)
-        ))
+        _ => Err(StdError::generic_err(format!(
+            "Failed to query manager unbondable from {}",
+            manager.address
+        ))),
     }
 }
 
@@ -175,37 +166,75 @@ pub fn balance_query(
     holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Manager(SubQueryMsg::Balance {
-        asset: asset.clone(),
-        holder: holder.clone(),
+    match QueryMsg::Manager(SubQueryMsg::Balance {
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
-    .query(&querier, &manager)?)
+    .query(&querier, &manager)
     {
-        QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err(format!(
-            "Failed to query manager balance from {}",
-            manager.address
-        ))),
+        Ok(resp) => match resp {
+            QueryAnswer::Balance { amount } => Ok(amount),
+            _ => Err(StdError::generic_err(format!(
+                "Unexpected response from {} manager balance",
+                manager.address
+            ))),
+        },
+        Err(e) => {
+            println!("HERERERER");
+            return Err(StdError::generic_err(format!(
+                "Failed to query manager balance: {}",
+                e.to_string()
+            )));
+        }
     }
 }
 
-pub fn claim_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Claim { asset }).to_cosmos_msg(
-        &manager,
-        vec![],
-    )
+pub fn batch_balance_query(
+    querier: QuerierWrapper,
+    assets: &Vec<Addr>,
+    holder: Addr,
+    manager: Contract,
+) -> StdResult<Vec<Uint128>> {
+    match QueryMsg::Manager(SubQueryMsg::BatchBalance {
+        assets: assets.iter().map(|a| a.to_string()).collect(),
+        holder: holder.to_string().clone(),
+    })
+    .query(&querier, &manager)
+    {
+        Ok(resp) => match resp {
+            QueryAnswer::BatchBalance { amounts } => Ok(amounts),
+            _ => Err(StdError::generic_err(format!(
+                "Unexpected response from {} manager batch balance",
+                manager.address
+            ))),
+        },
+        Err(e) => {
+            return Err(StdError::generic_err(format!(
+                "Failed to query manager batch balance: {}",
+                e.to_string()
+            )));
+        }
+    }
 }
 
-pub fn unbond_msg(asset: Addr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Unbond { asset, amount }).to_cosmos_msg(
-        &manager,
-        vec![],
-    )
+pub fn claim_msg(asset: &Addr, manager: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Manager(SubExecuteMsg::Claim {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&manager, vec![])
 }
 
-pub fn update_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Update { asset }).to_cosmos_msg(
-        &manager,
-        vec![],
-    )
+pub fn unbond_msg(asset: &Addr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Manager(SubExecuteMsg::Unbond {
+        asset: asset.to_string().clone(),
+        amount,
+    })
+    .to_cosmos_msg(&manager, vec![])
+}
+
+pub fn update_msg(asset: &Addr, manager: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Manager(SubExecuteMsg::Update {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&manager, vec![])
 }

@@ -26,10 +26,10 @@ pub mod liability_mint {
     multi_derive::implement_multi!(LiabilityMint, liability_mint);
 }
 
-#[cfg(feature = "airdrop")]
-pub mod airdrop {
-    use airdrop;
-    multi_derive::implement_multi!(Airdrop, airdrop);
+#[cfg(feature = "stkd_scrt")]
+pub mod stkd_scrt {
+    use stkd_scrt;
+    multi_derive::implement_multi!(StkdScrt, stkd_scrt);
 }
 
 // #[cfg(feature = "mint")]
@@ -95,10 +95,22 @@ pub mod treasury {
     multi_derive::implement_multi!(Treasury, treasury);
 }
 
+#[cfg(feature = "mock_adapter")]
+pub mod mock_adapter {
+    use mock_adapter;
+    multi_derive::implement_multi!(MockAdapter, mock_adapter);
+}
+
 #[cfg(feature = "scrt_staking")]
 pub mod scrt_staking {
     use scrt_staking;
     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
+}
+
+#[cfg(feature = "basic_staking")]
+pub mod basic_staking {
+    use basic_staking;
+    multi_derive::implement_multi!(BasicStaking, basic_staking);
 }
 
 #[cfg(feature = "peg_stability")]
@@ -107,14 +119,27 @@ pub mod peg_stability {
     multi_derive::implement_multi!(PegStability, peg_stability);
 }
 
-#[cfg(feature = "mock_sienna_pair")]
-pub mod mock_sienna_pair {
-    use mock_sienna_pair;
-    multi_derive::implement_multi!(MockSiennaPair, mock_sienna_pair);
-}
-
 #[cfg(feature = "sky_derivatives")]
 pub mod sky_derivatives {
     use sky_derivatives;
     multi_derive::implement_multi!(SkyDerivatives, sky_derivatives);
+}
+
+#[cfg(feature = "mock_stkd")]
+pub mod mock_stkd {
+    pub use mock_stkd;
+    multi_derive::implement_multi!(MockStkd, mock_stkd);
+}
+
+#[cfg(feature = "mock_sienna")]
+pub mod mock_sienna {
+    pub use mock_sienna;
+    multi_derive::implement_multi!(MockSienna, mock_sienna);
+}
+
+#[cfg(feature = "snip20_migration")]
+pub mod snip20_migration {
+    use snip20_migration;
+
+    multi_derive::implement_multi!(Snip20Migration, snip20_migration);
 }

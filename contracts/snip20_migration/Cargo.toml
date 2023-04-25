@@ -1,0 +1,37 @@
+[package]
+name = "snip20_migration"
+version = "0.1.0"
+authors = ["jackb7"]
+edition = "2018"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
+
+[dependencies]
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "snip20",
+  "snip20_migration",
+  "admin",
+] }
+schemars = "0.7"
+
+[dev-dependencies]
+rstest = "0.15"
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test", "admin"] }
+serde_json = { version = "1.0.67" }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "snip20", "snip20_migration", "admin"  ] }

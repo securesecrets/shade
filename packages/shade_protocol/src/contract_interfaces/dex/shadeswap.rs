@@ -1,9 +1,7 @@
 use crate::{
-    c_std::{Addr, Binary, Deps, DepsMut, StdError, StdResult, Uint128},
-    contract_interfaces::{dex, mint, oracles::band},
+    c_std::{Addr, Binary, Uint128},
     utils::{
         asset::Contract,
-        price::{normalize_price, translate_price},
         Query,
     },
 };
@@ -43,11 +41,8 @@ pub struct ContractLink {
 
 #[cw_serde]
 pub enum PairQuery {
-    PairInfo,
-    GetEstimatedPrice { 
-        offer: TokenAmount,
-    },
-
+    GetPairInfo {},
+    GetEstimatedPrice { offer: TokenAmount },
 }
 
 impl Query for PairQuery {

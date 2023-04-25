@@ -9,7 +9,7 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{self, Api, Deps, Querier, StdError, StdResult, Storage};
+use crate::c_std::{Deps, StdError, StdResult};
 
 use cosmwasm_schema::{cw_serde};
 
@@ -90,7 +90,7 @@ pub fn aggregate_price(
         }
     }
 
-    let mut combined_cp: Uint512 = pool_sizes.iter().sum();
+    let combined_cp: Uint512 = pool_sizes.iter().sum();
 
     let weighted_sum: Uint512 = amounts_per_scrt
         .into_iter()

@@ -1,14 +1,21 @@
 use crate::{
-    handle::{calculate_portion, mint_amount},
+    handle::mint_amount,
     state::{
-        asset_list_r, asset_peg_r, assets_r, config_r, limit_r, limit_refresh_r, minted_r,
-        native_asset_r, total_burned_r,
+        asset_list_r,
+        asset_peg_r,
+        assets_r,
+        config_r,
+        limit_r,
+        limit_refresh_r,
+        minted_r,
+        native_asset_r,
+        total_burned_r,
     },
 };
-use shade_protocol::c_std::{Addr, Api, DepsMut, Querier, StdError, StdResult, Storage};
-use shade_protocol::c_std::{Deps, Uint128};
-use shade_protocol::chrono::prelude::*;
-use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
+use shade_protocol::{
+    c_std::{Addr, Deps, StdError, StdResult, Uint128},
+    contract_interfaces::mint::mint::QueryAnswer,
+};
 
 pub fn native_asset(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::NativeAsset {

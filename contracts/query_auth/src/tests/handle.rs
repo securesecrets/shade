@@ -1,8 +1,8 @@
-use crate::tests::{get_config, get_permit, init_contract, validate_permit, validate_vk};
+use crate::tests::{get_config, init_contract, validate_permit, validate_vk};
 use shade_protocol::{
-    c_std::{from_binary, Addr, StdResult},
+    c_std::{from_binary, Addr},
     contract_interfaces::{query_auth, query_auth::ContractStatus},
-    utils::{asset::Contract, ExecuteCallback, Query},
+    utils::{asset::Contract, ExecuteCallback},
 };
 
 #[test]
