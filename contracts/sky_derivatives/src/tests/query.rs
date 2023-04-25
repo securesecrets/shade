@@ -1,9 +1,10 @@
 use shade_protocol::c_std::{
     to_binary, from_binary,
     Addr, StdError, Uint128, Coin,
-    Decimal,
+    Decimal, BankQuery,
 };
 use shade_protocol::contract_interfaces::{
+    dao::adapter,
     dex::dex::Dex,
     sky::{
         cycles::{
@@ -20,7 +21,6 @@ use shade_protocol::contract_interfaces::{
     },
     snip20,
 };
-use shade_protocol_temp::stkd;
 use shade_protocol::utils::{
     asset::Contract,
     ExecuteCallback,
@@ -41,6 +41,7 @@ use shade_multi_test::multi::{
     sky_derivatives::SkyDerivatives,
 };
 use shade_multi_test_temp::multi::mock_stkd::MockStkd;
+use mock_stkd_temp::contract as mock_stkd;
 use mock_sienna_temp::contract as mock_sienna;
 
 use crate::tests::{init, init_with_pair, fill_dex_pairs, seeded_pair};
@@ -197,7 +198,7 @@ fn is_profitable() {
         },
     );
 
-    // Profitable but barely do don't
+    // Profitable but barely, don't do
     snip20::ExecuteMsg::Send { // Pair: 1_000_000 deriv; 2_010_039 base
         recipient: pair.address.to_string(),
         recipient_code_hash: None,
@@ -266,7 +267,7 @@ fn is_profitable() {
         Uint128::new(2_025_000)
     );
 
-    ExecuteMsg::SetDexPairs {
+    ExecuteMsg::SetPairs {
         pairs: vec![ArbPair {
             pair_contract: Some(pair.clone().into()),
             mint_info: None,
@@ -306,7 +307,6 @@ fn is_profitable() {
     );
 
     // Low max swap
-    println!("LOW MAX SWAP");
     ExecuteMsg::UpdateConfig {
         shade_admin_addr: None,
         treasury: None,
@@ -341,7 +341,23 @@ fn is_profitable() {
         Uint128::new(100_000_000),
     );
 
-    ExecuteMsg::SetDexPairs {
+    ExecuteMsg::UpdateConfig {
+        shade_admin_addr: None,
+        treasury: None,
+        derivative: Some(Derivative {
+            contract: deriv.clone().into(),
+            base_asset: base.clone().into(),
+            staking_type: DerivativeType::StkdScrt,
+            base_decimals: 6u32,
+            deriv_decimals: 8u32,
+        }),
+        trading_fees: None,
+        max_arb_amount: Some(Uint128::MAX),
+        min_profit_amount: None,
+        viewing_key: None,
+    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    ExecuteMsg::SetPairs {
         pairs: vec![ArbPair {
             pair_contract: Some(pair.clone().into()),
             mint_info: None,
@@ -353,16 +369,6 @@ fn is_profitable() {
             token1_amount: None,
             dex: Dex::SiennaSwap,
         }]
-    }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
-
-    ExecuteMsg::UpdateConfig {
-        shade_admin_addr: None,
-        treasury: None,
-        derivative: None,
-        trading_fees: None,
-        max_arb_amount: Some(Uint128::MAX),
-        min_profit_amount: None,
-        viewing_key: None,
     }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     assert_eq!(
@@ -398,10 +404,10 @@ fn is_any_pair_profitable() {
         base.clone(),
         deriv.clone(),
         Uint128::new(1_975_000),
-        Uint128::new(1_000_000_000), 
+        Uint128::new(1_000_000), 
     );
 
-    ExecuteMsg::SetDexPairs {
+    ExecuteMsg::SetPairs {
         pairs: vec![ArbPair {
             pair_contract: Some(pair.clone().into()),
             mint_info: None,
@@ -431,7 +437,7 @@ fn is_any_pair_profitable() {
             token0_decimals: Uint128::new(6),
             token0_amount: None,
             token1: deriv.clone().into(),
-            token1_decimals: Uint128::new(9),
+            token1_decimals: Uint128::new(6),
             token1_amount: None,
             dex: Dex::SiennaSwap,
         }]
@@ -451,7 +457,7 @@ fn is_any_pair_profitable() {
             }),
             Some(SwapAmounts {
                 optimal_swap: Uint128::new(8981),
-                swap1_result: Uint128::new(4513216),
+                swap1_result: Uint128::new(4513),
                 swap2_result: Uint128::new(9021),
             })], 
             direction: vec![None, Some(Direction::Stake), Some(Direction::Unbond)],
@@ -459,30 +465,382 @@ fn is_any_pair_profitable() {
     ); 
 }
 
-/*
 // Adapter Tests
 #[test]
 fn adapter_balance() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        },
+    );
+
+    // Initial balance
+    snip20::ExecuteMsg::Transfer {
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+ 
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(20_000),
+        },
+    );
+   
+    // Unwrap and Stake
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(10_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &vec![
+               Coin { amount: Uint128::new(10_000), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    // Unbond some
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(2500),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(14_998),
+        },
+    );
+
+    // Advance Time
+    mock_stkd::ExecuteMsg::MockFastForward {
+        steps: 24,
+    }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(14_998),
+        },
+    );
+
+    // Unbond remaining
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(2490),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(19_976),
+        },
+    );
+
+    // Claim
+    mock_stkd::ExecuteMsg::Claim {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    snip20::ExecuteMsg::Deposit {
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(4_998), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(19_976),
+        },
+    );
+
+    // Advance Time
+    // Claim Rest
+    mock_stkd::ExecuteMsg::MockFastForward {
+        steps: 24,
+    }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Claim {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    snip20::ExecuteMsg::Deposit {
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(4_978), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::new(19_976),
+        },
+    );
+
+    // Bad Address
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: Addr::unchecked("Bad asset"),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        },
+    );
+
 }
 
 #[test]
 fn adapter_claimable() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    // Test with none claimable
+    snip20::ExecuteMsg::Transfer {
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Claimable {
+            amount: Uint128::zero(),
+        },
+    );
+
+    // Stake, Unbond
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(20_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(20_000), denom: "uscrt".into() },
+    ]).unwrap();
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(9980),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.clone(),
+        amount: Uint128::new(10_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    // Some claimable
+    mock_stkd::ExecuteMsg::MockFastForward {
+        steps: 24,
+    }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Claim {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    snip20::ExecuteMsg::Deposit {
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(19_952), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Claimable {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    // Bad Address
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+            asset: Addr::unchecked("Bad asset"),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Claimable {
+            amount: Uint128::zero(),
+        },
+    );
 }
 
 #[test]
 fn adapter_unbonding() {
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    // Test with none unbonding
+    snip20::ExecuteMsg::Transfer {
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::zero(),
+        },
+    );
+
+    // Stake, Unbond
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(20_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(20_000), denom: "uscrt".into() },
+    ]).unwrap();
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(9980),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.clone(),
+        amount: Uint128::new(10_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    // Already unbonded
+    mock_stkd::ExecuteMsg::MockFastForward {
+        steps: 24,
+    }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Claim {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    snip20::ExecuteMsg::Deposit {
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[
+               Coin { amount: Uint128::new(19_952), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    // Update =
+
     assert!(false);
 }
 
 #[test]
 fn adapter_unbondable() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::zero(),
+        },
+    );
+
+    // Initial balance
+    snip20::ExecuteMsg::Transfer {
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+ 
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::new(20_000),
+        },
+    );
+   
+    // Unwrap and Stake
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(10_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &vec![
+               Coin { amount: Uint128::new(10_000), denom: "uscrt".into() },
+    ]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    // Unbond some
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(2500),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::new(14_998),
+        },
+    );
+
+    // Bad Address
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: Addr::unchecked("Bad asset"),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::zero(),
+        },
+    );
 }
 
 #[test]
 fn adapter_reserves() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+            asset: base.address.clone(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Reserves {
+            amount: Uint128::zero(),
+        },
+    );
 }
-*/

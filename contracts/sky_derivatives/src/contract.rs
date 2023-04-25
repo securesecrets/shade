@@ -24,7 +24,7 @@ use shade_protocol::{
             ExecuteAnswer,
             InstantiateMsg, 
             QueryMsg,
-            Unbondings,
+            TreasuryUnbondings,
             SelfAddr,
         },
     },
@@ -47,7 +47,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     SelfAddr(env.contract.address.clone()).save(deps.storage)?;
-    Unbondings(Uint128::zero()).save(deps.storage)?;
+    TreasuryUnbondings(Uint128::zero()).save(deps.storage)?;
 
     // Validate shade admin works
     validate_admin(
@@ -79,7 +79,7 @@ pub fn instantiate(
         // derivative must be the 2nd entry in the dex_pair
         if !execute::validate_dex_pair(&msg.derivative, &pair) {
             return Err(StdError::generic_err(
-                "Invalid pair - original token must be token 0 and derivative must be token 1"
+                "Invalid pair - original token must be token 0 and derivative must be token 1, decimals must match derivative"
             ));
         }
         new_pairs.push(pair);
@@ -124,7 +124,7 @@ pub fn execute(
             min_profit_amount,
             viewing_key,
         ),
-        ExecuteMsg::SetDexPairs { pairs } => execute::try_set_dex_pairs(deps, info, pairs),
+        ExecuteMsg::SetPairs { pairs } => execute::try_set_pairs(deps, info, pairs),
         ExecuteMsg::SetPair { pair, index } => execute::try_set_pair(deps, info, pair, index),
         ExecuteMsg::AddPair { pair } => execute::try_add_pair(deps, info, pair),
         ExecuteMsg::RemovePair { index } => execute::try_remove_pair(deps, info, index),

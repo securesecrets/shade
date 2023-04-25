@@ -59,10 +59,10 @@ impl ItemStorage for DexPairs {
 }
 
 #[cw_serde]
-pub struct Unbondings(pub Uint128);
+pub struct TreasuryUnbondings(pub Uint128);
 
-impl ItemStorage for Unbondings {
-    const ITEM: Item<'static, Unbondings> = Item::new("item_rollover");
+impl ItemStorage for TreasuryUnbondings {
+    const ITEM: Item<'static, TreasuryUnbondings> = Item::new("item_unbondings");
 }
 
 #[cw_serde]
@@ -99,7 +99,7 @@ pub enum ExecuteMsg {
         min_profit_amount: Option<Uint128>,
         viewing_key: Option<String>,
     },
-    SetDexPairs {
+    SetPairs {
         pairs: Vec<ArbPair>,
     },
     AddPair {
@@ -124,11 +124,15 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Arbitrage {
         status: ResponseStatus,
+        arb_amount: Uint128,
+        expected_profit: Uint128,
     },
     ArbAllPairs {
         statuses: Vec<ResponseStatus>,
+        arb_amounts: Vec<Uint128>,
+        expected_profits: Vec<Uint128>,
     },
-    SetDexPairs {
+    SetPairs {
         status: ResponseStatus,
     },
     SetPair {
@@ -185,9 +189,11 @@ pub enum QueryAnswer {
         swap_amounts: Vec<Option<SwapAmounts>>,
         direction: Vec<Option<Direction>>,
     },
+    Adapter(adapter::QueryAnswer),
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct SwapAmounts {
     pub optimal_swap: Uint128,
     pub swap1_result: Uint128,
