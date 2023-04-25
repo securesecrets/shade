@@ -5,7 +5,7 @@ mod execute;
 use shade_protocol::c_std::{
     to_binary, from_binary,
     Addr, StdError, Uint128, Coin,
-    ContractInfo, Decimal,
+    ContractInfo, Decimal, BankMsg,
 };
 use shade_protocol::contract_interfaces::{
     dex::{
@@ -51,19 +51,23 @@ use shade_multi_test_temp::multi::{
     mock_stkd::MockStkd,
 };
 use mock_sienna_temp::contract as mock_sienna;
+use mock_stkd_temp::contract as mock_stkd;
 
 fn init() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo, Config) {
     let mut chain = App::default();
+    
+    let a_lot = Coin {
+        amount: Uint128::new(1_000_000_000_000),
+        denom: "uscrt".into(),
+    };
 
     // Init balances
     let admin = Addr::unchecked("admin");
     chain.init_modules(|router, _, storage| {
-        router.bank.init_balance(storage, &admin, vec![Coin {
-            amount: Uint128::new(2_000_000_000_000),
-            denom: "uscrt".into(),
-        }]).unwrap();
+        router.bank.init_balance(storage, &admin, vec![a_lot.clone(); 3]).unwrap();
     });
 
+    
     // Base snip20
     let base_snip20 = snip20::InstantiateMsg {
         name: "secret SCRT".into(),
@@ -84,34 +88,40 @@ fn init() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo, Confi
             enable_transfer: Some(true),
         }),
         query_auth: None,
-    }.test_init(Snip20::default(), &mut chain, admin.clone(), "token", &[]).unwrap();
+    }.test_init(Snip20::default(), &mut chain, admin.clone(), "token", &[a_lot]).unwrap();
 
     // Stkd
-    let deriv = stkd::MockInstantiateMsg {
+    let deriv = mock_stkd::InstantiateMsg {
         name: "derivative".to_string(),
         symbol: "stkd-SCRT".to_string(),
         decimals: 6,
-        price: Uint128::new(2),
+        price: Uint128::new(2_000_000),
+        unbonding_time: 21u32,
+        unbonding_batch_interval: 3u32,
+        staking_commission: Decimal::permille(2),
+        unbond_commission: Decimal::from_ratio(5u32, 10_000u32),
     }.test_init(MockStkd::default(), &mut chain, admin.clone(), "stkd-SCRT", &[]).unwrap();
 
-    stkd::HandleMsg::Stake {
+    mock_stkd::ExecuteMsg::Stake {
     }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[Coin {
         denom: "uscrt".into(),
-        amount: Uint128::new(1_000_000_000_00),
-    }]);
+        amount: Uint128::new(1_000_000_000_000),
+    }]).unwrap();
 
     // Sky Derivatives
     let shd_admin = init_admin_auth(&mut chain, &admin);
     let treasury = Addr::unchecked("treasury");
     let derivative = Derivative {
         contract: deriv.clone().into(),
-        original_asset: base_snip20.clone().into(),
+        base_asset: base_snip20.clone().into(),
         staking_type: DerivativeType::StkdScrt,
+        deriv_decimals: 6u32,
+        base_decimals: 6u32,
     };
 
-    let dex_fee = Decimal::permille(997);
-    let stake_fee = Decimal::permille(998);
-    let unbond_fee = Decimal::raw(999_500_000_000_000_000);
+    let dex_fee = Decimal::permille(3);
+    let stake_fee = Decimal::permille(2);
+    let unbond_fee = Decimal::from_ratio(5u32, 10_000u32);
     let trading_fees = TradingFees { dex_fee, stake_fee, unbond_fee };
     let dex_pairs = fill_dex_pairs(2, base_snip20.clone().into(), deriv.clone().into());
     let config = Config {
@@ -140,6 +150,15 @@ fn init() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo, Confi
 fn init_with_pair() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo) {
     let (mut chain, admin, base, deriv, arb, config) = init();
 
+    snip20::ExecuteMsg::Send {
+        recipient: arb.address.to_string(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1_000_000_000),
+        msg: None,
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap(); 
+
     let pair = seeded_pair(
         &mut chain, 
         base.clone(), 
@@ -148,7 +167,7 @@ fn init_with_pair() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractI
         Uint128::new(1_000_000)
     );
 
-    ExecuteMsg::SetDexPairs {
+    ExecuteMsg::SetPairs {
         pairs: vec![ArbPair {
             pair_contract: Some(pair.clone().into()),
             mint_info: None,
@@ -198,6 +217,7 @@ fn seeded_pair(
         token_0: token0.clone().into(),
         token_1: token1.clone().into(),
         viewing_key: "key".into(),
+        commission: Decimal::permille(3),
     }.test_init(
         MockSienna::default(),
         chain,
@@ -251,24 +271,30 @@ fn instantiate() {
         query_auth: None,
     }.test_init(Snip20::default(), &mut chain, admin.clone(), "token", &[]).unwrap();
 
-    let deriv = stkd::MockInstantiateMsg {
+    let deriv = mock_stkd::InstantiateMsg {
         name: "derivative".to_string(),
         symbol: "stkd-SCRT".to_string(),
         decimals: 6,
-        price: Uint128::new(2),
+        price: Uint128::new(2_000_000),
+        unbonding_time: 21u32,
+        unbonding_batch_interval: 3u32,
+        staking_commission: Decimal::permille(2),
+        unbond_commission: Decimal::from_ratio(5u32, 10_000u32),
     }.test_init(MockStkd::default(), &mut chain, admin.clone(), "stkd-SCRT", &[]).unwrap();
 
     let shd_admin = init_admin_auth(&mut chain, &admin);
     let treasury = Addr::unchecked("treasury");
     let derivative = Derivative {
         contract: deriv.clone().into(),
-        original_asset: base_snip20.clone().into(),
+        base_asset: base_snip20.clone().into(),
         staking_type: DerivativeType::StkdScrt,
+        deriv_decimals: 6u32,
+        base_decimals: 6u32,
     };
 
-    let dex_fee = Decimal::raw(999_500_000_000_000_000);
-    let stake_fee = Decimal::raw(998);
-    let unbond_fee = Decimal::raw(997);
+    let dex_fee = Decimal::permille(3);
+    let stake_fee = Decimal::permille(2);
+    let unbond_fee = Decimal::from_ratio(5u32, 10_000u32);
     let trading_fees = TradingFees { dex_fee, stake_fee, unbond_fee };
 
     let dex_pairs: Vec<ArbPair> = vec![];

@@ -4,7 +4,10 @@ use crate::{
         mint::mint,
         snip20::{
             self,
-            helpers::send_msg,
+            helpers::{
+                deposit_msg,
+                redeem_msg,
+            },
         },
         stkd,
     },
@@ -16,6 +19,7 @@ use cosmwasm_std::{
     Addr,
     Coin,
     CosmosMsg,
+    Decimal,
     Deps,
     StdError,
     StdResult,
@@ -299,52 +303,53 @@ impl ArbPair {
     // options
     pub fn to_cosmos_msg(&self, offer: Offer, expected_return: Uint128) -> StdResult<CosmosMsg> {
         match self.dex {
-            Dex::SiennaSwap => send_msg(
-                self.pair_contract.clone().unwrap().address,
-                Uint128::new(offer.amount.u128()),
-                Some(to_binary(&sienna::CallbackMsg {
-                    swap: sienna::CallbackSwap { expected_return },
-                })?),
-                None,
-                None,
-                &offer.asset,
-            ),
-            Dex::SecretSwap => send_msg(
-                self.pair_contract.clone().unwrap().address,
-                Uint128::new(offer.amount.u128()),
-                Some(to_binary(&secretswap::CallbackMsg {
-                    swap: secretswap::CallbackSwap { expected_return },
-                })?),
-                None,
-                None,
-                &offer.asset,
-            ),
-            Dex::ShadeSwap => send_msg(
-                self.pair_contract.clone().unwrap().address,
-                Uint128::new(offer.amount.u128()),
-                Some(to_binary(&shadeswap::SwapTokens {
-                    expected_return: Some(expected_return),
-                    to: None,
-                    router_link: None,
-                    callback_signature: None,
-                })?),
-                None,
-                None,
-                &offer.asset,
-            ),
+            Dex::SiennaSwap => snip20::ExecuteMsg::Send {
+                    recipient: self.pair_contract.clone().unwrap().address.to_string(),
+                    recipient_code_hash: Some(self.pair_contract.clone().unwrap().code_hash),
+                    amount: offer.amount,
+                    msg: Some(to_binary(&sienna::ReceiverCallbackMsg::Swap {
+                        expected_return: Some(expected_return),
+                        to: None,
+                    })?),
+                    memo: None,
+                    padding: None,
+                }.to_cosmos_msg(&offer.asset, vec![]),
+            Dex::SecretSwap => snip20::ExecuteMsg::Send {
+                    recipient: self.pair_contract.clone().unwrap().address.to_string(),
+                    recipient_code_hash: Some(self.pair_contract.clone().unwrap().code_hash),
+                    amount: offer.amount,
+                    msg: Some(to_binary(&secretswap::CallbackMsg {
+                        swap: secretswap::CallbackSwap { expected_return },
+                    })?),
+                    memo: None,
+                    padding: None,
+                }.to_cosmos_msg(&offer.asset, vec![]),
+            Dex::ShadeSwap => snip20::ExecuteMsg::Send {
+                    recipient: self.pair_contract.clone().unwrap().address.to_string(),
+                    recipient_code_hash: Some(self.pair_contract.clone().unwrap().code_hash),
+                    amount: offer.amount,
+                    msg: Some(to_binary(&shadeswap::SwapTokens {
+                        expected_return: Some(expected_return),
+                        to: None,
+                        router_link: None,
+                        callback_signature: None,
+                    })?),
+                    memo: None,
+                    padding: None,
+                }.to_cosmos_msg(&offer.asset, vec![]),
             Dex::Mint => {
                 let mint_contract = self.get_mint_contract(offer.asset.clone())?;
-                send_msg(
-                    mint_contract.address.clone(),
-                    Uint128::new(offer.amount.u128()),
-                    Some(to_binary(&mint::MintMsgHook {
+                snip20::ExecuteMsg::Send {
+                    recipient: mint_contract.address.to_string(),
+                    recipient_code_hash: Some(mint_contract.code_hash.clone()),
+                    amount: offer.amount,
+                    msg: Some(to_binary(&mint::MintMsgHook {
                         minimum_expected_amount: expected_return,
                     })?),
-                    None,
-                    None,
-                    &offer.asset,
-                )
-            }
+                    memo: None,
+                    padding: None,
+                }.to_cosmos_msg(&offer.asset, vec![])
+            },
         }
     }
 
@@ -389,8 +394,10 @@ pub enum DerivativeType {
 #[cw_serde]
 pub struct Derivative {
     pub contract: Contract,
-    pub original_asset: Contract,
+    pub base_asset: Contract,
     pub staking_type: DerivativeType,
+    pub deriv_decimals: u32,
+    pub base_decimals: u32,
 }
 
 impl Derivative {
@@ -407,21 +414,44 @@ impl Derivative {
         }
     }
 
-    pub fn stake_msg(&self, stake_amount: Uint128) -> StdResult<CosmosMsg> {
+    pub fn stake_msg(&self, amount: Uint128) -> StdResult<CosmosMsg> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
                 stkd::HandleMsg::Stake{}.to_cosmos_msg(
                     &self.contract.clone(),
-                    vec![Coin::new(stake_amount.u128(), "uscrt")],
+                    vec![Coin::new(amount.u128(), "uscrt")],
                 )
             }
+        }
+    }
+
+    pub fn claim_msg(&self) -> StdResult<CosmosMsg> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                stkd::HandleMsg::Claim {}.to_cosmos_msg(
+                    &self.contract.clone(),
+                    vec![],
+                )
+            },
+        }
+    }
+
+    pub fn wrap_base(&self, amount: Uint128) -> StdResult<CosmosMsg> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => deposit_msg(amount, None, &self.base_asset),
+        }
+    }
+    
+    pub fn unwrap_base(&self, amount: Uint128) -> StdResult<CosmosMsg> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => redeem_msg(amount, None, None, &self.base_asset),
         }
     }
 
     pub fn query_exchange_price(
         &self, 
         querier: &QuerierWrapper,
-    ) -> StdResult<Uint128> {
+    ) -> StdResult<Decimal> {
         match self.staking_type {
             DerivativeType::StkdScrt => {
                 let response =  stkd::QueryMsg::StakingInfo {
@@ -432,14 +462,15 @@ impl Derivative {
                 )?;
                 match response {
                     stkd::QueryAnswer::StakingInfo { price, .. } => 
-                        Ok(price),
+                        // stkd derivative price is Uint128 with 6 decimals
+                        Ok(Decimal::from_ratio(price, 1_000_000u32)),
                     _ => Err(StdError::generic_err("Invalid query return for mint cost")),
                 }
             },
         }
     }
 
-    pub fn query_original_balance(
+    pub fn query_base_balance(
         &self,
         querier: &QuerierWrapper, 
         addr: Addr, 
@@ -451,7 +482,7 @@ impl Derivative {
                     address: addr.to_string(),
                     key: viewing_key,
                 }
-                .query(querier, &self.original_asset)?;
+                .query(querier, &self.base_asset)?;
                 
                 match response {
                     snip20::QueryAnswer::Balance { amount } => Ok(amount),
@@ -478,11 +509,10 @@ impl Derivative {
                 }
                 .query(querier, &self.contract)?;
                 match stkd_response {
-                    // TODO: loop through unbondings and add up total amount waiting to unbond
                     stkd::QueryAnswer::Unbonding { unbondings, unbond_amount_in_next_batch, .. } => {
-                        let unbonding_amt = Uint128::zero();
+                        let mut unbonding_amt = Uint128::zero();
                         for unbonding in unbondings {
-                            unbonding_amt.checked_add(unbonding.amount)?;
+                            unbonding_amt = unbonding_amt.checked_add(unbonding.amount)?;
                         }
                         Ok(unbonding_amt.checked_add(unbond_amount_in_next_batch)?)
                     },
