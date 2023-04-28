@@ -1,7 +1,7 @@
 [package]
-name = "mock_sienna_pair"
+name = "mock_stkd_derivative"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = ["Aidan St. George <aidanstgeorge1@gmail.com>"]
 edition = "2018"
 
 exclude = [
@@ -23,7 +23,17 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-schema = "1.1.5"
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "dex",
+  "stkd",
 ] }
+cosmwasm-schema = "1.1.5"
+
+[dev-dependencies]
+mock_sienna_pair = { version = "0.1.0", path = "../mock_sienna_pair" }
+shade-multi-test = { version = "0.1.0", path = "../../../packages/multi_test", features = [
+  "mock_sienna",
+  "mock_stkd",
+  "snip20",
+] }
+

@@ -1,8 +1,5 @@
 //#! 
 use cosmwasm_schema::cw_serde;
-use shade_oracles::{
-    interfaces::common::OraclePrice, common::{PriceResponse, PricesResponse},
-};
 use cosmwasm_std::{StdResult, QuerierWrapper};
 use crate::{
     Contract,
@@ -10,6 +7,16 @@ use crate::{
     utils::{Query},
 };
 use std::collections::HashMap;
+
+#[cw_serde]
+#[derive(Default)]
+pub struct OraclePrice {
+    pub key: String,
+    pub data: ReferenceData,
+}
+
+pub type PriceResponse = OraclePrice;
+pub type PricesResponse = Vec<OraclePrice>;
 
 #[cw_serde]
 pub enum RouterQueryMsg {

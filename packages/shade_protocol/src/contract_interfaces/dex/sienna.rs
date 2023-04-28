@@ -53,6 +53,14 @@ pub struct SwapOffer {
 }
 
 #[cw_serde]
+pub enum ReceiverCallbackMsg {
+    Swap {
+        expected_return: Option<Uint128>,
+        to: Option<Addr>,
+    },
+}
+
+#[cw_serde]
 pub struct CallbackMsg {
     pub swap: CallbackSwap,
 }

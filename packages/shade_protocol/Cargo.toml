@@ -22,7 +22,7 @@ required-features = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["utils", "shade_oracles"]
+default = ["utils"]
 
 # Utils
 utils = ["chrono"]
@@ -66,7 +66,7 @@ basic_staking    = ["snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
-#liability_mint   = ["snip20", "adapter", "dao", "dep:shade-oracles"]
+#liability_mint   = ["snip20", "adapter", "dao"]
 mint_router      = ["snip20"]
 oracles          = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
@@ -82,7 +82,6 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
-shade_oracles    = ["dep:shade-oracles"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
@@ -91,6 +90,9 @@ chrono = ["dep:chrono"]
 
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
+
+stkd = []
+mock = []
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
@@ -115,7 +117,6 @@ schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
-shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 
 # Testing
