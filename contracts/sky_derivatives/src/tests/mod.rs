@@ -25,8 +25,8 @@ use shade_protocol::contract_interfaces::{
         },
     },
     snip20,
+    stkd,
 };
-use shade_protocol_temp::stkd;
 use shade_protocol::utils::{
     asset::Contract,
     ExecuteCallback,
@@ -34,24 +34,16 @@ use shade_protocol::utils::{
     MultiTestable,
     Query,
 };
-use shade_protocol_temp::utils::{
-    InstantiateCallback as OtherInstantiateCallback,
-    MultiTestable as OtherMultiTestable,
-    ExecuteCallback as OtherExecuteCallback,
-    Query as OtherQuery,
-};
 use shade_protocol::multi_test::App;
 use shade_multi_test::multi::{
     admin::init_admin_auth,
     snip20::Snip20,
     sky_derivatives::SkyDerivatives,
-};
-use shade_multi_test_temp::multi::{
     mock_sienna::MockSienna,
     mock_stkd::MockStkd,
 };
-use mock_sienna_temp::contract as mock_sienna;
-use mock_stkd_temp::contract as mock_stkd;
+use mock_sienna::contract as mock_sienna;
+use mock_stkd::contract as mock_stkd;
 
 fn init() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo, Config) {
     let mut chain = App::default();
@@ -114,6 +106,7 @@ fn init() -> (App, ContractInfo, ContractInfo, ContractInfo, ContractInfo, Confi
     let derivative = Derivative {
         contract: deriv.clone().into(),
         base_asset: base_snip20.clone().into(),
+        base_denom: "uscrt".into(),
         staking_type: DerivativeType::StkdScrt,
         deriv_decimals: 6u32,
         base_decimals: 6u32,
@@ -287,6 +280,7 @@ fn instantiate() {
     let derivative = Derivative {
         contract: deriv.clone().into(),
         base_asset: base_snip20.clone().into(),
+        base_denom: "uscrt".into(),
         staking_type: DerivativeType::StkdScrt,
         deriv_decimals: 6u32,
         base_decimals: 6u32,

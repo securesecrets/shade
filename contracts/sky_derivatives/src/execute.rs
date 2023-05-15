@@ -1,6 +1,7 @@
 use shade_protocol::c_std::{
     to_binary,
     Addr,
+    BankQuery,
     CosmosMsg,
     Decimal,
     DepsMut,
@@ -63,7 +64,7 @@ pub fn try_update_config(
     // Admin Only
     validate_admin(
         &deps.querier,
-        AdminPermissions::SkyAdmin, // TODO does this make sense????
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &cur_config.shade_admin_addr,
     )?;
@@ -414,8 +415,6 @@ pub fn try_arb_pair(
         return Err(StdError::generic_err(format!("Invalid dex_pair index: {}", index)));
     }
 
-    // TODO Check if claimable unbondings exist and claim them for more funds
-
     let config = Config::load(deps.storage)?;
     let self_addr = SelfAddr::load(deps.storage)?.0;
     let unbondings = TreasuryUnbondings::load(deps.storage)?.0;
@@ -483,7 +482,7 @@ pub fn try_adapter_unbond(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
     amount: Uint128,
 ) -> StdResult<Response> {
     // Verify comes from treasury
@@ -505,6 +504,13 @@ pub fn try_adapter_unbond(
         self_addr.clone(), 
         config.viewing_key.clone(),
     )?;
+
+    // Cap treasury unbond to no more than unbondable
+    let unbondable = match query::adapter_unbondable(deps.as_ref(), asset)? {
+        adapter::QueryAnswer::Unbondable { amount } => amount,
+        _ => Uint128::zero(), // shouldn't happen
+    };
+    let amount = Uint128::min(amount, unbondable);
     
     if balance.is_zero() {
         let unbondings = TreasuryUnbondings::load(deps.storage)?.0;
@@ -513,7 +519,7 @@ pub fn try_adapter_unbond(
         return Ok(Response::new()
            .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
                status: ResponseStatus::Success,
-               amount, // TODO: verify this amount makes sense even though none is claimed
+               amount,
            })?)
         )
     }
@@ -549,7 +555,7 @@ pub fn try_adapter_claim(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
 ) -> StdResult<Response> {
     // Verify comes from treasury
     let config = Config::load(deps.storage)?;
@@ -570,15 +576,6 @@ pub fn try_adapter_claim(
         config.viewing_key.clone(),
     )?;
 
-    if balance.is_zero() {
-        return Ok(Response::new()
-           .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
-               status: ResponseStatus::Success,
-               amount: Uint128::zero(),
-           })?)
-        )
-    }
-
     let unbondings = TreasuryUnbondings::load(deps.storage)?.0;
     let amount = Uint128::min(unbondings, balance);
     let message = send_msg(
@@ -590,6 +587,18 @@ pub fn try_adapter_claim(
         &derivative.base_asset,
     )?;
 
+    if amount.is_zero() {
+        return Ok(Response::new()
+           .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
+               status: ResponseStatus::Failure, // Nothing to claim
+               amount: Uint128::zero(),
+           })?)
+        )
+    }
+
+    let new_unbondings = unbondings - amount; // will not overflow
+    TreasuryUnbondings(new_unbondings).save(deps.storage)?;
+
     Ok(Response::new()
         .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
@@ -600,22 +609,62 @@ pub fn try_adapter_claim(
 }
 
 pub fn try_adapter_update(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _asset: Addr,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    asset: String,
 ) -> StdResult<Response> {
+    // Verify comes from treasury
+    let config = Config::load(deps.storage)?;
+    if config.treasury != info.sender {
+        return Err(StdError::generic_err("unauthorized"));
+    }
 
-    // Try claim
+    let derivative = config.derivative;
+    if asset != derivative.base_asset.address {
+        return Err(StdError::generic_err("Unrecognized asset"));
+    }
 
-    // Wrap
+    // Check for left over bonded derivative.
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let deriv_balance = derivative.query_deriv_balance(
+        &deps.querier,
+        self_addr.clone(),
+        config.viewing_key.clone(),
+    )?;
 
-    let messages = vec![];
+    // If derivative balance is nonzero, unbond for base asset.
+    let mut messages = vec![];
+    if !deriv_balance.is_zero() {
+        messages.push(derivative.unbond_msg(deriv_balance)?);
+    }
 
+    // Claim any fully unbonded derivative
+    let claimed = derivative.query_claimable(
+        &deps.querier,
+        self_addr.clone(),
+        config.viewing_key.clone(),
+        env.block.time.seconds(),
+    )?;
+    messages.push(derivative.claim_msg()?);
+
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    // TODO try to wrap all of L1 balance
+    // TODO implement l1_balance query function in cycles
+    BankQuery::Balance {
+        address: self_addr.to_string(),
+        denom: derivative.base_denom.clone(),
+    };
+
+    // Wrap base
+    if !claimed.is_zero() {
+        messages.push(derivative.wrap_base(claimed)?);
+    }
 
     Ok(Response::new()
-       .set_data(to_binary(&adapter::ExecuteAnswer::Update {
+        .set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
         })?)
+        .add_messages(messages),
     )
 }

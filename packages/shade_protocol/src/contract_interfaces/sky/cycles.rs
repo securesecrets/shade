@@ -134,7 +134,7 @@ impl ArbPair {
                 }
             }
             Dex::ShadeSwap => {
-                let res = shadeswap::PairQuery::PairInfo
+                let res = shadeswap::PairQuery::GetPairInfo {}
                     .query(querier, &self.pair_contract.clone().unwrap())?;
                 match res {
                     shadeswap::PairInfoResponse {
@@ -395,6 +395,7 @@ pub enum DerivativeType {
 pub struct Derivative {
     pub contract: Contract,
     pub base_asset: Contract,
+    pub base_denom: String,
     pub staking_type: DerivativeType,
     pub deriv_decimals: u32,
     pub base_decimals: u32,
@@ -492,6 +493,28 @@ impl Derivative {
         }
     }
 
+    pub fn query_deriv_balance(
+        &self,
+        querier: &QuerierWrapper,
+        addr: Addr,
+        viewing_key: String,
+    ) -> StdResult<Uint128> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                let response = stkd::QueryMsg::Balance {
+                    address: addr,
+                    key: viewing_key,
+                }
+                .query(querier, &self.contract)?;
+                
+                match response {
+                    stkd::QueryAnswer::Balance { amount } => Ok(amount),
+                    _ => Ok(Uint128::zero()),
+                }
+            }
+        }
+    }
+
     pub fn query_unbondings(
         &self,
         querier: &QuerierWrapper, 
@@ -521,6 +544,34 @@ impl Derivative {
             }
         }
     }
+
+    pub fn query_claimable(
+        &self,
+        querier: &QuerierWrapper, 
+        addr: Addr,
+        viewing_key: String,
+        time: u64,
+    ) -> StdResult<Uint128> {
+        match self.staking_type {
+            DerivativeType::StkdScrt => {
+                let stkd_response = stkd::QueryMsg::Unbonding {
+                    address: addr,
+                    key: viewing_key.clone(),
+                    page: None,
+                    page_size: None,
+                    time: Some(time),
+                }
+                .query(querier, &self.contract)?;
+                match stkd_response {
+                    stkd::QueryAnswer::Unbonding { claimable_scrt, .. } => {
+                        Ok(claimable_scrt.unwrap_or_default())
+                    },
+                    _ => Ok(Uint128::zero()),
+                }
+            }
+        }
+    }
+
 }
 
 #[cw_serde]

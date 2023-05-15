@@ -1,7 +1,10 @@
 [package]
 name = "mock_sienna_pair"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+  "Aidan St. George <aidanstgeorge1@gmail.com>",
+]
 edition = "2018"
 
 exclude = [

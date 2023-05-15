@@ -197,7 +197,6 @@ pub fn execute(
             Ok(Response::default()
                .add_messages(messages))
         }
-        // TODO: fees
         ExecuteMsg::Stake {} => {
             let mut amount = Uint128::zero();
             for coin in info.funds {
@@ -237,7 +236,8 @@ pub fn execute(
             let time = Time::load(deps.storage)?.0;
             let maturity = time + config.unbonding_time 
                 + config.unbonding_batch_interval - (time % config.unbonding_batch_interval);
-            let unbond_amount = redeem_amount - (redeem_amount * config.unbond_commission);
+            let unbond_amount = (redeem_amount - (redeem_amount * config.unbond_commission))
+                .multiply_ratio(Price::load(deps.storage)?.0, Uint128::from(1_000_000u32));
             let unbonding = Unbonding {
                 amount: unbond_amount,
                 maturity,
@@ -249,8 +249,8 @@ pub fn execute(
             Unbondings(unbondings).save(deps.storage, info.sender.clone())?;
 
             Balance(balance - redeem_amount).save(deps.storage, info.sender)?;
-            let scrt_amount = redeem_amount
-                .multiply_ratio(Price::load(deps.storage)?.0, Uint128::from(1_000_000u32));
+            let scrt_amount = redeem_amount;
+                //TODO.multiply_ratio(Price::load(deps.storage)?.0, Uint128::from(1_000_000u32));
             Ok(Response::default()
                 .set_data(to_binary(&ExecuteAnswer::Unbond {
                     tokens_redeemed: redeem_amount,
@@ -272,7 +272,14 @@ pub fn execute(
                     new_unbondings.push(unbonding);
                 }
             }
-            let returned = claimable.multiply_ratio(Price::load(deps.storage)?.0, Uint128::new(1_000_000));
+
+            if claimable.is_zero() {
+                return Ok(Response::default()
+                          .set_data(to_binary(&ExecuteAnswer::Claim {
+                          withdrawn: Uint128::zero(),
+                          fees: Uint128::zero(),
+                })?))
+            }
             Unbondings(new_unbondings).save(deps.storage, info.sender.clone())?;
             
             Ok(Response::default()
@@ -283,7 +290,7 @@ pub fn execute(
                .add_message(BankMsg::Send {
                    to_address: info.sender.to_string(),
                    amount: vec![Coin {
-                       amount: returned,
+                       amount: claimable,
                        denom: "uscrt".to_string(),
                    }]
                }))
@@ -349,7 +356,7 @@ pub fn query(
                 price,
             })
         },
-        QueryMsg::Unbonding { address, key, .. } => {
+        QueryMsg::Unbonding { address, key, time, .. } => {
             if key != ViewingKey::load(deps.storage, address.clone())?.0 {
                 return Err(StdError::generic_err("unauthorized"));
             }
@@ -357,11 +364,12 @@ pub fn query(
             let mut count: u64 = 0;
             let mut unbonds = vec![];
             let mut amount_in_next_batch = Uint128::zero();
-            let time = Time::load(deps.storage)?.0;
+            let mut claimable = Uint128::zero();
+            let cur_time = Time::load(deps.storage)?.0;
             let config = Config::load(deps.storage)?;
             let unbondings = Unbondings::load(deps.storage, address).unwrap_or_default().0;
             for unbonding in unbondings {
-                if unbonding.maturity <= time + config.unbonding_time {
+                if unbonding.maturity <= cur_time + config.unbonding_time {
                     count += 1;
                     unbonds.push(Unbond {
                         amount: unbonding.amount,
@@ -371,11 +379,22 @@ pub fn query(
                 } else {
                     amount_in_next_batch += unbonding.amount;
                 }
+
+                if let Some(query_time) = time {
+                    if query_time >= unbonding.maturity as u64 {
+                        claimable += unbonding.amount;
+                    }
+                }
+            }
+
+            let mut claimable_scrt = None;
+            if time.is_some() {
+                claimable_scrt = Some(claimable);
             }
 
             to_binary(&QueryAnswer::Unbonding { 
                 count,
-                claimable_scrt: None,
+                claimable_scrt,
                 unbondings: unbonds,
                 unbond_amount_in_next_batch: amount_in_next_batch,
                 estimated_time_of_maturity_for_next_batch: None,

@@ -34,7 +34,6 @@ dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
 # shade-oracles = ["dep:shade-oracles"]
 peg_stability = ["dep:peg_stability"]
 sky_derivatives = ["dep:sky_derivatives"]
-mock_sienna_pair = ["dep:mock_sienna_pair"]
 snip20_migration = ["dep:snip20_migration"]
 
 [dependencies]

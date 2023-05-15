@@ -28,21 +28,15 @@ use shade_protocol::utils::{
     MultiTestable,
     Query,
 };
-use shade_protocol_temp::utils::{
-    InstantiateCallback as OtherInstantiateCallback,
-    MultiTestable as OtherMultiTestable,
-    ExecuteCallback as OtherExecuteCallback,
-    Query as OtherQuery,
-};
 use shade_protocol::multi_test::App;
 use shade_multi_test::multi::{
     admin::init_admin_auth,
     snip20::Snip20,
     sky_derivatives::SkyDerivatives,
+    mock_stkd::MockStkd,
 };
-use shade_multi_test_temp::multi::mock_stkd::MockStkd;
-use mock_stkd_temp::contract as mock_stkd;
-use mock_sienna_temp::contract as mock_sienna;
+use mock_stkd::contract as mock_stkd;
+use mock_sienna::contract as mock_sienna;
 
 use crate::tests::{init, init_with_pair, fill_dex_pairs, seeded_pair};
 
@@ -347,6 +341,7 @@ fn is_profitable() {
         derivative: Some(Derivative {
             contract: deriv.clone().into(),
             base_asset: base.clone().into(),
+            base_denom: "uscrt".into(),
             staking_type: DerivativeType::StkdScrt,
             base_decimals: 6u32,
             deriv_decimals: 8u32,
@@ -472,7 +467,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::zero(),
@@ -489,7 +484,7 @@ fn adapter_balance() {
  
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(20_000),
@@ -509,7 +504,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(10_000),
@@ -523,7 +518,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(14_998),
@@ -537,7 +532,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(14_998),
@@ -551,7 +546,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(19_976),
@@ -569,7 +564,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(19_976),
@@ -591,7 +586,7 @@ fn adapter_balance() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(19_976),
@@ -601,7 +596,7 @@ fn adapter_balance() {
     // Bad Address
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: Addr::unchecked("Bad asset"),
+            asset: "Bad asset".to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::zero(),
@@ -624,7 +619,7 @@ fn adapter_claimable() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Claimable {
             amount: Uint128::zero(),
@@ -646,7 +641,7 @@ fn adapter_claimable() {
     }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
 
     ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
-        asset: base.address.clone(),
+        asset: base.address.to_string(),
         amount: Uint128::new(10_000),
     }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
 
@@ -664,7 +659,7 @@ fn adapter_claimable() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Claimable {
             amount: Uint128::new(10_000),
@@ -674,7 +669,7 @@ fn adapter_claimable() {
     // Bad Address
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
-            asset: Addr::unchecked("Bad asset"),
+            asset: "Bad asset".to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Claimable {
             amount: Uint128::zero(),
@@ -696,7 +691,7 @@ fn adapter_unbonding() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbonding {
             amount: Uint128::zero(),
@@ -717,13 +712,13 @@ fn adapter_unbonding() {
         redeem_amount: Uint128::new(9980),
     }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
     ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
-        asset: base.address.clone(),
+        asset: base.address.to_string(),
         amount: Uint128::new(10_000),
     }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbonding {
             amount: Uint128::new(10_000),
@@ -744,16 +739,38 @@ fn adapter_unbonding() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbonding {
             amount: Uint128::new(10_000),
         },
     );
 
-    // Update =
+    // Update and claim
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::new(10_000),
+        },
+    );
 
-    assert!(false);
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::zero(),
+        },
+    );
+
 }
 
 #[test]
@@ -762,7 +779,7 @@ fn adapter_unbondable() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbondable {
             amount: Uint128::zero(),
@@ -779,7 +796,7 @@ fn adapter_unbondable() {
  
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbondable {
             amount: Uint128::new(20_000),
@@ -799,7 +816,7 @@ fn adapter_unbondable() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbondable {
             amount: Uint128::new(10_000),
@@ -813,7 +830,7 @@ fn adapter_unbondable() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbondable {
             amount: Uint128::new(14_998),
@@ -823,7 +840,7 @@ fn adapter_unbondable() {
     // Bad Address
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-            asset: Addr::unchecked("Bad asset"),
+            asset: "Bad asset".to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Unbondable {
             amount: Uint128::zero(),
@@ -837,7 +854,7 @@ fn adapter_reserves() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Reserves {
             amount: Uint128::zero(),

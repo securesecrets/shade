@@ -41,3 +41,5 @@ shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", feat
   "mock_stkd",
   "mock_sienna",
 ] }
+mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../mock/mock_stkd_derivative" }
+mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../mock/mock_sienna_pair" }

@@ -1,7 +1,7 @@
 use shade_protocol::c_std::{
     to_binary, from_binary,
     Addr, StdError, Uint128, Coin,
-    Decimal,
+    Decimal
 };
 use shade_protocol::contract_interfaces::{
     dao::adapter,
@@ -22,8 +22,8 @@ use shade_protocol::contract_interfaces::{
     },
     admin,
     snip20,
+    stkd,
 };
-use shade_protocol_temp::stkd;
 use shade_protocol::utils::{
     asset::Contract,
     generic_response::ResponseStatus,
@@ -32,21 +32,15 @@ use shade_protocol::utils::{
     MultiTestable,
     Query,
 };
-use shade_protocol_temp::utils::{
-    InstantiateCallback as OtherInstantiateCallback,
-    MultiTestable as OtherMultiTestable,
-    ExecuteCallback as OtherExecuteCallback,
-    Query as OtherQuery,
-};
 use shade_protocol::multi_test::App;
 use shade_multi_test::multi::{
     admin::init_admin_auth,
     snip20::Snip20,
     sky_derivatives::SkyDerivatives,
+    mock_stkd::MockStkd,
 };
-use shade_multi_test_temp::multi::mock_stkd::MockStkd;
-use mock_stkd_temp::contract as mock_stkd;
-use mock_sienna_temp::contract as mock_sienna;
+use mock_stkd::contract as mock_stkd;
+use mock_sienna::contract as mock_sienna;
 
 use crate::tests::{init, init_with_pair, fill_dex_pairs, seeded_pair};
 
@@ -109,6 +103,7 @@ fn update_config() {
     let new_derivative = Derivative {
         contract: new_deriv.clone().into(),
         base_asset: base.clone().into(),
+        base_denom: "uscrt".into(),
         staking_type: DerivativeType::StkdScrt,
         deriv_decimals: 6u32,
         base_decimals: 6u32,
@@ -241,6 +236,7 @@ fn update_config() {
     let another_new_derivative = Derivative {
         contract: another_new_deriv.clone().into(),
         base_asset: new_snip20.clone().into(),
+        base_denom: "uscrt".into(),
         staking_type: DerivativeType::StkdScrt,
         deriv_decimals: 6u32,
         base_decimals: 6u32,
@@ -541,7 +537,7 @@ fn arb_pair() {
     // Unprofitable
     assert_eq!(  // Pair: 1_000_000 deriv; 2_000_000 base
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: Uint128::new(1_000_000_000),
@@ -565,7 +561,7 @@ fn arb_pair() {
     let mut exp_balance = Uint128::new(1_000_000_000);
 
     assert_eq!(
-        QueryMsg::Adapter(adapter::SubQueryMsg::Balance { asset: base.address.clone(),
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance { asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance,
@@ -600,7 +596,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::new(1), // off by one
@@ -636,7 +632,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance,
@@ -670,7 +666,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance,
@@ -707,7 +703,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance,
@@ -754,7 +750,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance,
@@ -815,7 +811,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::one(),  // Off by one
@@ -855,7 +851,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance + Uint128::new(2), // Off by two
@@ -894,6 +890,7 @@ fn arb_pair() {
         derivative: Some(Derivative {
             contract: new_deriv.clone().into(),
             base_asset: base.clone().into(),
+            base_denom: "uscrt".into(),
             staking_type: DerivativeType::StkdScrt,
             base_decimals: 6u32,
             deriv_decimals: 5u32,
@@ -919,7 +916,7 @@ fn arb_pair() {
     }.test_exec(&arb, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     let balance_query = QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-        asset: base.address.clone()
+        asset: base.address.to_string()
     }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap();
     let mut exp_balance = match balance_query {
         adapter::QueryAnswer::Balance { amount } => amount,
@@ -950,7 +947,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::new(7), // off by 7 because of decimal cutoff
@@ -989,7 +986,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::new(3), // Off by 3 because of decimal cutoff
@@ -1017,7 +1014,7 @@ fn arb_pair() {
     }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
 
     let balance_query = QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-        asset: base.address.clone()
+        asset: base.address.to_string()
     }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap();
     let mut exp_balance = match balance_query {
         adapter::QueryAnswer::Balance { amount } => amount,
@@ -1048,7 +1045,7 @@ fn arb_pair() {
 
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::new(8), // Off by 8 because of rounding
@@ -1191,6 +1188,7 @@ fn arb_all_pairs() {
         derivative: Some(Derivative {
             contract: deriv.clone().into(),
             base_asset: base.clone().into(),
+            base_denom: "uscrt".into(),
             staking_type: DerivativeType::StkdScrt,
             base_decimals: 6u32,
             deriv_decimals: 5u32,
@@ -1291,7 +1289,7 @@ fn arb_all_pairs() {
     let exp_balance = Uint128::new(1_000_000_000) + exp_profit;
     assert_eq!(
         QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: base.address.clone(),
+            asset: base.address.to_string(),
         }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
         adapter::QueryAnswer::Balance {
             amount: exp_balance - Uint128::new(8), // Off by 8 because of decimal cutoff
@@ -1299,19 +1297,349 @@ fn arb_all_pairs() {
     );
 }
 
-/*
 #[test]
 fn adapter_unbond() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    // With no balance
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        },
+    );
+
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.to_string(),
+        amount: Uint128::new(1_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: Uint128::zero(),
+        },
+    );
+
+    // With base balance
+    snip20::ExecuteMsg::Transfer { // initial balance
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+    
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.to_string(),
+        amount: Uint128::new(1_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: Uint128::new(1000),
+        },
+    );
+
+    snip20::ExecuteMsg::SetViewingKey {
+        key: "key".to_string(),
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        snip20::QueryMsg::Balance {
+            address: "treasury".to_string(),
+            key: "key".to_string(),
+        }.test_query::<snip20::QueryAnswer>(&base, &chain).unwrap(),
+        snip20::QueryAnswer::Balance {
+            amount: Uint128::new(1000),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::new(19_000),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::zero(), 
+        },
+    );
+
+    // Without base balance
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(10_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &vec![
+               Coin { amount: Uint128::new(10_000), denom: "uscrt".into() },
+    ]).unwrap();
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(4990),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.to_string(),
+        amount: Uint128::new(15_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: Uint128::new(15_000),
+        },
+    );
+
+    assert_eq!(
+        snip20::QueryMsg::Balance {
+            address: "treasury".to_string(),
+            key: "key".to_string(),
+        }.test_query::<snip20::QueryAnswer>(&base, &chain).unwrap(),
+        snip20::QueryAnswer::Balance {
+            amount: Uint128::new(10_000),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::new(3_976),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::new(6_000),
+        },
+    );
+
+    // Absurd unbond amount
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.to_string(),
+        amount: Uint128::MAX,
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: Uint128::new(3976),
+        },
+    );
+
+    assert_eq!(
+        snip20::QueryMsg::Balance {
+            address: "treasury".to_string(),
+            key: "key".to_string(),
+        }.test_query::<snip20::QueryAnswer>(&base, &chain).unwrap(),
+        snip20::QueryAnswer::Balance {
+            amount: Uint128::new(10_000),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbondable {
+            amount: Uint128::zero(),
+        },
+    );
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Unbonding {
+            amount: Uint128::new(9976),
+        },
+    );
+
+    // Unauthorized address
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+            asset: base.address.to_string(),
+            amount: Uint128::new(1000),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("bad actor"), &[]).is_err()
+    );
+
+    // Unrecognized asset
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+            asset: deriv.address.to_string(),
+            amount: Uint128::new(1000),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).is_err()
+    );
+
 }
 
 #[test]
 fn adapter_claim() {
-    assert!(false);
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    snip20::ExecuteMsg::SetViewingKey {
+        key: "key".to_string(),
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    // Zero balance
+    assert_eq!(
+        QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+            asset: base.address.to_string(),
+        }).test_query::<adapter::QueryAnswer>(&arb, &chain).unwrap(),
+        adapter::QueryAnswer::Balance {
+            amount: Uint128::zero(),
+        },
+    );
+
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Claim {
+            status: ResponseStatus::Failure,
+            amount: Uint128::zero(),
+        },
+    );
+
+    // No unbondings
+    snip20::ExecuteMsg::Transfer {
+        recipient: arb.address.to_string(),
+        amount: Uint128::new(20_000),
+        memo: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Claim {
+            status: ResponseStatus::Failure,
+            amount: Uint128::zero(),
+        },
+    );
+
+    // Unbondings to claim
+    snip20::ExecuteMsg::Redeem {
+        amount: Uint128::new(10_000),
+        denom: None,
+        padding: None,
+    }.test_exec(&base, &mut chain, arb.address.clone(), &[]).unwrap();
+    mock_stkd::ExecuteMsg::Stake {}
+    .test_exec(&deriv, &mut chain, arb.address.clone(), &vec![
+               Coin { amount: Uint128::new(10_000), denom: "uscrt".into() },
+    ]).unwrap();
+    mock_stkd::ExecuteMsg::Unbond {
+        redeem_amount: Uint128::new(4990),
+    }.test_exec(&deriv, &mut chain, arb.address.clone(), &[]).unwrap();
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: base.address.to_string(),
+        amount: Uint128::new(15_000),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Claim {
+            status: ResponseStatus::Failure,
+            amount: Uint128::new(0),
+        },
+    );
+    assert_eq!(
+        snip20::QueryMsg::Balance {
+            address: "treasury".to_string(),
+            key: "key".to_string(),
+        }.test_query::<snip20::QueryAnswer>(&base, &chain).unwrap(),
+        snip20::QueryAnswer::Balance {
+            amount: Uint128::new(10_000),
+        },
+    );
+
+    stkd::HandleMsg::MockFastForward {
+        steps: 25,
+    }.test_exec(&deriv, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
+    ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+    let response = ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: base.address.to_string(),
+    }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    assert_eq!(
+        from_binary::<adapter::ExecuteAnswer>(&response.data.unwrap()).unwrap(),
+        adapter::ExecuteAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount: Uint128::new(5_000),
+        },
+    );
+    assert_eq!(
+        snip20::QueryMsg::Balance {
+            address: "treasury".to_string(),
+            key: "key".to_string(),
+        }.test_query::<snip20::QueryAnswer>(&base, &chain).unwrap(),
+        snip20::QueryAnswer::Balance {
+            amount: Uint128::new(15_000),
+        },
+    );
+
+    // Unauthorized address
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+            asset: base.address.to_string(),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("bad actor"), &[]).is_err()
+    );
+
+    // Unrecognized asset
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+            asset: deriv.address.to_string(),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).is_err()
+    );
+
 }
 
 #[test]
 fn adapter_update() {
+    let (mut chain, admin, base, deriv, arb, config) = init();
+
+    snip20::ExecuteMsg::SetViewingKey {
+        key: "key".to_string(),
+        padding: None,
+    }.test_exec(&base, &mut chain, Addr::unchecked("treasury"), &[]).unwrap();
+
+    // Make sure arb has unwrapped and wrapped base, unclaimed derivative, and liquid derivative.
+
+    // Update and check balances
+
+    // Unauthorized address
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+            asset: base.address.to_string(),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("bad actor"), &[]).is_err()
+    );
+
+    // Unrecognized asset
+    assert!(
+        ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+            asset: deriv.address.to_string(),
+        }).test_exec(&arb, &mut chain, Addr::unchecked("treasury"), &[]).is_err()
+    );
+
     assert!(false);
 }
-*/

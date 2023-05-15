@@ -1,7 +1,6 @@
 use std::convert::TryInto;
 use shade_protocol::{
 	c_std::{
-        Addr, 
         Deps,
         StdError, 
         StdResult,
@@ -234,7 +233,7 @@ pub fn is_any_pair_profitable(
     })
 }
 
-pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn adapter_balance(deps: Deps, asset: String) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(deps.storage)?;
     let derivative = config.derivative;
 
@@ -256,26 +255,13 @@ pub fn adapter_balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswe
         self_addr.clone(), 
         config.viewing_key.clone(),
     )?;
-    let price = derivative.query_exchange_price(&deps.querier)?;
-
-    // TODO: when available checked math for multiplying Uint128 and Decimal
-    let mut derivative_value = unbondings * price;
-    if derivative.deriv_decimals != derivative.base_decimals { // Adjust to match base decimals
-        if derivative.deriv_decimals > derivative.base_decimals {
-            derivative_value *= Uint128::new(10)
-                .pow(derivative.deriv_decimals - derivative.base_decimals);
-        } else {
-            derivative_value *= Uint128::new(10)
-                .pow(derivative.base_decimals - derivative.deriv_decimals);
-        }
-    }
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: balance.checked_add(derivative_value)?,
+        amount: balance.checked_add(unbondings)?,
     })
 }
 
-pub fn adapter_claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn adapter_claimable(deps: Deps, asset: String) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(deps.storage)?;
 
     // Only relevant token sky staking holds
@@ -301,7 +287,7 @@ pub fn adapter_claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAns
     })
 }
 
-pub fn adapter_unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn adapter_unbonding(deps: Deps, asset: String) -> StdResult<adapter::QueryAnswer> {
     let derivative = Config::load(deps.storage)?.derivative;
 
     // Only relevant token sky staking holds
@@ -316,18 +302,28 @@ pub fn adapter_unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAns
     })
 }
 
-pub fn adapter_unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    // Whole balance is unbondable
+pub fn adapter_unbondable(deps: Deps, asset: String) -> StdResult<adapter::QueryAnswer> {
+    let derivative = Config::load(deps.storage)?.derivative;
+
+    // Only relevant token sky staking holds
+    if asset != derivative.base_asset.address {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: Uint128::zero(),
+        })
+    }
+
+    // Whole balance is unbondable, minus already unbonding
+    let unbondings = TreasuryUnbondings::load(deps.storage)?.0;
     if let adapter::QueryAnswer::Balance { amount } = adapter_balance(deps, asset)? {
         Ok(adapter::QueryAnswer::Unbondable {
-            amount,
+            amount: amount.saturating_sub(unbondings),
         })
     } else {
         Err(StdError::generic_err("This should not happen!"))
     }
 }
 
-pub fn adapter_reserves(_deps: Deps, _asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn adapter_reserves(_deps: Deps, _asset: String) -> StdResult<adapter::QueryAnswer> {
     // Sky Staking has no reserves
     Ok(adapter::QueryAnswer::Reserves {
         amount: Uint128::zero(),
