@@ -74,6 +74,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             burnable,
             ..
         } => {
+            let config = CONFIG.load(deps.storage)?;
+            validate_admin(
+                &deps.querier,
+                AdminPermissions::Snip20MigrationAdmin,
+                info.sender.to_string(),
+                &config.admin,
+            )?;
             let tokens = RegisteredToken {
                 burn_token: burn_token.into_valid(deps.api)?,
                 mint_token: mint_token.into_valid(deps.api)?,
