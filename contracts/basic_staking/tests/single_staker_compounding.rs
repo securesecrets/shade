@@ -148,11 +148,13 @@ fn single_staker_compounding(
         }
     };
 
-    // Stake funds
+    // Stake half funds (half after some rewards to compound on stake)
+    let first_amount = stake_amount / Uint128::new(2);
+    let second_amount = stake_amount - first_amount;
     snip20::ExecuteMsg::Send {
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
-        amount: stake_amount,
+        amount: first_amount,
         msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
         memo: None,
         padding: None,
@@ -171,7 +173,7 @@ fn single_staker_compounding(
     .unwrap()
     {
         basic_staking::QueryAnswer::Staked { amount } => {
-            assert_eq!(amount, stake_amount, "Post-Stake Balance");
+            assert_eq!(amount, first_amount, "Post First Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -220,6 +222,7 @@ fn single_staker_compounding(
         .unwrap()
     {
         basic_staking::QueryAnswer::RewardPools { rewards } => {
+            println!("init rewards {:?}", rewards);
             assert_eq!(rewards[0].amount, reward_amount, "Reward Pool Amount");
             assert_eq!(rewards[0].start, reward_start, "Reward Pool Start");
             assert_eq!(rewards[0].end, reward_end, "Reward Pool End");
@@ -299,9 +302,27 @@ fn single_staker_compounding(
     };
 
     // Compound rewards
+    /*
     basic_staking::ExecuteMsg::Compound {}
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
+    */
+    // Stake & compound
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: second_amount,
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: Some(true),
+            })
+            .unwrap(),
+        ),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     // Re-query rewards
     match (basic_staking::QueryMsg::Rewards {
@@ -513,7 +534,7 @@ macro_rules! single_staker_compounding {
 
 single_staker_compounding! {
     single_staker_compounding_0: (
-        Uint128::new(1), //   stake_amount
+        Uint128::new(2), //   stake_amount
         Uint128::new(100), // unbond_period
         Uint128::new(100), // reward_amount
         Uint128::new(0), //   reward_start (0-*)

@@ -180,10 +180,14 @@ pub fn receive(
                         )?;
                     }
                 }
-                USER_STAKED.save(deps.storage, from.clone(), &(user_staked + amount))?;
+                USER_STAKED.save(
+                    deps.storage,
+                    from.clone(),
+                    &(user_staked + amount + compound_amount),
+                )?;
+                TOTAL_STAKED.save(deps.storage, &(total_staked + amount + compound_amount))?;
 
                 REWARD_POOLS.save(deps.storage, &reward_pools.clone())?;
-                TOTAL_STAKED.save(deps.storage, &(total_staked + amount))?;
                 USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
                 Ok(response.set_data(to_binary(&ExecuteAnswer::Stake {
