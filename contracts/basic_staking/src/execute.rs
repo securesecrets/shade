@@ -264,8 +264,8 @@ pub fn receive(
                         }
                     }
 
-                    let new_id = match reward_pools.last() {
-                        Some(pool) => pool.id + Uint128::one(),
+                    let new_id = match reward_pools.iter().map(|p| p.id).max() {
+                        Some(max_id) => max_id + Uint128::one(),
                         None => Uint128::zero(),
                     };
 
