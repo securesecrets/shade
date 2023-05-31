@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -115,6 +115,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
+        airdrop: None,
         treasury: treasury.into(),
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
@@ -136,7 +137,13 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }
@@ -148,7 +155,13 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: transfer_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }

@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -106,6 +106,7 @@ fn unbonding_withdrawals(
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
+        airdrop: None,
         stake_token: token.clone().into(),
         treasury: treasury.into(),
         unbond_period,
@@ -128,7 +129,13 @@ fn unbonding_withdrawals(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }

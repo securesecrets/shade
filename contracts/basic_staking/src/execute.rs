@@ -15,10 +15,12 @@ use shade_protocol::{
         Storage,
         Uint128,
     },
+    contract_interfaces::airdrop::ExecuteMsg::CompleteTask,
     snip20::helpers::{register_receive, send_msg, set_viewing_key_msg},
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
+        ExecuteCallback,
     },
 };
 
@@ -31,6 +33,7 @@ pub fn update_config(
     info: MessageInfo,
     admin_auth: Option<RawContract>,
     query_auth: Option<RawContract>,
+    airdrop: Option<RawContract>,
     unbond_period: Option<Uint128>,
     max_user_pools: Option<Uint128>,
     reward_cancel_threshold: Option<Uint128>,
@@ -50,6 +53,10 @@ pub fn update_config(
 
     if let Some(query_auth) = query_auth {
         config.query_auth = query_auth.into_valid(deps.api)?;
+    }
+
+    if let Some(airdrop) = airdrop {
+        config.airdrop = Some(airdrop.into_valid(deps.api)?);
     }
 
     if let Some(unbond_period) = unbond_period {
@@ -119,7 +126,10 @@ pub fn receive(
 
     match msg {
         Some(m) => match from_binary(&m)? {
-            Action::Stake { compound } => {
+            Action::Stake {
+                compound,
+                airdrop_task,
+            } => {
                 let stake_token = STAKE_TOKEN.load(deps.storage)?;
                 if info.sender != stake_token.address {
                     return Err(StdError::generic_err(format!(
@@ -180,6 +190,23 @@ pub fn receive(
                         )?;
                     }
                 }
+
+                // Send airdrop message
+                if let Some(true) = airdrop_task {
+                    let config = CONFIG.load(deps.storage)?;
+                    if let Some(airdrop) = config.airdrop {
+                        response = response.add_message(
+                            CompleteTask {
+                                address: from.clone(),
+                                padding: None,
+                            }
+                            .to_cosmos_msg(&airdrop, vec![])?,
+                        );
+                    } else {
+                        return Err(StdError::generic_err("No airdrop contract configured"));
+                    }
+                }
+
                 USER_STAKED.save(
                     deps.storage,
                     from.clone(),

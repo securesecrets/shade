@@ -27,6 +27,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "math",
   "storage_plus",
   "admin",
+  "airdrop",
 ] }
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
 

@@ -31,6 +31,10 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &Config {
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         query_auth: msg.query_auth.into_valid(deps.api)?,
+        airdrop: match msg.airdrop {
+            Some(airdrop) => Some(airdrop.into_valid(deps.api)?),
+            None => None,
+        },
         treasury: deps.api.addr_validate(&msg.treasury)?,
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
@@ -63,6 +67,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::UpdateConfig {
             admin_auth,
             query_auth,
+            airdrop,
             unbond_period,
             max_user_pools,
             reward_cancel_threshold,
@@ -72,6 +77,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             info,
             admin_auth,
             query_auth,
+            airdrop,
             unbond_period,
             max_user_pools,
             reward_cancel_threshold,

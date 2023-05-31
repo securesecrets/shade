@@ -17,6 +17,7 @@ use cosmwasm_schema::cw_serde;
 pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
+    pub airdrop: Option<Contract>,
     pub treasury: Addr,
     pub unbond_period: Uint128,
     // Number of non-admin pools allowed
@@ -38,8 +39,14 @@ pub struct StakingInfo {
 #[cw_serde]
 pub enum Action {
     // Deposit rewards to be distributed
-    Stake { compound: Option<bool> },
-    Rewards { start: Uint128, end: Uint128 },
+    Stake {
+        compound: Option<bool>,
+        airdrop_task: Option<bool>,
+    },
+    Rewards {
+        start: Uint128,
+        end: Uint128,
+    },
 }
 
 #[cw_serde]
@@ -87,6 +94,7 @@ pub struct RewardPool {
 pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
+    pub airdrop: Option<RawContract>,
     pub stake_token: RawContract,
     pub treasury: String,
     pub unbond_period: Uint128,
@@ -104,6 +112,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin_auth: Option<RawContract>,
         query_auth: Option<RawContract>,
+        airdrop: Option<RawContract>,
         unbond_period: Option<Uint128>,
         max_user_pools: Option<Uint128>,
         reward_cancel_threshold: Option<Uint128>,
