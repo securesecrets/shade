@@ -170,14 +170,19 @@ pub fn receive(
                             compound_amount += reward_claimed;
                         } else {
                             // Claim if not compound or not stake token rewards
-                            response = response.add_message(send_msg(
-                                info.sender.clone(),
-                                reward_claimed,
-                                None,
-                                None,
-                                None,
-                                &reward_pool.token,
-                            )?);
+                            response = response
+                                .add_message(send_msg(
+                                    info.sender.clone(),
+                                    reward_claimed,
+                                    None,
+                                    None,
+                                    None,
+                                    &reward_pool.token,
+                                )?)
+                                .add_attribute(
+                                    reward_pool.token.address.to_string(),
+                                    reward_claimed,
+                                );
                         }
                     }
                 } else {
@@ -205,6 +210,10 @@ pub fn receive(
                     } else {
                         return Err(StdError::generic_err("No airdrop contract configured"));
                     }
+                }
+
+                if compound_amount > Uint128::zero() {
+                    response = response.add_attribute("compounded", compound_amount);
                 }
 
                 USER_STAKED.save(
@@ -405,14 +414,16 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
         reward_pool.claimed += reward_claimed;
 
-        response = response.add_message(send_msg(
-            info.sender.clone(),
-            reward_claimed,
-            None,
-            None,
-            None,
-            &reward_pool.token,
-        )?);
+        response = response
+            .add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
+            )?)
+            .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
     }
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
@@ -469,14 +480,16 @@ pub fn unbond(
                 compound_amount += reward_claimed;
             } else {
                 // Claim if not compound or not stake token rewards
-                response = response.add_message(send_msg(
-                    info.sender.clone(),
-                    reward_claimed,
-                    None,
-                    None,
-                    None,
-                    &reward_pool.token,
-                )?);
+                response = response
+                    .add_message(send_msg(
+                        info.sender.clone(),
+                        reward_claimed,
+                        None,
+                        None,
+                        None,
+                        &reward_pool.token,
+                    )?)
+                    .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
             }
         }
 
@@ -487,6 +500,9 @@ pub fn unbond(
                 amount,
                 user_staked + compound_amount,
             )));
+        }
+        if compound_amount > Uint128::zero() {
+            response = response.add_attribute("compounded", compound_amount);
         }
 
         user_staked = (user_staked + compound_amount) - amount;
@@ -664,17 +680,23 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
             compound_amount += reward_claimed;
         } else {
             // Claim non-stake_token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
+            response = response
+                .add_message(send_msg(
+                    info.sender.clone(),
+                    reward_claimed,
+                    None,
+                    None,
+                    None,
+                    &reward_pool.token,
+                )?)
+                .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
         }
     }
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
+
+    if compound_amount > Uint128::zero() {
+        response = response.add_attribute("compounded", compound_amount);
+    }
 
     USER_STAKED.save(
         deps.storage,
@@ -712,8 +734,8 @@ pub fn end_reward_pool(
 
     let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
 
-    let total_staked = TOTAL_STAKED.load(deps.storage)?;
-    let mut response = Response::new();
+    // let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    let response = Response::new();
 
     // Amount of rewards pulled from contract
     let mut extract_amount = Uint128::zero();
@@ -734,7 +756,7 @@ pub fn end_reward_pool(
     // Remove reward pool, will edit & push it later
     reward_pools.remove(pool_i);
 
-    let mut deleted: bool;
+    let deleted: bool;
 
     // Delete reward pool if it hasn't started
     if reward_pool.start < now {
@@ -893,15 +915,20 @@ pub fn transfer_stake(
             sender_compound_amount += reward_claimed;
         } else {
             // Claim if not compound or not stake token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
+            response = response
+                .add_message(send_msg(
+                    info.sender.clone(),
+                    reward_claimed,
+                    None,
+                    None,
+                    None,
+                    &reward_pool.token,
+                )?)
+                .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
         }
+    }
+    if sender_compound_amount > Uint128::zero() {
+        response = response.add_attribute("compounded", sender_compound_amount);
     }
 
     // Claim for receiving user
@@ -909,7 +936,7 @@ pub fn transfer_stake(
         .may_load(deps.storage, recipient.clone())?
         .unwrap_or(Uint128::zero());
 
-    // Claim rewards for Sender (no compound)
+    // Claim rewards for Receiver (no compound)
     for reward_pool in reward_pools.iter_mut() {
         let reward_claimed = reward_pool_claim(
             deps.storage,
