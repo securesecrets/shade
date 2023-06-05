@@ -389,7 +389,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
     if user_staked.is_zero() {
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Claim {
-            // claimed: Uint128::zero(),
             status: ResponseStatus::Success,
         })?));
     }

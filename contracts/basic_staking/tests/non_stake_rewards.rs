@@ -394,7 +394,7 @@ fn non_stake_rewards(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    basic_staking::ExecuteMsg::Compound {}
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
