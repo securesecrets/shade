@@ -37,7 +37,6 @@ pub fn instantiate(
         },
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
-        reward_cancel_threshold: msg.reward_cancel_threshold,
     })?;
 
     let stake_token = msg.stake_token.into_valid(deps.api)?;
@@ -69,7 +68,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             airdrop,
             unbond_period,
             max_user_pools,
-            reward_cancel_threshold,
         } => execute::update_config(
             deps,
             env,
@@ -79,7 +77,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             airdrop,
             unbond_period,
             max_user_pools,
-            reward_cancel_threshold,
         ),
         ExecuteMsg::RegisterRewards { token } => {
             let api = deps.api;

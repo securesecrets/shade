@@ -76,7 +76,6 @@ fn non_admin_access() {
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -93,7 +92,6 @@ fn non_admin_access() {
         airdrop: None,
         unbond_period: None,
         max_user_pools: None,
-        reward_cancel_threshold: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {

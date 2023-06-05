@@ -146,7 +146,6 @@ fn non_stake_rewards(
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),

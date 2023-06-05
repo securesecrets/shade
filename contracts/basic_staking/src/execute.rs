@@ -36,7 +36,6 @@ pub fn update_config(
     airdrop: Option<RawContract>,
     unbond_period: Option<Uint128>,
     max_user_pools: Option<Uint128>,
-    reward_cancel_threshold: Option<Uint128>,
 ) -> StdResult<Response> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -65,10 +64,6 @@ pub fn update_config(
 
     if let Some(max_user_pools) = max_user_pools {
         config.max_user_pools = max_user_pools;
-    }
-
-    if let Some(reward_cancel_threshold) = reward_cancel_threshold {
-        config.reward_cancel_threshold = reward_cancel_threshold;
     }
 
     CONFIG.save(deps.storage, &config)?;
@@ -750,25 +745,29 @@ pub fn end_reward_pool(
         }
     };
 
-    let mut reward_pool = reward_pools[pool_i].clone();
-
     // Remove reward pool, will edit & push it later
-    reward_pools.remove(pool_i);
+    let mut reward_pool = reward_pools.remove(pool_i);
 
     // Delete reward pool if it hasn't started
-    let deleted = if reward_pool.start < now {
+    let deleted = if reward_pool.start > now {
+        println!("DELETING BEFORE START");
         extract_amount = reward_pool.amount;
         true
     }
-    // Trim off un-emitted tokens if reward pool hasn't ended
+    // Reward pool hasn't ended, trim off un-emitted tokens & edit pool to end now
     else if reward_pool.end > now {
         // remove rewards from now -> end
         extract_amount = reward_pool.rate * (reward_pool.end - now) / Uint128::new(10u128.pow(18));
+        println!("EXTRACTING {}", extract_amount);
         reward_pool.end = now;
         reward_pool.amount -= extract_amount;
 
-        reward_pools.push(reward_pool.clone());
-        false
+        if reward_pool.claimed == reward_pool.amount {
+            true
+        } else {
+            reward_pools.push(reward_pool.clone());
+            false
+        }
     }
     // Delete reward pool if reward pool is fully claimed, or forced
     else if reward_pool.claimed == reward_pool.amount || force {

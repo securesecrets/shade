@@ -129,7 +129,6 @@ fn multi_staker_single_pool(
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),

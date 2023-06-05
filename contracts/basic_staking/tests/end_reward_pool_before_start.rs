@@ -14,14 +14,14 @@ use shade_multi_test::multi::{
 };
 
 // Add other adapters here as they come
-fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_amount: Uint128) {
+#[test]
+fn end_reward_pool_before_start() {
     let mut app = App::default();
 
-    let mut now = 0;
     // init block time for predictable behavior
     app.set_block(BlockInfo {
         height: 1,
-        time: Timestamp::from_seconds(now),
+        time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
     });
 
@@ -30,7 +30,11 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
 
-    let extra_amount = Uint128::new(100000000000);
+    let stake_amount = Uint128::new(100);
+    let reward_start = Uint128::new(100);
+    let reward_end = Uint128::new(200);
+    let reward_amount = Uint128::new(100);
+    let unbond_period = Uint128::zero();
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -39,7 +43,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         decimals: 6,
         initial_balances: Some(vec![
             snip20::InitialBalance {
-                amount: stake_amount + extra_amount,
+                amount: stake_amount,
                 address: staking_user.to_string(),
             },
             snip20::InitialBalance {
@@ -74,6 +78,13 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     }
     .test_exec(&token, &mut app, staking_user.clone(), &[])
     .unwrap();
+    // set admin_user viewing key
+    snip20::ExecuteMsg::SetViewingKey {
+        key: viewing_key.clone(),
+        padding: None,
+    }
+    .test_exec(&token, &mut app, admin_user.clone(), &[])
+    .unwrap();
 
     let admin_contract = init_admin_auth(&mut app, &admin_user);
 
@@ -106,7 +117,6 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     .test_exec(&query_contract, &mut app, reward_user.clone(), &[])
     .unwrap();
 
-    // Init Staking
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
@@ -124,42 +134,24 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         &[],
     )
     .unwrap();
-    println!("BASIC STAKING {}", basic_staking.address);
 
-    now = 10;
-    app.set_block(BlockInfo {
-        height: 10,
-        time: Timestamp::from_seconds(now),
-        chain_id: "chain_id".to_string(),
-    });
-
-    let reward_end = now + 100000000;
-
-    // Init Rewards
-    snip20::ExecuteMsg::Send {
-        recipient: basic_staking.address.to_string().clone(),
-        recipient_code_hash: None,
-        amount: reward_amount,
-        msg: Some(
-            to_binary(&basic_staking::Action::Rewards {
-                start: Uint128::new(now as u128),
-                end: Uint128::new(reward_end as u128),
-            })
-            .unwrap(),
-        ),
-        memo: None,
-        padding: None,
-    }
-    .test_exec(&token, &mut app, reward_user.clone(), &[])
-    .unwrap();
-
-    // Check reward pool
-    match (basic_staking::QueryMsg::RewardPools {})
-        .test_query(&basic_staking, &app)
-        .unwrap()
+    // Pre-staking user stake amount
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
     {
-        basic_staking::QueryAnswer::RewardPools { rewards } => {
-            assert_eq!(rewards[0].amount, reward_amount, "Reward Pool Amount");
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            assert_eq!(staked, Uint128::zero(), "Pre-Stake Balance");
         }
         _ => {
             panic!("Staking balance query failed");
@@ -184,14 +176,6 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     .test_exec(&token, &mut app, staking_user.clone(), &[])
     .unwrap();
 
-    // Generate some rewards
-    now += reward_end / 4;
-    app.set_block(BlockInfo {
-        height: 10,
-        time: Timestamp::from_seconds(now),
-        chain_id: "chain_id".to_string(),
-    });
-
     // Post-staking user balance
     match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {
@@ -209,131 +193,80 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
             unbondings,
         } => {
             assert_eq!(staked, stake_amount, "Post-Stake Balance");
-            /*
-            panic!(
-                "REWARDS {}",
-                rewards.iter().map(|r| r.amount).sum::<Uint128>()
-            );
-            */
         }
         _ => {
             panic!("Staking balance query failed");
         }
     };
 
-    // Unbond all funds
-    basic_staking::ExecuteMsg::Unbond {
-        amount: stake_amount,
-        compound: None,
-    }
-    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-    .unwrap();
-
-    // Check balance reflects unbonding
-    match (basic_staking::QueryMsg::Balance {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-        unbonding_ids: None,
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
-    {
-        basic_staking::QueryAnswer::Balance {
-            staked,
-            rewards,
-            unbondings,
-        } => {
-            assert_eq!(staked, Uint128::zero(), "Post-Unbond stake amount p");
-            assert_eq!(unbondings.len(), 1, "Post unbond unbondings");
-            assert_eq!(
-                unbondings[0].amount, stake_amount,
-                "Post unbond amount unbonding"
-            );
-        }
-        _ => {
-            panic!("Staking balance query failed");
-        }
-    };
-
-    println!("Fast-forward to end of unbonding period");
-
-    now += unbond_period.u128() as u64;
-    app.set_block(BlockInfo {
-        height: 10,
-        time: Timestamp::from_seconds(now),
-        chain_id: "chain_id".to_string(),
-    });
-
-    // Restake
+    // Init Rewards
     snip20::ExecuteMsg::Send {
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
-        amount: stake_amount,
+        amount: reward_amount,
         msg: Some(
-            to_binary(&basic_staking::Action::Stake {
-                compound: None,
-                airdrop_task: None,
+            to_binary(&basic_staking::Action::Rewards {
+                start: reward_start,
+                end: reward_end,
             })
             .unwrap(),
         ),
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .test_exec(&token, &mut app, reward_user.clone(), &[])
     .unwrap();
 
-    println!("Checking balance after restake...");
-    match (basic_staking::QueryMsg::Balance {
-        auth: basic_staking::Auth::ViewingKey {
-            key: viewing_key.clone(),
-            address: staking_user.clone().into(),
-        },
-        unbonding_ids: None,
-    })
-    .test_query(&basic_staking, &app)
-    .unwrap()
+    // Check reward pool
+    let pool_id = match (basic_staking::QueryMsg::RewardPools {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
     {
-        basic_staking::QueryAnswer::Balance {
-            staked,
-            rewards,
-            unbondings,
-        } => {
-            assert_eq!(staked, stake_amount, "Re-Staked Balance");
-            // assert_eq!(rewards, vec![], "Re-staked Rewards");
-            // assert_eq!(unbondings, vec![], "Final Unbondings");
+        basic_staking::QueryAnswer::RewardPools { rewards } => {
+            assert_eq!(rewards[0].amount, reward_amount, "Reward Pool Amount");
+            assert_eq!(rewards[0].start, reward_start, "Reward Pool Start");
+            assert_eq!(rewards[0].end, reward_end, "Reward Pool End");
+            rewards[0].id
         }
         _ => {
             panic!("Staking balance query failed");
         }
     };
-}
 
-macro_rules! unstake_softlock_bug {
-    ($($name:ident: $value:expr,)*) => {
-        $(
-            #[test]
-            fn $name() {
-                let (
-                    stake_amount,
-                    unbond_period,
-                    reward_amount,
-                ) = $value;
-                unstake_softlock_bug(
-                    stake_amount,
-                    unbond_period,
-                    reward_amount,
-                )
-            }
-        )*
+    // End reward pool
+    basic_staking::ExecuteMsg::EndRewardPool {
+        id: pool_id,
+        force: Some(false),
     }
-}
+    .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
+    .unwrap();
 
-unstake_softlock_bug! {
-    unstake_softlock_bug_0: (
-        Uint128::new(100), //   stake_amount
-        Uint128::new(100), // unbond_period
-        Uint128::new(100000000000), // reward_amount
-    ),
+    // Check reward pool was removed
+    match (basic_staking::QueryMsg::RewardPools {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::RewardPools { rewards } => {
+            assert_eq!(rewards.len(), 0, "No reward pools after cancelling");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    // Admin user that cancelled should receive un-emitted funds
+    match (snip20::QueryMsg::Balance {
+        key: viewing_key.clone(),
+        address: admin_user.clone().into(),
+    })
+    .test_query(&token, &app)
+    .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, reward_amount, "Rewards cancelled to admin user");
+        }
+        _ => {
+            panic!("admin snip20 balance query failed");
+        }
+    };
 }

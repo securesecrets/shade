@@ -118,7 +118,6 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),

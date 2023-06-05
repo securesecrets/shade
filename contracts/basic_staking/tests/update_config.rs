@@ -76,7 +76,6 @@ fn update_config() {
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -100,7 +99,6 @@ fn update_config() {
     config_match.airdrop = Some(admin_contract.clone().into());
     config_match.unbond_period = Uint128::new(100);
     config_match.max_user_pools = Uint128::new(10);
-    config_match.reward_cancel_threshold = Uint128::new(10000);
 
     // update config fields
     basic_staking::ExecuteMsg::UpdateConfig {
@@ -112,7 +110,6 @@ fn update_config() {
         }),
         unbond_period: Some(config_match.unbond_period.clone()),
         max_user_pools: Some(config_match.max_user_pools.clone()),
-        reward_cancel_threshold: Some(config_match.reward_cancel_threshold.clone()),
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();

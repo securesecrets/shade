@@ -21,9 +21,6 @@ pub struct Config {
     pub unbond_period: Uint128,
     // Number of non-admin pools allowed
     pub max_user_pools: Uint128,
-    // Required amount of rewards claimed
-    // before a reward pool can be cancelled without 'force'
-    pub reward_cancel_threshold: Uint128,
 }
 
 #[cw_serde]
@@ -97,7 +94,6 @@ pub struct InstantiateMsg {
     pub stake_token: RawContract,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
-    pub reward_cancel_threshold: Uint128,
     pub viewing_key: String,
 }
 
@@ -113,7 +109,6 @@ pub enum ExecuteMsg {
         airdrop: Option<RawContract>,
         unbond_period: Option<Uint128>,
         max_user_pools: Option<Uint128>,
-        reward_cancel_threshold: Option<Uint128>,
     },
     RegisterRewards {
         token: RawContract,
