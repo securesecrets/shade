@@ -192,6 +192,46 @@ fn single_staker_single_pool(
         }
     };
 
+    // Post staking total staked
+    match (basic_staking::QueryMsg::TotalStaked {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::TotalStaked { amount } => {
+            assert_eq!(amount, stake_amount, "Post staking total staked");
+        }
+        _ => {
+            panic!("Total Staked query failed");
+        }
+    };
+
+    // Verify stake token
+    match (basic_staking::QueryMsg::StakeToken {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::StakeToken { token: stake_token } => {
+            assert_eq!(stake_token, token.address);
+        }
+        _ => {
+            panic!("Total Staked query failed");
+        }
+    };
+
+    // Stake token should be registered
+    match (basic_staking::QueryMsg::RewardTokens {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::RewardTokens { tokens } => {
+            assert_eq!(tokens.len(), 1, "Only stake token registered");
+            assert_eq!(tokens[0], token.address);
+        }
+        _ => {
+            panic!("Total Staked query failed");
+        }
+    };
+
     // Init Rewards
     snip20::ExecuteMsg::Send {
         recipient: basic_staking.address.to_string().clone(),
