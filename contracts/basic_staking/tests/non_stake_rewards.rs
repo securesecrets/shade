@@ -34,7 +34,6 @@ fn non_stake_rewards(
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
-    let treasury = Addr::unchecked("treasury");
 
     let stake_token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -144,7 +143,6 @@ fn non_stake_rewards(
         query_auth: query_contract.into(),
         airdrop: None,
         stake_token: stake_token.clone().into(),
-        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

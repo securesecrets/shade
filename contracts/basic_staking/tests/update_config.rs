@@ -26,7 +26,6 @@ fn update_config() {
 
     let viewing_key = "unguessable".to_string();
     let admin_user = Addr::unchecked("admin");
-    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -74,7 +73,6 @@ fn update_config() {
         query_auth: query_contract.clone().into(),
         airdrop: None,
         stake_token: token.clone().into(),
-        treasury: treasury.into(),
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

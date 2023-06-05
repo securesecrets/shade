@@ -732,10 +732,9 @@ pub fn end_reward_pool(
         &config.admin_auth,
     )?;
 
-    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
-
-    // let total_staked = TOTAL_STAKED.load(deps.storage)?;
-    let response = Response::new();
+    let total_staked = TOTAL_STAKED.load(deps.storage)?;
+    let mut reward_pools =
+        update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
 
     // Amount of rewards pulled from contract
     let mut extract_amount = Uint128::zero();
@@ -756,12 +755,10 @@ pub fn end_reward_pool(
     // Remove reward pool, will edit & push it later
     reward_pools.remove(pool_i);
 
-    let deleted: bool;
-
     // Delete reward pool if it hasn't started
-    if reward_pool.start < now {
+    let deleted = if reward_pool.start < now {
         extract_amount = reward_pool.amount;
-        deleted = true;
+        true
     }
     // Trim off un-emitted tokens if reward pool hasn't ended
     else if reward_pool.end > now {
@@ -771,23 +768,23 @@ pub fn end_reward_pool(
         reward_pool.amount -= extract_amount;
 
         reward_pools.push(reward_pool.clone());
-        deleted = false;
+        false
     }
     // Delete reward pool if reward pool is fully claimed, or forced
     else if reward_pool.claimed == reward_pool.amount || force {
         extract_amount += reward_pool.amount - reward_pool.claimed;
-        deleted = true;
+        true
     } else {
         return Err(StdError::generic_err(
             "Reward pool is complete but claims are still pending",
         ));
-    }
+    };
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
-    Ok(response
+    Ok(Response::new()
         .add_message(send_msg(
-            CONFIG.load(deps.storage)?.treasury,
+            info.sender,
             extract_amount,
             None,
             None,

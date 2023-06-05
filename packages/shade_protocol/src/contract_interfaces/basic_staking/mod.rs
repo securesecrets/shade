@@ -18,7 +18,6 @@ pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
     pub airdrop: Option<Contract>,
-    pub treasury: Addr,
     pub unbond_period: Uint128,
     // Number of non-admin pools allowed
     pub max_user_pools: Uint128,
@@ -96,7 +95,6 @@ pub struct InstantiateMsg {
     pub query_auth: RawContract,
     pub airdrop: Option<RawContract>,
     pub stake_token: RawContract,
-    pub treasury: String,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
     pub reward_cancel_threshold: Uint128,

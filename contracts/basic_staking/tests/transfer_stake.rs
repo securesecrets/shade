@@ -28,7 +28,6 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let transfer_user = Addr::unchecked("transfer");
-    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -116,7 +115,6 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         query_auth: query_contract.into(),
         stake_token: token.clone().into(),
         airdrop: None,
-        treasury: treasury.into(),
         unbond_period: Uint128::zero(),
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),

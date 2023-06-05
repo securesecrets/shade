@@ -35,7 +35,6 @@ pub fn instantiate(
             Some(airdrop) => Some(airdrop.into_valid(deps.api)?),
             None => None,
         },
-        treasury: deps.api.addr_validate(&msg.treasury)?,
         unbond_period: msg.unbond_period,
         max_user_pools: msg.max_user_pools,
         reward_cancel_threshold: msg.reward_cancel_threshold,
