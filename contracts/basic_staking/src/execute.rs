@@ -488,9 +488,9 @@ pub fn unbond(
         }
 
         // if compounding, check staked + compounded >= unbond amount
-        if compound && user_staked + compound_amount < amount {
+        if user_staked + compound_amount < amount {
             return Err(StdError::generic_err(format!(
-                "Cannot unbond {}, only {} staked (after compounding)",
+                "Cannot unbond {}, only {} staked after compounding",
                 amount,
                 user_staked + compound_amount,
             )));
