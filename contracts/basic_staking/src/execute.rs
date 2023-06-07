@@ -893,16 +893,23 @@ pub fn transfer_stake(
     let sender_staked = USER_STAKED
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or(Uint128::zero());
+
+    if sender_staked == Uint128::zero() {
+        return Err(StdError::generic_err("Cannot transfer with 0 staked"));
+    }
+
     let mut sender_compound_amount = Uint128::zero();
 
     // Claim/Compound rewards for Sender
     for reward_pool in reward_pools.iter_mut() {
+        println!("reward pool claim sender");
         let reward_claimed = reward_pool_claim(
             deps.storage,
             info.sender.clone(),
             sender_staked,
             &reward_pool,
         )?;
+        println!("POST reward pool claim sender");
         reward_pool.claimed += reward_claimed;
 
         if compound && reward_pool.token == stake_token {
@@ -922,17 +929,35 @@ pub fn transfer_stake(
                 .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
         }
     }
+
+    if sender_staked + sender_compound_amount < amount {
+        return Err(StdError::generic_err(format!(
+            "Cannot transfer {}, only {} available",
+            amount,
+            sender_staked + sender_compound_amount
+        )));
+    }
+
     if sender_compound_amount > Uint128::zero() {
         response = response.add_attribute("compounded", sender_compound_amount);
     }
+
+    // Adjust sender staked
+    USER_STAKED.save(
+        deps.storage,
+        info.sender,
+        &(sender_staked + sender_compound_amount - amount),
+    )?;
 
     // Claim for receiving user
     let recipient_staked = USER_STAKED
         .may_load(deps.storage, recipient.clone())?
         .unwrap_or(Uint128::zero());
+    println!("Recipient STaked {}", recipient_staked);
 
     // Claim rewards for Receiver (no compound)
     for reward_pool in reward_pools.iter_mut() {
+        println!("reward pool claim recipient");
         let reward_claimed = reward_pool_claim(
             deps.storage,
             recipient.clone(),
@@ -951,13 +976,6 @@ pub fn transfer_stake(
             &reward_pool.token,
         )?);
     }
-
-    // Adjust sender staked
-    USER_STAKED.save(
-        deps.storage,
-        info.sender,
-        &(sender_staked + sender_compound_amount - amount),
-    )?;
 
     // Adjust recipient staked
     USER_STAKED.save(deps.storage, recipient, &(recipient_staked + amount))?;
