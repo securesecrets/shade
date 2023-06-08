@@ -32,7 +32,7 @@ treasury_manager = ["dep:treasury_manager"]
 stkd_scrt = ["dep:stkd_scrt"]
 dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
 # shade-oracles = ["dep:shade-oracles"]
-peg_stability = ["dep:peg_stability"]
+# peg_stability = ["dep:peg_stability"]
 snip20_migration = ["dep:snip20_migration"]
 
 [dependencies]
@@ -53,7 +53,7 @@ scrt_staking = { version = "0.1.0", path = "../../contracts/dao/scrt_staking", o
 treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
-peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+# peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
 mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../../contracts/mock/mock_stkd_derivative", optional = true }
 mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
 snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }

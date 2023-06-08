@@ -14,18 +14,15 @@ use shade_protocol::{
         Uint128,
         WasmMsg,
     },
-    contract_interfaces::{
-        governance::{
-            assembly::Assembly,
-            contract::AllowedContract,
-            profile::{Count, Profile, VoteProfile},
-            proposal::{Funding, Proposal, Status},
-            stored_id::UserID,
-            vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
-            Config,
-            ExecuteAnswer,
-        },
-        staking::snip20_staking,
+    contract_interfaces::governance::{
+        assembly::Assembly,
+        contract::AllowedContract,
+        profile::{Count, Profile, VoteProfile},
+        proposal::{Funding, Proposal, Status},
+        stored_id::UserID,
+        vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
+        Config,
+        ExecuteAnswer,
     },
     governance::errors::Error,
     snip20::helpers::send_msg,
@@ -248,14 +245,16 @@ pub fn try_update(
             let config = Config::load(deps.storage)?;
             let votes = Proposal::public_votes(deps.storage, proposal)?;
 
-            let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
+            /* let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
                 .query(&deps.querier, &config.vote_token.unwrap())?;
 
             // Get total staking power
             let total_power = match query {
                 snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
                 _ => return Err(Error::unexpected_query_response(vec![])),
-            };
+            };*/
+
+            let total_power = Uint128::zero();
 
             let mut vote_conclusion: Status;
 
