@@ -603,39 +603,6 @@ pub fn withdraw(
         })?))
 }
 
-/*
-pub fn do_claim(
-    deps: DepsMut,
-    &mut reward_pools: Vec<RewardPoolInternal>,
-    user: Addr,
-    user_staked: Uint128,
-    compound: bool,
-    stake_token: Addr,
-) -> StdResult<Vec<RewardPoolInternal>> {
-    for reward_pool in reward_pools.iter_mut() {
-        let reward_claimed =
-            reward_pool_claim(deps.storage, user.clone(), user_staked, &reward_pool)?;
-        reward_pool.claimed += reward_claimed;
-
-        if reward_pool.token.address == stake_token {
-            // Compound stake_token rewards
-            compound_amount += reward_claimed;
-        } else {
-            // Claim non-stake_token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
-        }
-    }
-    Ok(vec![])
-}
-*/
-
 pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let mut response = Response::new();
 
