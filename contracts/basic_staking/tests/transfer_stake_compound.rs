@@ -208,7 +208,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     match (basic_staking::ExecuteMsg::TransferStake {
         amount: transfer_amount,
         recipient: staking_user.clone().into(),
-        compound: Some(false),
+        compound: Some(true),
     }
     .test_exec(&basic_staking, &mut app, transfer_user.clone(), &[]))
     {
@@ -295,7 +295,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     basic_staking::ExecuteMsg::TransferStake {
         amount: transfer_amount,
         recipient: staking_user.clone().into(),
-        compound: Some(false),
+        compound: Some(true),
     }
     .test_exec(&basic_staking, &mut app, transfer_user.clone(), &[])
     .unwrap();
@@ -359,15 +359,15 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
             rewards,
             unbondings,
         } => {
-            assert_eq!(staked, Uint128::zero(), "Post-Transfer sender balance");
-            assert_eq!(rewards.len(), 0, "Sender rewards claimed");
+            assert_eq!(staked, transfer_user_reward, "Post-Transfer sender balance");
+            assert_eq!(rewards.len(), 0, "Sender rewards compounded");
         }
         _ => {
             panic!("Staking balance query failed");
         }
     };
 
-    // Check sender rewards claimed
+    // Check sender rewards compounded
     match (snip20::QueryMsg::Balance {
         key: viewing_key.clone(),
         address: transfer_user.clone().into(),
@@ -376,7 +376,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, transfer_user_reward, "Sender rewards claimed");
+            assert_eq!(amount, Uint128::zero(), "Sender no balance bc compound");
         }
         _ => {
             panic!("Snip20 balance query failed");

@@ -2,18 +2,8 @@ use shade_protocol::{
     admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
     basic_staking::{Action, ExecuteAnswer, RewardPoolInternal, Unbonding},
     c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
+        from_binary, to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Storage, Uint128,
     },
     contract_interfaces::airdrop::ExecuteMsg::CompleteTask,
     snip20::helpers::{register_receive, send_msg, set_viewing_key_msg},
@@ -938,6 +928,8 @@ pub fn transfer_stake(
         )));
     }
 
+    println!("sender compound amount {}", sender_compound_amount);
+
     if sender_compound_amount > Uint128::zero() {
         response = response.add_attribute("compounded", sender_compound_amount);
     }
@@ -953,7 +945,6 @@ pub fn transfer_stake(
     let recipient_staked = USER_STAKED
         .may_load(deps.storage, recipient.clone())?
         .unwrap_or(Uint128::zero());
-    println!("Recipient STaked {}", recipient_staked);
 
     // Claim rewards for Receiver (no compound)
     for reward_pool in reward_pools.iter_mut() {
@@ -967,6 +958,11 @@ pub fn transfer_stake(
         reward_pool.claimed += reward_claimed;
 
         // Claim if not compound or not stake token rewards
+        println!(
+            "SENDING RECIPIETN REWARD {} {}",
+            reward_claimed,
+            recipient.clone()
+        );
         response = response.add_message(send_msg(
             recipient.clone(),
             reward_claimed,
@@ -980,10 +976,8 @@ pub fn transfer_stake(
     // Adjust recipient staked
     USER_STAKED.save(deps.storage, recipient, &(recipient_staked + amount))?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::TransferStake {
-            transferred: amount,
-            status: ResponseStatus::Success,
-        })?),
-    )
+    Ok(response.set_data(to_binary(&ExecuteAnswer::TransferStake {
+        transferred: amount,
+        status: ResponseStatus::Success,
+    })?))
 }
