@@ -1,18 +1,8 @@
 use shade_protocol::{
     basic_staking::{Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
     c_std::{
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
+        shd_entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+        StdError, StdResult, Uint128,
     },
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::{register_receive, set_viewing_key_msg},
@@ -28,16 +18,19 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    CONFIG.save(deps.storage, &Config {
-        admin_auth: msg.admin_auth.into_valid(deps.api)?,
-        query_auth: msg.query_auth.into_valid(deps.api)?,
-        airdrop: match msg.airdrop {
-            Some(airdrop) => Some(airdrop.into_valid(deps.api)?),
-            None => None,
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            admin_auth: msg.admin_auth.into_valid(deps.api)?,
+            query_auth: msg.query_auth.into_valid(deps.api)?,
+            airdrop: match msg.airdrop {
+                Some(airdrop) => Some(airdrop.into_valid(deps.api)?),
+                None => None,
+            },
+            unbond_period: msg.unbond_period,
+            max_user_pools: msg.max_user_pools,
         },
-        unbond_period: msg.unbond_period,
-        max_user_pools: msg.max_user_pools,
-    })?;
+    )?;
 
     let stake_token = msg.stake_token.into_valid(deps.api)?;
 
@@ -46,6 +39,7 @@ pub fn instantiate(
 
     REWARD_TOKENS.save(deps.storage, &vec![stake_token.clone()])?;
     REWARD_POOLS.save(deps.storage, &vec![])?;
+    MAX_POOL_ID.save(deps.storage, &Uint128::zero())?;
 
     TRANSFER_WL.save(deps.storage, &vec![])?;
 

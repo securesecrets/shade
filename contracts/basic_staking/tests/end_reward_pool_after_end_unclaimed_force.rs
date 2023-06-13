@@ -69,6 +69,34 @@ fn end_reward_pool_after_end() {
         &[],
     )
     .unwrap();
+    let second_token = snip20::InstantiateMsg {
+        name: "reward_token".into(),
+        admin: Some(admin_user.to_string().clone()),
+        symbol: "STKNB".into(),
+        decimals: 6,
+        initial_balances: Some(vec![snip20::InitialBalance {
+            amount: reward_amount,
+            address: reward_user.to_string(),
+        }]),
+        query_auth: None,
+        prng_seed: to_binary("").ok().unwrap(),
+        config: Some(snip20::InitConfig {
+            public_total_supply: Some(true),
+            enable_deposit: Some(false),
+            enable_redeem: Some(false),
+            enable_mint: Some(false),
+            enable_burn: Some(false),
+            enable_transfer: Some(true),
+        }),
+    }
+    .test_init(
+        Snip20::default(),
+        &mut app,
+        admin_user.clone(),
+        "stake_token",
+        &[],
+    )
+    .unwrap();
 
     // set staking_user viewing key
     snip20::ExecuteMsg::SetViewingKey {
@@ -249,7 +277,7 @@ fn end_reward_pool_after_end() {
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();
 
-    // Check reward pool was not removed
+    // Check reward pool was removed
     match (basic_staking::QueryMsg::RewardPools {})
         .test_query(&basic_staking, &app)
         .unwrap()
@@ -278,6 +306,79 @@ fn end_reward_pool_after_end() {
         }
         _ => {
             panic!("admin snip20 balance query failed");
+        }
+    };
+
+    // Register Reward Token
+    basic_staking::ExecuteMsg::RegisterRewards {
+        token: second_token.clone().into(),
+    }
+    .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
+    .unwrap();
+
+    let second_reward_start = Uint128::new(10000);
+    let second_reward_end = Uint128::new(100000);
+
+    // Setup new rewards with new token
+    snip20::ExecuteMsg::Send {
+        recipient: basic_staking.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: reward_amount,
+        msg: Some(
+            to_binary(&basic_staking::Action::Rewards {
+                start: second_reward_start,
+                end: second_reward_end,
+            })
+            .unwrap(),
+        ),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&second_token, &mut app, reward_user.clone(), &[])
+    .unwrap();
+
+    // Check reward pool
+    match (basic_staking::QueryMsg::RewardPools {})
+        .test_query(&basic_staking, &app)
+        .unwrap()
+    {
+        basic_staking::QueryAnswer::RewardPools { rewards } => {
+            println!("{:?}", rewards);
+            assert_eq!(rewards.len(), 1, "Second reward pool exists");
+        }
+        _ => {
+            panic!("Staking balance query failed");
+        }
+    };
+
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(second_reward_end.u128() as u64),
+        chain_id: "chain_id".to_string(),
+    });
+
+    // Check queries work
+    match (basic_staking::QueryMsg::Balance {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
+        unbonding_ids: None,
+    })
+    .test_query(&basic_staking, &app)
+    .unwrap()
+    {
+        basic_staking::QueryAnswer::Balance {
+            staked,
+            rewards,
+            unbondings,
+        } => {
+            println!("Rewards {:?}", rewards);
+            assert_eq!(rewards.len(), 1, "Second rewards pool");
+            // panic!("OOF");
+        }
+        _ => {
+            panic!("Staking balance query failed");
         }
     };
 }

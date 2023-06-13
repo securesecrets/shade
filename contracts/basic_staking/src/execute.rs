@@ -209,7 +209,6 @@ pub fn receive(
                 TOTAL_STAKED.save(deps.storage, &(total_staked + amount + compound_amount))?;
 
                 REWARD_POOLS.save(deps.storage, &reward_pools.clone())?;
-                USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
                 Ok(response.set_data(to_binary(&ExecuteAnswer::Stake {
                     staked: user_staked + amount,
@@ -258,10 +257,8 @@ pub fn receive(
                         }
                     }
 
-                    let new_id = match reward_pools.iter().map(|p| p.id).max() {
-                        Some(max_id) => max_id + Uint128::one(),
-                        None => Uint128::zero(),
-                    };
+                    let new_id = MAX_POOL_ID.load(deps.storage)? + Uint128::new(1);
+                    MAX_POOL_ID.save(deps.storage, &new_id)?;
 
                     // Tokens per second emitted from this pool
                     let rate = amount * Uint128::new(10u128.pow(18)) / (end - start);
@@ -411,7 +408,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
     }
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
-    USER_LAST_CLAIM.save(deps.storage, info.sender, &Uint128::new(now.into()))?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Claim {
         //claimed:
@@ -655,11 +651,6 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         &(user_staked + compound_amount),
     )?;
     TOTAL_STAKED.save(deps.storage, &(total_staked + compound_amount))?;
-    USER_LAST_CLAIM.save(
-        deps.storage,
-        info.sender,
-        &Uint128::new(env.block.time.seconds().into()),
-    )?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
         compounded: compound_amount,
@@ -695,9 +686,7 @@ pub fn end_reward_pool(
     let pool_i = match reward_pools.iter().position(|p| p.id == id) {
         Some(i) => i,
         None => {
-            return Err(StdError::generic_err(
-                "Could not match id on second attempt",
-            ));
+            return Err(StdError::generic_err("Could not match id"));
         }
     };
 
