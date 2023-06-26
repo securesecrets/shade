@@ -125,8 +125,6 @@ pub fn receive(
 
                 let compound = compound.unwrap_or(false);
 
-                let now = env.block.time.seconds();
-
                 let total_staked = TOTAL_STAKED.load(deps.storage)?;
 
                 let mut reward_pools =
