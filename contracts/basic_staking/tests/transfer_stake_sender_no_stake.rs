@@ -153,6 +153,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         amount: transfer_amount,
         recipient: receiving_user.clone().into(),
         compound: Some(true),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, sending_user.clone(), &[]))
     {
@@ -165,6 +166,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
     // Add transfer user to whitelist
     basic_staking::ExecuteMsg::AddTransferWhitelist {
         user: sending_user.clone().into(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();
@@ -173,6 +175,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         amount: transfer_amount,
         recipient: receiving_user.clone().into(),
         compound: Some(true),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, sending_user.clone(), &[]))
     {

@@ -315,7 +315,7 @@ fn stake_0_total_bug(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    basic_staking::ExecuteMsg::Claim { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -344,6 +344,7 @@ fn stake_0_total_bug(
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -379,9 +380,12 @@ fn stake_0_total_bug(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     // Check unbonding withdrawn
     match (snip20::QueryMsg::Balance {

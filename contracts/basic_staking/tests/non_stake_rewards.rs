@@ -224,6 +224,7 @@ fn non_stake_rewards(
     // Register Reward Token
     basic_staking::ExecuteMsg::RegisterRewards {
         token: reward_token.clone().into(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();
@@ -394,7 +395,7 @@ fn non_stake_rewards(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Compound {}
+    basic_staking::ExecuteMsg::Compound { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -423,6 +424,7 @@ fn non_stake_rewards(
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -464,9 +466,12 @@ fn non_stake_rewards(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {

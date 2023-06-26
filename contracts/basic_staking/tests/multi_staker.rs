@@ -359,7 +359,7 @@ fn multi_staker_single_pool(
         };
 
         // Claim rewards
-        basic_staking::ExecuteMsg::Claim {}
+        basic_staking::ExecuteMsg::Claim { padding: None }
             .test_exec(&basic_staking, &mut app, user.clone(), &[])
             .unwrap();
 
@@ -388,6 +388,7 @@ fn multi_staker_single_pool(
         basic_staking::ExecuteMsg::Unbond {
             amount,
             compound: None,
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, user.clone(), &[])
         .unwrap();
@@ -431,9 +432,12 @@ fn multi_staker_single_pool(
         .zip(expected_rewards.clone().into_iter())
     {
         // Withdraw unbonding
-        basic_staking::ExecuteMsg::Withdraw { ids: None }
-            .test_exec(&basic_staking, &mut app, user.clone(), &[])
-            .unwrap();
+        basic_staking::ExecuteMsg::Withdraw {
+            ids: None,
+            padding: None,
+        }
+        .test_exec(&basic_staking, &mut app, user.clone(), &[])
+        .unwrap();
 
         // Check unbonding withdrawn
         match (snip20::QueryMsg::Balance {

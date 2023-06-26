@@ -273,6 +273,7 @@ fn end_reward_pool_after_end() {
     basic_staking::ExecuteMsg::EndRewardPool {
         id: pool_id,
         force: Some(true),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();
@@ -312,6 +313,7 @@ fn end_reward_pool_after_end() {
     // Register Reward Token
     basic_staking::ExecuteMsg::RegisterRewards {
         token: second_token.clone().into(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();

@@ -92,6 +92,7 @@ fn non_admin_access() {
         airdrop: None,
         unbond_period: None,
         max_user_pools: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {
@@ -112,6 +113,7 @@ fn non_admin_access() {
             address: "any_token".to_string(),
             code_hash: "any_hash".to_string(),
         },
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {
@@ -130,6 +132,7 @@ fn non_admin_access() {
     match (basic_staking::ExecuteMsg::EndRewardPool {
         id: Uint128::zero(),
         force: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {
@@ -147,6 +150,7 @@ fn non_admin_access() {
 
     match (basic_staking::ExecuteMsg::AddTransferWhitelist {
         user: "any_user".to_string(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {
@@ -164,6 +168,7 @@ fn non_admin_access() {
 
     match (basic_staking::ExecuteMsg::RemoveTransferWhitelist {
         user: "any_user".to_string(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, non_admin_user.clone(), &[]))
     {

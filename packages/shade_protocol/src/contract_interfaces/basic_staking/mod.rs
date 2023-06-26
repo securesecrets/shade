@@ -109,9 +109,11 @@ pub enum ExecuteMsg {
         airdrop: Option<RawContract>,
         unbond_period: Option<Uint128>,
         max_user_pools: Option<Uint128>,
+        padding: Option<String>,
     },
     RegisterRewards {
         token: RawContract,
+        padding: Option<String>,
     },
     Receive {
         sender: Addr,
@@ -123,26 +125,36 @@ pub enum ExecuteMsg {
     Unbond {
         amount: Uint128,
         compound: Option<bool>,
+        padding: Option<String>,
     },
     Withdraw {
         ids: Option<Vec<Uint128>>,
+        padding: Option<String>,
     },
-    Claim {},
-    Compound {},
+    Claim {
+        padding: Option<String>,
+    },
+    Compound {
+        padding: Option<String>,
+    },
     EndRewardPool {
         id: Uint128,
         force: Option<bool>,
+        padding: Option<String>,
     },
     AddTransferWhitelist {
         user: String,
+        padding: Option<String>,
     },
     RemoveTransferWhitelist {
         user: String,
+        padding: Option<String>,
     },
     TransferStake {
         amount: Uint128,
         recipient: String,
         compound: Option<bool>,
+        padding: Option<String>,
     },
 }
 

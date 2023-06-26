@@ -6,10 +6,12 @@ use shade_protocol::{
     },
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::{register_receive, set_viewing_key_msg},
-    utils::asset::Contract,
+    utils::{asset::Contract, pad_handle_result},
 };
 
 use crate::{execute, query, storage::*};
+
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 #[shd_entry_point]
 pub fn instantiate(
@@ -55,67 +57,76 @@ pub fn instantiate(
 
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
-    match msg {
-        ExecuteMsg::UpdateConfig {
-            admin_auth,
-            query_auth,
-            airdrop,
-            unbond_period,
-            max_user_pools,
-        } => execute::update_config(
-            deps,
-            env,
-            info,
-            admin_auth,
-            query_auth,
-            airdrop,
-            unbond_period,
-            max_user_pools,
-        ),
-        ExecuteMsg::RegisterRewards { token } => {
-            let api = deps.api;
-            execute::register_reward(deps, env, info, token.into_valid(api)?)
-        }
-        ExecuteMsg::AddTransferWhitelist { user } => {
-            let api = deps.api;
-            execute::add_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
-        }
-        ExecuteMsg::RemoveTransferWhitelist { user } => {
-            let api = deps.api;
-            execute::rm_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
-        }
-        ExecuteMsg::Receive {
-            sender,
-            from,
-            amount,
-            msg,
-            ..
-        } => execute::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::Claim {} => execute::claim(deps, env, info),
-        ExecuteMsg::Unbond { amount, compound } => {
-            execute::unbond(deps, env, info, amount, compound.unwrap_or(false))
-        }
-        ExecuteMsg::Withdraw { ids } => execute::withdraw(deps, env, info.clone(), ids),
-        ExecuteMsg::Compound {} => execute::compound(deps, env, info),
-        ExecuteMsg::EndRewardPool { id, force } => {
-            execute::end_reward_pool(deps, env, info, id, force.unwrap_or(false))
-        }
-        ExecuteMsg::TransferStake {
-            amount,
-            recipient,
-            compound,
-        } => {
-            let api = deps.api;
-            execute::transfer_stake(
+    pad_handle_result(
+        match msg {
+            ExecuteMsg::UpdateConfig {
+                admin_auth,
+                query_auth,
+                airdrop,
+                unbond_period,
+                max_user_pools,
+                padding,
+            } => execute::update_config(
                 deps,
                 env,
                 info,
+                admin_auth,
+                query_auth,
+                airdrop,
+                unbond_period,
+                max_user_pools,
+            ),
+            ExecuteMsg::RegisterRewards { token, padding } => {
+                let api = deps.api;
+                execute::register_reward(deps, env, info, token.into_valid(api)?)
+            }
+            ExecuteMsg::AddTransferWhitelist { user, padding } => {
+                let api = deps.api;
+                execute::add_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
+            }
+            ExecuteMsg::RemoveTransferWhitelist { user, padding } => {
+                let api = deps.api;
+                execute::rm_transfer_whitelist(deps, env, info, api.addr_validate(&user)?)
+            }
+            ExecuteMsg::Receive {
+                sender,
+                from,
                 amount,
-                api.addr_validate(&recipient)?,
-                compound.unwrap_or(false),
-            )
-        }
-    }
+                msg,
+                ..
+            } => execute::receive(deps, env, info, sender, from, amount, msg),
+            ExecuteMsg::Claim { padding } => execute::claim(deps, env, info),
+            ExecuteMsg::Unbond {
+                amount,
+                compound,
+                padding,
+            } => execute::unbond(deps, env, info, amount, compound.unwrap_or(false)),
+            ExecuteMsg::Withdraw { ids, padding } => {
+                execute::withdraw(deps, env, info.clone(), ids)
+            }
+            ExecuteMsg::Compound { padding } => execute::compound(deps, env, info),
+            ExecuteMsg::EndRewardPool { id, force, padding } => {
+                execute::end_reward_pool(deps, env, info, id, force.unwrap_or(false))
+            }
+            ExecuteMsg::TransferStake {
+                amount,
+                recipient,
+                compound,
+                padding,
+            } => {
+                let api = deps.api;
+                execute::transfer_stake(
+                    deps,
+                    env,
+                    info,
+                    amount,
+                    api.addr_validate(&recipient)?,
+                    compound.unwrap_or(false),
+                )
+            }
+        },
+        RESPONSE_BLOCK_SIZE,
+    )
 }
 
 pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<Addr> {

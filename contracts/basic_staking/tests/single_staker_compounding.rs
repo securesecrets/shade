@@ -415,7 +415,7 @@ fn single_staker_compounding(
     };
 
     // Compound rewards
-    basic_staking::ExecuteMsg::Compound {}
+    basic_staking::ExecuteMsg::Compound { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -447,6 +447,7 @@ fn single_staker_compounding(
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount + current_rewards + mid_rewards,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -487,9 +488,12 @@ fn single_staker_compounding(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     // Check unbonding withdrawn
     match (snip20::QueryMsg::Balance {

@@ -245,6 +245,7 @@ fn end_reward_pool_after_end() {
     match (basic_staking::ExecuteMsg::EndRewardPool {
         id: pool_id,
         force: Some(false),
+        padding: None,
     })
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     {

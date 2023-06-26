@@ -155,6 +155,7 @@ fn unbonding_withdrawals(
         basic_staking::ExecuteMsg::Unbond {
             amount: unbond_amount.clone(),
             compound: None,
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
@@ -205,6 +206,7 @@ fn unbonding_withdrawals(
         // Withdraw
         basic_staking::ExecuteMsg::Withdraw {
             ids: Some(vec![unbonding_ids[i]]),
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();

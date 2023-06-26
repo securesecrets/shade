@@ -398,7 +398,7 @@ fn single_staker_single_pool(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    basic_staking::ExecuteMsg::Claim { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -427,6 +427,7 @@ fn single_staker_single_pool(
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -468,9 +469,12 @@ fn single_staker_single_pool(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     match (basic_staking::QueryMsg::Balance {
         auth: basic_staking::Auth::ViewingKey {

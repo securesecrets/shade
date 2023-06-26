@@ -242,7 +242,7 @@ fn end_reward_pool_after_end() {
     });
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    basic_staking::ExecuteMsg::Claim { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -250,6 +250,7 @@ fn end_reward_pool_after_end() {
     basic_staking::ExecuteMsg::EndRewardPool {
         id: pool_id,
         force: Some(false),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();

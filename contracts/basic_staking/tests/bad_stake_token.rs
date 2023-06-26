@@ -233,6 +233,7 @@ fn bad_stake_token(
     // Register Reward Token
     basic_staking::ExecuteMsg::RegisterRewards {
         token: reward_token.clone().into(),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();

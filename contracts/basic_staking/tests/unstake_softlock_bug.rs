@@ -225,6 +225,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();

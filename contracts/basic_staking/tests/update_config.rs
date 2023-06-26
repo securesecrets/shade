@@ -110,6 +110,7 @@ fn update_config() {
         }),
         unbond_period: Some(config_match.unbond_period.clone()),
         max_user_pools: Some(config_match.max_user_pools.clone()),
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
     .unwrap();
