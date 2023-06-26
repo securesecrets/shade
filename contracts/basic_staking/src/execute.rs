@@ -553,12 +553,12 @@ pub fn withdraw(
     }
 
     if withdrawn_amount.is_zero() {
-        return Ok(
-            Response::new().set_data(to_binary(&ExecuteAnswer::Withdraw {
+        return Ok(Response::new()
+            .add_attribute("withdrawn", withdrawn_amount)
+            .set_data(to_binary(&ExecuteAnswer::Withdraw {
                 withdrawn: withdrawn_amount,
                 status: ResponseStatus::Success,
-            })?),
-        );
+            })?));
     }
 
     // Sort lists so the operation is O(n)
@@ -593,6 +593,7 @@ pub fn withdraw(
             None,
             &STAKE_TOKEN.load(deps.storage)?,
         )?)
+        .add_attribute("withdrawn", withdrawn_amount)
         .set_data(to_binary(&ExecuteAnswer::Withdraw {
             withdrawn: withdrawn_amount,
             status: ResponseStatus::Success,
