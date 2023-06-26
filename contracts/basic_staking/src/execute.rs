@@ -2,23 +2,15 @@ use shade_protocol::{
     admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
     basic_staking::{Action, ExecuteAnswer, RewardPoolInternal, Unbonding},
     c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
+        from_binary, to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Storage, Uint128,
     },
+    contract_interfaces::airdrop::ExecuteMsg::CompleteTask,
     snip20::helpers::{register_receive, send_msg, set_viewing_key_msg},
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
+        ExecuteCallback,
     },
 };
 
@@ -31,9 +23,9 @@ pub fn update_config(
     info: MessageInfo,
     admin_auth: Option<RawContract>,
     query_auth: Option<RawContract>,
+    airdrop: Option<RawContract>,
     unbond_period: Option<Uint128>,
     max_user_pools: Option<Uint128>,
-    reward_cancel_threshold: Option<Uint128>,
 ) -> StdResult<Response> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -52,16 +44,16 @@ pub fn update_config(
         config.query_auth = query_auth.into_valid(deps.api)?;
     }
 
+    if let Some(airdrop) = airdrop {
+        config.airdrop = Some(airdrop.into_valid(deps.api)?);
+    }
+
     if let Some(unbond_period) = unbond_period {
         config.unbond_period = unbond_period;
     }
 
     if let Some(max_user_pools) = max_user_pools {
         config.max_user_pools = max_user_pools;
-    }
-
-    if let Some(reward_cancel_threshold) = reward_cancel_threshold {
-        config.reward_cancel_threshold = reward_cancel_threshold;
     }
 
     CONFIG.save(deps.storage, &config)?;
@@ -119,7 +111,10 @@ pub fn receive(
 
     match msg {
         Some(m) => match from_binary(&m)? {
-            Action::Stake { compound } => {
+            Action::Stake {
+                compound,
+                airdrop_task,
+            } => {
                 let stake_token = STAKE_TOKEN.load(deps.storage)?;
                 if info.sender != stake_token.address {
                     return Err(StdError::generic_err(format!(
@@ -160,14 +155,19 @@ pub fn receive(
                             compound_amount += reward_claimed;
                         } else {
                             // Claim if not compound or not stake token rewards
-                            response = response.add_message(send_msg(
-                                info.sender.clone(),
-                                reward_claimed,
-                                None,
-                                None,
-                                None,
-                                &reward_pool.token,
-                            )?);
+                            response = response
+                                .add_message(send_msg(
+                                    info.sender.clone(),
+                                    reward_claimed,
+                                    None,
+                                    None,
+                                    None,
+                                    &reward_pool.token,
+                                )?)
+                                .add_attribute(
+                                    reward_pool.token.address.to_string(),
+                                    reward_claimed,
+                                );
                         }
                     }
                 } else {
@@ -180,6 +180,27 @@ pub fn receive(
                         )?;
                     }
                 }
+
+                // Send airdrop message
+                if let Some(true) = airdrop_task {
+                    let config = CONFIG.load(deps.storage)?;
+                    if let Some(airdrop) = config.airdrop {
+                        response = response.add_message(
+                            CompleteTask {
+                                address: from.clone(),
+                                padding: None,
+                            }
+                            .to_cosmos_msg(&airdrop, vec![])?,
+                        );
+                    } else {
+                        return Err(StdError::generic_err("No airdrop contract configured"));
+                    }
+                }
+
+                if compound_amount > Uint128::zero() {
+                    response = response.add_attribute("compounded", compound_amount);
+                }
+
                 USER_STAKED.save(
                     deps.storage,
                     from.clone(),
@@ -188,7 +209,6 @@ pub fn receive(
                 TOTAL_STAKED.save(deps.storage, &(total_staked + amount + compound_amount))?;
 
                 REWARD_POOLS.save(deps.storage, &reward_pools.clone())?;
-                USER_LAST_CLAIM.save(deps.storage, from, &Uint128::new(now as u128))?;
 
                 Ok(response.set_data(to_binary(&ExecuteAnswer::Stake {
                     staked: user_staked + amount,
@@ -237,10 +257,8 @@ pub fn receive(
                         }
                     }
 
-                    let new_id = match reward_pools.last() {
-                        Some(pool) => pool.id + Uint128::one(),
-                        None => Uint128::zero(),
-                    };
+                    let new_id = MAX_POOL_ID.load(deps.storage)? + Uint128::new(1);
+                    MAX_POOL_ID.save(deps.storage, &new_id)?;
 
                     // Tokens per second emitted from this pool
                     let rate = amount * Uint128::new(10u128.pow(18)) / (end - start);
@@ -358,7 +376,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
     if user_staked.is_zero() {
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Claim {
-            // claimed: Uint128::zero(),
             status: ResponseStatus::Success,
         })?));
     }
@@ -378,18 +395,19 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
         reward_pool.claimed += reward_claimed;
 
-        response = response.add_message(send_msg(
-            info.sender.clone(),
-            reward_claimed,
-            None,
-            None,
-            None,
-            &reward_pool.token,
-        )?);
+        response = response
+            .add_message(send_msg(
+                info.sender.clone(),
+                reward_claimed,
+                None,
+                None,
+                None,
+                &reward_pool.token,
+            )?)
+            .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
     }
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
-    USER_LAST_CLAIM.save(deps.storage, info.sender, &Uint128::new(now.into()))?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Claim {
         //claimed:
@@ -442,24 +460,29 @@ pub fn unbond(
                 compound_amount += reward_claimed;
             } else {
                 // Claim if not compound or not stake token rewards
-                response = response.add_message(send_msg(
-                    info.sender.clone(),
-                    reward_claimed,
-                    None,
-                    None,
-                    None,
-                    &reward_pool.token,
-                )?);
+                response = response
+                    .add_message(send_msg(
+                        info.sender.clone(),
+                        reward_claimed,
+                        None,
+                        None,
+                        None,
+                        &reward_pool.token,
+                    )?)
+                    .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
             }
         }
 
         // if compounding, check staked + compounded >= unbond amount
-        if compound && user_staked + compound_amount < amount {
+        if user_staked + compound_amount < amount {
             return Err(StdError::generic_err(format!(
-                "Cannot unbond {}, only {} staked (after compounding)",
+                "Cannot unbond {}, only {} staked after compounding",
                 amount,
                 user_staked + compound_amount,
             )));
+        }
+        if compound_amount > Uint128::zero() {
+            response = response.add_attribute("compounded", compound_amount);
         }
 
         user_staked = (user_staked + compound_amount) - amount;
@@ -576,39 +599,6 @@ pub fn withdraw(
         })?))
 }
 
-/*
-pub fn do_claim(
-    deps: DepsMut,
-    &mut reward_pools: Vec<RewardPoolInternal>,
-    user: Addr,
-    user_staked: Uint128,
-    compound: bool,
-    stake_token: Addr,
-) -> StdResult<Vec<RewardPoolInternal>> {
-    for reward_pool in reward_pools.iter_mut() {
-        let reward_claimed =
-            reward_pool_claim(deps.storage, user.clone(), user_staked, &reward_pool)?;
-        reward_pool.claimed += reward_claimed;
-
-        if reward_pool.token.address == stake_token {
-            // Compound stake_token rewards
-            compound_amount += reward_claimed;
-        } else {
-            // Claim non-stake_token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
-        }
-    }
-    Ok(vec![])
-}
-*/
-
 pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let mut response = Response::new();
 
@@ -637,17 +627,23 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
             compound_amount += reward_claimed;
         } else {
             // Claim non-stake_token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
+            response = response
+                .add_message(send_msg(
+                    info.sender.clone(),
+                    reward_claimed,
+                    None,
+                    None,
+                    None,
+                    &reward_pool.token,
+                )?)
+                .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
         }
     }
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
+
+    if compound_amount > Uint128::zero() {
+        response = response.add_attribute("compounded", compound_amount);
+    }
 
     USER_STAKED.save(
         deps.storage,
@@ -655,11 +651,6 @@ pub fn compound(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         &(user_staked + compound_amount),
     )?;
     TOTAL_STAKED.save(deps.storage, &(total_staked + compound_amount))?;
-    USER_LAST_CLAIM.save(
-        deps.storage,
-        info.sender,
-        &Uint128::new(env.block.time.seconds().into()),
-    )?;
 
     Ok(response.set_data(to_binary(&ExecuteAnswer::Compound {
         compounded: compound_amount,
@@ -683,10 +674,9 @@ pub fn end_reward_pool(
         &config.admin_auth,
     )?;
 
-    let mut reward_pools = REWARD_POOLS.load(deps.storage)?;
-
     let total_staked = TOTAL_STAKED.load(deps.storage)?;
-    let mut response = Response::new();
+    let mut reward_pools =
+        update_rewards(env.clone(), &REWARD_POOLS.load(deps.storage)?, total_staked);
 
     // Amount of rewards pulled from contract
     let mut extract_amount = Uint128::zero();
@@ -696,49 +686,49 @@ pub fn end_reward_pool(
     let pool_i = match reward_pools.iter().position(|p| p.id == id) {
         Some(i) => i,
         None => {
-            return Err(StdError::generic_err(
-                "Could not match id on second attempt",
-            ));
+            return Err(StdError::generic_err("Could not match id"));
         }
     };
 
-    let mut reward_pool = reward_pools[pool_i].clone();
-
     // Remove reward pool, will edit & push it later
-    reward_pools.remove(pool_i);
-
-    let mut deleted: bool;
+    let mut reward_pool = reward_pools.remove(pool_i);
 
     // Delete reward pool if it hasn't started
-    if reward_pool.start < now {
+    let deleted = if reward_pool.start > now {
+        println!("DELETING BEFORE START");
         extract_amount = reward_pool.amount;
-        deleted = true;
+        true
     }
-    // Trim off un-emitted tokens if reward pool hasn't ended
+    // Reward pool hasn't ended, trim off un-emitted tokens & edit pool to end now
     else if reward_pool.end > now {
         // remove rewards from now -> end
         extract_amount = reward_pool.rate * (reward_pool.end - now) / Uint128::new(10u128.pow(18));
+        println!("EXTRACTING {}", extract_amount);
         reward_pool.end = now;
         reward_pool.amount -= extract_amount;
 
-        reward_pools.push(reward_pool.clone());
-        deleted = false;
+        if reward_pool.claimed == reward_pool.amount {
+            true
+        } else {
+            reward_pools.push(reward_pool.clone());
+            false
+        }
     }
     // Delete reward pool if reward pool is fully claimed, or forced
     else if reward_pool.claimed == reward_pool.amount || force {
         extract_amount += reward_pool.amount - reward_pool.claimed;
-        deleted = true;
+        true
     } else {
         return Err(StdError::generic_err(
             "Reward pool is complete but claims are still pending",
         ));
-    }
+    };
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
 
-    Ok(response
+    Ok(Response::new()
         .add_message(send_msg(
-            CONFIG.load(deps.storage)?.treasury,
+            info.sender,
             extract_amount,
             None,
             None,
@@ -849,16 +839,23 @@ pub fn transfer_stake(
     let sender_staked = USER_STAKED
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or(Uint128::zero());
+
+    if sender_staked == Uint128::zero() {
+        return Err(StdError::generic_err("Cannot transfer with 0 staked"));
+    }
+
     let mut sender_compound_amount = Uint128::zero();
 
     // Claim/Compound rewards for Sender
     for reward_pool in reward_pools.iter_mut() {
+        println!("reward pool claim sender");
         let reward_claimed = reward_pool_claim(
             deps.storage,
             info.sender.clone(),
             sender_staked,
             &reward_pool,
         )?;
+        println!("POST reward pool claim sender");
         reward_pool.claimed += reward_claimed;
 
         if compound && reward_pool.token == stake_token {
@@ -866,24 +863,48 @@ pub fn transfer_stake(
             sender_compound_amount += reward_claimed;
         } else {
             // Claim if not compound or not stake token rewards
-            response = response.add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?);
+            response = response
+                .add_message(send_msg(
+                    info.sender.clone(),
+                    reward_claimed,
+                    None,
+                    None,
+                    None,
+                    &reward_pool.token,
+                )?)
+                .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
         }
     }
+
+    if sender_staked + sender_compound_amount < amount {
+        return Err(StdError::generic_err(format!(
+            "Cannot transfer {}, only {} available",
+            amount,
+            sender_staked + sender_compound_amount
+        )));
+    }
+
+    println!("sender compound amount {}", sender_compound_amount);
+
+    if sender_compound_amount > Uint128::zero() {
+        response = response.add_attribute("compounded", sender_compound_amount);
+    }
+
+    // Adjust sender staked
+    USER_STAKED.save(
+        deps.storage,
+        info.sender,
+        &(sender_staked + sender_compound_amount - amount),
+    )?;
 
     // Claim for receiving user
     let recipient_staked = USER_STAKED
         .may_load(deps.storage, recipient.clone())?
         .unwrap_or(Uint128::zero());
 
-    // Claim rewards for Sender (no compound)
+    // Claim rewards for Receiver (no compound)
     for reward_pool in reward_pools.iter_mut() {
+        println!("reward pool claim recipient");
         let reward_claimed = reward_pool_claim(
             deps.storage,
             recipient.clone(),
@@ -893,6 +914,11 @@ pub fn transfer_stake(
         reward_pool.claimed += reward_claimed;
 
         // Claim if not compound or not stake token rewards
+        println!(
+            "SENDING RECIPIETN REWARD {} {}",
+            reward_claimed,
+            recipient.clone()
+        );
         response = response.add_message(send_msg(
             recipient.clone(),
             reward_claimed,
@@ -903,20 +929,11 @@ pub fn transfer_stake(
         )?);
     }
 
-    // Adjust sender staked
-    USER_STAKED.save(
-        deps.storage,
-        info.sender,
-        &(sender_staked + sender_compound_amount - amount),
-    )?;
-
     // Adjust recipient staked
     USER_STAKED.save(deps.storage, recipient, &(recipient_staked + amount))?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::TransferStake {
-            transferred: amount,
-            status: ResponseStatus::Success,
-        })?),
-    )
+    Ok(response.set_data(to_binary(&ExecuteAnswer::TransferStake {
+        transferred: amount,
+        status: ResponseStatus::Success,
+    })?))
 }

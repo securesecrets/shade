@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -34,7 +34,6 @@ fn stake_0_total_bug(
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
-    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -113,12 +112,11 @@ fn stake_0_total_bug(
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
+        airdrop: None,
         stake_token: token.clone().into(),
-        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -186,7 +184,13 @@ fn stake_0_total_bug(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }
@@ -311,7 +315,7 @@ fn stake_0_total_bug(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    basic_staking::ExecuteMsg::Claim { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -340,6 +344,7 @@ fn stake_0_total_bug(
     basic_staking::ExecuteMsg::Unbond {
         amount: stake_amount,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -375,9 +380,12 @@ fn stake_0_total_bug(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     // Check unbonding withdrawn
     match (snip20::QueryMsg::Balance {

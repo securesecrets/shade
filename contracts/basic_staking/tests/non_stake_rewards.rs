@@ -14,7 +14,7 @@ use shade_multi_test::multi::{
 };
 
 // Add other adapters here as they come
-fn single_staker_single_pool(
+fn non_stake_rewards(
     stake_amount: Uint128,
     unbond_period: Uint128,
     reward_amount: Uint128,
@@ -35,21 +35,15 @@ fn single_staker_single_pool(
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
 
-    let token = snip20::InstantiateMsg {
+    let stake_token = snip20::InstantiateMsg {
         name: "stake_token".into(),
         admin: Some(admin_user.to_string().clone()),
         symbol: "STKN".into(),
         decimals: 6,
-        initial_balances: Some(vec![
-            snip20::InitialBalance {
-                amount: stake_amount,
-                address: staking_user.to_string(),
-            },
-            snip20::InitialBalance {
-                amount: reward_amount,
-                address: reward_user.to_string(),
-            },
-        ]),
+        initial_balances: Some(vec![snip20::InitialBalance {
+            amount: stake_amount,
+            address: staking_user.to_string(),
+        }]),
         query_auth: None,
         prng_seed: to_binary("").ok().unwrap(),
         config: Some(snip20::InitConfig {
@@ -70,12 +64,47 @@ fn single_staker_single_pool(
     )
     .unwrap();
 
-    // set staking_user viewing key
+    let reward_token = snip20::InstantiateMsg {
+        name: "reward_token".into(),
+        admin: Some(admin_user.to_string().clone()),
+        symbol: "STKN".into(),
+        decimals: 6,
+        initial_balances: Some(vec![snip20::InitialBalance {
+            amount: reward_amount,
+            address: reward_user.to_string(),
+        }]),
+        query_auth: None,
+        prng_seed: to_binary("").ok().unwrap(),
+        config: Some(snip20::InitConfig {
+            public_total_supply: Some(true),
+            enable_deposit: Some(false),
+            enable_redeem: Some(false),
+            enable_mint: Some(false),
+            enable_burn: Some(false),
+            enable_transfer: Some(true),
+        }),
+    }
+    .test_init(
+        Snip20::default(),
+        &mut app,
+        admin_user.clone(),
+        "stake_token",
+        &[],
+    )
+    .unwrap();
+
+    // set staking_user viewing keys
     snip20::ExecuteMsg::SetViewingKey {
         key: viewing_key.clone(),
         padding: None,
     }
-    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .test_exec(&stake_token, &mut app, staking_user.clone(), &[])
+    .unwrap();
+    snip20::ExecuteMsg::SetViewingKey {
+        key: viewing_key.clone(),
+        padding: None,
+    }
+    .test_exec(&reward_token, &mut app, staking_user.clone(), &[])
     .unwrap();
 
     let admin_contract = init_admin_auth(&mut app, &admin_user);
@@ -113,7 +142,7 @@ fn single_staker_single_pool(
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
         airdrop: None,
-        stake_token: token.clone().into(),
+        stake_token: stake_token.clone().into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
@@ -166,7 +195,7 @@ fn single_staker_single_pool(
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, staking_user.clone(), &[])
+    .test_exec(&stake_token, &mut app, staking_user.clone(), &[])
     .unwrap();
 
     // Post-staking user balance
@@ -192,45 +221,13 @@ fn single_staker_single_pool(
         }
     };
 
-    // Post staking total staked
-    match (basic_staking::QueryMsg::TotalStaked {})
-        .test_query(&basic_staking, &app)
-        .unwrap()
-    {
-        basic_staking::QueryAnswer::TotalStaked { amount } => {
-            assert_eq!(amount, stake_amount, "Post staking total staked");
-        }
-        _ => {
-            panic!("Total Staked query failed");
-        }
-    };
-
-    // Verify stake token
-    match (basic_staking::QueryMsg::StakeToken {})
-        .test_query(&basic_staking, &app)
-        .unwrap()
-    {
-        basic_staking::QueryAnswer::StakeToken { token: stake_token } => {
-            assert_eq!(stake_token, token.address);
-        }
-        _ => {
-            panic!("Total Staked query failed");
-        }
-    };
-
-    // Stake token should be registered
-    match (basic_staking::QueryMsg::RewardTokens {})
-        .test_query(&basic_staking, &app)
-        .unwrap()
-    {
-        basic_staking::QueryAnswer::RewardTokens { tokens } => {
-            assert_eq!(tokens.len(), 1, "Only stake token registered");
-            assert_eq!(tokens[0], token.address);
-        }
-        _ => {
-            panic!("Total Staked query failed");
-        }
-    };
+    // Register Reward Token
+    basic_staking::ExecuteMsg::RegisterRewards {
+        token: reward_token.clone().into(),
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, admin_user.clone(), &[])
+    .unwrap();
 
     // Init Rewards
     snip20::ExecuteMsg::Send {
@@ -247,7 +244,7 @@ fn single_staker_single_pool(
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, reward_user.clone(), &[])
+    .test_exec(&reward_token, &mut app, reward_user.clone(), &[])
     .unwrap();
 
     // reward user has no stake
@@ -398,7 +395,7 @@ fn single_staker_single_pool(
     };
 
     // Claim rewards
-    basic_staking::ExecuteMsg::Claim { padding: None }
+    basic_staking::ExecuteMsg::Compound { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
@@ -407,7 +404,7 @@ fn single_staker_single_pool(
         key: viewing_key.clone(),
         address: staking_user.clone().into(),
     })
-    .test_query(&token, &app)
+    .test_query(&reward_token, &app)
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
@@ -500,21 +497,41 @@ fn single_staker_single_pool(
         }
     };
 
-    // Check snip20 received by user
+    // Check user stake token balance
     match (snip20::QueryMsg::Balance {
         key: viewing_key.clone(),
         address: staking_user.clone().into(),
     })
-    .test_query(&token, &app)
+    .test_query(&stake_token, &app)
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
-            let expected = stake_amount + reward_amount;
+            assert_eq!(
+                amount, stake_amount,
+                "Final user balance of stake token {}, expected {}",
+                amount, stake_amount,
+            );
+        }
+        _ => {
+            panic!("Snip20 balance query failed");
+        }
+    };
+
+    // Check user reward token balance
+    match (snip20::QueryMsg::Balance {
+        key: viewing_key.clone(),
+        address: staking_user.clone().into(),
+    })
+    .test_query(&reward_token, &app)
+    .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => {
             assert!(
-                amount >= expected - Uint128::one() && amount <= expected,
-                "Final user balance within error of 1 unit token {} != {}",
+                amount >= reward_amount - Uint128::one()
+                    && amount <= reward_amount + Uint128::one(),
+                "Final user balance of reward token {}, expected {}",
                 amount,
-                expected,
+                reward_amount,
             );
         }
         _ => {
@@ -523,7 +540,7 @@ fn single_staker_single_pool(
     };
 }
 
-macro_rules! single_staker_single_pool {
+macro_rules! non_stake_rewards {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -535,7 +552,7 @@ macro_rules! single_staker_single_pool {
                     reward_start,
                     reward_end,
                 ) = $value;
-                single_staker_single_pool(
+                non_stake_rewards(
                     stake_amount,
                     unbond_period,
                     reward_amount,
@@ -547,43 +564,43 @@ macro_rules! single_staker_single_pool {
     }
 }
 
-single_staker_single_pool! {
-    single_staker_single_pool_0: (
+non_stake_rewards! {
+    non_stake_rewards_0: (
         Uint128::new(1), //   stake_amount
         Uint128::new(100), // unbond_period
         Uint128::new(100), // reward_amount
         Uint128::new(0), //   reward_start (0-*)
         Uint128::new(100), // reward_end
     ),
-    single_staker_single_pool_1: (
+    non_stake_rewards_1: (
         Uint128::new(100),
         Uint128::new(100),
         Uint128::new(1000),
         Uint128::new(0),
         Uint128::new(100),
     ),
-    single_staker_single_pool_2: (
+    non_stake_rewards_2: (
         Uint128::new(1000),
         Uint128::new(100),
         Uint128::new(300),
         Uint128::new(0),
         Uint128::new(100),
     ),
-    single_staker_single_pool_3: (
+    non_stake_rewards_3: (
         Uint128::new(10),
         Uint128::new(100),
         Uint128::new(50000),
         Uint128::new(0),
         Uint128::new(2500000),
     ),
-    single_staker_single_pool_4: (
+    non_stake_rewards_4: (
         Uint128::new(1234567),
         Uint128::new(10000),
         Uint128::new(500),
         Uint128::new(0),
         Uint128::new(10000),
     ),
-    single_staker_single_pool_5: (
+    non_stake_rewards_5: (
         Uint128::new(99999999999),
         Uint128::new(100),
         Uint128::new(8192),

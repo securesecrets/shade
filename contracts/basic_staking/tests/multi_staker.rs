@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -39,7 +39,6 @@ fn multi_staker_single_pool(
         .enumerate()
         .map(|(i, x)| Addr::unchecked(format!("staker-{}", i)))
         .collect::<Vec<Addr>>();
-    let treasury = Addr::unchecked("treasury");
 
     let mut initial_balances = staking_users
         .iter()
@@ -125,12 +124,11 @@ fn multi_staker_single_pool(
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
+        airdrop: None,
         stake_token: token.clone().into(),
-        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -166,7 +164,13 @@ fn multi_staker_single_pool(
             recipient: basic_staking.address.to_string().clone(),
             recipient_code_hash: None,
             amount: stake_amount,
-            msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+            msg: Some(
+                to_binary(&basic_staking::Action::Stake {
+                    compound: None,
+                    airdrop_task: None,
+                })
+                .unwrap(),
+            ),
             memo: None,
             padding: None,
         }
@@ -355,7 +359,7 @@ fn multi_staker_single_pool(
         };
 
         // Claim rewards
-        basic_staking::ExecuteMsg::Claim {}
+        basic_staking::ExecuteMsg::Claim { padding: None }
             .test_exec(&basic_staking, &mut app, user.clone(), &[])
             .unwrap();
 
@@ -384,6 +388,7 @@ fn multi_staker_single_pool(
         basic_staking::ExecuteMsg::Unbond {
             amount,
             compound: None,
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, user.clone(), &[])
         .unwrap();
@@ -427,9 +432,12 @@ fn multi_staker_single_pool(
         .zip(expected_rewards.clone().into_iter())
     {
         // Withdraw unbonding
-        basic_staking::ExecuteMsg::Withdraw { ids: None }
-            .test_exec(&basic_staking, &mut app, user.clone(), &[])
-            .unwrap();
+        basic_staking::ExecuteMsg::Withdraw {
+            ids: None,
+            padding: None,
+        }
+        .test_exec(&basic_staking, &mut app, user.clone(), &[])
+        .unwrap();
 
         // Check unbonding withdrawn
         match (snip20::QueryMsg::Balance {

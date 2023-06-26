@@ -17,13 +17,10 @@ use cosmwasm_schema::cw_serde;
 pub struct Config {
     pub admin_auth: Contract,
     pub query_auth: Contract,
-    pub treasury: Addr,
+    pub airdrop: Option<Contract>,
     pub unbond_period: Uint128,
     // Number of non-admin pools allowed
     pub max_user_pools: Uint128,
-    // Required amount of rewards claimed
-    // before a reward pool can be cancelled without 'force'
-    pub reward_cancel_threshold: Uint128,
 }
 
 #[cw_serde]
@@ -38,8 +35,14 @@ pub struct StakingInfo {
 #[cw_serde]
 pub enum Action {
     // Deposit rewards to be distributed
-    Stake { compound: Option<bool> },
-    Rewards { start: Uint128, end: Uint128 },
+    Stake {
+        compound: Option<bool>,
+        airdrop_task: Option<bool>,
+    },
+    Rewards {
+        start: Uint128,
+        end: Uint128,
+    },
 }
 
 #[cw_serde]
@@ -87,11 +90,10 @@ pub struct RewardPool {
 pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
+    pub airdrop: Option<RawContract>,
     pub stake_token: RawContract,
-    pub treasury: String,
     pub unbond_period: Uint128,
     pub max_user_pools: Uint128,
-    pub reward_cancel_threshold: Uint128,
     pub viewing_key: String,
 }
 
@@ -104,12 +106,14 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin_auth: Option<RawContract>,
         query_auth: Option<RawContract>,
+        airdrop: Option<RawContract>,
         unbond_period: Option<Uint128>,
         max_user_pools: Option<Uint128>,
-        reward_cancel_threshold: Option<Uint128>,
+        padding: Option<String>,
     },
     RegisterRewards {
         token: RawContract,
+        padding: Option<String>,
     },
     Receive {
         sender: Addr,
@@ -121,26 +125,36 @@ pub enum ExecuteMsg {
     Unbond {
         amount: Uint128,
         compound: Option<bool>,
+        padding: Option<String>,
     },
     Withdraw {
         ids: Option<Vec<Uint128>>,
+        padding: Option<String>,
     },
-    Claim {},
-    Compound {},
+    Claim {
+        padding: Option<String>,
+    },
+    Compound {
+        padding: Option<String>,
+    },
     EndRewardPool {
         id: Uint128,
         force: Option<bool>,
+        padding: Option<String>,
     },
     AddTransferWhitelist {
         user: String,
+        padding: Option<String>,
     },
     RemoveTransferWhitelist {
         user: String,
+        padding: Option<String>,
     },
     TransferStake {
         amount: Uint128,
         recipient: String,
         compound: Option<bool>,
+        padding: Option<String>,
     },
 }
 

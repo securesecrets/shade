@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -33,7 +33,6 @@ fn unbonding_withdrawals(
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
-    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -106,12 +105,11 @@ fn unbonding_withdrawals(
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
+        airdrop: None,
         stake_token: token.clone().into(),
-        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -128,7 +126,13 @@ fn unbonding_withdrawals(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: stake_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }
@@ -151,6 +155,7 @@ fn unbonding_withdrawals(
         basic_staking::ExecuteMsg::Unbond {
             amount: unbond_amount.clone(),
             compound: None,
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
@@ -201,6 +206,7 @@ fn unbonding_withdrawals(
         // Withdraw
         basic_staking::ExecuteMsg::Withdraw {
             ids: Some(vec![unbonding_ids[i]]),
+            padding: None,
         }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();

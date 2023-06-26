@@ -3,7 +3,7 @@ use shade_protocol::c_std::{to_binary, Addr, BlockInfo, Timestamp, Uint128};
 use shade_protocol::{
     contract_interfaces::{basic_staking, query_auth, snip20},
     multi_test::App,
-    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{
@@ -34,7 +34,6 @@ fn single_staker_compounding(
     let admin_user = Addr::unchecked("admin");
     let staking_user = Addr::unchecked("staker");
     let reward_user = Addr::unchecked("reward_user");
-    let treasury = Addr::unchecked("treasury");
 
     let token = snip20::InstantiateMsg {
         name: "stake_token".into(),
@@ -113,12 +112,11 @@ fn single_staker_compounding(
     let basic_staking = basic_staking::InstantiateMsg {
         admin_auth: admin_contract.into(),
         query_auth: query_contract.into(),
+        airdrop: None,
         stake_token: token.clone().into(),
-        treasury: treasury.into(),
         unbond_period,
         max_user_pools: Uint128::one(),
         viewing_key: viewing_key.clone(),
-        reward_cancel_threshold: Uint128::zero(),
     }
     .test_init(
         BasicStaking::default(),
@@ -155,7 +153,13 @@ fn single_staker_compounding(
         recipient: basic_staking.address.to_string().clone(),
         recipient_code_hash: None,
         amount: first_amount,
-        msg: Some(to_binary(&basic_staking::Action::Stake { compound: None }).unwrap()),
+        msg: Some(
+            to_binary(&basic_staking::Action::Stake {
+                compound: None,
+                airdrop_task: None,
+            })
+            .unwrap(),
+        ),
         memo: None,
         padding: None,
     }
@@ -301,12 +305,6 @@ fn single_staker_compounding(
         }
     };
 
-    // Compound rewards
-    /*
-    basic_staking::ExecuteMsg::Compound {}
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
-    */
     // Stake & compound
     snip20::ExecuteMsg::Send {
         recipient: basic_staking.address.to_string().clone(),
@@ -315,6 +313,7 @@ fn single_staker_compounding(
         msg: Some(
             to_binary(&basic_staking::Action::Stake {
                 compound: Some(true),
+                airdrop_task: None,
             })
             .unwrap(),
         ),
@@ -361,6 +360,7 @@ fn single_staker_compounding(
     .unwrap()
     {
         basic_staking::QueryAnswer::Staked { amount } => {
+            println!("PRE COMPOUND STAKED {}", amount);
             let amount = amount.u128();
             let expected = (stake_amount + mid_rewards).u128();
             assert!(
@@ -381,6 +381,7 @@ fn single_staker_compounding(
         chain_id: "chain_id".to_string(),
     });
 
+    let current_rewards: Uint128;
     // All rewards should be pending
     match (basic_staking::QueryMsg::Rewards {
         auth: basic_staking::Auth::ViewingKey {
@@ -393,16 +394,18 @@ fn single_staker_compounding(
     {
         basic_staking::QueryAnswer::Rewards { rewards } => {
             assert_eq!(rewards.len(), 1, "rewards length at end");
-            let amount = rewards[0].amount;
+            current_rewards = rewards[0].amount;
+            println!("CUR REWARDS {}", current_rewards);
             println!(
                 "reward amount {} mid rewards {}",
                 reward_amount, mid_rewards
             );
             let expected = reward_amount - mid_rewards;
             assert!(
-                amount >= expected - Uint128::new(2) && amount <= expected + Uint128::new(2),
+                current_rewards >= expected - Uint128::new(2)
+                    && current_rewards <= expected + Uint128::new(2),
                 "Rewards claimable at the end within error of 2 unit tokens {} != {}",
-                amount,
+                current_rewards,
                 expected,
             );
         }
@@ -411,37 +414,40 @@ fn single_staker_compounding(
         }
     };
 
-    // Claim rewards
-    basic_staking::ExecuteMsg::Claim {}
+    // Compound rewards
+    basic_staking::ExecuteMsg::Compound { padding: None }
         .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
         .unwrap();
 
-    // Check rewards were claimed
-    match (snip20::QueryMsg::Balance {
-        key: viewing_key.clone(),
-        address: staking_user.clone().into(),
+    // Check rewards were compounded
+    match (basic_staking::QueryMsg::Staked {
+        auth: basic_staking::Auth::ViewingKey {
+            key: viewing_key.clone(),
+            address: staking_user.clone().into(),
+        },
     })
-    .test_query(&token, &app)
+    .test_query(&basic_staking, &app)
     .unwrap()
     {
-        snip20::QueryAnswer::Balance { amount } => {
-            let expected = reward_amount - mid_rewards;
-            assert!(
-                amount >= expected - Uint128::new(2) && expected <= reward_amount,
-                "Rewards claimed at the end within error of 2 unit tokens {} != {}",
+        basic_staking::QueryAnswer::Staked { amount } => {
+            assert_eq!(
                 amount,
-                reward_amount,
+                stake_amount + current_rewards + mid_rewards,
+                "Post compound staked {}, {}",
+                stake_amount,
+                current_rewards
             );
         }
         _ => {
-            panic!("Snip20 balance query failed");
+            panic!("Staking balance query failed");
         }
     };
 
     // Unbond
     basic_staking::ExecuteMsg::Unbond {
-        amount: stake_amount + mid_rewards,
+        amount: stake_amount + current_rewards + mid_rewards,
         compound: None,
+        padding: None,
     }
     .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
     .unwrap();
@@ -461,7 +467,7 @@ fn single_staker_compounding(
             assert_eq!(unbondings.len(), 1, "1 unbonding");
             assert_eq!(
                 unbondings[0].amount,
-                stake_amount + mid_rewards,
+                stake_amount + current_rewards + mid_rewards,
                 "Unbonding full amount"
             );
             assert_eq!(
@@ -474,6 +480,7 @@ fn single_staker_compounding(
             panic!("Staking unbonding query failed");
         }
     };
+
     println!("Fast-forward to end of unbonding period");
     app.set_block(BlockInfo {
         height: 10,
@@ -481,9 +488,12 @@ fn single_staker_compounding(
         chain_id: "chain_id".to_string(),
     });
 
-    basic_staking::ExecuteMsg::Withdraw { ids: None }
-        .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
-        .unwrap();
+    basic_staking::ExecuteMsg::Withdraw {
+        ids: None,
+        padding: None,
+    }
+    .test_exec(&basic_staking, &mut app, staking_user.clone(), &[])
+    .unwrap();
 
     // Check unbonding withdrawn
     match (snip20::QueryMsg::Balance {
