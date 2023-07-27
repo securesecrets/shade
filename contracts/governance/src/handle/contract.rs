@@ -1,39 +1,29 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
-    contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
+    contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, ExecuteAnswer},
+    governance::errors::Error,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_add_contract(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
     contract: Contract,
-    assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let id = ID::add_contract(&mut deps.storage)?;
+    assemblies: Option<Vec<u16>>,
+) -> StdResult<Response> {
+    let id = ID::add_contract(deps.storage)?;
 
     if let Some(ref assemblies) = assemblies {
-        let assembly_id = ID::assembly(&deps.storage)?;
+        let assembly_id = ID::assembly(deps.storage)?;
         for assembly in assemblies.iter() {
             if assembly > &assembly_id {
-                return Err(StdError::generic_err("Assembly does not exist"));
+                return Err(Error::item_not_found(vec![
+                    &assembly.to_string(),
+                    "Assembly",
+                ]));
             }
         }
     }
@@ -44,36 +34,31 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
         contract,
         assemblies,
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContract {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
+pub fn try_set_contract(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     name: Option<String>,
     metadata: Option<String>,
     contract: Option<Contract>,
     disable_assemblies: bool,
-    assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+    assemblies: Option<Vec<u16>>,
+) -> StdResult<Response> {
+    if id > ID::contract(deps.storage)? {
+        return Err(Error::item_not_found(vec![&id.to_string(), "Contract"]));
     }
 
-    if id > ID::contract(&deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"));
-    }
-
-    let mut allowed_contract = AllowedContract::load(&mut deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::load(deps.storage, id)?;
 
     if let Some(name) = name {
         allowed_contract.name = name;
@@ -91,45 +76,43 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
         allowed_contract.assemblies = None;
     } else {
         if let Some(assemblies) = assemblies {
-            let assembly_id = ID::assembly(&deps.storage)?;
+            let assembly_id = ID::assembly(deps.storage)?;
             for assembly in assemblies.iter() {
                 if assembly > &assembly_id {
-                    return Err(StdError::generic_err("Assembly does not exist"));
+                    return Err(Error::item_not_found(vec![
+                        &assembly.to_string(),
+                        "Assembly",
+                    ]));
                 }
             }
             allowed_contract.assemblies = Some(assemblies);
         }
     }
 
-    allowed_contract.save(&mut deps.storage, &id)?;
+    allowed_contract.save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContract {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
-    assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+pub fn try_add_contract_assemblies(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
+    assemblies: Vec<u16>,
+) -> StdResult<Response> {
+    if id > ID::contract(deps.storage)? {
+        return Err(Error::item_not_found(vec![&id.to_string(), "Contract"]));
     }
 
-    if id > ID::contract(&deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"));
-    }
-
-    let mut allowed_contract = AllowedContract::data(&mut deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::data(deps.storage, id)?;
 
     if let Some(mut old_assemblies) = allowed_contract.assemblies {
-        let assembly_id = ID::assembly(&deps.storage)?;
+        let assembly_id = ID::assembly(deps.storage)?;
         for assembly in assemblies.iter() {
             if assembly <= &assembly_id && !old_assemblies.contains(assembly) {
                 old_assemblies.push(assembly.clone());
@@ -137,18 +120,14 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
         }
         allowed_contract.assemblies = Some(old_assemblies);
     } else {
-        return Err(StdError::generic_err(
-            "Assembly support is disabled in this contract",
-        ));
+        return Err(Error::contract_disabled(vec![]));
     }
 
-    AllowedContract::save_data(&mut deps.storage, &id, allowed_contract)?;
+    AllowedContract::save_data(deps.storage, id, allowed_contract)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddContractAssemblies {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }

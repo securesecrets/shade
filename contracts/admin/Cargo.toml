@@ -1,0 +1,31 @@
+[package]
+name = "admin"
+version = "0.2.0"
+authors = ["sbeem <sbeem@pm.me>", "scrtreddev <scrtredev@protonmail.com", "hoomp <flammable.shower939@anonaddy.me>"]
+edition = "2021"
+
+exclude = [
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+debug-print = ["shade-protocol/debug-print"]
+
+[dependencies]
+# Needs to be in contract dependency in order for build to work
+shade-protocol = { path = "../../packages/shade_protocol", default-features = false, features = ["admin_impl"] }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+
+[dev-dependencies]
+rstest = "0.15"
+shade-protocol = { path = "../../packages/shade_protocol", features = ["multi-test"] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "admin"  ] }

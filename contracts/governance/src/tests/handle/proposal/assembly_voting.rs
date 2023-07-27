@@ -1,82 +1,108 @@
-use crate::tests::{
-    admin_only_governance,
-    get_assemblies,
-    get_proposals,
-    gov_generic_proposal,
-    gov_msg_proposal,
-    init_governance,
-};
-use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma::core::ContractLink;
+use crate::tests::{get_proposals, init_chain};
+use shade_multi_test::multi::governance::Governance;
 use shade_protocol::{
+    c_std::{Addr, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
+            profile::{Count, Profile, VoteProfile},
+            proposal::Status,
             vote::Vote,
-            InitMsg,
+            InstantiateMsg,
         },
+        query_auth,
     },
-    utils::asset::Contract,
+    governance::AssemblyInit,
+    multi_test::App,
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
 };
 
-fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
-{
-    let (mut chain, gov) = init_governance(InitMsg {
-        treasury: HumanAddr::from("treasury"),
-        admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::LiteralCount {
-                    count: Uint128::new(2),
-                },
-                yes_threshold: Count::LiteralCount {
-                    count: Uint128::new(2),
-                },
-                veto_threshold: Count::LiteralCount {
-                    count: Uint128::new(3),
-                },
-            }),
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
+pub fn init_assembly_governance_with_proposal() -> StdResult<(App, ContractInfo)> {
+    let (mut chain, auth) = init_chain();
+
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
+
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
+
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[])
+    .unwrap();
+
+    let gov = InstantiateMsg {
+        treasury: Addr::unchecked("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
         },
         funding_token: None,
         vote_token: None,
-    })?;
-
-    chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Text only proposal".to_string(),
-            msgs: None,
-            padding: None,
-        },
-        MockEnv::new("alpha", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: Some(VoteProfile {
+                    deadline: 10000,
+                    threshold: Count::LiteralCount {
+                        count: Uint128::new(2),
+                    },
+                    yes_threshold: Count::LiteralCount {
+                        count: Uint128::new(2),
+                    },
+                    veto_threshold: Count::LiteralCount {
+                        count: Uint128::new(3),
+                    },
+                }),
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
         }),
-    )?;
+        migrator: None,
+    }
+    .test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "governance",
+        &[],
+    )
+    .unwrap();
+
+    governance::ExecuteMsg::AssemblyProposal {
+        assembly: 1,
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     Ok((chain, gov))
 }
@@ -85,8 +111,12 @@ fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, Cont
 fn assembly_voting() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
+
+    assert_eq!(prop.title, "Title".to_string());
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.proposer, Addr::unchecked("alpha"));
+    assert_eq!(prop.assembly, 1);
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -99,18 +129,12 @@ fn update_before_deadline() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::HandleMsg::Update {
-                    proposal: Uint128::new(0),
-                    padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
-            .is_err()
+        governance::ExecuteMsg::Update {
+            proposal: 0,
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_err()
     );
 }
 
@@ -118,21 +142,15 @@ fn update_before_deadline() {
 fn update_after_deadline() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     assert!(
-        chain
-            .execute(
-                &governance::HandleMsg::Update {
-                    proposal: Uint128::new(0),
-                    padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
-            .is_ok()
+        governance::ExecuteMsg::Update {
+            proposal: 0,
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_ok()
     );
 }
 
@@ -141,24 +159,18 @@ fn invalid_vote() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::HandleMsg::AssemblyVote {
-                    proposal: Uint128::new(0),
-                    vote: Vote {
-                        yes: Uint128::new(1),
-                        no: Uint128::new(1),
-                        no_with_veto: Default::default(),
-                        abstain: Default::default()
-                    },
-                    padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
-            .is_err()
+        governance::ExecuteMsg::AssemblyVote {
+            proposal: 0,
+            vote: Vote {
+                yes: Uint128::new(1),
+                no: Uint128::new(1),
+                no_with_veto: Default::default(),
+                abstain: Default::default()
+            },
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_err()
     );
 }
 
@@ -167,24 +179,18 @@ fn unauthorised_vote() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::HandleMsg::AssemblyVote {
-                    proposal: Uint128::new(0),
-                    vote: Vote {
-                        yes: Uint128::zero(),
-                        no: Uint128::new(1),
-                        no_with_veto: Uint128::zero(),
-                        abstain: Uint128::zero()
-                    },
-                    padding: None
-                },
-                MockEnv::new("foxtrot", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
-            .is_err()
+        governance::ExecuteMsg::AssemblyVote {
+            proposal: 0,
+            vote: Vote {
+                yes: Uint128::zero(),
+                no: Uint128::new(1),
+                no_with_veto: Uint128::zero(),
+                abstain: Uint128::zero()
+            },
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("foxtrot"), &[])
+        .is_err()
     );
 }
 
@@ -192,27 +198,21 @@ fn unauthorised_vote() {
 fn vote_after_deadline() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     assert!(
-        chain
-            .execute(
-                &governance::HandleMsg::AssemblyVote {
-                    proposal: Uint128::new(0),
-                    vote: Vote {
-                        yes: Uint128::zero(),
-                        no: Uint128::new(1),
-                        no_with_veto: Uint128::zero(),
-                        abstain: Uint128::zero()
-                    },
-                    padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
-            .is_err()
+        governance::ExecuteMsg::AssemblyVote {
+            proposal: 0,
+            vote: Vote {
+                yes: Uint128::zero(),
+                no: Uint128::new(1),
+                no_with_veto: Uint128::zero(),
+                abstain: Uint128::zero()
+            },
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_err()
     );
 }
 
@@ -220,27 +220,20 @@ fn vote_after_deadline() {
 fn vote_yes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -262,27 +255,20 @@ fn vote_yes() {
 fn vote_abstain() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::new(1),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(1),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -304,27 +290,20 @@ fn vote_abstain() {
 fn vote_no() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::new(1),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(1),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -346,27 +325,20 @@ fn vote_no() {
 fn vote_veto() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -388,61 +360,42 @@ fn vote_veto() {
 fn vote_passed() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -454,61 +407,42 @@ fn vote_passed() {
 fn vote_abstained() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::new(1),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(1),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::new(1),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(1),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Rejected { .. } => assert!(true),
@@ -520,61 +454,42 @@ fn vote_abstained() {
 fn vote_rejected() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::new(1),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(1),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::new(1),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(1),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Rejected { .. } => assert!(true),
@@ -586,61 +501,42 @@ fn vote_rejected() {
 fn vote_vetoed() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         // NOTE: assembly votes cannot be vetoed
@@ -653,42 +549,29 @@ fn vote_vetoed() {
 fn vote_no_quorum() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::new(0),
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(prop.status, Status::Expired);
 }
@@ -697,65 +580,46 @@ fn vote_no_quorum() {
 fn vote_total() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("charlie", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("charlie"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -777,27 +641,20 @@ fn vote_total() {
 fn update_vote() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::zero(),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::new(1),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(
         prop.assembly_vote_tally,
@@ -809,27 +666,20 @@ fn update_vote() {
         })
     );
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     assert_eq!(
         prop.assembly_vote_tally,
@@ -846,61 +696,42 @@ fn update_vote() {
 fn vote_count() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -910,110 +741,101 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov) = init_governance(InitMsg {
-        treasury: HumanAddr::from("treasury"),
-        admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::Percentage { percent: 6500 },
-                yes_threshold: Count::Percentage { percent: 6500 },
-                veto_threshold: Count::Percentage { percent: 6500 },
-            }),
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
+    let (mut chain, auth) = init_chain();
+
+    let gov = InstantiateMsg {
+        treasury: Addr::unchecked("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
         },
         funding_token: None,
         vote_token: None,
-    })
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: Some(VoteProfile {
+                    deadline: 10000,
+                    threshold: Count::Percentage { percent: 6500 },
+                    yes_threshold: Count::Percentage { percent: 6500 },
+                    veto_threshold: Count::Percentage { percent: 6500 },
+                }),
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
+        migrator: None,
+    }
+    .test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "governance",
+        &[],
+    )
     .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text only proposal".to_string(),
-                msgs: None,
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyProposal {
+        assembly: 1,
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::AssemblyVote {
+        proposal: 0,
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    chain
-        .execute(
-            &governance::HandleMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
-        .unwrap();
+    governance::ExecuteMsg::Update {
+        proposal: 0,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    let prop =
-        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+    let prop = get_proposals(&mut chain, &gov, 0, 2).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),

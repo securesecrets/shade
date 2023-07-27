@@ -1,4 +1,3 @@
-contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
@@ -14,10 +13,12 @@ rm ./$(1).wasm
 endef
 
 CONTRACTS = \
-		airdrop bonds governance snip20_staking mint mint_router \
+		airdrop governance \
 		treasury treasury_manager scrt_staking rewards_emission \
-		lp_shade_swap oracle snip20 query_auth\
-		mock_band mock_secretswap_pair mock_sienna_pair sky
+		oracle snip20 query_auth sky peg_stability admin\
+		mock_band mock_secretswap_pair mock_sienna_pair mock_adapter\
+		mock_stkd_derivative basic_staking snip20_migration lp_shdswap stkd_scrt\
+		snip20_derivative
 
 PACKAGES = \
 	  shade_protocol contract_harness cosmwasm_math_compat \
@@ -39,25 +40,31 @@ compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	(cd ${contracts_dir}/$@; ${build-release})
-	@$(MAKE) $(addprefix compress-,$(@))
+	(${build-release} -p $@)
+	@$(MAKE) compress-$(@)
 
 $(PACKAGES):
 	(cd packages/$@; cargo build)
 
 snip20: setup
-	(cd ${contracts_dir}/snip20; ${build-release})
+	(cd contracts/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
 
 snip20_staking: setup
-	(cd ${contracts_dir}/snip20_staking; ${build-release})
+	(cd contracts/snip20_staking; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20_staking)
 
 test:
 	@$(MAKE) $(addprefix test-,$(CONTRACTS))
 
 test-%: %
-	(cd ${contracts_dir}/$*; cargo test)
+	(cargo test -p $*)
+
+dao-cov:
+	(cargo llvm-cov --html -p treasury -p treasury_manager; xdg-open target/llvm-cov/html/index.html)
+
+cov:
+	(cargo llvm-cov --html; xdg-open target/llvm-cov/html/index.html)
 
 setup: $(compiled_dir) $(checksum_dir)
 

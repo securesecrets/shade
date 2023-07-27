@@ -1,121 +1,95 @@
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use query_authentication::viewing_keys::ViewingKey;
-use secret_toolkit::utils::Query;
-use shade_admin::admin::AuthorizedUsersResponse;
 use shade_protocol::{
+    admin::helpers::{validate_admin, AdminPermissions},
+    c_std::{to_binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
         Admin,
         ContractStatus,
-        HandleAnswer,
+        ExecuteAnswer,
         RngSeed,
     },
+    query_authentication::viewing_keys::ViewingKey,
     utils::{
         generic_response::ResponseStatus::Success,
         storage::plus::{ItemStorage, MapStorage},
     },
 };
+
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: Env) -> StdResult<bool> {
-    let contract = Admin::load(&deps.storage)?.0;
+fn user_authorized(deps: &Deps, _env: Env, info: &MessageInfo) -> StdResult<()> {
+    let contract = Admin::load(deps.storage)?.0;
 
-    let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
-        contract_address: env.contract.address.to_string()
-    }.query(&deps.querier, contract.code_hash, contract.address)?;
-
-    Ok(authorized_users.authorized_users.contains(&env.message.sender.to_string()))
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::QueryAuthAdmin,
+        info.sender.clone(),
+        &contract,
+    )
 }
 
-pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_set_admin(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     admin: Contract,
-) -> StdResult<HandleResponse> {
-    if  !user_authorized(&deps, env)? {
-        return Err(StdError::unauthorized());
-    }
+) -> StdResult<Response> {
+    user_authorized(&deps.as_ref(), env, &info)?;
 
-    Admin(admin).save(&mut deps.storage)?;
+    Admin(admin).save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAdminAuth { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetAdminAuth { status: Success })?))
 }
 
-pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_set_run_state(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     state: ContractStatus,
-) -> StdResult<HandleResponse> {
-    if  !user_authorized(&deps, env)? {
-        return Err(StdError::unauthorized());
-    }
+) -> StdResult<Response> {
+    user_authorized(&deps.as_ref(), env, &info)?;
 
-    state.save(&mut deps.storage)?;
+    state.save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetRunState { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetRunState { status: Success })?))
 }
 
-pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_create_viewing_key(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     entropy: String,
-) -> StdResult<HandleResponse> {
-    let seed = RngSeed::load(&deps.storage)?.0;
+) -> StdResult<Response> {
+    let seed = RngSeed::load(deps.storage)?.0;
 
-    let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
+    let key = Key::generate(&info, &env, seed.as_slice(), &entropy.as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key: key.0 })?))
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_set_viewing_key(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     key: String,
-) -> StdResult<HandleResponse> {
-    HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
+) -> StdResult<Response> {
+    HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey { status: Success })?))
 }
 
-pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_block_permit_key(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     key: String,
-) -> StdResult<HandleResponse> {
-    PermitKey::revoke(&mut deps.storage, key, env.message.sender)?;
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BlockPermitKey {
+) -> StdResult<Response> {
+    PermitKey::revoke(deps.storage, key, info.sender)?;
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::BlockPermitKey {
             status: Success,
         })?),
-    })
+    )
 }

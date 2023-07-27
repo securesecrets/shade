@@ -1,58 +1,39 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
-        profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
+        profile::{Profile, UpdateProfile},
         stored_id::ID,
-        HandleAnswer,
+        ExecuteAnswer,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    governance::errors::Error,
+    utils::generic_response::ResponseStatus,
 };
 
-pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_add_profile(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     profile: Profile,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
+) -> StdResult<Response> {
+    let id = ID::add_profile(deps.storage)?;
+    profile.save(deps.storage, id)?;
 
-    let id = ID::add_profile(&mut deps.storage)?;
-    profile.save(&mut deps.storage, &id)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddProfile {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddProfile {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
+pub fn try_set_profile(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     new_profile: UpdateProfile,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let mut profile = match Profile::may_load(&mut deps.storage, &id)? {
-        None => return Err(StdError::generic_err("Profile not found")),
+) -> StdResult<Response> {
+    let mut profile = match Profile::may_load(deps.storage, id)? {
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "Profile"])),
         Some(p) => p,
     };
 
@@ -86,13 +67,11 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
         profile.cancel_deadline = cancel_deadline;
     }
 
-    profile.save(&mut deps.storage, &id)?;
+    profile.save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetProfile {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetProfile {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }

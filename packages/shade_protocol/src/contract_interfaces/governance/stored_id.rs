@@ -1,105 +1,261 @@
-use crate::utils::storage::default::NaiveSingletonStorage;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdResult, Storage};
-use serde::{Deserialize, Serialize};
+use crate::{
+    c_std::{StdResult, Storage},
+    utils::storage::plus::{NaiveItemStorage, NaiveMapStorage},
+};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Addr;
+use secret_storage_plus::{Item, Json, Map};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-// Used to get total IDs
-pub struct ID(Uint128);
+#[cw_serde] // Used to get total IDs
+pub struct ID(u16);
 
-impl NaiveSingletonStorage for ID {}
+impl NaiveItemStorage for ID {}
 
-const PROP_KEY: &'static [u8] = b"proposal_id-";
-const COMMITTEE_KEY: &'static [u8] = b"assembly_id-";
-const COMMITTEE_MSG_KEY: &'static [u8] = b"assembly_msg_id-";
-const PROFILE_KEY: &'static [u8] = b"profile_id-";
-const CONTRACT_KEY: &'static [u8] = b"allowed_contract_id-";
+const PROP_KEY: Item<'static, u32, Json> = Item::new("proposal_id-");
+const ASSEMBLY_KEY: Item<'static, ID, Json> = Item::new("assembly_id-");
+const ASSEMBLY_MSG_KEY: Item<'static, ID, Json> = Item::new("assembly_msg_id-");
+const PROFILE_KEY: Item<'static, ID, Json> = Item::new("profile_id-");
+const CONTRACT_KEY: Item<'static, ID, Json> = Item::new("allowed_contract_id-");
+
+// Migration specific data
+// Used to determine the next ID to migrate over
+const LAST_ASSEMBLY_KEY: Item<'static, ID, Json> = Item::new("last_assembly_id-");
+const LAST_ASSEMBLY_MSG_KEY: Item<'static, ID, Json> = Item::new("last_assembly_msg_id-");
+const LAST_PROFILE_KEY: Item<'static, ID, Json> = Item::new("last_profile_id-");
+const LAST_CONTRACT_KEY: Item<'static, ID, Json> = Item::new("last_allowed_contract_id-");
 
 impl ID {
     // Load current ID related proposals
-    pub fn set_proposal<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, PROP_KEY)
+    pub fn set_proposal(storage: &mut dyn Storage, id: u32) -> StdResult<()> {
+        PROP_KEY.save(storage, &id)
     }
 
-    pub fn proposal<S: Storage>(storage: &S) -> StdResult<Uint128> {
-        Ok(ID::load(storage, PROP_KEY)?.0)
+    pub fn proposal(storage: &dyn Storage) -> StdResult<u32> {
+        Ok(PROP_KEY.load(storage)?)
     }
 
-    pub fn add_proposal<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
-        let item = match ID::may_load(storage, PROP_KEY)? {
-            None => ID(Uint128::zero()),
-            Some(i) => {
-                let item = ID(i.0.checked_add(Uint128::new(1))?);
-                item
-            }
+    pub fn add_proposal(storage: &mut dyn Storage) -> StdResult<u32> {
+        let item = match PROP_KEY.may_load(storage)? {
+            None => 0,
+            Some(i) => i.checked_add(1).unwrap(),
         };
-        item.save(storage, PROP_KEY)?;
-        Ok(item.0)
+        PROP_KEY.save(storage, &item)?;
+        Ok(item)
     }
 
     // Assembly
-    pub fn set_assembly<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, COMMITTEE_KEY)
+    pub fn set_assembly(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, ASSEMBLY_KEY)
     }
 
-    pub fn assembly<S: Storage>(storage: &S) -> StdResult<Uint128> {
-        Ok(ID::load(storage, COMMITTEE_KEY)?.0)
+    pub fn assembly(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, ASSEMBLY_KEY)?.0)
     }
 
-    pub fn add_assembly<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
-        let mut item = ID::load(storage, COMMITTEE_KEY)?;
-        item.0 += Uint128::new(1);
-        item.save(storage, COMMITTEE_KEY)?;
+    pub fn add_assembly(storage: &mut dyn Storage) -> StdResult<u16> {
+        let mut item = ID::load(storage, ASSEMBLY_KEY)?;
+        item.0 = item.0.checked_add(1).unwrap();
+        item.save(storage, ASSEMBLY_KEY)?;
         Ok(item.0)
     }
 
-    // Assembly Msg
-    pub fn set_assembly_msg<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, COMMITTEE_MSG_KEY)
+    // Committee Msg
+    pub fn set_assembly_msg(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, ASSEMBLY_MSG_KEY)
     }
 
-    pub fn assembly_msg<S: Storage>(storage: &S) -> StdResult<Uint128> {
-        Ok(ID::load(storage, COMMITTEE_MSG_KEY)?.0)
+    pub fn assembly_msg(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, ASSEMBLY_MSG_KEY)?.0)
     }
 
-    pub fn add_assembly_msg<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
-        let mut item = ID::load(storage, COMMITTEE_MSG_KEY)?;
-        item.0 += Uint128::new(1);
-        item.save(storage, COMMITTEE_MSG_KEY)?;
+    pub fn add_assembly_msg(storage: &mut dyn Storage) -> StdResult<u16> {
+        let mut item = ID::load(storage, ASSEMBLY_MSG_KEY)?;
+        item.0 = item.0.checked_add(1).unwrap();
+        item.save(storage, ASSEMBLY_MSG_KEY)?;
         Ok(item.0)
     }
 
     // Profile
-    pub fn set_profile<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+    pub fn set_profile(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
         ID(id).save(storage, PROFILE_KEY)
     }
 
-    pub fn profile<S: Storage>(storage: &S) -> StdResult<Uint128> {
+    pub fn profile(storage: &dyn Storage) -> StdResult<u16> {
         Ok(ID::load(storage, PROFILE_KEY)?.0)
     }
 
-    pub fn add_profile<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+    pub fn add_profile(storage: &mut dyn Storage) -> StdResult<u16> {
         let mut item = ID::load(storage, PROFILE_KEY)?;
-        item.0 += Uint128::new(1);
+        item.0 = item.0.checked_add(1).unwrap();
         item.save(storage, PROFILE_KEY)?;
         Ok(item.0)
     }
 
     // Contract
     // Profile
-    pub fn set_contract<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+    pub fn set_contract(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
         ID(id).save(storage, CONTRACT_KEY)
     }
 
-    pub fn contract<S: Storage>(storage: &S) -> StdResult<Uint128> {
+    pub fn contract(storage: &dyn Storage) -> StdResult<u16> {
         Ok(ID::load(storage, CONTRACT_KEY)?.0)
     }
 
-    pub fn add_contract<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+    pub fn add_contract(storage: &mut dyn Storage) -> StdResult<u16> {
         let mut item = ID::load(storage, CONTRACT_KEY)?;
-        item.0 += Uint128::new(1);
+        item.0 = item.0.checked_add(1).unwrap();
         item.save(storage, CONTRACT_KEY)?;
         Ok(item.0)
+    }
+
+    // Migration
+    pub fn init_migration(storage: &mut dyn Storage) -> StdResult<()> {
+        let id = ID(0);
+        id.save(storage, LAST_ASSEMBLY_KEY)?;
+        id.save(storage, LAST_ASSEMBLY_MSG_KEY)?;
+        id.save(storage, LAST_PROFILE_KEY)?;
+        id.save(storage, LAST_CONTRACT_KEY)?;
+        Ok(())
+    }
+
+    pub fn set_assembly_migration(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, LAST_ASSEMBLY_KEY)
+    }
+
+    pub fn assembly_migration(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, LAST_ASSEMBLY_KEY)?.0)
+    }
+
+    pub fn set_assembly_msg_migration(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, LAST_ASSEMBLY_MSG_KEY)
+    }
+
+    pub fn assembly_msg_migration(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, LAST_ASSEMBLY_MSG_KEY)?.0)
+    }
+
+    pub fn set_profile_migration(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, LAST_PROFILE_KEY)
+    }
+
+    pub fn profile_migration(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, LAST_PROFILE_KEY)?.0)
+    }
+
+    pub fn set_contract_migration(storage: &mut dyn Storage, id: u16) -> StdResult<()> {
+        ID(id).save(storage, LAST_CONTRACT_KEY)
+    }
+
+    pub fn contract_migration(storage: &dyn Storage) -> StdResult<u16> {
+        Ok(ID::load(storage, LAST_CONTRACT_KEY)?.0)
+    }
+}
+
+#[cw_serde]
+// Used for ease of querying
+pub struct UserID(u32);
+
+impl NaiveMapStorage<'static> for UserID {}
+
+// Using user ID cause its practically the same type
+const USER_PROP_ID: Map<'static, Addr, UserID> = Map::new("user_proposal_id-");
+const USER_PROP: Map<'static, (Addr, u32), UserID> = Map::new("user_proposal_list-");
+
+const USER_ASSEMBLY_VOTE_ID: Map<'static, Addr, UserID> = Map::new("user_assembly_votes_id-");
+const USER_ASSEMBLY_VOTE: Map<'static, (Addr, u32), UserID> = Map::new("user_assembly_votes_list-");
+
+const USER_FUNDING_ID: Map<'static, Addr, UserID> = Map::new("user_funding_id-");
+const USER_FUNDING: Map<'static, (Addr, u32), UserID> = Map::new("user_funding_list-");
+
+const USER_VOTES_ID: Map<'static, Addr, UserID> = Map::new("user_votes_id-");
+const USER_VOTES: Map<'static, (Addr, u32), UserID> = Map::new("user_votes_list-");
+
+impl UserID {
+    // Stores the proposal's id
+    pub fn total_proposals(storage: &dyn Storage, user: Addr) -> StdResult<u32> {
+        Ok(UserID::may_load(storage, USER_PROP_ID, user)?
+            .unwrap_or(UserID(0))
+            .0)
+    }
+
+    pub fn proposal(storage: &dyn Storage, user: Addr, id: u32) -> StdResult<u32> {
+        Ok(UserID::load(storage, USER_PROP, (user, id))?.0)
+    }
+
+    pub fn add_proposal(storage: &mut dyn Storage, user: Addr, prop_id: &u32) -> StdResult<u32> {
+        let item = match UserID::may_load(storage, USER_PROP_ID, user.clone())? {
+            None => 0,
+            Some(i) => i.0.checked_add(1).unwrap(),
+        };
+        UserID(item).save(storage, USER_PROP_ID, user.clone())?;
+        UserID(prop_id.clone()).save(storage, USER_PROP, (user, item))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_assembly_votes(storage: &dyn Storage, user: Addr) -> StdResult<u32> {
+        Ok(UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user)?
+            .unwrap_or(UserID(0))
+            .0)
+    }
+
+    pub fn assembly_vote(storage: &dyn Storage, user: Addr, id: u32) -> StdResult<u32> {
+        Ok(UserID::load(storage, USER_ASSEMBLY_VOTE, (user, id))?.0)
+    }
+
+    pub fn add_assembly_vote(
+        storage: &mut dyn Storage,
+        user: Addr,
+        prop_id: u32,
+    ) -> StdResult<u32> {
+        let item = match UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user.clone())? {
+            None => 0,
+            Some(i) => i.0.checked_add(1).unwrap(),
+        };
+        UserID(item).save(storage, USER_ASSEMBLY_VOTE_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_ASSEMBLY_VOTE, (user, item))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_funding(storage: &dyn Storage, user: Addr) -> StdResult<u32> {
+        Ok(UserID::may_load(storage, USER_FUNDING_ID, user)?
+            .unwrap_or(UserID(0))
+            .0)
+    }
+
+    pub fn funding(storage: &dyn Storage, user: Addr, id: u32) -> StdResult<u32> {
+        Ok(UserID::load(storage, USER_FUNDING, (user, id))?.0)
+    }
+
+    pub fn add_funding(storage: &mut dyn Storage, user: Addr, prop_id: u32) -> StdResult<u32> {
+        let item = match UserID::may_load(storage, USER_FUNDING_ID, user.clone())? {
+            None => 0,
+            Some(i) => i.0.checked_add(1).unwrap(),
+        };
+        UserID(item).save(storage, USER_FUNDING_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_FUNDING, (user, item))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_votes(storage: &dyn Storage, user: Addr) -> StdResult<u32> {
+        Ok(UserID::may_load(storage, USER_VOTES_ID, user)?
+            .unwrap_or(UserID(0))
+            .0)
+    }
+
+    pub fn votes(storage: &dyn Storage, user: Addr, id: u32) -> StdResult<u32> {
+        Ok(UserID::load(storage, USER_VOTES, (user, id))?.0)
+    }
+
+    pub fn add_vote(storage: &mut dyn Storage, user: Addr, prop_id: u32) -> StdResult<u32> {
+        let item = match UserID::may_load(storage, USER_VOTES_ID, user.clone())? {
+            None => 0,
+            Some(i) => i.0.checked_add(1).unwrap(),
+        };
+        UserID(item).save(storage, USER_VOTES_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_VOTES, (user, item))?;
+        Ok(item)
     }
 }

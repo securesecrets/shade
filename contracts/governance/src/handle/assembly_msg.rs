@@ -1,47 +1,32 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdResult},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
-        HandleAnswer,
+        ExecuteAnswer,
         MSG_VARIABLE,
     },
-    utils::{
-        flexible_msg::FlexibleMsg,
-        generic_response::ResponseStatus,
-        storage::default::BucketStorage,
-    },
+    governance::errors::Error,
+    utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
-pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_add_assembly_msg(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     msg: String,
-    assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let id = ID::add_assembly_msg(&mut deps.storage)?;
+    assemblies: Vec<u16>,
+) -> StdResult<Response> {
+    let id = ID::add_assembly_msg(deps.storage)?;
 
     // Check that assemblys exist
     for assembly in assemblies.iter() {
-        if *assembly > ID::assembly(&deps.storage)? {
-            return Err(StdError::generic_err("Given assembly does not exist"));
+        if *assembly > ID::assembly(deps.storage)? {
+            return Err(Error::item_not_found(vec![
+                &assembly.to_string(),
+                "Assembly",
+            ]));
         }
     }
 
@@ -50,31 +35,26 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assemblies,
         msg: FlexibleMsg::new(msg, MSG_VARIABLE),
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
+pub fn try_set_assembly_msg(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     name: Option<String>,
     msg: Option<String>,
-    assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let mut assembly_msg = match AssemblyMsg::may_load(&mut deps.storage, &id)? {
-        None => return Err(StdError::generic_err("AssemblyMsg not found")),
+    assemblies: Option<Vec<u16>>,
+) -> StdResult<Response> {
+    let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, id)? {
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "AssemblyMsg"])),
         Some(c) => c,
     };
 
@@ -90,43 +70,36 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assembly_msg.assemblies = assemblies;
     }
 
-    assembly_msg.save(&mut deps.storage, &id)?;
+    assembly_msg.save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
-    assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
+pub fn try_add_assembly_msg_assemblies(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
+    assemblies: Vec<u16>,
+) -> StdResult<Response> {
+    let mut assembly_msg = AssemblyMsg::data(deps.storage, id)?;
 
-    let mut assembly_msg = AssemblyMsg::data(&mut deps.storage, &id)?;
-
-    let assembly_id = ID::assembly(&deps.storage)?;
+    let assembly_id = ID::assembly(deps.storage)?;
     for assembly in assemblies.iter() {
         if assembly < &assembly_id && !assembly_msg.assemblies.contains(assembly) {
             assembly_msg.assemblies.push(assembly.clone());
         }
     }
 
-    AssemblyMsg::save_data(&mut deps.storage, &id, assembly_msg)?;
+    AssemblyMsg::save_data(deps.storage, id, assembly_msg)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }

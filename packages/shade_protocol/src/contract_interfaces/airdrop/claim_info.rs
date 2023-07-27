@@ -1,11 +1,8 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{Uint128, Addr};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct RequiredTask {
-    pub address: HumanAddr,
+    pub address: Addr,
     pub percent: Uint128,
 }

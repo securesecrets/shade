@@ -1,93 +1,135 @@
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::{
-    contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
-    utils::{
-        asset::Contract,
-        generic_response::ResponseStatus,
-        storage::default::SingletonStorage,
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, SubMsg},
+    contract_interfaces::governance::{Config, ExecuteAnswer, RuntimeState},
+    governance::{
+        assembly::{Assembly, AssemblyData},
+        errors::Error,
+        profile::Profile,
     },
+    snip20::helpers::register_receive,
+    utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
 
 pub mod assembly;
 pub mod assembly_msg;
 pub mod contract;
+pub mod migration;
 pub mod profile;
 pub mod proposal;
 
-pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    treasury: Option<HumanAddr>,
-    vote_token: Option<Contract>,
-    funding_token: Option<Contract>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+/// Checks that state can be updated
+pub fn assembly_state_valid(storage: &dyn Storage, assembly: u16) -> StdResult<()> {
+    match RuntimeState::load(storage)? {
+        RuntimeState::Normal => {}
+        RuntimeState::SpecificAssemblies { assemblies } => {
+            if !assemblies.contains(&assembly) {
+                return Err(Error::assemblies_limited(vec![]));
+            }
+        }
+        RuntimeState::Migrated { .. } => return Err(Error::migrated(vec![])),
+    };
+
+    Ok(())
+}
+
+/// Authorizes the assembly, returns assembly data to avoid redundant loading
+pub fn authorize_assembly(
+    storage: &dyn Storage,
+    info: &MessageInfo,
+    assembly: u16,
+) -> StdResult<AssemblyData> {
+    assembly_state_valid(storage, assembly)?;
+
+    let data = Assembly::data(storage, assembly)?;
+
+    // Check that the user is in the non-public assembly
+    if data.profile != 0 && !data.members.contains(&info.sender) {
+        return Err(Error::not_in_assembly(vec![
+            info.sender.as_str(),
+            &assembly.to_string(),
+        ]));
+    };
+
+    // Check if enabled
+    if !Profile::data(storage, data.profile)?.enabled {
+        return Err(Error::profile_disabled(vec![&data.profile.to_string()]));
     }
 
+    Ok(data)
+}
+
+/// Checks that the message sender is self and also not migrated
+pub fn authorized(storage: &dyn Storage, env: &Env, info: &MessageInfo) -> StdResult<()> {
+    if info.sender != env.contract.address {
+        return Err(Error::not_self(vec![]));
+    } else if let RuntimeState::Migrated { .. } = RuntimeState::load(storage)? {
+        return Err(Error::migrated(vec![]));
+    }
+
+    Ok(())
+}
+
+pub fn try_set_config(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    query_auth: Option<Contract>,
+    treasury: Option<Addr>,
+    vote_token: Option<Contract>,
+    funding_token: Option<Contract>,
+) -> StdResult<Response> {
     let mut messages = vec![];
-    let mut config = Config::load(&deps.storage)?;
+    let mut config = Config::load(deps.storage)?;
 
     // Vote and funding tokens cannot be set to none after being set
     if let Some(vote_token) = vote_token {
         config.vote_token = Some(vote_token.clone());
-        messages.push(register_receive_msg(
-            env.contract_code_hash.clone(),
+        messages.push(SubMsg::new(register_receive(
+            env.contract.code_hash.clone(),
             None,
-            255,
-            vote_token.code_hash,
-            vote_token.address,
-        )?);
+            &vote_token,
+        )?));
     }
 
     if let Some(funding_token) = funding_token {
         config.funding_token = Some(funding_token.clone());
-        messages.push(register_receive_msg(
-            env.contract_code_hash.clone(),
+        messages.push(SubMsg::new(register_receive(
+            env.contract.code_hash.clone(),
             None,
-            255,
-            funding_token.code_hash,
-            funding_token.address,
-        )?);
+            &funding_token,
+        )?));
     }
 
     if let Some(treasury) = treasury {
         config.treasury = treasury;
     }
 
-    config.save(&mut deps.storage)?;
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetConfig {
+    if let Some(query_auth) = query_auth {
+        config.query = query_auth;
+    }
+
+    config.save(deps.storage)?;
+    Ok(Response::new()
+        .set_data(to_binary(&ExecuteAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?)
+        .add_submessages(messages))
 }
 
-pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_set_runtime_state(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     state: RuntimeState,
-) -> StdResult<HandleResponse> {
-    todo!();
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetRuntimeState {
+) -> StdResult<Response> {
+    if let RuntimeState::Migrated { .. } = state {
+        return Err(Error::migrated(vec![]));
+    }
+
+    state.save(deps.storage)?;
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }

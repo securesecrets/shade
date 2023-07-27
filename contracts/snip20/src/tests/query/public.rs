@@ -1,13 +1,11 @@
 use shade_protocol::contract_interfaces::snip20::{InitConfig, QueryAnswer, QueryMsg};
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
 use crate::tests::init_snip20_with_config;
 
 #[test]
 fn token_info() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
-    let answer: QueryAnswer = chain.query(
-        snip.address.clone(),
-        &QueryMsg::TokenInfo {}
-    ).unwrap();
+    let answer: QueryAnswer = QueryMsg::TokenInfo {  }.test_query(&snip, &chain).unwrap();
 
     match answer {
         QueryAnswer::TokenInfo { name, symbol, decimals, total_supply} => {
@@ -23,10 +21,7 @@ fn token_info() {
 #[test]
 fn token_config() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
-    let answer: QueryAnswer = chain.query(
-        snip.address.clone(),
-        &QueryMsg::TokenConfig {}
-    ).unwrap();
+    let answer: QueryAnswer = QueryMsg::TokenConfig {  }.test_query(&snip, &chain).unwrap();
 
     match answer {
         QueryAnswer::TokenConfig {
@@ -54,10 +49,7 @@ fn token_config() {
         enable_burn: None,
         enable_transfer: None
     })).unwrap();
-    let answer: QueryAnswer = chain.query(
-        snip.address.clone(),
-        &QueryMsg::TokenConfig {}
-    ).unwrap();
+    let answer: QueryAnswer = QueryMsg::TokenConfig {  }.test_query(&snip, &chain).unwrap();
 
     match answer {
         QueryAnswer::TokenConfig {

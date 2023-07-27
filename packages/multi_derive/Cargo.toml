@@ -1,0 +1,13 @@
+[package]
+name = "multi-derive"
+version = "0.1.0"
+authors = [
+   "hoomp <flammable.shower939@anonaddy.me>"
+]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []

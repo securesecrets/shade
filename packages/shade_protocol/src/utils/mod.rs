@@ -1,5 +1,14 @@
 // Helper libraries
 
+#[cfg(feature = "interface")]
+pub mod callback;
+#[cfg(feature = "interface")]
+pub use callback::*;
+
+pub mod padding;
+pub use padding::*;
+pub mod crypto;
+
 #[cfg(feature = "utils")]
 pub mod asset;
 
@@ -14,10 +23,13 @@ pub mod generic_response;
 
 pub mod storage;
 
-#[cfg(feature = "utils")]
+#[cfg(feature = "dao-utils")]
 pub mod cycle;
-#[cfg(feature = "utils")]
+#[cfg(feature = "dao-utils")]
 pub mod wrap;
 
 #[cfg(feature = "math")]
 pub mod price;
+
+#[cfg(feature = "math")]
+pub mod calc;

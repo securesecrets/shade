@@ -1,151 +1,182 @@
-use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::{Contract, RawContract},
+    cycle::Cycle,
+    generic_response::ResponseStatus,
+};
 
-use crate::contract_interfaces::dao::adapter;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Uint128};
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::c_std::{Addr, Api, Binary, Coin, StdResult, Uint128};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::cw_serde;
+
+use crate::utils::storage::plus::period_storage::Period;
+
+/// The permission referenced in the Admin Auth contract to give a user
+/// admin permissions for the Shade Treasury
+//pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
+
+#[cw_serde]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin_auth: Contract,
+    pub multisig: Addr,
 }
 
-/* Examples:
- * Constant-Portion -> Finance manager
- * Constant-Amount -> Rewards, pre-set manually adjusted
- * Monthly-Portion -> Rewards, self-scaling
- * Monthly-Amount -> Governance grant or Committee funding
- *
- * Once-Portion -> Disallowed
- */
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Allowance {
-    // Monthly refresh, not counted in rebalance
-    Amount {
-        //nick: Option<String>,
-        spender: HumanAddr,
-        // Unlike others, this is a direct number of uTKN to allow monthly
-        cycle: Cycle,
-        amount: Uint128,
-        last_refresh: String,
-    },
-    Portion {
-        //nick: Option<String>,
-        spender: HumanAddr,
-        portion: Uint128,
-        //TODO: This needs to be omitted from the handle msg
-        last_refresh: String,
-        tolerance: Uint128,
-    },
+#[cw_serde]
+pub enum RunLevel {
+    Normal,
+    Deactivated,
+    Migrating,
 }
 
-//TODO rename to Adapter
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Manager {
-    pub contract: Contract,
-    pub balance: Uint128,
-    pub desired: Uint128,
+#[cw_serde]
+pub enum Context {
+    Receive,
+    Rebalance,
+    Migration,
+    Unbond,
+    Wrap,
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Balance {
-    pub token: HumanAddr,
+#[cw_serde]
+pub enum Action {
+    IncreaseAllowance,
+    DecreaseAllowance,
+    Unbond,
+    Claim,
+    FundsReceived,
+    SendFunds,
+    Wrap,
+}
+
+#[cw_serde]
+pub struct Metric {
+    pub action: Action,
+    pub context: Context,
+    pub timestamp: u64,
+    pub token: Addr,
     pub amount: Uint128,
+    pub user: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Active,
-    Disabled,
-    Closed,
-    Transferred,
+#[cw_serde]
+pub enum AllowanceType {
+    Amount,
+    Portion,
 }
 
-//TODO: move accounts to treasury manager
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Account {
-    pub balances: Vec<Balance>,
-    pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
-    pub status: Status,
-}
-*/
-
-// Flag to be sent with funds
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Flag {
-    pub flag: String,
+#[cw_serde]
+pub struct RawAllowance {
+    pub spender: String,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+impl RawAllowance {
+    pub fn valid(self, api: &dyn Api) -> StdResult<Allowance> {
+        Ok(Allowance {
+            spender: api.addr_validate(self.spender.as_str())?,
+            allowance_type: self.allowance_type,
+            cycle: self.cycle,
+            amount: self.amount,
+            tolerance: self.tolerance,
+        })
+    }
+}
+
+#[cw_serde]
+pub struct Allowance {
+    pub spender: Addr,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+#[cw_serde]
+pub struct AllowanceMeta {
+    pub spender: Addr,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+    pub last_refresh: String,
+}
+
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub admin_auth: RawContract,
+    pub multisig: String,
     pub viewing_key: String,
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        multisig: Option<String>,
     },
     RegisterAsset {
-        contract: Contract,
-        reserves: Option<Uint128>,
+        contract: RawContract,
     },
     RegisterManager {
-        contract: Contract,
+        contract: RawContract,
     },
+    RegisterWrap {
+        denom: String,
+        contract: RawContract,
+    },
+    WrapCoins {},
     // Setup a new allowance
     Allowance {
-        asset: HumanAddr,
-        allowance: Allowance,
+        asset: String,
+        allowance: RawAllowance,
+        refresh_now: bool,
     },
-    /* TODO: Maybe?
-    TransferAccount {
+    Update {
+        asset: String,
     },
-    */
-    Adapter(adapter::SubHandleMsg),
+    SetRunLevel {
+        run_level: RunLevel,
+    },
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: String,
     },
     UpdateConfig {
+        config: Config,
         status: ResponseStatus,
     },
     Receive {
         status: ResponseStatus,
     },
     RegisterAsset {
+        status: ResponseStatus,
+    },
+    RegisterManager {
+        status: ResponseStatus,
+    },
+    RegisterWrap {
         status: ResponseStatus,
     },
     Allowance {
@@ -154,46 +185,66 @@ pub enum HandleAnswer {
     Rebalance {
         status: ResponseStatus,
     },
+    Migration {
+        status: ResponseStatus,
+    },
     Unbond {
         status: ResponseStatus,
     },
+    Update {
+        status: ResponseStatus,
+    },
+    RunLevel {
+        run_level: RunLevel,
+    },
+    WrapCoins {
+        success: Vec<Coin>,
+        failed: Vec<Coin>,
+    },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Assets {},
     // List of recurring allowances configured
     Allowances {
-        asset: HumanAddr,
+        asset: String,
     },
-    // List of actual current amounts
+    // Current allowance to spender
     Allowance {
-        asset: HumanAddr,
-        spender: HumanAddr,
+        asset: String,
+        spender: String,
     },
-    /*
-    AccountHolders { },
-    Account { 
-        holder: HumanAddr,
+    RunLevel,
+    Metrics {
+        date: Option<String>,
+        epoch: Option<Uint128>,
+        period: Period,
     },
-    */
-    Adapter(adapter::SubQueryMsg),
+    Balance {
+        asset: String,
+    },
+    BatchBalance {
+        assets: Vec<String>,
+    },
+    Reserves {
+        asset: String,
+    },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    Assets { assets: Vec<HumanAddr> },
-    Allowances { allowances: Vec<Allowance> },
-    CurrentAllowances { allowances: Vec<Allowance> },
-    Allowance { allowance: Uint128 },
-    //Accounts { accounts: Vec<HumanAddr> },
-    //Account { account: Account },
+    Assets { assets: Vec<Addr> },
+    Allowances { allowances: Vec<AllowanceMeta> },
+    Allowance { amount: Uint128 },
+    RunLevel { run_level: RunLevel },
+    Metrics { metrics: Vec<Metric> },
+    Balance { amount: Uint128 },
+    Reserves { amount: Uint128 },
 }

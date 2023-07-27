@@ -1,24 +1,23 @@
+use crate::utils::asset::RawContract;
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use crate::c_std::{Binary, Decimal, Addr, Uint128, Validator};
 
 use crate::contract_interfaces::dao::adapter;
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
 pub struct Config {
-    pub admins: Vec<HumanAddr>,
-    //pub treasury: HumanAddr,
+    pub admin_auth: Contract,
+    //pub treasury: Addr,
     // This is the contract that will "unbond" funds
-    pub owner: HumanAddr,
+    pub owner: Addr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ValidatorBounds {
     pub min_commission: Decimal,
     pub max_commission: Decimal,
@@ -26,25 +25,24 @@ pub struct ValidatorBounds {
     pub bottom_position: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
-    pub admins: Option<Vec<HumanAddr>>,
-    pub owner: HumanAddr,
-    pub sscrt: Contract,
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub admin_auth: RawContract,
+    pub owner: String,
+    pub sscrt: RawContract,
     pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -52,19 +50,18 @@ pub enum HandleMsg {
     UpdateConfig {
         config: Config,
     },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: String,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -79,16 +76,16 @@ pub enum HandleAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        delegations: Vec<HumanAddr>,
+        delegations: Vec<Addr>,
     },
     */
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Delegations {},
+    Rewards {},
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -96,8 +93,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
     //Balance { amount: Uint128 },

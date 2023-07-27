@@ -1,118 +1,120 @@
 use crate::{handle, query};
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    QueryResult,
-    StdError,
-    StdResult,
-    Storage,
-};
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
+    },
     contract_interfaces::query_auth::{
         Admin,
         ContractStatus,
-        HandleMsg,
-        InitMsg,
+        ExecuteMsg,
+        InstantiateMsg,
         QueryMsg,
         RngSeed,
     },
-    utils::storage::plus::ItemStorage,
+    utils::{pad_handle_result, pad_query_result, storage::plus::ItemStorage},
 };
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[shd_entry_point]
+pub fn instantiate(
+    deps: DepsMut,
     _env: Env,
-    msg: InitMsg,
-) -> StdResult<InitResponse> {
-    Admin(msg.admin_auth)
-    .save(&mut deps.storage)?;
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
+    Admin(msg.admin_auth).save(deps.storage)?;
 
-    RngSeed::new(msg.prng_seed).save(&mut deps.storage)?;
+    RngSeed::new(msg.prng_seed).save(deps.storage)?;
 
-    ContractStatus::Default.save(&mut deps.storage)?;
+    ContractStatus::Default.save(deps.storage)?;
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     // Check what msgs are allowed
-    let status = ContractStatus::load(&deps.storage)?;
+    let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing
         ContractStatus::Default => {}
         // No permit interactions
         ContractStatus::DisablePermit => match msg {
-            HandleMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::generic_err("unauthorized")),
             _ => {}
         },
         // No VK interactions
         ContractStatus::DisableVK => match msg {
-            HandleMsg::CreateViewingKey { .. } | HandleMsg::SetViewingKey { .. } => {
-                return Err(StdError::unauthorized());
+            ExecuteMsg::CreateViewingKey { .. } | ExecuteMsg::SetViewingKey { .. } => {
+                return Err(StdError::generic_err("unauthorized"));
             }
             _ => {}
         },
         // Nothing
         ContractStatus::DisableAll => match msg {
-            HandleMsg::CreateViewingKey { .. }
-            | HandleMsg::SetViewingKey { .. }
-            | HandleMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            ExecuteMsg::CreateViewingKey { .. }
+            | ExecuteMsg::SetViewingKey { .. }
+            | ExecuteMsg::BlockPermitKey { .. } => {
+                return Err(StdError::generic_err("unauthorized"));
+            }
             _ => {}
         },
     }
 
     pad_handle_result(
         match msg {
-            HandleMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, admin),
-            HandleMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, state),
-            HandleMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, key),
-            HandleMsg::CreateViewingKey { entropy, .. } => {
-                handle::try_create_viewing_key(deps, env, entropy)
+            ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, info, admin),
+            ExecuteMsg::SetRunState { state, .. } => {
+                handle::try_set_run_state(deps, env, info, state)
             }
-            HandleMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, key),
+            ExecuteMsg::SetViewingKey { key, .. } => {
+                handle::try_set_viewing_key(deps, env, info, key)
+            }
+            ExecuteMsg::CreateViewingKey { entropy, .. } => {
+                handle::try_create_viewing_key(deps, env, info, entropy)
+            }
+            ExecuteMsg::BlockPermitKey { key, .. } => {
+                handle::try_block_permit_key(deps, env, info, key)
+            }
         },
         RESPONSE_BLOCK_SIZE,
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
-    let status = ContractStatus::load(&deps.storage)?;
+#[shd_entry_point]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing
         ContractStatus::Default => {}
         // No permit interactions
         ContractStatus::DisablePermit => {
             if let QueryMsg::ValidatePermit { .. } = msg {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
         // No VK interactions
         ContractStatus::DisableVK => {
             if let QueryMsg::ValidateViewingKey { .. } = msg {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
         // Nothing
         ContractStatus::DisableAll => {
             if let QueryMsg::Config { .. } = msg {
             } else {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
     }

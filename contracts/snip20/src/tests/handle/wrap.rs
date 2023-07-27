@@ -1,14 +1,14 @@
-use cosmwasm_std::{Coin, HumanAddr};
-use fadroma::ensemble::MockEnv;
-use cosmwasm_math_compat::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
+use shade_protocol::c_std::{Coin, Addr};
+use shade_protocol::utils::{ExecuteCallback, Query, MultiTestable};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, TotalSupply};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::tests::init_snip20_with_config;
 
 #[test]
 fn deposit() {
-    let (mut chain, snip) = init_snip20_with_config(None, Some(InitConfig{
+    let (mut chain, snip20) = init_snip20_with_config(None, Some(InitConfig{
         public_total_supply: None,
         enable_deposit: Some(true),
         enable_redeem: Some(true),
@@ -18,43 +18,44 @@ fn deposit() {
     })).unwrap();
 
     let scrt_coin = Coin {
-        denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        denom: "uscrt".into(),
+        amount: Uint128::new(1000)
     };
 
     let not_coin = Coin {
-        denom: "token".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        denom: "token".into(),
+        amount: Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Marco"), vec![
-        scrt_coin.clone(), not_coin.clone()]);
+    // chain.add_funds(Addr::unchecked("marco"), vec![
+    //     scrt_coin.clone(), not_coin.clone()]);
+    chain.init_modules(|router, _, storage| {
+        router.bank.init_balance(storage, &Addr::unchecked("marco"), vec![scrt_coin.clone(), not_coin.clone()]).unwrap();
+    });
 
     // Deposit
-    let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![not_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(ExecuteMsg::Deposit {
         padding: None
-    }, env).is_err());
+    }.test_exec(&snip20, &mut chain, Addr::unchecked("marco"), &vec![not_coin]).is_err());
 
-    let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(ExecuteMsg::Deposit {
         padding: None
-    }, env).is_ok());
+    }.test_exec(&snip20, &mut chain, Addr::unchecked("marco"), &vec![scrt_coin]).is_ok());
 
     // Check that internal states were updated accordingly
-    chain.deps(snip.address, |deps| {
+    chain.deps(&snip20.address, |storage| {
         assert_eq!(Balance::load(
-            &deps.storage,
-            HumanAddr::from("Marco")).unwrap().0, Uint128::new(1000)
+            storage,
+            Addr::unchecked("marco")).unwrap().0, Uint128::new(1000)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1000)
+        assert_eq!(TotalSupply::load(storage).unwrap().0, Uint128::new(1000)
         );
-    });
+    }).unwrap();
 }
 
 #[test]
 fn redeem() {
-    let (mut chain, snip) = init_snip20_with_config(None, Some(InitConfig{
+    let (mut chain, snip20) = init_snip20_with_config(None, Some(InitConfig{
         public_total_supply: None,
         enable_deposit: Some(true),
         enable_redeem: Some(true),
@@ -64,41 +65,43 @@ fn redeem() {
     })).unwrap();
 
     let scrt_coin = Coin {
-        denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        denom: "uscrt".into(),
+        amount: Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Marco"), vec![
-        scrt_coin.clone()]);
+    chain.init_modules(|router, _, storage| {
+        router.bank.init_balance(storage, &Addr::unchecked("marco"), vec![scrt_coin.clone()]).unwrap();
+    });
+    
 
     // Deposit
-    let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(ExecuteMsg::Deposit {
         padding: None
-    }, env).is_ok());
+    }.test_exec(&snip20, &mut chain, Addr::unchecked("marco"), &vec![scrt_coin]).is_ok());
 
     // Redeem
-    assert!(chain.execute(&HandleMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(10000),
         denom: None,
         padding: None
-    }, MockEnv::new("Marco", snip.clone())).is_err());
+    }.test_exec(&snip20, &mut chain, Addr::unchecked("marco"), &[]).is_err());
 
-    assert!(chain.execute(&HandleMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(500),
         denom: None,
         padding: None
-    }, MockEnv::new("Marco", snip.clone())).is_ok());
+    }.test_exec(&snip20, &mut chain, Addr::unchecked("marco"), &[]).is_ok());
     
     // Check that internal states were updated accordingly
-    chain.deps(snip.address, |deps| {
+    chain.deps(&snip20.address, |storage| {
         assert_eq!(Balance::load(
-            &deps.storage,
-            HumanAddr::from("Marco")).unwrap().0, Uint128::new(500)
+            storage,
+            Addr::unchecked("marco")).unwrap().0, Uint128::new(500)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(500)
+        assert_eq!(TotalSupply::load(storage).unwrap().0, Uint128::new(500)
         );
-        let balance = chain.balances(HumanAddr::from("Marco")).unwrap().get("uscrt").unwrap();
-        assert_eq!(balance, &cosmwasm_std::Uint128(500));
-    });
+    }).unwrap();
+
+    let balance = chain.wrap().query_balance("marco", "uscrt").unwrap();
+    assert_eq!(balance.amount, Uint128::new(500));
 }

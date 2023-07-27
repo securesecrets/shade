@@ -1,0 +1,140 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+BUILD_TARGET = "./target/wasm32-unknown-unknown/release/"
+COMPILED_DIR = "compiled"
+CHECKSUM_DIR = "${COMPILED_DIR}/checksum"
+CURRENT_CRATE = "NONE"
+# TODO: figure out how to only exclude when on a specific task
+CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "packages/*"
+DOCKER_IMAGE_VERSION = "v0.2"
+
+[tasks.set_flags]
+workspace = false
+private = true
+script = '''
+RUSTFLAGS='-C link-arg=-s'
+'''
+
+# Build for testnet
+
+[tasks.release]
+workspace = false
+run_task = [{ name = ["build_with_args", "compress_with_args"] }]
+dependencies = ["set_flags"]
+
+[tasks.build_with_args]
+private = true
+workspace = false
+command = "cargo"
+args = ["build", "--release", "--package", "${@}", "--target", "wasm32-unknown-unknown"]
+
+[tasks.compress_with_args]
+private = true
+workspace = false
+script = '''
+wasm-opt -Oz ${BUILD_TARGET}${@}.wasm -o ./${@}.wasm
+echo $(md5sum ${@}.wasm | cut -f 1 -d " ") >> ${CHECKSUM_DIR}/${@}.txt
+cat ./${@}.wasm | gzip -n -9 > ${COMPILED_DIR}/${@}.wasm.gz
+rm ./${@}.wasm
+'''
+
+[tasks.build-all]
+# TODO: cargo skip workspace not working here
+env = { "CURRENT_CRATE" = "${CARGO_MAKE_CRATE_NAME}", "CARGO_MAKE_WORKSPACE_SKIP_MEMBERS" = "packages/*" }
+run_task = [{ name = ["build", "compress"] }]
+dependencies = ["set_flags"]
+
+[tasks.build]
+private = true
+workspace = false
+command = "cargo"
+args = ["build", "--release", "--package", "${CURRENT_CRATE}", "--target", "wasm32-unknown-unknown"]
+
+[tasks.compress]
+private = true
+workspace = false
+script = '''
+wasm-opt -Oz ${BUILD_TARGET}${CURRENT_CRATE}.wasm -o ./${CURRENT_CRATE}.wasm
+echo $(md5sum ${CURRENT_CRATE}.wasm | cut -f 1 -d " ") >> ${CHECKSUM_DIR}/${CURRENT_CRATE}.txt
+cat ./${CURRENT_CRATE}.wasm | gzip -n -9 > ${COMPILED_DIR}/${CURRENT_CRATE}.wasm.gz
+rm ./${CURRENT_CRATE}.wasm
+'''
+
+[tasks.schemas]
+workspace = false
+script = '''
+cargo run --bin schemas --features="snip20_migration admin airdrop bonds dao dex governance-impl mint oracles peg_stability query_auth sky snip20 staking mint_router"
+'''
+
+# Testing
+
+[tasks.test]
+workspace = false
+command = "cargo"
+args = ["test", "--package", "${@}"]
+
+[tasks.test-all]
+workspace = false
+command = "cargo"
+args = ["test"]
+
+# Cleanup
+
+[tasks.clean]
+workspace = false
+dependencies = ["remove_compile_dir", "create_compile_dir", "create_checksum_dir"]
+
+[tasks.remove_compile_dir]
+private = true
+workspace = false
+command = "rm"
+args = ["-r", "${COMPILED_DIR}", "-f"]
+
+[tasks.create_compile_dir]
+private = true
+workspace = false
+command = "mkdir"
+args = ["${COMPILED_DIR}"]
+
+[tasks.create_checksum_dir]
+private = true
+workspace = false
+command = "mkdir"
+args = ["${CHECKSUM_DIR}"]
+
+# Docker support - can be run with `cargo make server start|connect|download
+[tasks.server]
+private = false
+workspace = false
+extend = "subcommand"
+env = { "SUBCOMMAND_PREFIX" = "server" }
+
+[tasks.subcommand]
+private = true
+workspace = false
+script = '''
+#!@duckscript
+
+cm_run_task ${SUBCOMMAND_PREFIX}-${1}
+'''
+
+
+[tasks.server-download]
+workspace = false
+script = '''
+docker pull securesecrets/sn-testnet:${DOCKER_IMAGE_VERSION}
+'''
+
+[tasks.server-start]
+workspace = false
+script = '''
+docker run -it --rm \
+	 -p 26657:26657 -p 26656:26656 -p 1337:1337 \
+	 -v $$(pwd):/root/code --name shade-testnet securesecrets/sn-testnet:${DOCKER_IMAGE_VERSION}
+'''
+
+[tasks.server-connect]
+workspace = false
+script = '''
+docker exec -it shade-testnet /bin/bash
+'''

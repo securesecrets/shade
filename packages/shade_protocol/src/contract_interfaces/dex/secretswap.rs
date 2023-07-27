@@ -1,45 +1,39 @@
 use crate::{
-    contract_interfaces::{dex::dex, mint::mint, oracles::band},
+    c_std::{Addr, Deps, StdResult, Uint128},
+    contract_interfaces::{dex::dex, oracles::band},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use cosmwasm_math_compat::Uint128;
-use schemars::JsonSchema;
-use secret_toolkit::utils::Query;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use crate::utils::Query;
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
 pub struct Token {
-    pub contract_addr: HumanAddr,
+    pub contract_addr: Addr,
     pub token_code_hash: String,
     pub viewing_key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssetInfo {
     pub token: Token,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Asset {
     pub amount: Uint128,
     pub info: AssetInfo,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Simulation {
     pub offer_asset: Asset,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum PairQuery {
     Pair {},
     Pool {},
@@ -51,51 +45,53 @@ impl Query for PairQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
     pub commission_amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PairResponse {
     pub asset_infos: Vec<AssetInfo>,
-    pub contract_addr: HumanAddr,
-    pub liquidity_token: HumanAddr,
+    pub contract_addr: Addr,
+    pub liquidity_token: Addr,
     pub token_code_hash: String,
     pub asset0_volume: Uint128,
     pub asset1_volume: Uint128,
     pub factory: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PoolResponse {
     pub assets: Vec<Asset>,
     pub total_share: Uint128,
 }
 
-pub fn is_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[cw_serde]
+pub struct CallbackMsg {
+    pub swap: CallbackSwap,
+}
+#[cw_serde]
+pub struct CallbackSwap {
+    pub expected_return: Uint128,
+}
+
+/*pub fn is_pair(
+    deps: DepsMut,
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::Pair {}).query::<Q, PairResponse>(
-            &deps.querier,
-            pair.code_hash,
-            pair.address.clone(),
-        ) {
+        match (PairQuery::Pair {}).query::<PairResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
     )
-}
+}*/
 
-pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn price(
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -106,17 +102,13 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     Ok(translate_price(
         scrt_result.rate,
         normalize_price(
-            amount_per_scrt(deps, pair.clone(), sscrt)?,
+            amount_per_scrt(&deps, pair.clone(), sscrt)?,
             pair.asset.token_info.decimals,
         ),
     ))
 }
 
-pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: dex::TradingPair,
-    sscrt: Contract,
-) -> StdResult<Uint128> {
+pub fn amount_per_scrt(deps: &Deps, pair: dex::TradingPair, sscrt: Contract) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::Simulation {
         offer_asset: Asset {
             amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
@@ -129,24 +121,13 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
             },
         },
     }
-    .query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
+    .query(&deps.querier, &pair.contract)?;
 
     Ok(response.return_amount)
 }
 
-pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: dex::TradingPair,
-) -> StdResult<Uint128> {
-    let pool: PoolResponse = PairQuery::Pool {}.query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
+pub fn pool_cp(deps: &Deps, pair: dex::TradingPair) -> StdResult<Uint128> {
+    let pool: PoolResponse = PairQuery::Pool {}.query(&deps.querier, &pair.contract)?;
 
     // Constant Product
     Ok(Uint128::new(

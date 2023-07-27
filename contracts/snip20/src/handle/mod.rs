@@ -3,26 +3,29 @@ pub mod burning;
 pub mod minting;
 pub mod transfers;
 
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    BankMsg,
-    Coin,
-    CosmosMsg,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        BankMsg,
+        Coin,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Uint128,
+    },
     contract_interfaces::snip20::{
-        batch,
+        errors::{
+            deposit_disabled,
+            no_tokens_received,
+            not_admin,
+            not_enough_tokens,
+            redeem_disabled,
+            unsupported_token,
+        },
         manager::{
             Admin,
             Balance,
@@ -31,35 +34,37 @@ use shade_protocol::{
             ContractStatusLevel,
             HashedKey,
             Key,
-            Minters,
             PermitKey,
             RandSeed,
             ReceiverHash,
             TotalSupply,
         },
-        transaction_history::{store_deposit, store_mint, store_redeem},
-        HandleAnswer,
+        transaction_history::{store_deposit, store_redeem},
+        ExecuteAnswer,
     },
+    query_authentication::viewing_keys::ViewingKey,
+    snip20::manager::QueryAuth,
     utils::{
         generic_response::ResponseStatus::Success,
         storage::plus::{ItemStorage, MapStorage},
     },
+    Contract,
 };
-use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
 
-pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_redeem(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let sender = env.message.sender;
+) -> StdResult<Response> {
+    let sender = info.sender;
 
-    if !Config::redeem_enabled(&deps.storage)? {
+    if !Config::redeem_enabled(deps.storage)? {
         return Err(redeem_disabled());
     }
 
-    Balance::sub(&mut deps.storage, amount, &sender)?;
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    Balance::sub(deps.storage, amount, &sender)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     let token_reserve = Uint128::from(
         deps.querier
@@ -75,28 +80,22 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
         amount: amount.into(),
     }];
 
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
-    store_redeem(&mut deps.storage, &sender, amount, denom, &env.block)?;
+    store_redeem(deps.storage, &sender, amount, denom, &env.block)?;
 
-    Ok(HandleResponse {
-        messages: vec![CosmosMsg::Bank(BankMsg::Send {
-            from_address: env.contract.address,
-            to_address: sender,
+    Ok(Response::new()
+        .add_message(CosmosMsg::Bank(BankMsg::Send {
+            to_address: sender.into(),
             amount: withdrawal_coins,
-        })],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Redeem { status: Success })?),
-    })
+        }))
+        .set_data(to_binary(&ExecuteAnswer::Redeem { status: Success })?))
 }
 
-pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-) -> StdResult<HandleResponse> {
-    let sender = env.message.sender;
+pub fn try_deposit(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    let sender = info.sender;
     let mut amount = Uint128::zero();
-    for coin in &env.message.sent_funds {
+    for coin in &info.funds {
         // TODO: implement IBC coins
         if coin.denom == "uscrt" {
             amount = Uint128::from(coin.amount)
@@ -109,125 +108,131 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         return Err(no_tokens_received());
     }
 
-    if !Config::deposit_enabled(&deps.storage)? {
+    if !Config::deposit_enabled(deps.storage)? {
         return Err(deposit_disabled());
     }
 
-    TotalSupply::add(&mut deps.storage, amount)?;
-    Balance::add(&mut deps.storage, amount, &sender)?;
+    TotalSupply::add(deps.storage, amount)?;
+    Balance::add(deps.storage, amount, &sender)?;
 
     store_deposit(
-        &mut deps.storage,
+        deps.storage,
         &sender,
         amount,
         "uscrt".to_string(),
         &env.block,
     )?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Deposit { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Deposit { status: Success })?))
 }
 
-pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    address: HumanAddr,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+pub fn try_change_admin(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    address: Addr,
+) -> StdResult<Response> {
+    if info.sender != Admin::load(deps.storage)?.0 {
         return Err(not_admin());
     }
 
-    Admin(address).save(&mut deps.storage)?;
+    Admin(address).save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::ChangeAdmin { status: Success })?))
 }
 
-pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_update_query_auth(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    auth: Option<Contract>,
+) -> StdResult<Response> {
+    if info.sender != Admin::load(deps.storage)?.0 {
+        return Err(not_admin());
+    }
+
+    if let Some(auth) = auth {
+        QueryAuth(auth).save(deps.storage)?;
+    } else {
+        QueryAuth::remove(deps.storage);
+    }
+
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateQueryAuth {
+            status: Success,
+        })?),
+    )
+}
+
+pub fn try_set_contract_status(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     status_level: ContractStatusLevel,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+) -> StdResult<Response> {
+    if info.sender != Admin::load(deps.storage)?.0 {
         return Err(not_admin());
     }
 
-    status_level.save(&mut deps.storage)?;
+    status_level.save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetContractStatus {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetContractStatus {
             status: Success,
         })?),
-    })
+    )
 }
 
-pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_register_receive(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     code_hash: String,
-) -> StdResult<HandleResponse> {
-    ReceiverHash(code_hash).save(&mut deps.storage, env.message.sender)?;
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterReceive {
+) -> StdResult<Response> {
+    ReceiverHash(code_hash).save(deps.storage, info.sender)?;
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterReceive {
             status: Success,
         })?),
-    })
+    )
 }
 
-pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_create_viewing_key(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     entropy: String,
-) -> StdResult<HandleResponse> {
-    let seed = RandSeed::load(&deps.storage)?.0;
+) -> StdResult<Response> {
+    let seed = RandSeed::load(deps.storage)?.0;
 
-    let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
+    let key = Key::generate(&info, &env, seed.as_slice(), (&entropy).as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key: key.0 })?))
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_set_viewing_key(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     key: String,
-) -> StdResult<HandleResponse> {
-    let seed = RandSeed::load(&deps.storage)?.0;
+) -> StdResult<Response> {
+    // TODO: review this
+    //let seed = RandSeed::load(deps.storage)?.0;
 
-    HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey { status: Success })?))
 }
 
-pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_revoke_permit(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     permit_name: String,
-) -> StdResult<HandleResponse> {
-    PermitKey::revoke(&mut deps.storage, permit_name, env.message.sender)?;
+) -> StdResult<Response> {
+    PermitKey::revoke(deps.storage, permit_name, info.sender)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RevokePermit { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RevokePermit { status: Success })?))
 }

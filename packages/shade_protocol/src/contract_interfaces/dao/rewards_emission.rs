@@ -1,72 +1,75 @@
 use crate::{
-    contract_interfaces::dao::adapter,
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    c_std::{Addr, Binary, Uint128},
+    utils::{
+        asset::{Contract, RawContract},
+        cycle::Cycle,
+        generic_response::ResponseStatus,
+    },
 };
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
 pub struct Reward {
-    pub asset: HumanAddr,
+    //pub token: Addr,
+    pub distributor: Contract,
     pub amount: Uint128,
+    pub cycle: Cycle,
+    pub last_refresh: String,
+    // datetime string
+    pub expiration: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
-    pub admins: Vec<HumanAddr>,
-    pub treasury: HumanAddr,
-    pub asset: Contract,
-    pub distributor: HumanAddr,
-    pub rewards: Vec<Reward>,
+    pub admins: Vec<Addr>,
+    pub treasury: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct InitMsg {
-    pub config: Config,
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub admins: Vec<String>,
     pub viewing_key: String,
+    pub treasury: String,
+    pub token: RawContract,
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
+    UpdateConfig {
+        config: Config,
+    },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    RefillRewards {
-        rewards: Vec<Reward>,
+    RefillRewards {},
+    RegisterRewards {
+        token: Addr, // Just for verification
+        distributor: Contract,
+        amount: Uint128,
+        cycle: Cycle,
+        expiration: Option<String>,
     },
-    UpdateConfig {
-        config: Config,
-    },
-    RegisterAsset {
-        asset: Contract,
-    },
-    Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -74,7 +77,7 @@ pub enum HandleAnswer {
     Receive {
         status: ResponseStatus,
     },
-    RegisterAsset {
+    RegisterReward {
         status: ResponseStatus,
     },
     RefillRewards {
@@ -82,21 +85,18 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
-    PendingAllowance { asset: HumanAddr },
-    Adapter(adapter::SubQueryMsg),
+    //PendingAllowance { asset: Addr },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    PendingAllowance { amount: Uint128 },
+    //PendingAllowance { amount: Uint128 },
 }

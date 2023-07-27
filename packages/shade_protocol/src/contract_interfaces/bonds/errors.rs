@@ -1,13 +1,12 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, StdError};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::Uint128;
+use crate::c_std::{Addr, StdError};
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 pub enum Error {
     BondEnded,
     BondNotStarted,
@@ -28,6 +27,7 @@ pub enum Error {
     IssuedPriceBelowMinimum,
     SlippageToleranceExceeded,
     Blacklisted,
+    IssuedAssetDeposit,
     NotTreasuryBond,
     NoBondsClaimable,
     NotAdmin,
@@ -95,6 +95,9 @@ impl CodeType for Error {
             }
             Error::Blacklisted => {
                 build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
+            }
+            Error::IssuedAssetDeposit => {
+                build_string("Cannot deposit using this contract's issued asset", context)
             }
             Error::NotTreasuryBond => {
                 build_string("Cannot perform function since this is not a treasury bond", context)
@@ -303,8 +306,12 @@ pub fn permit_revoked(user: &str) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![user]).to_error()
 }
 
-pub fn blacklisted(address: HumanAddr) -> StdError {
+pub fn blacklisted(address: Addr) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::Blacklisted, vec![address.as_str()]).to_error()
+}
+
+pub fn issued_asset_deposit() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::IssuedAssetDeposit, vec![]).to_error()
 }
 
 pub fn not_treasury_bond() -> StdError {

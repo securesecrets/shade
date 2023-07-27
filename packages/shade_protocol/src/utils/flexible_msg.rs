@@ -1,9 +1,8 @@
-use cosmwasm_std::{StdError, StdResult};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{StdError, StdResult};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
 pub struct FlexibleMsg {
     pub msg: String,
     pub arguments: u16,

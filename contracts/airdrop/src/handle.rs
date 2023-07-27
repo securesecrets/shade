@@ -15,30 +15,12 @@ use crate::state::{
     total_claimed_w,
     validate_address_permit,
 };
-use cosmwasm_math_compat::{Decimal, Uint128};
-use cosmwasm_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
-use secret_toolkit::snip20::send_msg;
 use shade_protocol::{
-    contract_interfaces::airdrop::{
+    airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
         claim_info::RequiredTask,
         errors::{
-            account_already_created,
             account_does_not_exist,
             address_already_in_account,
             airdrop_ended,
@@ -52,34 +34,51 @@ use shade_protocol::{
             invalid_task_percentage,
             not_admin,
             nothing_to_claim,
-            permit_rejected,
             unexpected_error,
         },
         Config,
-        HandleAnswer,
+        ExecuteAnswer,
     },
-    utils::generic_response::ResponseStatus,
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Decimal,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Storage,
+        Uint128,
+    },
+    query_authentication::viewing_keys::ViewingKey,
+    snip20::helpers::send_msg,
+    utils::generic_response::{ResponseStatus, ResponseStatus::Success},
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    admin: Option<HumanAddr>,
-    dump_address: Option<HumanAddr>,
+pub fn try_update_config(
+    deps: DepsMut,
+    _env: Env,
+    info: &MessageInfo,
+    admin: Option<Addr>,
+    dump_address: Option<Addr>,
     query_rounding: Option<Uint128>,
     start_date: Option<u64>,
     end_date: Option<u64>,
     decay_start: Option<u64>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(not_admin(config.admin.as_str()));
     }
 
     // Save new info
-    let mut config = config_w(&mut deps.storage);
+    let mut config = config_w(deps.storage);
     config.update(|mut state| {
         if let Some(admin) = admin {
             state.admin = admin;
@@ -169,28 +168,22 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
         Ok(state)
     })?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success,
-        })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig { status: Success })?))
 }
 
-pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
+pub fn try_add_tasks(
+    deps: DepsMut,
+    _env: &Env,
+    info: &MessageInfo,
     tasks: Vec<RequiredTask>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(not_admin(config.admin.as_str()));
     }
 
-    config_w(&mut deps.storage).update(|mut config| {
+    config_w(deps.storage).update(|mut config| {
         let mut task_list = tasks;
         config.task_claim.append(&mut task_list);
 
@@ -207,35 +200,30 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         Ok(config)
     })?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddTask {
-            status: ResponseStatus::Success,
-        })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddTask { status: Success })?))
 }
 
-pub fn try_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_account(
+    deps: DepsMut,
     env: &Env,
+    info: &MessageInfo,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if airdrop active
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Check that airdrop hasn't ended
     available(&config, env)?;
 
     // Setup account
-    let sender = env.message.sender.to_string();
+    let sender = info.sender.to_string();
 
     // These variables are setup to facilitate updating
     let updating_account: bool;
     let old_claim_amount: Uint128;
 
-    let mut account = match account_r(&deps.storage).may_load(sender.as_bytes())? {
+    let mut account = match account_r(deps.storage).may_load(sender.as_bytes())? {
         None => {
             updating_account = false;
             old_claim_amount = Uint128::zero();
@@ -243,18 +231,18 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 
             // Validate permits
             try_add_account_addresses(
-                &mut deps.storage,
-                &deps.api,
+                deps.storage,
+                deps.api,
                 &config,
-                &env.message.sender,
+                &info.sender,
                 &mut account,
                 addresses.clone(),
                 partial_tree.clone(),
             )?;
 
             // Add default claim at index 0
-            account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
-            claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
+            account_total_claimed_w(deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
+            claim_status_w(deps.storage, 0).save(sender.as_bytes(), &false)?;
 
             account
         }
@@ -269,14 +257,15 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender.clone())?;
+        update_tasks(deps.storage, &config, sender.clone())?;
 
     let mut redeem_amount = Uint128::zero();
 
     if unclaimed_percentage > Uint128::zero() {
         redeem_amount = claim_tokens(
-            &mut deps.storage,
+            deps.storage,
             env,
+            info,
             &config,
             &account,
             completed_percentage,
@@ -288,10 +277,10 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     if updating_account {
         // Validate permits
         try_add_account_addresses(
-            &mut deps.storage,
-            &deps.api,
+            deps.storage,
+            deps.api,
             &config,
-            &env.message.sender,
+            &info.sender,
             &mut account,
             addresses.clone(),
             partial_tree.clone(),
@@ -301,15 +290,16 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
         let added_address_total = account.total_claimable.checked_sub(old_claim_amount)?;
-        account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
+        account_total_claimed_w(deps.storage).update(sender.as_bytes(), |claimed| {
             if let Some(claimed) = claimed {
                 let new_redeem: Uint128;
                 if completed_percentage == Uint128::new(100u128) {
-                    new_redeem = added_address_total * decay_factor(env.block.time, &config);
+                    new_redeem =
+                        added_address_total * decay_factor(env.block.time.seconds(), &config);
                 } else {
                     new_redeem = completed_percentage
                         .multiply_ratio(added_address_total, Uint128::new(100u128))
-                        * decay_factor(env.block.time, &config);
+                        * decay_factor(env.block.time.seconds(), &config);
                 }
 
                 redeem_amount += new_redeem;
@@ -321,84 +311,76 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     }
 
     if redeem_amount > Uint128::zero() {
-        total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
+        total_claimed_w(deps.storage)
+            .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
         messages.push(send_msg(
-            env.message.sender.clone(),
+            info.sender.clone(),
             redeem_amount.into(),
             None,
             None,
             None,
-            0,
-            config.airdrop_snip20.code_hash,
-            config.airdrop_snip20.address,
+            &config.airdrop_snip20,
         )?);
     }
 
     // Save account
-    account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
+    account_w(deps.storage).save(sender.as_bytes(), &account)?;
 
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Account {
-            status: ResponseStatus::Success,
-            total: account.total_claimable,
-            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
-            // Will always be 0 since rewards are automatically claimed here
-            finished_tasks: finished_tasks(&deps.storage, sender.clone())?,
-            addresses: account.addresses,
-        })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Account {
+        status: ResponseStatus::Success,
+        total: account.total_claimable,
+        claimed: account_total_claimed_r(deps.storage).load(sender.to_string().as_bytes())?,
+        // Will always be 0 since rewards are automatically claimed here
+        finished_tasks: finished_tasks(deps.storage, sender.clone())?,
+        addresses: account.addresses,
+    })?))
 }
 
-pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
+pub fn try_disable_permit_key(
+    deps: DepsMut,
+    _env: &Env,
+    info: &MessageInfo,
     key: String,
-) -> StdResult<HandleResponse> {
-    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
+) -> StdResult<Response> {
+    revoke_permit(deps.storage, info.sender.to_string(), key);
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::DisablePermitKey {
-            status: ResponseStatus::Success,
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::DisablePermitKey {
+            status: Success,
         })?),
-    })
+    )
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
+pub fn try_set_viewing_key(
+    deps: DepsMut,
+    _env: &Env,
+    info: &MessageInfo,
     key: String,
-) -> StdResult<HandleResponse> {
-    account_viewkey_w(&mut deps.storage).save(
-        &env.message.sender.to_string().as_bytes(),
-        &AccountKey(key).hash(),
-    )?;
+) -> StdResult<Response> {
+    account_viewkey_w(deps.storage)
+        .save(&info.sender.to_string().as_bytes(), &AccountKey(key).hash())?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey {
-            status: ResponseStatus::Success,
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey {
+            status: Success,
         })?),
-    })
+    )
 }
 
-pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    account: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+pub fn try_complete_task(
+    deps: DepsMut,
+    _env: &Env,
+    info: &MessageInfo,
+    account: Addr,
+) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
 
     for (i, task) in config.task_claim.iter().enumerate() {
-        if task.address == env.message.sender {
-            claim_status_w(&mut deps.storage, i).update(
+        if task.address == info.sender {
+            claim_status_w(deps.storage, i).update(
                 account.to_string().as_bytes(),
-                |status| {
+                |status| -> StdResult<bool> {
                     // If there was a state then ignore
                     if let Some(status) = status {
                         Ok(status)
@@ -410,80 +392,66 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CompleteTask {
-            status: ResponseStatus::Success,
-        })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CompleteTask { status: Success })?))
 }
 
-pub fn try_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
 
     // Check that airdrop hasn't ended
     available(&config, env)?;
 
     // Get account
-    let sender = env.message.sender.clone();
-    let account = account_r(&deps.storage).load(sender.to_string().as_bytes())?;
+    let sender = info.sender.clone();
+    let account = account_r(deps.storage).load(sender.to_string().as_bytes())?;
 
     // Calculate airdrop
     let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender.to_string())?;
+        update_tasks(deps.storage, &config, sender.to_string())?;
 
     if unclaimed_percentage == Uint128::zero() {
         return Err(nothing_to_claim());
     }
 
     let redeem_amount = claim_tokens(
-        &mut deps.storage,
+        deps.storage,
         env,
+        info,
         &config,
         &account,
         completed_percentage,
         unclaimed_percentage,
     )?;
 
-    total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
+    total_claimed_w(deps.storage)
+        .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
-    Ok(HandleResponse {
-        messages: vec![send_msg(
+    Ok(Response::new()
+        .set_data(to_binary(&ExecuteAnswer::Claim {
+            status: ResponseStatus::Success,
+            total: account.total_claimable,
+            claimed: account_total_claimed_r(deps.storage).load(sender.to_string().as_bytes())?,
+            finished_tasks: finished_tasks(deps.storage, sender.to_string())?,
+            addresses: account.addresses,
+        })?)
+        .add_message(send_msg(
             sender.clone(),
             redeem_amount.into(),
             None,
             None,
             None,
-            0,
-            config.airdrop_snip20.code_hash,
-            config.airdrop_snip20.address,
-        )?],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Claim {
-            status: ResponseStatus::Success,
-            total: account.total_claimable,
-            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
-            finished_tasks: finished_tasks(&deps.storage, sender.to_string())?,
-            addresses: account.addresses,
-        })?),
-    })
+            &config.airdrop_snip20,
+        )?))
 }
 
-pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+pub fn try_claim_decay(deps: DepsMut, env: &Env, _info: &MessageInfo) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
 
     // Check if airdrop ended
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
-            if env.block.time > end_date {
-                decay_claimed_w(&mut deps.storage).update(|claimed| {
+            if env.block.time.seconds() > end_date {
+                decay_claimed_w(deps.storage).update(|claimed| {
                     if claimed {
                         Err(decay_claimed())
                     } else {
@@ -491,26 +459,19 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
                     }
                 })?;
 
-                let total_claimed = total_claimed_r(&deps.storage).load()?;
+                let total_claimed = total_claimed_r(deps.storage).load()?;
                 let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
                 let messages = vec![send_msg(
-                    dump_address,
+                    dump_address.clone(),
                     send_total.into(),
                     None,
                     None,
                     None,
-                    1,
-                    config.airdrop_snip20.code_hash,
-                    config.airdrop_snip20.address,
+                    &config.airdrop_snip20,
                 )?];
 
-                return Ok(HandleResponse {
-                    messages,
-                    log: vec![],
-                    data: Some(to_binary(&HandleAnswer::ClaimDecay {
-                        status: ResponseStatus::Success,
-                    })?),
-                });
+                return Ok(Response::new()
+                    .set_data(to_binary(&ExecuteAnswer::ClaimDecay { status: Success })?));
             }
         }
     }
@@ -518,15 +479,15 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     Err(decay_not_set())
 }
 
-pub fn finished_tasks<S: Storage>(storage: &S, account: String) -> StdResult<Vec<RequiredTask>> {
+pub fn finished_tasks(storage: &dyn Storage, account: String) -> StdResult<Vec<RequiredTask>> {
     let mut finished_tasks = vec![];
     let config = config_r(storage).load()?;
 
-    for (index, task) in config.task_claim.iter().enumerate() {
+    for (index, _task) in config.task_claim.iter().enumerate() {
         match claim_status_r(storage, index).may_load(account.as_bytes())? {
             None => {}
             Some(_) => {
-                finished_tasks.push(task.clone());
+                finished_tasks.push(config.task_claim[index].clone());
             }
         }
     }
@@ -535,8 +496,8 @@ pub fn finished_tasks<S: Storage>(storage: &S, account: String) -> StdResult<Vec
 }
 
 /// Gets task information and sets them
-pub fn update_tasks<S: Storage>(
-    storage: &mut S,
+pub fn update_tasks(
+    storage: &mut dyn Storage,
     config: &Config,
     sender: String,
 ) -> StdResult<(Uint128, Uint128)> {
@@ -565,16 +526,17 @@ pub fn update_tasks<S: Storage>(
     Ok((completed_percentage, unclaimed_percentage))
 }
 
-pub fn claim_tokens<S: Storage>(
-    storage: &mut S,
+pub fn claim_tokens(
+    storage: &mut dyn Storage,
     env: &Env,
+    info: &MessageInfo,
     config: &Config,
     account: &Account,
     completed_percentage: Uint128,
     unclaimed_percentage: Uint128,
 ) -> StdResult<Uint128> {
     // send_amount
-    let sender = env.message.sender.to_string();
+    let sender = info.sender.to_string();
 
     // Amount to be redeemed
     let mut redeem_amount = Uint128::zero();
@@ -591,7 +553,7 @@ pub fn claim_tokens<S: Storage>(
             }
 
             // Update redeem amount with the decay multiplier
-            redeem_amount = redeem_amount * decay_factor(env.block.time, config);
+            redeem_amount = redeem_amount * decay_factor(env.block.time.seconds(), config);
 
             Ok(claimed + redeem_amount)
         } else {
@@ -603,11 +565,11 @@ pub fn claim_tokens<S: Storage>(
 }
 
 /// Validates all of the information and updates relevant states
-pub fn try_add_account_addresses<S: Storage, A: Api>(
-    storage: &mut S,
-    api: &A,
+pub fn try_add_account_addresses(
+    storage: &mut dyn Storage,
+    api: &dyn Api,
     config: &Config,
-    sender: &HumanAddr,
+    sender: &Addr,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
@@ -637,7 +599,7 @@ pub fn try_add_account_addresses<S: Storage, A: Api>(
             // Update address if its not in an account
             address_in_account_w(storage).update(
                 params.address.to_string().as_bytes(),
-                |state| {
+                |state| -> StdResult<bool> {
                     if state.is_some() {
                         return Err(address_already_in_account(params.address.as_str()));
                     }
@@ -691,7 +653,7 @@ pub fn try_add_account_addresses<S: Storage, A: Api>(
 }
 
 pub fn available(config: &Config, env: &Env) -> StdResult<()> {
-    let current_time = env.block.time;
+    let current_time = env.block.time.seconds();
 
     // Check if airdrop started
     if current_time < config.start_date {

@@ -1,28 +1,62 @@
 use crate::{
-    contract_interfaces::dao::adapter,
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    c_std::{Addr, Api, Binary, StdResult, Uint128},
+    contract_interfaces::dao::manager,
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+        storage::plus::period_storage::Period,
+    },
 };
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Config {
-    pub admin: HumanAddr,
-    pub treasury: HumanAddr,
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
+pub enum Context {
+    Receive,
+    Update,
+    Unbond,
+    Claim,
+    Holders,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+pub enum Action {
+    Unbond,
+    Claim,
+    FundsReceived,
+    SendFunds,
+    SendFundsFrom,
+    RealizeGains,
+    RealizeLosses,
+    //TODO
+    AddHolder,
+    RemoveHolder,
+}
+
+#[cw_serde]
+pub struct Metric {
+    pub action: Action,
+    pub context: Context,
+    pub timestamp: u64,
+    pub token: Addr,
+    pub amount: Uint128,
+    pub user: Addr,
+}
+
+#[cw_serde]
+pub struct Config {
+    pub admin_auth: Contract,
+    pub treasury: Addr,
+}
+
+#[cw_serde]
 pub struct Balance {
-    pub token: HumanAddr,
+    pub token: Addr,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Status {
     Active,
     Disabled,
@@ -31,24 +65,42 @@ pub enum Status {
 }
 
 //TODO: move accounts to treasury manager
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Holder {
+#[cw_serde]
+pub struct Holding {
     pub balances: Vec<Balance>,
     pub unbondings: Vec<Balance>,
     //pub claimable: Vec<Balance>,
     pub status: Status,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Unbonding {
-    pub holder: HumanAddr,
+    pub holder: Addr,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+pub struct RawAllocation {
+    pub nick: Option<String>,
+    pub contract: RawContract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+impl RawAllocation {
+    pub fn valid(self, api: &dyn Api) -> StdResult<Allocation> {
+        Ok(Allocation {
+            nick: self.nick,
+            contract: self.contract.into_valid(api)?,
+            alloc_type: self.alloc_type,
+            amount: self.amount,
+            tolerance: self.tolerance,
+        })
+    }
+}
+
+#[cw_serde]
 pub struct Allocation {
     pub nick: Option<String>,
     pub contract: Contract,
@@ -57,80 +109,89 @@ pub struct Allocation {
     pub tolerance: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum AllocationType {
     // amount becomes percent * 10^18
     Portion,
     Amount,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+//TODO remove - same as Allocation
+#[cw_serde]
 pub struct AllocationMeta {
     pub nick: Option<String>,
     pub contract: Contract,
     pub alloc_type: AllocationType,
     pub amount: Uint128,
     pub tolerance: Uint128,
+}
+
+#[cw_serde]
+pub struct AllocationTempData {
+    pub contract: Contract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
     pub balance: Uint128,
+    pub unbondable: Uint128,
+    pub unbonding: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub admin_auth: RawContract,
     pub viewing_key: String,
-    pub treasury: HumanAddr,
+    pub treasury: String,
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        treasury: Option<String>,
     },
     RegisterAsset {
-        contract: Contract,
+        contract: RawContract,
     },
     Allocate {
-        asset: HumanAddr,
-        allocation: Allocation,
+        asset: String,
+        allocation: RawAllocation,
     },
     AddHolder {
-        holder: HumanAddr,
+        holder: String,
     },
     RemoveHolder {
-        holder: HumanAddr,
+        holder: String,
     },
-    Adapter(adapter::SubHandleMsg),
+    Manager(manager::SubExecuteMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: String,
     },
     Receive {
         status: ResponseStatus,
     },
     UpdateConfig {
+        config: Config,
         status: ResponseStatus,
     },
     RegisterAsset {
@@ -145,37 +206,42 @@ pub enum HandleAnswer {
     RemoveHolder {
         status: ResponseStatus,
     },
-    Adapter(adapter::HandleAnswer),
+    Manager(manager::ExecuteAnswer),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: HumanAddr },
-    PendingAllowance { asset: HumanAddr },
-    Holders { },
-    Holder { holder: HumanAddr },
-    Balance { asset: HumanAddr, holder: HumanAddr },
-    Unbonding { asset: HumanAddr, holder: HumanAddr },
-    Unbondable { asset: HumanAddr, holder: HumanAddr },
-    Claimable { asset: HumanAddr, holder: HumanAddr },
-    Adapter(adapter::SubQueryMsg),
+    Allocations {
+        asset: String,
+    },
+    PendingAllowance {
+        asset: String,
+    },
+    Holders {},
+    Holding {
+        holder: String,
+    },
+    Metrics {
+        date: Option<String>,
+        epoch: Option<Uint128>,
+        period: Period,
+    },
+    Manager(manager::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
-    Assets { assets: Vec<HumanAddr> },
+    Assets { assets: Vec<Addr> },
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
-    Holders { holders: Vec<HumanAddr> },
-    Holder { holder: Holder },
-    Adapter(adapter::QueryAnswer),
+    Holders { holders: Vec<Addr> },
+    Holding { holding: Holding },
+    Metrics { metrics: Vec<Metric> },
 }

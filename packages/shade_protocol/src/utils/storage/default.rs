@@ -1,5 +1,5 @@
-use cosmwasm_std::{StdResult, Storage};
-use cosmwasm_storage::{
+use crate::c_std::{StdResult, Storage};
+use crate::storage::{
     bucket,
     bucket_read,
     singleton,
@@ -9,26 +9,26 @@ use cosmwasm_storage::{
     ReadonlySingleton,
     Singleton,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use crate::serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveSingletonStorage: Serialize + DeserializeOwned {
-    fn read<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> ReadonlySingleton<'a, S, Self> {
+    fn read<'a>(storage: &'a dyn Storage, namespace: &'a [u8]) -> ReadonlySingleton<'a, Self> {
         singleton_read(storage, namespace)
     }
 
-    fn load<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> StdResult<Self> {
+    fn load<'a>(storage: &'a dyn Storage, namespace: &'a [u8]) -> StdResult<Self> {
         Self::read(storage, namespace).load()
     }
 
-    fn may_load<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> StdResult<Option<Self>> {
+    fn may_load<'a>(storage: &'a dyn Storage, namespace: &'a [u8]) -> StdResult<Option<Self>> {
         Self::read(storage, namespace).may_load()
     }
 
-    fn write<'a, S: Storage>(storage: &'a mut S, namespace: &'a [u8]) -> Singleton<'a, S, Self> {
+    fn write<'a>(storage: &'a mut dyn Storage, namespace: &'a [u8]) -> Singleton<'a, Self> {
         singleton(storage, namespace)
     }
 
-    fn save<'a, S: Storage>(&self, storage: &'a mut S, namespace: &'a [u8]) -> StdResult<()> {
+    fn save<'a>(&self, storage: &mut dyn Storage, namespace: &'a [u8]) -> StdResult<()> {
         Self::write(storage, namespace).save(self)
     }
 }
@@ -36,51 +36,51 @@ pub trait NaiveSingletonStorage: Serialize + DeserializeOwned {
 pub trait SingletonStorage: Serialize + DeserializeOwned {
     const NAMESPACE: &'static [u8];
 
-    fn read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Self> {
+    fn read(storage: &dyn Storage) -> ReadonlySingleton<Self> {
         singleton_read(storage, Self::NAMESPACE)
     }
 
-    fn load<S: Storage>(storage: &S) -> StdResult<Self> {
+    fn load(storage: &dyn Storage) -> StdResult<Self> {
         Self::read(storage).load()
     }
 
-    fn may_load<S: Storage>(storage: &S) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage) -> StdResult<Option<Self>> {
         Self::read(storage).may_load()
     }
 
-    fn write<S: Storage>(storage: &mut S) -> Singleton<S, Self> {
+    fn write(storage: &mut dyn Storage) -> Singleton<Self> {
         singleton(storage, Self::NAMESPACE)
     }
 
-    fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::write(storage).save(self)
     }
 }
 
 pub trait NaiveBucketStorage: Serialize + DeserializeOwned {
-    fn read<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> ReadonlyBucket<'a, S, Self> {
-        bucket_read(namespace, storage)
+    fn read<'a>(storage: &'a dyn Storage, namespace: &'a [u8]) -> ReadonlyBucket<'a, Self> {
+        bucket_read(storage, namespace)
     }
 
-    fn load<'a, S: Storage>(storage: &'a S, namespace: &'a [u8], key: &'a [u8]) -> StdResult<Self> {
+    fn load<'a>(storage: &'a dyn Storage, namespace: &'a [u8], key: &'a [u8]) -> StdResult<Self> {
         Self::read(storage, namespace).load(key)
     }
 
-    fn may_load<'a, S: Storage>(
-        storage: &'a S,
+    fn may_load<'a>(
+        storage: &'a dyn Storage,
         namespace: &'a [u8],
         key: &'a [u8],
     ) -> StdResult<Option<Self>> {
         Self::read(storage, namespace).may_load(key)
     }
 
-    fn write<'a, S: Storage>(storage: &'a mut S, namespace: &'a [u8]) -> Bucket<'a, S, Self> {
-        bucket(namespace, storage)
+    fn write<'a>(storage: &'a mut dyn Storage, namespace: &'a [u8]) -> Bucket<'a, Self> {
+        bucket(storage, namespace)
     }
 
-    fn save<'a, S: Storage>(
+    fn save<'a>(
         &self,
-        storage: &'a mut S,
+        storage: &mut dyn Storage,
         namespace: &'a [u8],
         key: &'a [u8],
     ) -> StdResult<()> {
@@ -91,23 +91,23 @@ pub trait NaiveBucketStorage: Serialize + DeserializeOwned {
 pub trait BucketStorage: Serialize + DeserializeOwned {
     const NAMESPACE: &'static [u8];
 
-    fn read<S: Storage>(storage: &S) -> ReadonlyBucket<S, Self> {
-        bucket_read(Self::NAMESPACE, storage)
+    fn read(storage: &dyn Storage) -> ReadonlyBucket<Self> {
+        bucket_read(storage, Self::NAMESPACE)
     }
 
-    fn load<S: Storage>(storage: &S, key: &[u8]) -> StdResult<Self> {
+    fn load(storage: &dyn Storage, key: &[u8]) -> StdResult<Self> {
         Self::read(storage).load(key)
     }
 
-    fn may_load<S: Storage>(storage: &S, key: &[u8]) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage, key: &[u8]) -> StdResult<Option<Self>> {
         Self::read(storage).may_load(key)
     }
 
-    fn write<S: Storage>(storage: &mut S) -> Bucket<S, Self> {
-        bucket(Self::NAMESPACE, storage)
+    fn write(storage: &mut dyn Storage) -> Bucket<Self> {
+        bucket(storage, Self::NAMESPACE)
     }
 
-    fn save<S: Storage>(&self, storage: &mut S, key: &[u8]) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage, key: &[u8]) -> StdResult<()> {
         Self::write(storage).save(key, self)
     }
 }

@@ -1,8 +1,7 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
 pub enum ResponseStatus {
     Success,
     Failure,

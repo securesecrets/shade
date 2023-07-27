@@ -1,58 +1,52 @@
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::Uint128;
+use crate::c_std::Binary;
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+use crate::c_std::Uint128;
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
 pub struct TransferAction {
-    pub recipient: HumanAddr,
+    pub recipient: String,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SendAction {
-    pub recipient: HumanAddr,
+    pub recipient: String,
     pub recipient_code_hash: Option<String>,
     pub amount: Uint128,
     pub msg: Option<Binary>,
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct TransferFromAction {
-    pub owner: HumanAddr,
-    pub recipient: HumanAddr,
+    pub owner: String,
+    pub recipient: String,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SendFromAction {
-    pub owner: HumanAddr,
-    pub recipient: HumanAddr,
+    pub owner: String,
+    pub recipient: String,
     pub recipient_code_hash: Option<String>,
     pub amount: Uint128,
     pub msg: Option<Binary>,
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MintAction {
-    pub recipient: HumanAddr,
+    pub recipient: String,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct BurnFromAction {
-    pub owner: HumanAddr,
+    pub owner: String,
     pub amount: Uint128,
     pub memo: Option<String>,
 }

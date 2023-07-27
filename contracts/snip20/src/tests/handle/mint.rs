@@ -1,7 +1,7 @@
-use cosmwasm_std::HumanAddr;
-use fadroma::ensemble::MockEnv;
-use cosmwasm_math_compat::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
+use shade_protocol::c_std::Addr;
+use shade_protocol::utils::{ExecuteCallback, Query, MultiTestable};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, Minters, TotalSupply};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::tests::init_snip20_with_config;
@@ -17,33 +17,33 @@ fn mint() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::Mint {
-        recipient: HumanAddr::from("Jimmy"),
+    assert!(ExecuteMsg::Mint {
+        recipient: "jimmy".into(),
         amount: Uint128::new(1000),
         memo: None,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_err());
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
-        minters: vec![HumanAddr::from("admin")],
+    assert!(ExecuteMsg::AddMinters {
+        minters: vec!["admin".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&HandleMsg::Mint {
-        recipient: HumanAddr::from("Jimmy"),
+    assert!(ExecuteMsg::Mint {
+        recipient: "jimmy".into(),
         amount: Uint128::new(1500),
         memo: None,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address, |deps| {
+    chain.deps(&snip.address, |storage| {
         assert_eq!(Balance::load(
-            &deps.storage,
-            HumanAddr::from("Jimmy")).unwrap().0, Uint128::new(1500)
+            storage,
+            Addr::unchecked("jimmy")).unwrap().0, Uint128::new(1500)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1500)
+        assert_eq!(TotalSupply::load(storage).unwrap().0, Uint128::new(1500)
         );
-    });
+    }).unwrap();
 }
 
 #[test]
@@ -57,29 +57,29 @@ fn set_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from("admin")],
+    assert!(ExecuteMsg::SetMinters {
+        minters: vec!["admin".into()],
         padding: None
-    }, MockEnv::new("notAdmin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("notadmin"), &[]).is_err());
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from("admin")],
+    assert!(ExecuteMsg::SetMinters {
+        minters: vec!["admin".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![HumanAddr::from("admin")]);
-    });
+    chain.deps(&snip.address.clone(), |storage| {
+        assert_eq!(Minters::load(storage).unwrap().0, vec![Addr::unchecked("admin")]);
+    }).unwrap();
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from("other_address"), HumanAddr::from("some_other")],
+    assert!(ExecuteMsg::SetMinters {
+        minters: vec!["other_address".into(), "some_other".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
-                   vec![HumanAddr::from("other_address"), HumanAddr::from("some_other")]);
-    });
+    chain.deps(&snip.address, |storage| {
+        assert_eq!(Minters::load(storage).unwrap().0,
+                   vec![Addr::unchecked("other_address"), Addr::unchecked("some_other")]);
+    }).unwrap();
 }
 
 #[test]
@@ -93,33 +93,33 @@ fn add_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
-        minters: vec![HumanAddr::from("admin")],
+    assert!(ExecuteMsg::AddMinters {
+        minters: vec!["admin".into()],
         padding: None
-    }, MockEnv::new("notAdmin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("notadmin"), &[]).is_err());
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
-        minters: vec![HumanAddr::from("admin")],
+    assert!(ExecuteMsg::AddMinters {
+        minters: vec!["admin".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![HumanAddr::from("admin")]);
-    });
+    chain.deps(&snip.address.clone(), |storage| {
+        assert_eq!(Minters::load(storage).unwrap().0, vec![Addr::unchecked("admin")]);
+    }).unwrap();
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
-        minters: vec![HumanAddr::from("other_address"), HumanAddr::from("some_other")],
+    assert!(ExecuteMsg::AddMinters {
+        minters: vec!["other_address".into(), "some_other".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
+    chain.deps(&snip.address, |storage| {
+        assert_eq!(Minters::load(storage).unwrap().0,
                    vec![
-                       HumanAddr::from("admin"),
-                       HumanAddr::from("other_address"),
-                       HumanAddr::from("some_other")
+                       Addr::unchecked("admin"),
+                       Addr::unchecked("other_address"),
+                       Addr::unchecked("some_other")
                    ]);
-    });
+    }).unwrap();
 }
 
 #[test]
@@ -133,20 +133,20 @@ fn remove_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
-        minters: vec![HumanAddr::from("other_address"), HumanAddr::from("some_other")],
+    assert!(ExecuteMsg::AddMinters {
+        minters: vec!["other_address".into(), "some_other".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&HandleMsg::RemoveMinters {
-        minters: vec![HumanAddr::from("other_address")],
+    assert!(ExecuteMsg::RemoveMinters {
+        minters: vec!["other_address".into()],
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
+    chain.deps(&snip.address, |storage| {
+        assert_eq!(Minters::load(storage).unwrap().0,
                    vec![
-                       HumanAddr::from("some_other")
+                       Addr::unchecked("some_other")
                    ]);
-    });
+    }).unwrap();
 }

@@ -4,9 +4,19 @@ version = "0.1.0"
 authors = [
   "Guy Garcia <guysebastiangarcia@gmail.com>",
   "Jackson Swenson <jacksonswenson22@gmail.com>",
-  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>"
+  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>",
+  "Jack Sisson <sissonjack67@gmail.com>",
 ]
 edition = "2018"
+
+[[bin]]
+name = "schemas"
+path = "src/schemas.rs"
+# Must have all of the contract_interfaces
+required-features = [
+  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
+  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -14,69 +24,118 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["utils"]
 
-# TODO: Normalize usage, some features are using - while others use _
-
-# Templates
-dex = ["utils", "math", "snip20", "mint", "band"]
-band = []
-secretswap = ["utils"]
-sienna = ["utils", "math"]
-
 # Utils
-utils = []
+utils = ["chrono"]
+dao-utils = ["snip20"]
 errors = []
 flexible_msg = []
 math = []
-storage = ["cosmwasm-storage/iterator"]
-storage_plus = ["storage", "dep:secret-storage-plus"]
+storage = ["dao-utils"]
+storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
+query_auth_lib = ["dep:query-authentication"]
+multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 
-# Protocol contracts
-airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
-bonds = ["utils", "errors", "dep:remain", "airdrop", "dep:query-authentication", "snip20", "query_auth"]
-governance = ["utils", "flexible_msg"]
-mint = ["utils", "snip20"]
-mint_router = ["utils", "snip20"]
-oracle = ["snip20", "dex"]
-scrt_staking= ["utils", "adapter", "treasury"]
-treasury = ["utils", "adapter", "snip20"]
+# Implementing new contracts:
+# Contracts packages are divided by two different features, the interface and the implementation
+# When creating a new contract; try to keep all interface (Init, Handle and Query) related content in the `mod.rs` file
+# and move all implementation related content into separate files inside the package.
+# When defining a new interface, first create a feature that imports this:
+interface = ["utils", "errors"]
+# Like so
+# contract_name = ["interface"]
+# Then add the following inside `/src/contract_interfaces/mod.rs`
+# #[cfg(feature = "contract_name")]
+# pub mod contract_name;
+
+# For the implementation you need to import this in your feature and prepend the feature name with `_impl`
+implementation = ["storage_plus", "storage", "admin"]
+# Like so
+# contract_name_impl = ["contract_name", "implementation"]
+
+# TODO: Normalize usage, some features are using - while others use _
+
+# Templates
+dex        = ["math", "snip20", "mint", "band", "oracles"]
+band       = ["interface"]
+secretswap = ["interface"]
+sienna     = ["interface", "math"]
+
+# Protocol contracts NOTE: interfaces that have other interfaces as features already automatically have `interface` as a feature
+airdrop          = ["query_auth", "snip20"]
+basic_staking    = ["snip20"]
+bonds            = ["airdrop", "snip20"]
+governance       = ["query_auth", "flexible_msg"]
+mint             = ["snip20"]
+#liability_mint   = ["snip20", "adapter", "dao"]
+mint_router      = ["snip20"]
+oracles          = ["snip20", "dex"]
+scrt_staking     = ["adapter", "treasury"]
+stkd_scrt        = ["adapter"]
+treasury         = ["adapter", "dao-utils"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
-lp_shade_swap = []
-adapter = []
-snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
-query_auth = ["utils", "dep:query-authentication", "dep:remain"]
-snip20_staking = ["utils", "storage"]
-sky = ["snip20", "utils", "dex"]
+lp_shdswap       = ["interface"]
+adapter          = ["interface"]
+manager          = ["interface"]
+snip20           = ["query_auth_impl", "dep:base64"]
+query_auth       = ["interface", "query_auth_lib", "dep:remain"]
+snip20_staking   = ["interface", "implementation"]
+sky              = ["snip20", "dex", "dao"]
+dao              = ["interface", "cosmwasm-std/staking"]
+admin            = ["interface"]
+peg_stability    = ["sky-utils", "adapter"]
+snip20_migration = []
+
+chrono = ["dep:chrono"]
+
+stargate = ["cosmwasm-std/stargate"]
+staking = ["cosmwasm-std/staking"]
+
+stkd = []
+mock = []
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
-governance-impl = ["governance", "storage"]
-snip20-impl = ["snip20", "storage_plus"]
-query_auth_impl = ["query_auth", "storage_plus", "dep:base64"]
-sky-impl = ["sky", "storage_plus"]
+governance-impl = ["implementation", "governance"]
+snip20-impl     = ["snip20", "query_auth_impl"]
+query_auth_impl = ["implementation", "query_auth", "dep:base64"]
+sky-utils       = ["implementation", "sky"]
+admin_impl      = ["implementation", "admin"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+debug-print = [] # TODO: remove this from all cargo configs
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
-cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2", features = ["crypto"] }
-schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
-# TODO: fix import
-chrono = "0.4.19"
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
+cosmwasm-schema = "1.1.5"
+contract-derive = { version = "0.1.0", path = "../contract_derive" }
+
+schemars = "0.8.9"
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+thiserror = "1.0"
+
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+
+# Testing
+anyhow = { version = "1", optional = true }
+
+chrono = { version = "=0.4.19", optional = true }
 base64 = { version = "0.12.3", optional = true }
-# Needed for transactions
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
+#query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", branch = "cosmwasm_v1_upgrade", optional = true }
 remain = { version = "0.2.2", optional = true }
 subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
+
+# for EnumIter
+strum = "0.24"
+strum_macros = "0.24"
+const_format = "0.2.26"
+#strum = { version = "0.24", features = ["derive"] }
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }

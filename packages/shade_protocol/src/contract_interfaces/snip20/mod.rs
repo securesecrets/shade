@@ -1,44 +1,68 @@
-pub mod manager;
 pub mod batch;
-pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
+pub mod manager;
+pub mod transaction_history;
 
-use cosmwasm_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
-use query_authentication::permit::Permit;
-use schemars::JsonSchema;
-use secret_toolkit::crypto::sha_256;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::Uint128;
-use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
-use crate::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
-use crate::contract_interfaces::snip20::transaction_history::{RichTx, Tx};
+use crate::{
+    c_std::{Addr, Binary, Env, StdResult, Storage},
+    query_authentication::permit::Permit,
+};
+use cosmwasm_std::{Api, MessageInfo};
+
 #[cfg(feature = "snip20-impl")]
 use crate::contract_interfaces::snip20::transaction_history::store_mint;
-use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::ItemStorage;
-#[cfg(feature = "snip20-impl")]
-use secret_storage_plus::Item;
+use crate::{
+    c_std::Uint128,
+    contract_interfaces::{
+        query_auth::QueryPermit as AuthQueryPermit,
+        snip20::{
+            errors::{invalid_decimals, invalid_name_format, invalid_symbol_format},
+            manager::{
+                Admin,
+                Balance,
+                CoinInfo,
+                Config,
+                ContractStatusLevel,
+                Minters,
+                RandSeed,
+                TotalSupply,
+            },
+            transaction_history::{RichTx, Tx},
+        },
+    },
+    snip20::manager::QueryAuth,
+    utils::{
+        crypto::sha_256,
+        generic_response::ResponseStatus,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
+    },
+    Contract,
+};
+use cosmwasm_schema::cw_serde;
 
 pub const VERSION: &str = "SNIP24";
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InitialBalance {
-    pub address: HumanAddr,
+    pub address: String,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub name: String,
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<String>,
     pub symbol: String,
     pub decimals: u8,
     pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
+    pub query_auth: Option<Contract>,
 }
 
 fn is_valid_name(name: &str) -> bool {
@@ -54,8 +78,14 @@ fn is_valid_symbol(symbol: &str) -> bool {
 }
 
 #[cfg(feature = "snip20-impl")]
-impl InitMsg {
-    pub fn save<S: Storage>(&self, storage: &mut S, env: Env) -> StdResult<()> {
+impl InstantiateMsg {
+    pub fn save(
+        &self,
+        storage: &mut dyn Storage,
+        api: &dyn Api,
+        env: Env,
+        info: MessageInfo,
+    ) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
         }
@@ -74,28 +104,36 @@ impl InitMsg {
         CoinInfo {
             name: self.name.clone(),
             symbol: self.symbol.clone(),
-            decimals: self.decimals
-        }.save(storage)?;
+            decimals: self.decimals,
+        }
+        .save(storage)?;
 
-        let admin = self.admin.clone().unwrap_or(env.message.sender);
-        Admin(admin.clone()).save(storage)?;
+        let admin_addr;
+        if let Some(admin) = &self.admin {
+            admin_addr = api.addr_validate(admin.as_str())?
+        } else {
+            admin_addr = info.sender;
+        }
+
+        Admin(admin_addr.clone()).save(storage)?;
         RandSeed(sha_256(&self.prng_seed.0).to_vec()).save(storage)?;
 
         let mut total_supply = Uint128::zero();
 
-        if let Some(initial_balances) = &self.initial_balances{
+        if let Some(initial_balances) = &self.initial_balances {
             for balance in initial_balances.iter() {
-                Balance::set(storage, balance.amount.clone(), &balance.address)?;
+                let address = api.addr_validate(balance.address.as_str())?;
+                Balance::set(storage, balance.amount.clone(), &address)?;
                 total_supply = total_supply.checked_add(balance.amount)?;
 
                 store_mint(
                     storage,
-                    &admin,
-                    &balance.address,
+                    &admin_addr,
+                    &address,
                     balance.amount,
                     self.symbol.clone(),
                     Some("Initial Balance".to_string()),
-                    &env.block
+                    &env.block,
                 )?;
             }
         }
@@ -106,12 +144,15 @@ impl InitMsg {
 
         Minters(vec![]).save(storage)?;
 
+        if let Some(query_auth) = self.query_auth.clone() {
+            QueryAuth(query_auth).save(storage)?;
+        }
+
         Ok(())
     }
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
@@ -141,51 +182,57 @@ impl Default for InitConfig {
             enable_redeem: None,
             enable_mint: None,
             enable_burn: None,
-            enable_transfer: None
+            enable_transfer: None,
         }
     }
 }
 
 #[cfg(feature = "snip20-impl")]
 impl InitConfig {
-    pub fn save<S: Storage>(self, storage: &mut S) -> StdResult<()> {
+    pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
         Config {
             public_total_supply: self.public_total_supply(),
             enable_deposit: self.deposit_enabled(),
             enable_redeem: self.redeem_enabled(),
             enable_mint: self.mint_enabled(),
             enable_burn: self.burn_enabled(),
-            enable_transfer: self.transfer_enabled()
-        }.save(storage)?;
+            enable_transfer: self.transfer_enabled(),
+        }
+        .save(storage)?;
         Ok(())
     }
+
     pub fn public_total_supply(&self) -> bool {
         self.public_total_supply.unwrap_or(false)
     }
+
     pub fn deposit_enabled(&self) -> bool {
         self.enable_deposit.unwrap_or(false)
     }
+
     pub fn redeem_enabled(&self) -> bool {
         self.enable_redeem.unwrap_or(false)
     }
+
     pub fn mint_enabled(&self) -> bool {
         self.enable_mint.unwrap_or(false)
     }
+
     pub fn burn_enabled(&self) -> bool {
         self.enable_burn.unwrap_or(false)
     }
+
     pub fn transfer_enabled(&self) -> bool {
         self.enable_transfer.unwrap_or(true)
     }
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     // Native coin interactions
     Redeem {
         amount: Uint128,
@@ -198,13 +245,13 @@ pub enum HandleMsg {
 
     // Base ERC-20 stuff
     Transfer {
-        recipient: HumanAddr,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     Send {
-        recipient: HumanAddr,
+        recipient: String,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -239,27 +286,27 @@ pub enum HandleMsg {
 
     // Allowance
     IncreaseAllowance {
-        spender: HumanAddr,
+        spender: String,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     DecreaseAllowance {
-        spender: HumanAddr,
+        spender: String,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     TransferFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
+        owner: String,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     SendFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
+        owner: String,
+        recipient: String,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -275,7 +322,7 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     BurnFrom {
-        owner: HumanAddr,
+        owner: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
@@ -287,7 +334,7 @@ pub enum HandleMsg {
 
     // Mint
     Mint {
-        recipient: HumanAddr,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
@@ -297,26 +344,30 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     AddMinters {
-        minters: Vec<HumanAddr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
     RemoveMinters {
-        minters: Vec<HumanAddr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
     SetMinters {
-        minters: Vec<HumanAddr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
 
     // Admin
     ChangeAdmin {
-        address: HumanAddr,
+        address: String,
         padding: Option<String>,
     },
     SetContractStatus {
         level: ContractStatusLevel,
         padding: Option<String>,
+    },
+    // Updated the auth setting
+    UpdateQueryAuth {
+        auth: Option<Contract>,
     },
 
     // Permit
@@ -326,52 +377,49 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Snip20ReceiveMsg {
-    pub sender: HumanAddr,
-    pub from: HumanAddr,
+    pub sender: String,
+    pub from: String,
     pub amount: Uint128,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
     pub msg: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ReceiverHandleMsg {
     Receive(Snip20ReceiveMsg),
 }
 
 impl ReceiverHandleMsg {
     pub fn new(
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<String>,
         msg: Option<Binary>,
     ) -> Self {
-        Self::Receive(Snip20ReceiveMsg{
+        Self::Receive(Snip20ReceiveMsg {
             sender,
             from,
             amount,
             memo,
-            msg
+            msg,
         })
     }
 }
 
-impl HandleCallback for ReceiverHandleMsg {
+impl ExecuteCallback for ReceiverHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     // Native
     Deposit {
         status: ResponseStatus,
@@ -408,13 +456,13 @@ pub enum HandleAnswer {
 
     // Allowance
     IncreaseAllowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     DecreaseAllowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     TransferFrom {
@@ -460,6 +508,9 @@ pub enum HandleAnswer {
     SetContractStatus {
         status: ResponseStatus,
     },
+    UpdateQueryAuth {
+        status: ResponseStatus,
+    },
 
     // Permit
     RevokePermit {
@@ -469,10 +520,9 @@ pub enum HandleAnswer {
 
 pub type QueryPermit = Permit<PermitParams>;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PermitParams {
-    pub allowed_tokens: Vec<HumanAddr>,
+    pub allowed_tokens: Vec<Addr>,
     pub permit_name: String,
     pub permissions: Vec<Permission>,
 }
@@ -483,8 +533,7 @@ impl PermitParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Permission {
     /// Allowance for SNIP-20 - Permission to query allowance of the owner & spender
     Allowance,
@@ -502,37 +551,38 @@ pub enum Permission {
     Owner,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     TokenInfo {},
     TokenConfig {},
     ContractStatus {},
     ExchangeRate {},
     Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
+        owner: String,
+        spender: String,
         key: String,
     },
     Balance {
-        address: HumanAddr,
+        address: String,
         key: String,
     },
     TransferHistory {
-        address: HumanAddr,
+        address: String,
         key: String,
         page: Option<u32>,
         page_size: u32,
     },
     TransactionHistory {
-        address: HumanAddr,
+        address: String,
         key: String,
         page: Option<u32>,
         page_size: u32,
     },
     Minters {},
     WithPermit {
-        permit: QueryPermit,
+        permit: Option<QueryPermit>,
+        // Extra parameter because of snip20s standards
+        auth_permit: Option<AuthQueryPermit>,
         query: QueryWithPermit,
     },
 }
@@ -541,26 +591,15 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryWithPermit {
-    Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
-    },
+    Allowance { owner: String, spender: String },
     Balance {},
-    TransferHistory {
-        page: Option<u32>,
-        page_size: u32,
-    },
-    TransactionHistory {
-        page: Option<u32>,
-        page_size: u32,
-    },
+    TransferHistory { page: Option<u32>, page_size: u32 },
+    TransactionHistory { page: Option<u32>, page_size: u32 },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     TokenInfo {
         name: String,
@@ -585,8 +624,8 @@ pub enum QueryAnswer {
         denom: String,
     },
     Allowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
         expiration: Option<u64>,
     },
@@ -605,6 +644,6 @@ pub enum QueryAnswer {
         msg: String,
     },
     Minters {
-        minters: Vec<HumanAddr>,
+        minters: Vec<Addr>,
     },
 }

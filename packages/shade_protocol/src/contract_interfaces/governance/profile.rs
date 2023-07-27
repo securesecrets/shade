@@ -1,19 +1,18 @@
-use crate::contract_interfaces::governance::stored_id::ID;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdError, StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::{
+    c_std::{StdError, StdResult, Storage, Uint128},
+    contract_interfaces::governance::stored_id::ID,
+};
+
+use cosmwasm_schema::cw_serde;
+use secret_storage_plus::Map;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::BucketStorage;
-#[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::NaiveBucketStorage;
+use crate::utils::storage::plus::{MapStorage, NaiveMapStorage};
 
 /// Allow better control over the safety and privacy features that proposals will need if
 /// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.
 /// All percentages are taken as follows 100000 = 100%
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Profile {
     pub name: String,
     // State of the current profile and its subsequent assemblies
@@ -32,103 +31,95 @@ pub struct Profile {
     pub cancel_deadline: u64,
 }
 
-const COMMITTEE_PROFILE_KEY: &'static [u8] = b"assembly_vote_profile-";
-const TOKEN_PROFILE_KEY: &'static [u8] = b"token_vote_profile-";
+const COMMITTEE_PROFILE_KEY: Map<u16, VoteProfileType> = Map::new("assembly_vote_profile-");
+const TOKEN_PROFILE_KEY: Map<u16, VoteProfileType> = Map::new("token_vote_profile-");
 
 #[cfg(feature = "governance-impl")]
 impl Profile {
-    pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: u16) -> StdResult<Self> {
         let data = Self::data(storage, id)?;
 
         Ok(Self {
             name: data.name,
             enabled: data.enabled,
-            assembly: Self::assembly_voting(storage, &id)?,
-            funding: Self::funding(storage, &id)?,
-            token: Self::public_voting(storage, &id)?,
+            assembly: Self::assembly_voting(storage, id)?,
+            funding: Self::funding(storage, id)?,
+            token: Self::public_voting(storage, id)?,
             cancel_deadline: data.cancel_deadline,
         })
     }
 
-    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
-        if id > &ID::profile(storage)? {
+    pub fn may_load(storage: &dyn Storage, id: u16) -> StdResult<Option<Self>> {
+        if id > ID::profile(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: u16) -> StdResult<()> {
         ProfileData {
             name: self.name.clone(),
             enabled: self.enabled,
             cancel_deadline: self.cancel_deadline,
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id)?;
 
-        Self::save_assembly_voting(storage, &id, self.assembly.clone())?;
+        Self::save_assembly_voting(storage, id, self.assembly.clone())?;
 
-        Self::save_public_voting(storage, &id, self.token.clone())?;
+        Self::save_public_voting(storage, id, self.token.clone())?;
 
-        Self::save_funding(storage, &id, self.funding.clone())?;
+        Self::save_funding(storage, id, self.funding.clone())?;
 
         Ok(())
     }
 
-    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProfileData> {
-        ProfileData::load(storage, &id.to_be_bytes())
+    pub fn data(storage: &dyn Storage, id: u16) -> StdResult<ProfileData> {
+        ProfileData::load(storage, id)
     }
 
-    pub fn save_data<S: Storage>(
-        storage: &mut S,
-        id: &Uint128,
-        data: ProfileData,
-    ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+    pub fn save_data(storage: &mut dyn Storage, id: u16, data: ProfileData) -> StdResult<()> {
+        data.save(storage, id)
     }
 
-    pub fn assembly_voting<S: Storage>(
-        storage: &S,
-        id: &Uint128,
-    ) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
+    pub fn assembly_voting(storage: &dyn Storage, id: u16) -> StdResult<Option<VoteProfile>> {
+        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, id)?.0)
     }
 
-    pub fn save_assembly_voting<S: Storage>(
-        storage: &mut S,
-        id: &Uint128,
+    pub fn save_assembly_voting(
+        storage: &mut dyn Storage,
+        id: u16,
         assembly: Option<VoteProfile>,
     ) -> StdResult<()> {
-        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
+        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, id)
     }
 
-    pub fn public_voting<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
+    pub fn public_voting(storage: &dyn Storage, id: u16) -> StdResult<Option<VoteProfile>> {
+        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, id)?.0)
     }
 
-    pub fn save_public_voting<S: Storage>(
-        storage: &mut S,
-        id: &Uint128,
+    pub fn save_public_voting(
+        storage: &mut dyn Storage,
+        id: u16,
         token: Option<VoteProfile>,
     ) -> StdResult<()> {
-        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
+        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, id)
     }
 
-    pub fn funding<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<FundProfile>> {
-        Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
+    pub fn funding(storage: &dyn Storage, id: u16) -> StdResult<Option<FundProfile>> {
+        Ok(FundProfileType::load(storage, id)?.0)
     }
 
-    pub fn save_funding<S: Storage>(
-        storage: &mut S,
-        id: &Uint128,
+    pub fn save_funding(
+        storage: &mut dyn Storage,
+        id: u16,
         funding: Option<FundProfile>,
     ) -> StdResult<()> {
-        FundProfileType(funding).save(storage, &id.to_be_bytes())
+        FundProfileType(funding).save(storage, id)
     }
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ProfileData {
     pub name: String,
     pub enabled: bool,
@@ -136,14 +127,12 @@ pub struct ProfileData {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProfileData {
-    const NAMESPACE: &'static [u8] = b"profile_data-";
+impl MapStorage<'static, u16> for ProfileData {
+    const MAP: Map<'static, u16, Self> = Map::new("profile_data-");
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-// NOTE: 100% = Uint128(10000)
+#[cw_serde] // NOTE: 100% = Uint128::new(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,
@@ -156,16 +145,14 @@ pub struct VoteProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct VoteProfileType(pub Option<VoteProfile>);
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for VoteProfileType {}
+impl NaiveMapStorage<'static> for VoteProfileType {}
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FundProfile {
     // Deadline for funding
     pub deadline: u64,
@@ -178,25 +165,22 @@ pub struct FundProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct FundProfileType(pub Option<FundProfile>);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for FundProfileType {
-    const NAMESPACE: &'static [u8] = b"fund_profile-";
+impl MapStorage<'static, u16> for FundProfileType {
+    const MAP: Map<'static, u16, Self> = Map::new("fund_profile-");
 }
 
 /// Helps simplify the given limits
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Count {
     Percentage { percent: u16 },
     LiteralCount { count: Uint128 },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateProfile {
     pub name: Option<String>,
     // State of the current profile and its subsequent assemblies
@@ -218,8 +202,7 @@ pub struct UpdateProfile {
     pub cancel_deadline: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateVoteProfile {
     // Deadline for voting
     pub deadline: Option<u64>,
@@ -273,8 +256,7 @@ impl UpdateVoteProfile {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateFundProfile {
     // Deadline for funding
     pub deadline: Option<u64>,

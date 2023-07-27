@@ -1,20 +1,17 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{StdResult, Uint128};
+
+use cosmwasm_schema::cw_serde;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::NaiveBucketStorage;
+use crate::utils::storage::plus::NaiveMapStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ReceiveBalanceMsg {
     pub vote: Vote,
-    pub proposal: Uint128,
+    pub proposal: u32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Vote {
     pub yes: Uint128,
     pub no: Uint128,
@@ -23,7 +20,7 @@ pub struct Vote {
 }
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for Vote {}
+impl NaiveMapStorage<'static> for Vote {}
 
 impl Default for Vote {
     fn default() -> Self {

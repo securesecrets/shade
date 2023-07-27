@@ -1,0 +1,26 @@
+on: [pull_request]
+
+name: Basic CICD
+
+jobs:
+  TestAndCompileContract:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Run unit test
+        run: cargo test --locked
+        shell: bash
+
+      # - name: Build contracts
+      #   run: make compile-optimized-reproducible
+      #   shell: bash

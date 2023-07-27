@@ -1,47 +1,36 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, StdResult, Uint128},
     contract_interfaces::snip20::{
         batch,
+        errors::burning_disabled,
         manager::{Allowance, Balance, CoinInfo, Config, TotalSupply},
         transaction_history::store_burn,
-        HandleAnswer,
+        ExecuteAnswer,
     },
     utils::{generic_response::ResponseStatus::Success, storage::plus::ItemStorage},
 };
-use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 
-pub fn try_burn<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_burn(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
-    let sender = &env.message.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+) -> StdResult<Response> {
+    let sender = &info.sender;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
-    Balance::sub(&mut deps.storage, amount, sender)?;
+    Balance::sub(deps.storage, amount, sender)?;
     // Dec total supply
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     store_burn(
-        &mut deps.storage,
+        deps.storage,
         &sender,
         &sender,
         amount,
@@ -50,35 +39,32 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Burn { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Burn { status: Success })?))
 }
 
-pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_burn_from(
+    deps: DepsMut,
     env: Env,
-    owner: HumanAddr,
+    info: MessageInfo,
+    owner: Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
-    let sender = &env.message.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+) -> StdResult<Response> {
+    let sender = &info.sender;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
-    Allowance::spend(&mut deps.storage, &owner, &sender, amount, &env.block)?;
-    Balance::sub(&mut deps.storage, amount, &owner)?;
+    Allowance::spend(deps.storage, &owner, &sender, amount, &env.block)?;
+    Balance::sub(deps.storage, amount, &owner)?;
     // Dec total supply
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     store_burn(
-        &mut deps.storage,
+        deps.storage,
         &owner,
         &sender,
         amount,
@@ -87,45 +73,46 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BurnFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::BurnFrom { status: Success })?))
 }
 
-pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_batch_burn_from(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::BurnFromAction>,
-) -> StdResult<HandleResponse> {
-    let sender = &env.message.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+) -> StdResult<Response> {
+    let sender = &info.sender;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
-    let mut supply = TotalSupply::load(&deps.storage)?;
+    let mut supply = TotalSupply::load(deps.storage)?;
 
     for action in actions {
         Allowance::spend(
-            &mut deps.storage,
-            &action.owner,
+            deps.storage,
+            &deps.api.addr_validate(action.owner.as_str())?,
             &sender,
             action.amount,
             &env.block,
         )?;
 
-        Balance::sub(&mut deps.storage, action.amount, &action.owner)?;
+        Balance::sub(
+            deps.storage,
+            action.amount,
+            &deps.api.addr_validate(action.owner.as_str())?,
+        )?;
 
         // Dec total supply
         supply.0 = supply.0.checked_sub(action.amount)?;
 
         store_burn(
-            &mut deps.storage,
-            &action.owner,
+            deps.storage,
+            &deps.api.addr_validate(action.owner.as_str())?,
             &sender,
             action.amount,
             denom.clone(),
@@ -134,11 +121,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    supply.save(&mut deps.storage)?;
+    supply.save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchBurnFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::BatchBurnFrom { status: Success })?))
 }

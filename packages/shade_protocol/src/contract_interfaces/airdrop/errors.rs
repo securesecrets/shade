@@ -1,14 +1,13 @@
 use crate::{
+    c_std::StdError,
     impl_into_u8,
     utils::errors::{build_string, CodeType, DetailedError},
 };
-use cosmwasm_std::StdError;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 pub enum Error {
     InvalidTaskPercentage,
     InvalidDates,
@@ -67,10 +66,10 @@ impl CodeType for Error {
     }
 }
 
-const airdrop_target: &str = "airdrop";
+const AIRDROP_TARGET: &str = "airdrop";
 
 pub fn invalid_task_percentage(percentage: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidTaskPercentage, vec![
+    DetailedError::from_code(AIRDROP_TARGET, Error::InvalidTaskPercentage, vec![
         percentage,
     ])
     .to_error()
@@ -83,7 +82,7 @@ pub fn invalid_dates(
     item_b: &str,
     item_b_amount: &str,
 ) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidDates, vec![
+    DetailedError::from_code(AIRDROP_TARGET, Error::InvalidDates, vec![
         item_a,
         item_a_amount,
         precedence,
@@ -94,75 +93,75 @@ pub fn invalid_dates(
 }
 
 pub fn permit_contract_mismatch(contract: &str, expected: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::PermitContractMismatch, vec![
+    DetailedError::from_code(AIRDROP_TARGET, Error::PermitContractMismatch, vec![
         contract, expected,
     ])
     .to_error()
 }
 
 pub fn permit_key_revoked(key: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::PermitKeyRevoked, vec![key]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::PermitKeyRevoked, vec![key]).to_error()
 }
 
 pub fn permit_rejected() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::PermitRejected, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::PermitRejected, vec![]).to_error()
 }
 
 pub fn not_admin(admin: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::NotAdmin, vec![admin]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::NotAdmin, vec![admin]).to_error()
 }
 
 pub fn account_already_created() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AccountAlreadyCreated, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::AccountAlreadyCreated, vec![]).to_error()
 }
 
 pub fn account_does_not_exist() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AccountDoesntExist, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::AccountDoesntExist, vec![]).to_error()
 }
 
 pub fn nothing_to_claim() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::NothingToClaim, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::NothingToClaim, vec![]).to_error()
 }
 
 pub fn decay_claimed() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::DecayClaimed, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::DecayClaimed, vec![]).to_error()
 }
 
 pub fn decay_not_set() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::NoDecaySet, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::NoDecaySet, vec![]).to_error()
 }
 
 pub fn claim_too_high(claim: &str, max: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::ClaimAmountTooHigh, vec![claim, max]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::ClaimAmountTooHigh, vec![claim, max]).to_error()
 }
 
 pub fn address_already_in_account(address: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AddressInAccount, vec![address]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::AddressInAccount, vec![address]).to_error()
 }
 
 pub fn expected_memo() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::ExpectedMemo, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::ExpectedMemo, vec![]).to_error()
 }
 
 pub fn invalid_partial_tree() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidPartialTree, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::InvalidPartialTree, vec![]).to_error()
 }
 
 pub fn airdrop_not_started(start: &str, current: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AirdropNotStarted, vec![
+    DetailedError::from_code(AIRDROP_TARGET, Error::AirdropNotStarted, vec![
         start, current,
     ])
     .to_error()
 }
 
 pub fn airdrop_ended(end: &str, current: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AirdropEnded, vec![end, current]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::AirdropEnded, vec![end, current]).to_error()
 }
 
 pub fn invalid_viewing_key() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidViewingKey, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::InvalidViewingKey, vec![]).to_error()
 }
 
 pub fn unexpected_error() -> StdError {
-    DetailedError::from_code(airdrop_target, Error::UnexpectedError, vec![]).to_error()
+    DetailedError::from_code(AIRDROP_TARGET, Error::UnexpectedError, vec![]).to_error()
 }

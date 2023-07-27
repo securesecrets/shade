@@ -12,38 +12,41 @@ use crate::{
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
-use shade_protocol::contract_interfaces::airdrop::{
-    claim_info::RequiredTask,
-    errors::{invalid_dates, invalid_task_percentage},
-    Config,
-    HandleMsg,
-    InitMsg,
-    QueryMsg,
+use shade_protocol::{
+    airdrop::{
+        claim_info::RequiredTask,
+        errors::{invalid_dates, invalid_task_percentage},
+        Config,
+        ExecuteMsg,
+        InstantiateMsg,
+        QueryMsg,
+    },
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
+        Uint128,
+    },
+    utils::{pad_handle_result, pad_query_result},
 };
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[shd_entry_point]
+pub fn instantiate(
+    deps: DepsMut,
     env: Env,
-    msg: InitMsg,
-) -> StdResult<InitResponse> {
+    info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
     // Setup task claim
     let mut task_claim = vec![RequiredTask {
         address: env.contract.address.clone(),
@@ -63,7 +66,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     let start_date = match msg.start_date {
-        None => env.block.time,
+        None => env.block.time.seconds(),
         Some(date) => date,
     };
 
@@ -106,7 +109,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     let config = Config {
-        admin: msg.admin.unwrap_or(env.message.sender),
+        admin: msg.admin.unwrap_or(info.sender),
         contract: env.contract.address,
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
@@ -121,27 +124,21 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         query_rounding: msg.query_rounding,
     };
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     // Initialize claim amount
-    total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
+    total_claimed_w(deps.storage).save(&Uint128::zero())?;
 
-    decay_claimed_w(&mut deps.storage).save(&false)?;
+    decay_claimed_w(deps.storage).save(&false)?;
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
-            HandleMsg::UpdateConfig {
+            ExecuteMsg::UpdateConfig {
                 admin,
                 dump_address,
                 query_rounding: redeem_step_size,
@@ -152,6 +149,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_update_config(
                 deps,
                 env,
+                &info,
                 admin,
                 dump_address,
                 redeem_step_size,
@@ -159,26 +157,28 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 end_date,
                 start_decay,
             ),
-            HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
-            HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
-            HandleMsg::Account {
+            ExecuteMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, &info, tasks),
+            ExecuteMsg::CompleteTask { address, .. } => {
+                try_complete_task(deps, &env, &info, address)
+            }
+            ExecuteMsg::Account {
                 addresses,
                 partial_tree,
                 ..
-            } => try_account(deps, &env, addresses, partial_tree),
-            HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
-            HandleMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
-            HandleMsg::Claim { .. } => try_claim(deps, &env),
-            HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
+            } => try_account(deps, &env, &info, addresses, partial_tree),
+            ExecuteMsg::DisablePermitKey { key, .. } => {
+                try_disable_permit_key(deps, &env, &info, key)
+            }
+            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, &info, key),
+            ExecuteMsg::Claim { .. } => try_claim(deps, &env, &info),
+            ExecuteMsg::ClaimDecay { .. } => try_claim_decay(deps, &env, &info),
         },
         RESPONSE_BLOCK_SIZE,
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::Config {} => to_binary(&query::config(deps)?),

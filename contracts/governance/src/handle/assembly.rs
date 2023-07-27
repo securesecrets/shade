@@ -1,141 +1,126 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
+use crate::handle::authorize_assembly;
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Binary,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
+        Uint128,
+    },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
-        profile::{Profile, VoteProfile},
+        profile::Profile,
         proposal::{Proposal, ProposalMsg, Status},
-        stored_id::ID,
+        stored_id::{UserID, ID},
         vote::Vote,
-        HandleAnswer,
+        ExecuteAnswer,
         MSG_VARIABLE,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    governance::errors::Error,
+    utils::generic_response::ResponseStatus,
 };
-use std::convert::TryInto;
 
-pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_assembly_vote(
+    deps: DepsMut,
     env: Env,
-    proposal: Uint128,
+    info: MessageInfo,
+    proposal: u32,
     vote: Vote,
-) -> StdResult<HandleResponse> {
-    let sender = env.message.sender;
+) -> StdResult<Response> {
+    authorize_assembly(
+        deps.storage,
+        &info,
+        Proposal::assembly(deps.storage, proposal)?,
+    )?;
+
+    let sender = info.sender;
 
     // Check if proposal in assembly voting
-    if let Status::AssemblyVote { end, .. } = Proposal::status(&deps.storage, &proposal)? {
-        if end <= env.block.time {
-            return Err(StdError::generic_err("Voting time has been reached"));
+    if let Status::AssemblyVote { end, .. } = Proposal::status(deps.storage, proposal)? {
+        if end <= env.block.time.seconds() {
+            return Err(Error::voting_ended(vec![&end.to_string()]));
         }
     } else {
-        return Err(StdError::generic_err("Not in assembly vote phase"));
-    }
-    // Check if user in assembly
-    if !Assembly::data(
-        &deps.storage,
-        &Proposal::assembly(&deps.storage, &proposal)?,
-    )?
-    .members
-    .contains(&sender)
-    {
-        return Err(StdError::unauthorized());
+        return Err(Error::not_assembly_voting(vec![]));
     }
 
-    let mut tally = Proposal::assembly_votes(&deps.storage, &proposal)?;
+    let mut tally = Proposal::assembly_votes(deps.storage, proposal)?;
 
     // Assembly votes can only be = 1 uint
     if vote.total_count()? != Uint128::new(1) {
-        return Err(StdError::generic_err("Assembly vote can only be one"));
+        return Err(Error::assembly_vote_qty(vec![]));
     }
 
     // Check if user voted
-    if let Some(old_vote) = Proposal::assembly_vote(&deps.storage, &proposal, &sender)? {
+    if let Some(old_vote) = Proposal::assembly_vote(deps.storage, proposal, &sender)? {
         tally = tally.checked_sub(&old_vote)?;
     }
 
-    Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
-    Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    Proposal::save_assembly_vote(deps.storage, proposal, &sender, &vote)?;
+    Proposal::save_assembly_votes(deps.storage, proposal, &tally.checked_add(&vote)?)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AssemblyVote {
+    // Save data for user queries
+    UserID::add_assembly_vote(deps.storage, sender.clone(), proposal.clone())?;
+
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AssemblyVote {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn try_assembly_proposal(
+    deps: DepsMut,
     env: Env,
-    assembly_id: Uint128,
+    info: MessageInfo,
+    assembly_id: u16,
     title: String,
     metadata: String,
     msgs: Option<Vec<ProposalMsg>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Get assembly
-    let assembly_data = Assembly::data(&deps.storage, &assembly_id)?;
-
-    // Check if public; everyone is allowed
-    if assembly_data.profile != Uint128::zero() {
-        if !assembly_data.members.contains(&env.message.sender) {
-            return Err(StdError::unauthorized());
-        }
-    }
+    let assembly_data = authorize_assembly(deps.storage, &info, assembly_id)?;
 
     // Get profile
     // Check if assembly is enabled
-    let profile = Profile::data(&deps.storage, &assembly_data.profile)?;
-    if !profile.enabled {
-        return Err(StdError::generic_err("Assembly is disabled"));
-    }
+    let profile = Profile::data(deps.storage, assembly_data.profile)?;
 
     let status: Status;
 
     // Check if assembly voting
-    if let Some(vote_settings) = Profile::assembly_voting(&deps.storage, &assembly_data.profile)? {
+    if let Some(vote_settings) = Profile::assembly_voting(deps.storage, assembly_data.profile)? {
         status = Status::AssemblyVote {
-            start: env.block.time,
-            end: env.block.time + vote_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + vote_settings.deadline,
         }
     }
     // Check if funding
-    else if let Some(fund_settings) = Profile::funding(&deps.storage, &assembly_data.profile)? {
+    else if let Some(fund_settings) = Profile::funding(deps.storage, assembly_data.profile)? {
         status = Status::Funding {
             amount: Uint128::zero(),
-            start: env.block.time,
-            end: env.block.time + fund_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + fund_settings.deadline,
         }
     }
     // Check if token voting
-    else if let Some(vote_settings) =
-        Profile::public_voting(&deps.storage, &assembly_data.profile)?
+    else if let Some(vote_settings) = Profile::public_voting(deps.storage, assembly_data.profile)?
     {
         status = Status::Voting {
-            start: env.block.time,
-            end: env.block.time + vote_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + vote_settings.deadline,
         }
     }
     // Else push directly to passed
     else {
         status = Status::Passed {
-            start: env.block.time,
-            end: env.block.time + profile.cancel_deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + profile.cancel_deadline,
         }
     }
 
@@ -144,16 +129,16 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         let mut new_msgs = vec![];
         for msg in msgs.iter() {
             // Check if msg is allowed in assembly
-            let assembly_msg = AssemblyMsg::data(&deps.storage, &msg.assembly_msg)?;
+            let assembly_msg = AssemblyMsg::data(deps.storage, msg.assembly_msg)?;
             if !assembly_msg.assemblies.contains(&assembly_id) {
-                return Err(StdError::unauthorized());
+                return Err(Error::msg_not_in_assembly(vec![]));
             }
 
             // Check if msg is allowed in contract
-            let contract = AllowedContract::data(&deps.storage, &msg.target)?;
+            let contract = AllowedContract::data(deps.storage, msg.target)?;
             if let Some(assemblies) = contract.assemblies {
                 if !assemblies.contains(&msg.target) {
-                    return Err(StdError::unauthorized());
+                    return Err(Error::msg_not_in_contract(vec![]));
                 }
             }
 
@@ -174,7 +159,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     let prop = Proposal {
-        proposer: env.message.sender,
+        proposer: info.sender,
         title,
         metadata,
         msgs: processed_msgs,
@@ -186,35 +171,29 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         funders: None,
     };
 
-    let prop_id = ID::add_proposal(&mut deps.storage)?;
-    prop.save(&mut deps.storage, &prop_id)?;
+    prop.save(deps.storage)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AssemblyProposal {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AssemblyProposal {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+pub fn try_add_assembly(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
-    members: Vec<HumanAddr>,
-    profile: Uint128,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let id = ID::add_assembly(&mut deps.storage)?;
+    members: Vec<Addr>,
+    profile: u16,
+) -> StdResult<Response> {
+    let id = ID::add_assembly(deps.storage)?;
 
     // Check that profile exists
-    if profile > ID::profile(&deps.storage)? {
-        return Err(StdError::generic_err("Profile not found"));
+    if profile > ID::profile(deps.storage)? {
+        return Err(Error::item_not_found(vec![&profile.to_string(), "Profile"]));
     }
 
     Assembly {
@@ -223,32 +202,27 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
         members,
         profile,
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddAssembly {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::AddAssembly {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }
 
-pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    id: Uint128,
+pub fn try_set_assembly(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u16,
     name: Option<String>,
     metadata: Option<String>,
-    members: Option<Vec<HumanAddr>>,
-    profile: Option<Uint128>,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized());
-    }
-
-    let mut assembly = match Assembly::may_load(&mut deps.storage, &id)? {
-        None => return Err(StdError::generic_err("Assembly not found")),
+    members: Option<Vec<Addr>>,
+    profile: Option<u16>,
+) -> StdResult<Response> {
+    let mut assembly = match Assembly::may_load(deps.storage, id)? {
+        None => return Err(Error::item_not_found(vec![&id.to_string(), "Assembly"])),
         Some(c) => c,
     };
 
@@ -266,19 +240,17 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
 
     if let Some(profile) = profile {
         // Check that profile exists
-        if profile > ID::profile(&deps.storage)? {
-            return Err(StdError::generic_err("Profile not found"));
+        if profile > ID::profile(deps.storage)? {
+            return Err(Error::item_not_found(vec![&profile.to_string(), "Profile"]));
         }
         assembly.profile = profile
     }
 
-    assembly.save(&mut deps.storage, &id)?;
+    assembly.save(deps.storage, id)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAssembly {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetAssembly {
             status: ResponseStatus::Success,
         })?),
-    })
+    )
 }

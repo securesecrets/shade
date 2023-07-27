@@ -1,5 +1,11 @@
 use crate::cli_types::{
-    ListCodeResponse, ListContractCode, NetContract, SignedTx, StoredContract, TxCompute, TxQuery,
+    ListCodeResponse,
+    ListContractCode,
+    NetContract,
+    SignedTx,
+    StoredContract,
+    TxCompute,
+    TxQuery,
     TxResponse,
 };
 use serde::{Deserialize, Serialize};
@@ -8,7 +14,8 @@ use std::{
     fs::File,
     io::{self, Write},
     process::Command,
-    thread, time,
+    thread,
+    time,
 };
 
 //secretcli tx sign-doc tx_to_sign --from sign-test
@@ -269,7 +276,7 @@ fn instantiate_contract<Init: serde::Serialize>(
 /// * 'sender' - Msg sender
 /// * 'store_gas' - Gas price to use when storing the contract, defaults to 10000000
 /// * 'backend' - Keyring backend defaults to none
-/// 
+///
 pub fn store_and_return_contract(
     contract_file: &str,
     sender: &str,
@@ -326,7 +333,7 @@ pub fn init<Message: serde::Serialize>(
     backend: Option<&str>,
     report: &mut Vec<Report>,
 ) -> Result<NetContract> {
-    io::stdout().flush();
+    io::stdout().flush().unwrap();
     let store_response = store_contract(contract_file, Option::from(&*sender), store_gas, backend)?;
     let store_query = query_hash(store_response.txhash)?;
     let mut contract = NetContract {
@@ -397,7 +404,7 @@ fn execute_contract<Handle: serde::Serialize>(
     max_tries: Option<i32>,
 ) -> Result<TxResponse> {
     let message = serde_json::to_string(&msg)?;
-    
+
     let mut command = vec![
         "tx",
         "compute",
@@ -437,7 +444,7 @@ fn execute_contract<Handle: serde::Serialize>(
 ///
 /// # Arguments
 ///
-/// * `msg` - HandleMsg
+/// * `msg` - ExecuteMsg
 /// * 'contract' - The contract to interact with
 /// * 'sender' - Msg sender
 /// * 'gas' - Gas price to use, defaults to 8000000

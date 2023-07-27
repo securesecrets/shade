@@ -1,0 +1,129 @@
+<mxfile host="app.diagrams.net" modified="2022-07-27T17:28:56.820Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36" etag="pFPmgbGkzX08mDRr_k5c" version="20.2.1" type="github">
+  <diagram id="hO2woEYLl5W8Jl_3f4gL" name="Page-1">
+    <mxGraphModel dx="2072" dy="1157" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-7" value="" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-140" y="520" width="400" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.118;entryY=-0.027;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="OEarSlNTJwMwaWrM12Ts-1" target="OEarSlNTJwMwaWrM12Ts-7" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-93" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-29" value="Claim Rewards/unbonds" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-28" vertex="1" connectable="0">
+          <mxGeometry x="0.3846" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OEarSlNTJwMwaWrM12Ts-1" target="OEarSlNTJwMwaWrM12Ts-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-31" value="Send SHD / deriiv&lt;br&gt;bond / unbond" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-30" vertex="1" connectable="0">
+          <mxGeometry x="-0.6933" y="-1" relative="1" as="geometry">
+            <mxPoint x="1" y="17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_Octo8sf_nyTNGusy5xY-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="OEarSlNTJwMwaWrM12Ts-1" target="OEarSlNTJwMwaWrM12Ts-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="730" y="190" />
+              <mxPoint x="730" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_Octo8sf_nyTNGusy5xY-2" value="Request unbond, claim unbond" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="_Octo8sf_nyTNGusy5xY-1">
+          <mxGeometry x="-0.0825" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-1" value="User" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="365" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OEarSlNTJwMwaWrM12Ts-2" target="OEarSlNTJwMwaWrM12Ts-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-17" value="Mint / burn under a given address" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-16" vertex="1" connectable="0">
+          <mxGeometry x="-0.3444" y="1" relative="1" as="geometry">
+            <mxPoint x="7" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OEarSlNTJwMwaWrM12Ts-2" target="OEarSlNTJwMwaWrM12Ts-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-34" value="Mint" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-32" vertex="1" connectable="0">
+          <mxGeometry x="0.3309" y="2" relative="1" as="geometry">
+            <mxPoint y="12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="OEarSlNTJwMwaWrM12Ts-2" target="OEarSlNTJwMwaWrM12Ts-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-36" value="Bond / unbond under a given address" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-35" vertex="1" connectable="0">
+          <mxGeometry x="0.6" y="-3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-2" value="Staking Overseer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="365" y="370" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="OEarSlNTJwMwaWrM12Ts-3" target="OEarSlNTJwMwaWrM12Ts-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-38" value="Send SHD&lt;br&gt;bond / unbond" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-37" vertex="1" connectable="0">
+          <mxGeometry x="-0.1625" y="-3" relative="1" as="geometry">
+            <mxPoint x="17" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OEarSlNTJwMwaWrM12Ts-3" target="OEarSlNTJwMwaWrM12Ts-7" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="780" />
+              <mxPoint x="200" y="780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-41" value="Claim rewards/unbonds" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-40" vertex="1" connectable="0">
+          <mxGeometry x="0.1211" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-3" value="stkd-d-SHD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="540" y="560" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-4" value="stkd-SHD&lt;br&gt;low&amp;nbsp;risk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="-130" y="560" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-5" value="stkd-SHD &lt;br&gt;medium risk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry y="560" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-6" value="stkd-SHD&lt;br&gt;high risk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="130" y="560" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-8" value="Staking Profiles" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="-25" y="530" width="170" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="OEarSlNTJwMwaWrM12Ts-15" target="OEarSlNTJwMwaWrM12Ts-21" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-23" value="Vote" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="OEarSlNTJwMwaWrM12Ts-22" vertex="1" connectable="0">
+          <mxGeometry x="0.1667" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-15" value="Vote Token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="365" y="560" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-21" value="Governance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="365" y="680" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-33" value="&lt;h1&gt;Derivative Staking&lt;/h1&gt;&lt;p&gt;When a user picks a derivative split, the overseer will both bond a percent under the staking address and another percent under the derivatives address. This means that the derivative will have its own voting power and responsibility.&lt;/p&gt;&lt;p&gt;The rebonding and unbondings are handled just like a normal user.&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="610" y="630" width="240" height="210" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -2,9 +2,11 @@ pub mod errors;
 pub mod rand;
 pub mod utils;
 
-use cosmwasm_std::Env;
+use crate::c_std::Env;
+use cosmwasm_std::MessageInfo;
 
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::{
         bonds::{
             rand::{sha_256, Prng},
@@ -20,18 +22,16 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
-use secret_toolkit::utils::HandleCallback;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+use crate::utils::ExecuteCallback;
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
 pub struct Config {
-    pub limit_admin: HumanAddr,
+    pub limit_admin: Addr,
     pub shade_admin: Contract,
     pub oracle: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub issued_asset: Contract,
     pub activated: bool,
     pub bond_issuance_limit: Uint128,
@@ -42,20 +42,20 @@ pub struct Config {
     pub global_maximum_discount: Uint128,
     pub global_min_accepted_issued_price: Uint128,
     pub global_err_issued_price: Uint128,
-    pub contract: HumanAddr,
+    pub contract: Addr,
     pub airdrop: Option<Contract>,
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
-    pub limit_admin: HumanAddr,
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub limit_admin: Addr,
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
     pub shade_admin: Contract,
     pub oracle: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub issued_asset: Contract,
     pub activated: bool,
     pub bond_issuance_limit: Uint128,
@@ -68,11 +68,10 @@ pub struct InitMsg {
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateLimitConfig {
-        limit_admin: Option<HumanAddr>,
+        limit_admin: Option<Addr>,
         shade_admin: Option<Contract>,
         global_issuance_limit: Option<Uint128>,
         global_minimum_bonding_period: Option<u64>,
@@ -83,7 +82,7 @@ pub enum HandleMsg {
     },
     UpdateConfig {
         oracle: Option<Contract>,
-        treasury: Option<HumanAddr>,
+        treasury: Option<Addr>,
         issued_asset: Option<Contract>,
         activated: Option<bool>,
         bond_issuance_limit: Option<Uint128>,
@@ -113,8 +112,8 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         msg: Option<Binary>,
         padding: Option<String>,
@@ -123,13 +122,13 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
 }
-impl HandleCallback for HandleMsg {
+
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     UpdateLimitConfig {
         status: ResponseStatus,
     },
@@ -164,8 +163,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     BondOpportunities {},
@@ -175,11 +173,9 @@ pub enum QueryMsg {
     BondInfo {},
     CheckAllowance {},
     CheckBalance {},
-    Metrics {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         config: Config,
@@ -191,7 +187,7 @@ pub enum QueryAnswer {
         pending_bonds: Vec<PendingBond>,
     },
     DepositAddresses {
-        deposit_addresses: Vec<HumanAddr>,
+        deposit_addresses: Vec<Addr>,
     },
     PriceCheck {
         price: Uint128,
@@ -209,20 +205,15 @@ pub enum QueryAnswer {
     CheckBalance {
         balance: Uint128,
     },
-    Metrics {
-        interactions: u64,
-    },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Account {
-    pub address: HumanAddr,
+    pub address: Addr,
     pub pending_bonds: Vec<PendingBond>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SnipViewingKey(pub String);
 
 impl SnipViewingKey {
@@ -232,13 +223,13 @@ impl SnipViewingKey {
         ct_slice_compare(&mine_hashed, hashed_pw)
     }
 
-    pub fn new(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
+    pub fn new(info: &MessageInfo, env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
         // 16 here represents the lengths in bytes of the block height and time.
-        let entropy_len = 16 + env.message.sender.len() + entropy.len();
+        let entropy_len = 16 + info.sender.as_str().len() + entropy.len();
         let mut rng_entropy = Vec::with_capacity(entropy_len);
         rng_entropy.extend_from_slice(&env.block.height.to_be_bytes());
-        rng_entropy.extend_from_slice(&env.block.time.to_be_bytes());
-        rng_entropy.extend_from_slice(&env.message.sender.0.as_bytes());
+        rng_entropy.extend_from_slice(&env.block.time.seconds().to_be_bytes());
+        rng_entropy.extend_from_slice(&info.sender.as_str().as_bytes());
         rng_entropy.extend_from_slice(entropy);
 
         let mut rng = Prng::new(seed, &rng_entropy);
@@ -259,8 +250,7 @@ impl SnipViewingKey {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PendingBond {
     pub deposit_denom: Snip20Asset,
     pub end_time: u64, // Will be turned into a time via block time calculations
@@ -273,8 +263,7 @@ pub struct PendingBond {
 }
 
 // When users deposit and try to use the bond, a Bond Opportunity is selected via deposit denom
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct BondOpportunity {
     pub issuance_limit: Uint128,
     pub amount_issued: Uint128,
@@ -288,8 +277,7 @@ pub struct BondOpportunity {
     pub minting_bond: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SlipMsg {
     pub minimum_expected_amount: Uint128,
 }

@@ -4,37 +4,32 @@ use crate::{
         account_r,
         account_total_claimed_r,
         account_viewkey_r,
-        address_in_account_r,
         claim_status_r,
         config_r,
         decay_claimed_r,
         total_claimed_r,
         validate_account_permit,
-        validate_address_permit,
     },
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
-use query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::contract_interfaces::airdrop::{
-    account::{AccountKey, AccountPermit, AddressProofPermit},
-    claim_info::RequiredTask,
-    errors::invalid_viewing_key,
-    AccountVerification,
-    QueryAnswer,
+use shade_protocol::{
+    airdrop::{
+        account::{AccountKey, AccountPermit},
+        claim_info::RequiredTask,
+        errors::invalid_viewing_key,
+        QueryAnswer,
+    },
+    c_std::{Addr, Deps, StdResult, Uint128},
+    query_authentication::viewing_keys::ViewingKey,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
-pub fn dates<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    current_date: Option<u64>,
-) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+pub fn dates(deps: Deps, current_date: Option<u64>) -> StdResult<QueryAnswer> {
+    let config = config_r(deps.storage).load()?;
     Ok(QueryAnswer::Dates {
         start: config.start_date,
         end: config.end_date,
@@ -43,36 +38,34 @@ pub fn dates<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<QueryAnswer> {
+pub fn total_claimed(deps: Deps) -> StdResult<QueryAnswer> {
     let claimed: Uint128;
-    let total_claimed = total_claimed_r(&deps.storage).load()?;
-    if decay_claimed_r(&deps.storage).load()? {
+    let total_claimed = total_claimed_r(deps.storage).load()?;
+    if decay_claimed_r(deps.storage).load()? {
         claimed = total_claimed;
     } else {
-        let config = config_r(&deps.storage).load()?;
+        let config = config_r(deps.storage).load()?;
         claimed = total_claimed.checked_div(config.query_rounding)? * config.query_rounding;
     }
     Ok(QueryAnswer::TotalClaimed { claimed })
 }
 
-fn account_information<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    account_address: HumanAddr,
+fn account_information(
+    deps: Deps,
+    account_address: Addr,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
+    let account = account_r(deps.storage).load(account_address.to_string().as_bytes())?;
 
     // Calculate eligible tasks
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     let mut finished_tasks: Vec<RequiredTask> = vec![];
     let mut completed_percentage = Uint128::zero();
     let mut unclaimed_percentage = Uint128::zero();
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
-        let state = claim_status_r(&deps.storage, index)
-            .may_load(account_address.to_string().as_bytes())?;
+        let state =
+            claim_status_r(deps.storage, index).may_load(account_address.to_string().as_bytes())?;
 
         match state {
             // Ignore if none
@@ -103,7 +96,7 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 
     Ok(QueryAnswer::Account {
         total: account.total_claimable,
-        claimed: account_total_claimed_r(&deps.storage)
+        claimed: account_total_claimed_r(deps.storage)
             .load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks,
@@ -111,12 +104,12 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn account(
+    deps: Deps,
     permit: AccountPermit,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     account_information(
         deps,
         validate_account_permit(deps, &permit, config.contract)?,
@@ -124,14 +117,14 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+pub fn account_with_key(
+    deps: Deps,
+    account: Addr,
     key: String,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
     // Validate address
-    let stored_hash = account_viewkey_r(&deps.storage).load(account.to_string().as_bytes())?;
+    let stored_hash = account_viewkey_r(deps.storage).load(account.to_string().as_bytes())?;
 
     if !AccountKey(key).compare(&stored_hash) {
         return Err(invalid_viewing_key());

@@ -1,18 +1,16 @@
 use crate::contract_interfaces::airdrop::errors::permit_rejected;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
-use query_authentication::{
+use crate::c_std::Uint128;
+use crate::c_std::{Addr, StdResult, Api};
+use crate::query_authentication::{
     permit::{bech32_to_canonical, Permit},
-    transaction::SignedTx,
     viewing_keys::ViewingKey,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
 pub struct Account {
-    pub addresses: Vec<HumanAddr>,
+    pub addresses: Vec<Addr>,
     pub total_claimable: Uint128,
 }
 
@@ -29,16 +27,14 @@ impl Default for Account {
 pub type AccountPermit = Permit<AccountPermitMsg>;
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AccountPermitMsg {
-    pub contract: HumanAddr,
+    pub contract: Addr,
     pub key: String,
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FillerMsg {
     pub coins: Vec<String>,
     pub contract: String,
@@ -58,14 +54,13 @@ impl Default for FillerMsg {
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct EmptyMsg {}
 
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+pub fn authenticate_ownership(api: &dyn Api, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
     let signer_address = permit
         .validate(api, Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();
@@ -78,23 +73,21 @@ pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, perm
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AddressProofMsg {
     // Address is necessary since we have other network permits present
-    pub address: HumanAddr,
+    pub address: Addr,
     // Reward amount
     pub amount: Uint128,
     // Used to prevent permits from being used elsewhere
-    pub contract: HumanAddr,
+    pub contract: Addr,
     // Index of the address in the leaves array
     pub index: u32,
     // Used to identify permits
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AccountKey(pub String);
 
 impl ToString for AccountKey {

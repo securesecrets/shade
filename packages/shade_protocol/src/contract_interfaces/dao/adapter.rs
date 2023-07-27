@@ -1,53 +1,38 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{
-    Api,
-    Binary,
-    CosmosMsg,
-    Decimal,
-    Delegation,
-    Extern,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-    Validator,
+use crate::{
+    c_std::{Addr, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum SubHandleMsg {
+use crate::utils::{ExecuteCallback, Query};
+use cosmwasm_schema::cw_serde;
+
+#[cw_serde]
+pub enum SubExecuteMsg {
     // Begin unbonding amount
-    Unbond { asset: HumanAddr, amount: Uint128 },
-    Claim { asset: HumanAddr },
+    Unbond { asset: String, amount: Uint128 },
+    Claim { asset: String },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { asset: HumanAddr },
+    Update { asset: String },
 }
 
-impl HandleCallback for SubHandleMsg {
+impl ExecuteCallback for SubExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
-    Adapter(SubHandleMsg),
+#[cw_serde]
+pub enum ExecuteMsg {
+    Adapter(SubExecuteMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     Unbond {
         status: ResponseStatus,
@@ -62,18 +47,16 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum SubQueryMsg {
-    Balance { asset: HumanAddr },
-    Unbonding { asset: HumanAddr },
-    Claimable { asset: HumanAddr },
-    Unbondable { asset: HumanAddr },
-    Reserves { asset: HumanAddr },
+    Balance { asset: String },
+    Unbonding { asset: String },
+    Claimable { asset: String },
+    Unbondable { asset: String },
+    Reserves { asset: String },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Adapter(SubQueryMsg),
 }
@@ -82,8 +65,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
@@ -92,15 +74,15 @@ pub enum QueryAnswer {
     Reserves { amount: Uint128 },
 }
 
-pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+pub fn claimable_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Claimable {
-        asset: asset.clone(),
+    match QueryMsg::Adapter(SubQueryMsg::Claimable {
+        asset: asset.to_string().clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -110,15 +92,15 @@ pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+pub fn unbonding_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Unbonding {
-        asset: asset.clone(),
+    match QueryMsg::Adapter(SubQueryMsg::Unbonding {
+        asset: asset.to_string().clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -128,15 +110,15 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+pub fn unbondable_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Unbondable {
-        asset: asset.clone(),
+    match QueryMsg::Adapter(SubQueryMsg::Unbondable {
+        asset: asset.to_string().clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -146,31 +128,33 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+pub fn reserves_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-
-    match (QueryMsg::Adapter(SubQueryMsg::Reserves {
-        asset: asset.clone(),
-    }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+    match QueryMsg::Adapter(SubQueryMsg::Reserves {
+        asset: asset.to_string().clone(),
+    })
+    .query(&querier, &adapter)?
+    {
         QueryAnswer::Reserves { amount } => Ok(amount),
-        _ => Err(StdError::generic_err(
-            format!("Failed to query adapter unbondable from {}", adapter.address)
-        ))
+        _ => Err(StdError::generic_err(format!(
+            "Failed to query adapter unbondable from {}",
+            adapter.address
+        ))),
     }
 }
 
-pub fn balance_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+pub fn balance_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Balance {
-        asset: asset.clone(),
+    match QueryMsg::Adapter(SubQueryMsg::Balance {
+        asset: asset.to_string().clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -180,32 +164,24 @@ pub fn balance_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn claim_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
-    )
+pub fn claim_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
 
-pub fn unbond_msg(asset: HumanAddr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
-    )
+pub fn unbond_msg(asset: &Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond {
+        asset: asset.to_string().clone(),
+        amount,
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
 
-pub fn update_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
-    )
+pub fn update_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Update {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
