@@ -1,13 +1,18 @@
 # Shade Protocol Core Contracts
 | Contract                    | Reference                         | Description                           |
 | --------------------------- | --------------------------------- | ------------------------------------- |
-| [`governance`](./contracts/governance)  | [doc](./contracts/governance/README.md) | Protocol's governance module |
-| [`shade_staking`](./contracts/staking)  | [doc](./contracts/staking/README.md) | Snip20 staker |
-| [`scrt_staking`](./contracts/scrt_staking)  | [doc](./contracts/scrt_staking/README.md) | SCRT staker |
-| [`treasury`](./contracts/treasury)  | [doc](./contracts/treasury/README.md) | Protocol's asset manager |
-| [`mint`](./contracts/mint)  | [doc](./contracts/mint/README.md) | Asset burner and minter |
-| [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Asset price querier |
+| [`admin`](./contracts/admin)  | [doc](./contracts/admin/README.md) | Contract admin manager |
+| [`governance`](./contracts/governance)  | N/A | Protocol's governance module |
+| [`shade_staking`](./contracts/basic_staking)  | [doc](./contracts/basic_staking/README.md) | Snip20 staker |
+| [`query_auth`](./contracts/query_auth)  | N/A | authentication manager for validation for permits and viewing keys |
+| [`dao_contracts`](./contracts/dao)  |  [doc](./contracts/query_auth/README.md) | collection of dao contracts |
+| [`bonds`](./archived-contracts/bonds)  | [doc](./archived-contracts/bonds/README.md)| snip20 bonds |
+| [`peg_stability`](./contracts/peg_stability)  | N/A | peg stability |
+| [`snip20_migration`](./contracts/snip20_migration)  | N/A |  migrate snip20 tokens into a newer version |
+| [`sky_arbitrage`](./contracts/sky)  | N/A |  protocol arbitrage contract |
 | [`airdrop`](./contracts/airdrop)  | [doc](./contracts/airdrop/README.md) | Task based, multichain snip20 airdropper  |
+| [`mock_contracts`](./contracts/mock)  | N/A | testing contracts that mock mainnet contracts |
+| [`snip20_derivative`](./contracts/snip20_derivative)  | [doc](./contracts/snip20_derivative/README.md) | snip20 staking derivative token  |
 
 ## Development Environment
 
