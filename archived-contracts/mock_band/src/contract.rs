@@ -1,16 +1,14 @@
 use shade_protocol::c_std::{
     to_binary,
-    Api,
     Binary,
     Env,
     DepsMut,
     Response,
-    Querier,
     StdError,
     StdResult,
     Storage,
+    Deps,
 };
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::contract_interfaces::oracles::band::{InstantiateMsg, ReferenceData};
 use shade_protocol::c_std::Uint128;
@@ -27,7 +25,7 @@ pub fn price_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
     bucket(storage, PRICE)
 }
 
-pub fn init(
+pub fn instantiate(
     _deps: DepsMut,
     _env: Env,
     _msg: InstantiateMsg,
@@ -100,7 +98,6 @@ pub fn query(
                 } else {
                     return Err(StdError::GenericErr {
                         msg: "Missing Price Feed".to_string(),
-                        backtrace: None,
                     });
                 }
             }

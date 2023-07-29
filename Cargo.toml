@@ -40,7 +40,7 @@ members = [
   # "contracts/snip20_staking", //TODO: migrate to v1
   
   # Mock contracts
-  # "contracts/mock/mock_band", //TODO: migrate to v1
+  "archived-contracts/mock_band",
   # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
   "contracts/mock/mock_sienna_pair",
   # "contracts/mock/mock_adapter", //TODO: migrate to v1
