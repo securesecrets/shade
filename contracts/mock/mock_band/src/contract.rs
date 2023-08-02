@@ -7,24 +7,13 @@ use shade_protocol::c_std::{
     Response,
     StdError,
     StdResult,
-    Storage,
     Deps,
     shd_entry_point,
 };
 use shade_protocol::contract_interfaces::oracles::band::{InstantiateMsg, ReferenceData};
 use shade_protocol::c_std::Uint128;
 
-use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
-
-pub static PRICE: &[u8] = b"prices";
-
-pub fn price_r(storage: &dyn Storage) -> ReadonlyBucket<Uint128> {
-    bucket_read(storage, PRICE)
-}
-
-pub fn price_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
-    bucket(storage, PRICE)
-}
+use crate::storage::PRICE;
 
 #[shd_entry_point]
 pub fn instantiate(
@@ -48,7 +37,7 @@ pub fn execute(
 ) -> StdResult<Response> {
     return match msg {
         ExecuteMsg::MockPrice { symbol, price } => {
-            price_w(deps.storage).save(symbol.as_bytes(), &price)?;
+            PRICE.save(deps.storage, symbol, &price)?;
             Ok(Response::default())
         }
     };
@@ -76,7 +65,7 @@ pub fn query(
             base_symbol,
             quote_symbol: _,
         } => {
-            if let Some(price) = price_r(deps.storage).may_load(base_symbol.as_bytes())? {
+            if let Some(price) = PRICE.may_load(deps.storage, base_symbol)? {
                 return to_binary(&ReferenceData {
                     rate: price,
                     last_updated_base: 0,
@@ -92,7 +81,7 @@ pub fn query(
             let mut results = Vec::new();
 
             for sym in base_symbols {
-                if let Some(price) = price_r(deps.storage).may_load(sym.as_bytes())? {
+                if let Some(price) = PRICE.may_load(deps.storage, sym)? {
                     results.push(ReferenceData {
                         rate: price,
                         last_updated_base: 0,
