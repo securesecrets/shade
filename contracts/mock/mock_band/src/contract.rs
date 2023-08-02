@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use shade_protocol::c_std::{
     to_binary,
     Binary,
@@ -9,7 +10,6 @@ use shade_protocol::c_std::{
     Storage,
     Deps,
 };
-use serde::{Deserialize, Serialize};
 use shade_protocol::contract_interfaces::oracles::band::{InstantiateMsg, ReferenceData};
 use shade_protocol::c_std::Uint128;
 
@@ -33,8 +33,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     MockPrice { symbol: String, price: Uint128 },
 }
@@ -52,8 +51,7 @@ pub fn handle(
     };
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     GetReferenceData {
         base_symbol: String,
