@@ -9,6 +9,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
     Deps,
+    shd_entry_point,
 };
 use shade_protocol::contract_interfaces::oracles::band::{InstantiateMsg, ReferenceData};
 use shade_protocol::c_std::Uint128;
@@ -25,6 +26,7 @@ pub fn price_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
     bucket(storage, PRICE)
 }
 
+#[shd_entry_point]
 pub fn instantiate(
     _deps: DepsMut,
     _env: Env,
@@ -38,7 +40,8 @@ pub enum ExecuteMsg {
     MockPrice { symbol: String, price: Uint128 },
 }
 
-pub fn handle(
+#[shd_entry_point]
+pub fn execute(
     deps: DepsMut,
     _env: Env,
     msg: ExecuteMsg,
@@ -62,6 +65,8 @@ pub enum QueryMsg {
         quote_symbols: Vec<String>,
     },
 }
+
+#[shd_entry_point]
 pub fn query(
     deps: Deps,
     msg: QueryMsg,

@@ -28,5 +28,6 @@ debug-print = ["shade-protocol/debug-print"]
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "band",
+  "storage_plus",
 ] }
 cosmwasm-schema = "1.1.5"
