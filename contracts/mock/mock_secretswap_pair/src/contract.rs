@@ -1,20 +1,17 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::cw_serde;
 use shade_protocol::{
     c_std::{
         to_binary,
         Addr,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
+        shd_entry_point,
     },
     contract_interfaces::{
         dex::{
@@ -29,38 +26,22 @@ use shade_protocol::{
                 Token,
             },
         },
-        oracles::band::{InstantiateMsg, ReferenceData},
+        oracles::band::InstantiateMsg,
     },
     utils::asset::Contract,
 };
 
-use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use crate::storage::{POOL, PAIR_INFO};
 
-pub static PAIR_INFO: &[u8] = b"pair_info";
-pub static POOL: &[u8] = b"pool";
-
-pub fn pair_info_r(storage: &dyn Storage) -> ReadonlySingleton<PairResponse> {
-    singleton_read(storage, PAIR_INFO)
-}
-
-pub fn pair_info_w(storage: &mut dyn Storage) -> Singleton<PairResponse> {
-    singleton(storage, PAIR_INFO)
-}
-
-pub fn pool_r(storage: &dyn Storage) -> ReadonlySingleton<PoolResponse> {
-    singleton_read(storage, POOL)
-}
-
-pub fn pool_w(storage: &mut dyn Storage) -> Singleton<PoolResponse> {
-    singleton(storage, POOL)
-}
-
-pub fn init(_deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> StdResult<Response> {
+pub fn instantiate(
+    _deps: DepsMut, 
+    _env: Env, 
+    _msg: InstantiateMsg
+) -> StdResult<Response> {
     Ok(Response::default())
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     MockPool {
         token_a: Contract,
@@ -70,7 +51,8 @@ pub enum ExecuteMsg {
     },
 }
 
-pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> {
     return match msg {
         ExecuteMsg::MockPool {
             token_a,
@@ -94,7 +76,7 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
                     },
                 },
             ];
-            pool_w(deps.storage).save(&PoolResponse {
+            POOL.save(deps.storage, &PoolResponse {
                 assets: vec![
                     Asset {
                         amount: amount_a,
@@ -108,7 +90,7 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
                 total_share: Uint128::zero(),
             })?;
 
-            pair_info_w(deps.storage).save(&PairResponse {
+            PAIR_INFO.save(deps.storage, &PairResponse {
                 asset_infos,
                 contract_addr: Addr::unchecked("".to_string()),
                 liquidity_token: Addr::unchecked("".to_string()),
@@ -125,12 +107,13 @@ pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> 
     };
 }
 
+#[shd_entry_point]
 pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
     match msg {
-        PairQuery::Pool {} => to_binary(&pool_r(deps.storage).load()?),
-        PairQuery::Pair {} => to_binary(&pair_info_r(deps.storage).load()?),
+        PairQuery::Pool {} => to_binary(&POOL.load(deps.storage)?),
+        PairQuery::Pair {} => to_binary(&PAIR_INFO.load(deps.storage)?),
         PairQuery::Simulation { offer_asset } => {
-            let pool = pool_r(deps.storage).load()?;
+            let pool = POOL.load(deps.storage)?;
 
             if pool.assets[0].info == offer_asset.info {
                 /*
