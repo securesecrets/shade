@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use derivative_snip_20_contract::msg::{
+use snip20_derivative::msg::{
     ExecuteAnswer, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg,
 };
 

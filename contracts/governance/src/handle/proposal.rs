@@ -25,7 +25,7 @@ use shade_protocol::{
             Config,
             ExecuteAnswer,
         },
-        staking::snip20_staking,
+        basic_staking,
     },
     governance::errors::Error,
     snip20::helpers::send_msg,
@@ -248,12 +248,12 @@ pub fn try_update(
             let config = Config::load(deps.storage)?;
             let votes = Proposal::public_votes(deps.storage, proposal)?;
 
-            let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
+            let query: basic_staking::QueryAnswer = basic_staking::QueryMsg::TotalStaked {}
                 .query(&deps.querier, &config.vote_token.unwrap())?;
 
             // Get total staking power
             let total_power = match query {
-                snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
+                basic_staking::QueryAnswer::TotalStaked { amount, .. } => amount.into(),
                 _ => return Err(Error::unexpected_query_response(vec![])),
             };
 

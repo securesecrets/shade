@@ -12,6 +12,7 @@ use shade_protocol::c_std::{
 };
 
 use shade_protocol::snip20::helpers::{
+    // TODO: This message type needs to be implemented.
     send_from_msg,
 };
 
