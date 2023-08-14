@@ -1,3 +1,7 @@
+//! ### Liquidity Book msgs Helper Library
+//! Author: Haseeb
+//!
+//!
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, ContractInfo, CosmosMsg, QuerierWrapper, QueryRequest,

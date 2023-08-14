@@ -1,3 +1,7 @@
+//! ### Liquidity Book token Helper Library
+//! Author: Haseeb
+//!
+
 use crate::utils::liquidity_book::transfer::{self, HandleMsg, QueryAnswer, QueryMsg};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{

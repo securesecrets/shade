@@ -1,3 +1,6 @@
+//! ### Liquidity Book ConvertUint256 Math Library
+//! Author: Haseeb
+//!
 use cosmwasm_std::Uint128;
 use cosmwasm_std::Uint256;
 use ethnum::U256;
