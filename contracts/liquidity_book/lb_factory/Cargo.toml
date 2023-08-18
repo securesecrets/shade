@@ -1,0 +1,39 @@
+[package]
+name = "lb_factory"
+version = "0.1.0"
+edition = "2021"
+exclude = [
+  # Those files are contract-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "liquidity_book","storage_plus","lb-libraries",
+] }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0", features=["iterator"] }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0", features=["iterator"] }
+cosmwasm-schema = "1.1.5"
+# schemars = { version = "0.8" }
+serde = { version = "1" }
+# serde-json-wasm = { version = "0.5"}
+thiserror = { version = "1" }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+ethnum = { version = "1" }
+
+[dev-dependencies]
+anyhow = "1"
+# cw-multi-test = { version = "0.16.0", default-features = false }
+
+[[bin]]
+name = "schema"
