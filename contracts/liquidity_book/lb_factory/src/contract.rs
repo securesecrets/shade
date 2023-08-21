@@ -1,8 +1,8 @@
 #![allow(unused)] // For beginning only.
 
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, SubMsgResult, Timestamp, Uint256, WasmMsg,
+    entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Reply, Response, StdError, StdResult, SubMsg, SubMsgResult, Timestamp, Uint256, WasmMsg,
 };
 use shade_protocol::lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types};
 
@@ -85,7 +85,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             bin_step,
             ignored,
         } => try_set_lb_pair_ignored(deps, env, info, token_x, token_y, bin_step, ignored),
-        ExecuteMsg::SetPreset {
+        ExecuteMsg::SetPairPreset {
             bin_step,
             base_factor,
             filter_period,
@@ -95,7 +95,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             protocol_share,
             max_volatility_accumulator,
             is_open,
-        } => try_set_preset(
+        } => try_set_pair_preset(
             deps,
             env,
             info,
@@ -440,7 +440,7 @@ fn try_set_lb_pair_ignored(
 /// * `protocol_share` - The share of the fees received by the protocol
 /// * `max_volatility_accumulator` - The max value of the volatility accumulator
 /// * `is_open` - Whether the preset is open or not to be used by users
-fn try_set_preset(
+fn try_set_pair_preset(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,

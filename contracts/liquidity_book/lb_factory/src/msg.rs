@@ -1,8 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-pub use ilbpair::InstantiateMsg as LBPairInstantiateMsg;
+pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 use shade_protocol::lb_libraries::{tokens::TokenType, types::ContractInstantiationInfo};
-use shade_protocol::liquidity_book::ilbpair;
+use shade_protocol::liquidity_book::lb_pair;
 
 use crate::types::{LBPair, LBPairInformation};
 
@@ -38,7 +38,7 @@ pub enum ExecuteMsg {
         bin_step: u16,
         ignored: bool,
     },
-    SetPreset {
+    SetPairPreset {
         bin_step: u16,
         base_factor: u16,
         filter_period: u16,
