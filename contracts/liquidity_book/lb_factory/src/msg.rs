@@ -31,13 +31,13 @@ pub enum ExecuteMsg {
         active_id: u32,
         bin_step: u16,
     },
-    #[serde(rename = "set_lb_pair_ignored")]
-    SetLBPairIgnored {
-        token_x: TokenType,
-        token_y: TokenType,
-        bin_step: u16,
-        ignored: bool,
-    },
+    // #[serde(rename = "set_lb_pair_ignored")]
+    // SetLBPairIgnored {
+    //     token_x: TokenType,
+    //     token_y: TokenType,
+    //     bin_step: u16,
+    //     ignored: bool,
+    // },
     SetPairPreset {
         bin_step: u16,
         base_factor: u16,
@@ -58,20 +58,20 @@ pub enum ExecuteMsg {
     RemovePreset {
         bin_step: u16,
     },
-    SetFeeParametersOnPair {
-        token_x: TokenType,
-        token_y: TokenType,
-        bin_step: u16,
-        base_factor: u16,
-        filter_period: u16,
-        decay_period: u16,
-        reduction_factor: u16,
-        // u24
-        variable_fee_control: u32,
-        protocol_share: u16,
-        // u24
-        max_volatility_accumulator: u32,
-    },
+    // SetFeeParametersOnPair {
+    //     token_x: TokenType,
+    //     token_y: TokenType,
+    //     bin_step: u16,
+    //     base_factor: u16,
+    //     filter_period: u16,
+    //     decay_period: u16,
+    //     reduction_factor: u16,
+    //     // u24
+    //     variable_fee_control: u32,
+    //     protocol_share: u16,
+    //     // u24
+    //     max_volatility_accumulator: u32,
+    // },
     SetFeeRecipient {
         fee_recipient: Addr,
     },

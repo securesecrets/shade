@@ -2,11 +2,11 @@
 
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Reply, Response, StdError, StdResult, SubMsg, SubMsgResult, Timestamp, Uint256, WasmMsg,
+    Reply, Response, StdError, StdResult, Storage, SubMsg, SubMsgResult, Timestamp, Uint256,
+    WasmMsg,
 };
 use shade_protocol::lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types};
 
-use cosmwasm_std::{ContractInfo, Storage};
 use ethnum::U256;
 
 use math::encoded_sample::EncodedSample;
@@ -79,12 +79,12 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             active_id,
             bin_step,
         } => try_create_lb_pair(deps, env, info, token_x, token_y, active_id, bin_step),
-        ExecuteMsg::SetLBPairIgnored {
-            token_x,
-            token_y,
-            bin_step,
-            ignored,
-        } => try_set_lb_pair_ignored(deps, env, info, token_x, token_y, bin_step, ignored),
+        // ExecuteMsg::SetLBPairIgnored {
+        //     token_x,
+        //     token_y,
+        //     bin_step,
+        //     ignored,
+        // } => try_set_lb_pair_ignored(deps, env, info, token_x, token_y, bin_step, ignored),
         ExecuteMsg::SetPairPreset {
             bin_step,
             base_factor,
@@ -113,32 +113,32 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             try_set_preset_open_state(deps, env, info, bin_step, is_open)
         }
         ExecuteMsg::RemovePreset { bin_step } => try_remove_preset(deps, env, info, bin_step),
-        ExecuteMsg::SetFeeParametersOnPair {
-            token_x,
-            token_y,
-            bin_step,
-            base_factor,
-            filter_period,
-            decay_period,
-            reduction_factor,
-            variable_fee_control,
-            protocol_share,
-            max_volatility_accumulator,
-        } => try_set_fee_parameters_on_pair(
-            deps,
-            env,
-            info,
-            token_x,
-            token_y,
-            bin_step,
-            base_factor,
-            filter_period,
-            decay_period,
-            reduction_factor,
-            variable_fee_control,
-            protocol_share,
-            max_volatility_accumulator,
-        ),
+        // ExecuteMsg::SetFeeParametersOnPair {
+        //     token_x,
+        //     token_y,
+        //     bin_step,
+        //     base_factor,
+        //     filter_period,
+        //     decay_period,
+        //     reduction_factor,
+        //     variable_fee_control,
+        //     protocol_share,
+        //     max_volatility_accumulator,
+        // } => try_set_fee_parameters_on_pair(
+        //     deps,
+        //     env,
+        //     info,
+        //     token_x,
+        //     token_y,
+        //     bin_step,
+        //     base_factor,
+        //     filter_period,
+        //     decay_period,
+        //     reduction_factor,
+        //     variable_fee_control,
+        //     protocol_share,
+        //     max_volatility_accumulator,
+        // ),
         ExecuteMsg::SetFeeRecipient { fee_recipient } => {
             try_set_fee_recipient(deps, env, info, fee_recipient)
         }
@@ -357,75 +357,75 @@ fn try_create_lb_pair(
     // emit LBPairCreated(tokenX, tokenY, binStep, pair, _allLBPairs.length - 1);
 }
 
-/// Sets whether the pair is ignored or not for routing, it will make the pair unusable by the router.
-///
-/// # Arguments
-///
-/// * `token_x` - The address of the first token of the pair.
-/// * `token_y` - The address of the second token of the pair.
-/// * `bin_step` - The bin step in basis point of the pair.
-/// * `ignored` - Whether to ignore (true) or not (false) the pair for routing.
-fn try_set_lb_pair_ignored(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    token_a: TokenType,
-    token_b: TokenType,
-    bin_step: u16,
-    ignored: bool,
-) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
+// /// Sets whether the pair is ignored or not for routing, it will make the pair unusable by the router.
+// ///
+// /// # Arguments
+// ///
+// /// * `token_x` - The address of the first token of the pair.
+// /// * `token_y` - The address of the second token of the pair.
+// /// * `bin_step` - The bin step in basis point of the pair.
+// /// * `ignored` - Whether to ignore (true) or not (false) the pair for routing.
+// fn try_set_lb_pair_ignored(
+//     deps: DepsMut,
+//     env: Env,
+//     info: MessageInfo,
+//     token_a: TokenType,
+//     token_b: TokenType,
+//     bin_step: u16,
+//     ignored: bool,
+// ) -> Result<Response> {
+//     let state = CONFIG.load(deps.storage)?;
+//     only_owner(&info.sender, &state.owner)?;
 
-    let (token_a, token_b) = _sort_tokens(token_a, token_b);
+//     let (token_a, token_b) = _sort_tokens(token_a, token_b);
 
-    let mut pair_information = LB_PAIRS_INFO
-        .load(
-            deps.storage,
-            (
-                token_a.unique_key().clone(),
-                token_b.unique_key().clone(),
-                bin_step,
-            ),
-        )
-        .unwrap();
+//     let mut pair_information = LB_PAIRS_INFO
+//         .load(
+//             deps.storage,
+//             (
+//                 token_a.unique_key().clone(),
+//                 token_b.unique_key().clone(),
+//                 bin_step,
+//             ),
+//         )
+//         .unwrap();
 
-    if pair_information
-        .lb_pair
-        .contract
-        .address
-        .as_str()
-        .is_empty()
-    {
-        return Err(Error::LBPairDoesNotExist {
-            token_x: token_a.unique_key().clone(),
-            token_y: token_b.unique_key().clone(),
-            bin_step,
-        });
-    }
+//     if pair_information
+//         .lb_pair
+//         .contract
+//         .address
+//         .as_str()
+//         .is_empty()
+//     {
+//         return Err(Error::LBPairDoesNotExist {
+//             token_x: token_a.unique_key().clone(),
+//             token_y: token_b.unique_key().clone(),
+//             bin_step,
+//         });
+//     }
 
-    if pair_information.ignored_for_routing == ignored {
-        return Err(Error::LBPairIgnoredIsAlreadyInTheSameState);
-    }
+//     if pair_information.ignored_for_routing == ignored {
+//         return Err(Error::LBPairIgnoredIsAlreadyInTheSameState);
+//     }
 
-    pair_information.ignored_for_routing = ignored;
+//     pair_information.ignored_for_routing = ignored;
 
-    LB_PAIRS_INFO.save(
-        deps.storage,
-        (
-            token_a.unique_key().clone(),
-            token_b.unique_key().clone(),
-            bin_step,
-        ),
-        &pair_information,
-    )?;
+//     LB_PAIRS_INFO.save(
+//         deps.storage,
+//         (
+//             token_a.unique_key().clone(),
+//             token_b.unique_key().clone(),
+//             bin_step,
+//         ),
+//         &pair_information,
+//     )?;
 
-    // emit LBPairIgnoredStateChanged(pairInformation.LBPair, ignored);
+//     // emit LBPairIgnoredStateChanged(pairInformation.LBPair, ignored);
 
-    // TODO: be more specific about which pair changed
-    Ok(Response::default()
-        .add_attribute_plaintext("LBPair ignored state changed", format!("{}", ignored)))
-}
+//     // TODO: be more specific about which pair changed
+//     Ok(Response::default()
+//         .add_attribute_plaintext("LBPair ignored state changed", format!("{}", ignored)))
+// }
 
 /// Sets the preset parameters of a bin step
 ///
@@ -553,70 +553,70 @@ fn try_remove_preset(
     Ok(Response::default().add_attribute_plaintext("preset removed", bin_step.to_string()))
 }
 
-/// Function to set the fee parameters of a LBPair
-///
-/// # Arguments
-///
-/// * `token_x` - The address of the first token
-/// * `token_y` - The address of the second token
-/// * `bin_step` - The bin step in basis point, used to calculate the price
-/// * `base_factor` - The base factor, used to calculate the base fee, baseFee = baseFactor * binStep
-/// * `filter_period` - The period where the accumulator value is untouched, prevent spam
-/// * `decay_period` - The period where the accumulator value is decayed, by the reduction factor
-/// * `reduction_factor` - The reduction factor, used to calculate the reduction of the accumulator
-/// * `variable_fee_control` - The variable fee control, used to control the variable fee, can be 0 to disable it
-/// * `protocol_share` - The share of the fees received by the protocol
-/// * `max_volatility_accumulator` - The max value of volatility accumulator
-fn try_set_fee_parameters_on_pair(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    token_x: TokenType,
-    token_y: TokenType,
-    bin_step: u16,
-    base_factor: u16,
-    filter_period: u16,
-    decay_period: u16,
-    reduction_factor: u16,
-    variable_fee_control: u32,
-    protocol_share: u16,
-    max_volatility_accumulator: u32,
-) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
+// /// Function to set the fee parameters of a LBPair
+// ///
+// /// # Arguments
+// ///
+// /// * `token_x` - The address of the first token
+// /// * `token_y` - The address of the second token
+// /// * `bin_step` - The bin step in basis point, used to calculate the price
+// /// * `base_factor` - The base factor, used to calculate the base fee, baseFee = baseFactor * binStep
+// /// * `filter_period` - The period where the accumulator value is untouched, prevent spam
+// /// * `decay_period` - The period where the accumulator value is decayed, by the reduction factor
+// /// * `reduction_factor` - The reduction factor, used to calculate the reduction of the accumulator
+// /// * `variable_fee_control` - The variable fee control, used to control the variable fee, can be 0 to disable it
+// /// * `protocol_share` - The share of the fees received by the protocol
+// /// * `max_volatility_accumulator` - The max value of volatility accumulator
+// fn try_set_fee_parameters_on_pair(
+//     deps: DepsMut,
+//     env: Env,
+//     info: MessageInfo,
+//     token_x: TokenType,
+//     token_y: TokenType,
+//     bin_step: u16,
+//     base_factor: u16,
+//     filter_period: u16,
+//     decay_period: u16,
+//     reduction_factor: u16,
+//     variable_fee_control: u32,
+//     protocol_share: u16,
+//     max_volatility_accumulator: u32,
+// ) -> Result<Response> {
+//     let state = CONFIG.load(deps.storage)?;
+//     only_owner(&info.sender, &state.owner)?;
 
-    let (token_a, token_b) = _sort_tokens(token_x, token_y);
-    let mut lb_pair = LB_PAIRS_INFO
-        .load(
-            deps.storage,
-            (
-                token_a.unique_key().clone(),
-                token_b.unique_key().clone(),
-                bin_step,
-            ),
-        )
-        .map_err(|_| Error::LBPairNotCreated {
-            token_x: token_a.unique_key(),
-            token_y: token_b.unique_key(),
-            bin_step,
-        })?
-        .lb_pair;
+//     let (token_a, token_b) = _sort_tokens(token_x, token_y);
+//     let mut lb_pair = LB_PAIRS_INFO
+//         .load(
+//             deps.storage,
+//             (
+//                 token_a.unique_key().clone(),
+//                 token_b.unique_key().clone(),
+//                 bin_step,
+//             ),
+//         )
+//         .map_err(|_| Error::LBPairNotCreated {
+//             token_x: token_a.unique_key(),
+//             token_y: token_b.unique_key(),
+//             bin_step,
+//         })?
+//         .lb_pair;
 
-    // TODO: this needs to actually send a message to the LBPair contract to change those parameters
-    // lb_pair.setStaticFeeParameters(
-    //     base_factor,
-    //     filter_period,
-    //     decay_period,
-    //     reduction_factor,
-    //     variable_fee_control,
-    //     protocol_share,
-    //     max_volatility_accumulator
-    // );
+//     // TODO: this needs to actually send a message to the LBPair contract to change those parameters
+//     // lb_pair.setStaticFeeParameters(
+//     //     base_factor,
+//     //     filter_period,
+//     //     decay_period,
+//     //     reduction_factor,
+//     //     variable_fee_control,
+//     //     protocol_share,
+//     //     max_volatility_accumulator
+//     // );
 
-    todo!();
+//     todo!();
 
-    Ok(Response::default().add_attribute_plaintext("status", "ok"))
-}
+//     Ok(Response::default().add_attribute_plaintext("status", "ok"))
+// }
 
 /// Function to set the recipient of the fees. This address needs to be able to receive SNIP20s.
 ///

@@ -142,4 +142,4 @@ strum_macros = "0.24"
 const_format = "0.2.26"
 #strum = { version = "0.24", features = ["derive"] }
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["iterator"] }
