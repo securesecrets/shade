@@ -15,7 +15,7 @@ path = "src/schemas.rs"
 # Must have all of the contract_interfaces
 required-features = [
   "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
-  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration",
+  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration", "liquidity_book"
 ]
 
 [lib]
@@ -34,6 +34,7 @@ storage = ["dao-utils"]
 storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
+lb-libraries = []
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -85,6 +86,7 @@ dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
+liquidity_book = ["interface"]
 
 chrono = ["dep:chrono"]
 
@@ -101,6 +103,7 @@ snip20-impl     = ["snip20", "query_auth_impl"]
 query_auth_impl = ["implementation", "query_auth", "dep:base64"]
 sky-utils       = ["implementation", "sky"]
 admin_impl      = ["implementation", "admin"]
+liquidity_book_impl = ["liquidity_book", "implementation"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -112,12 +115,13 @@ cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
 cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
 cosmwasm-schema = "1.1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
+ethnum = { version = "1" }
 
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["iterator"] }
 
 # Testing
 anyhow = { version = "1", optional = true }
@@ -138,4 +142,4 @@ strum_macros = "0.24"
 const_format = "0.2.26"
 #strum = { version = "0.24", features = ["derive"] }
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["iterator"] }

@@ -1,12 +1,24 @@
 //! Helper Libraries
+
+#[cfg(feature = "lb-libraries")]
 pub mod bin_helper;
+#[cfg(feature = "lb-libraries")]
 pub mod constants;
+#[cfg(feature = "lb-libraries")]
 pub mod fee_helper;
+#[cfg(feature = "lb-libraries")]
 pub mod math;
+#[cfg(feature = "lb-libraries")]
 pub mod oracle_helper;
+#[cfg(feature = "lb-libraries")]
 pub mod pair_parameter_helper;
+#[cfg(feature = "lb-libraries")]
 pub mod price_helper;
+#[cfg(feature = "lb-libraries")]
 pub mod tokens;
+#[cfg(feature = "lb-libraries")]
 pub mod transfer;
+#[cfg(feature = "lb-libraries")]
 pub mod types;
+#[cfg(feature = "lb-libraries")]
 pub mod viewing_keys;

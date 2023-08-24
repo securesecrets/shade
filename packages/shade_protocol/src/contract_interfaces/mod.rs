@@ -23,6 +23,9 @@ pub mod airdrop;
 #[cfg(feature = "governance")]
 pub mod governance;
 
+#[cfg(feature = "liquidity_book")]
+pub mod liquidity_book;
+
 // Bonds
 #[cfg(feature = "bonds")]
 pub mod bonds;

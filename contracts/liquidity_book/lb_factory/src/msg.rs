@@ -1,0 +1,230 @@
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
+pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
+use shade_protocol::lb_libraries::{tokens::TokenType, types::ContractInstantiationInfo};
+use shade_protocol::liquidity_book::lb_pair;
+
+use crate::types::{LBPair, LBPairInformation};
+
+#[cw_serde]
+pub struct InstantiateMsg {
+    pub owner: Option<Addr>,
+    pub fee_recipient: Addr,
+    pub flash_loan_fee: u8,
+}
+
+#[cw_serde]
+pub enum ExecuteMsg {
+    #[serde(rename = "set_lb_pair_implementation")]
+    SetLBPairImplementation {
+        lb_pair_implementation: ContractInstantiationInfo,
+    },
+    #[serde(rename = "set_lb_token_implementation")]
+    SetLBTokenImplementation {
+        lb_token_implementation: ContractInstantiationInfo,
+    },
+    #[serde(rename = "create_lb_pair")]
+    CreateLBPair {
+        token_x: TokenType,
+        token_y: TokenType,
+        // u24
+        active_id: u32,
+        bin_step: u16,
+    },
+    // #[serde(rename = "set_lb_pair_ignored")]
+    // SetLBPairIgnored {
+    //     token_x: TokenType,
+    //     token_y: TokenType,
+    //     bin_step: u16,
+    //     ignored: bool,
+    // },
+    SetPairPreset {
+        bin_step: u16,
+        base_factor: u16,
+        filter_period: u16,
+        decay_period: u16,
+        reduction_factor: u16,
+        // u24
+        variable_fee_control: u32,
+        protocol_share: u16,
+        // u24
+        max_volatility_accumulator: u32,
+        is_open: bool,
+    },
+    SetPresetOpenState {
+        bin_step: u16,
+        is_open: bool,
+    },
+    RemovePreset {
+        bin_step: u16,
+    },
+    // SetFeeParametersOnPair {
+    //     token_x: TokenType,
+    //     token_y: TokenType,
+    //     bin_step: u16,
+    //     base_factor: u16,
+    //     filter_period: u16,
+    //     decay_period: u16,
+    //     reduction_factor: u16,
+    //     // u24
+    //     variable_fee_control: u32,
+    //     protocol_share: u16,
+    //     // u24
+    //     max_volatility_accumulator: u32,
+    // },
+    SetFeeRecipient {
+        fee_recipient: Addr,
+    },
+    SetFlashLoanFee {
+        flash_loan_fee: u8,
+    },
+    AddQuoteAsset {
+        asset: TokenType,
+    },
+    RemoveQuoteAsset {
+        asset: TokenType,
+    },
+    ForceDecay {
+        pair: LBPair,
+    },
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    #[returns(MinBinStepResponse)]
+    GetMinBinStep {},
+    #[returns(FeeRecipientResponse)]
+    GetFeeRecipient {},
+    #[returns(MaxFlashLoanFeeResponse)]
+    GetMaxFlashLoanFee {},
+    #[returns(FlashLoanFeeResponse)]
+    GetFlashLoanFee {},
+    #[returns(LBPairImplementationResponse)]
+    #[serde(rename = "get_lb_pair_implementation")]
+    GetLBPairImplementation {},
+    #[returns(LBTokenImplementationResponse)]
+    #[serde(rename = "get_lb_token_implementation")]
+    GetLBTokenImplementation {},
+    #[returns(NumberOfLBPairsResponse)]
+    #[serde(rename = "get_number_of_lb_pairs")]
+    GetNumberOfLBPairs {},
+    #[returns(LBPairAtIndexResponse)]
+    #[serde(rename = "get_lb_pair_at_index")]
+    GetLBPairAtIndex { index: u32 },
+    #[returns(NumberOfQuoteAssetsResponse)]
+    GetNumberOfQuoteAssets {},
+    #[returns(QuoteAssetAtIndexResponse)]
+    GetQuoteAssetAtIndex { index: u32 },
+    #[returns(IsQuoteAssetResponse)]
+    IsQuoteAsset { token: TokenType },
+    #[returns(LBPairInformationResponse)]
+    #[serde(rename = "get_lb_pair_information")]
+    GetLBPairInformation {
+        token_a: TokenType,
+        token_b: TokenType,
+        bin_step: u16,
+    },
+    #[returns(PresetResponse)]
+    GetPreset { bin_step: u16 },
+    #[returns(AllBinStepsResponse)]
+    GetAllBinSteps {},
+    #[returns(OpenBinStepsResponse)]
+    GetOpenBinSteps {},
+    #[returns(AllLBPairsResponse)]
+    #[serde(rename = "get_all_lb_pairs")]
+    GetAllLBPairs {
+        token_x: TokenType,
+        token_y: TokenType,
+    },
+}
+
+// We define a custom struct for each query response
+#[cw_serde]
+pub struct MinBinStepResponse {
+    pub min_bin_step: u8,
+}
+
+#[cw_serde]
+pub struct FeeRecipientResponse {
+    pub fee_recipient: Addr,
+}
+
+#[cw_serde]
+pub struct MaxFlashLoanFeeResponse {
+    pub max_fee: u8,
+}
+
+#[cw_serde]
+pub struct FlashLoanFeeResponse {
+    pub flash_loan_fee: u8,
+}
+
+#[cw_serde]
+pub struct LBPairImplementationResponse {
+    pub lb_pair_implementation: ContractInstantiationInfo,
+}
+
+#[cw_serde]
+pub struct LBTokenImplementationResponse {
+    pub lb_token_implementation: ContractInstantiationInfo,
+}
+
+#[cw_serde]
+pub struct NumberOfLBPairsResponse {
+    pub lb_pair_number: u32,
+}
+
+#[cw_serde]
+pub struct LBPairAtIndexResponse {
+    pub lb_pair: LBPair,
+}
+
+#[cw_serde]
+pub struct NumberOfQuoteAssetsResponse {
+    pub number_of_quote_assets: u32,
+}
+
+#[cw_serde]
+pub struct QuoteAssetAtIndexResponse {
+    pub asset: Addr,
+}
+
+#[cw_serde]
+pub struct IsQuoteAssetResponse {
+    pub is_quote: bool,
+}
+
+#[cw_serde]
+pub struct LBPairInformationResponse {
+    pub lb_pair_information: LBPairInformation,
+}
+
+#[cw_serde]
+pub struct PresetResponse {
+    pub base_factor: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    // u24
+    pub variable_fee_control: u32,
+    pub protocol_share: u16,
+    // u24
+    pub max_volatility_accumulator: u32,
+    pub is_open: bool,
+}
+
+#[cw_serde]
+pub struct AllBinStepsResponse {
+    pub bin_step_with_preset: Vec<u16>,
+}
+
+#[cw_serde]
+pub struct OpenBinStepsResponse {
+    pub open_bin_steps: Vec<u16>,
+}
+
+#[cw_serde]
+pub struct AllLBPairsResponse {
+    pub lb_pairs_available: Vec<LBPairInformation>,
+}
