@@ -585,11 +585,7 @@ mod tests {
         )
         .unwrap();
 
-        println!("shares: {:?}", shares);
-        println!(
-            "effective_amounts_in: {:?}",
-            U256::from(effective_amounts_in.decode_y())
-        );
+
 
         Ok(())
     }

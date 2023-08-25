@@ -271,6 +271,7 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `oracle_id` - The oracle id
     pub fn set_oracle_id(self, oracle_id: u16) -> PairParameters {
+        //No need to add a check oracle_id == u16
         PairParameters(self.0.set(oracle_id.into(), MASK_UINT16, OFFSET_ORACLE_ID))
     }
 
@@ -322,8 +323,16 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `active_id` - The active id
-    pub fn set_active_id(self, active_id: u32) -> PairParameters {
-        PairParameters(self.0.set(active_id.into(), MASK_UINT24, OFFSET_ACTIVE_ID))
+    pub fn set_active_id(self, active_id: u32) -> Result<PairParameters, PairParametersError> {
+        if active_id > MASK_UINT24.as_u32() {
+            Err(PairParametersError::InvalidParameter)
+        } else {
+            Ok(PairParameters(self.0.set(
+                active_id.into(),
+                MASK_UINT24,
+                OFFSET_ACTIVE_ID,
+            )))
+        }
     }
 
     /// Sets the static fee parameters in the encoded pair parameters.
@@ -339,13 +348,13 @@ impl PairParameters {
     /// * `max_volatility_accumulator` - The max volatility accumulator
     pub fn set_static_fee_parameters(
         self,
-        base_factor: u16,
-        filter_period: u16,
-        decay_period: u16,
-        reduction_factor: u16,
-        variable_fee_control: u32,
-        protocol_share: u16,
-        max_volatility_accumulator: u32,
+        base_factor: u16,                //u16
+        filter_period: u16,              //u12
+        decay_period: u16,               //u12
+        reduction_factor: u16,           //u14
+        variable_fee_control: u32,       //u24
+        protocol_share: u16,             //u14
+        max_volatility_accumulator: u32, //u20
     ) -> Result<PairParameters, PairParametersError> {
         if (filter_period > decay_period) | (decay_period > MASK_UINT12.as_u16())
             || reduction_factor > BASIS_POINT_MAX as u16
@@ -392,6 +401,7 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     pub fn update_id_reference(self) -> PairParameters {
+        //No need to add check because we already have a check on setting active id
         let active_id = Self::get_active_id(&self);
         PairParameters(self.0.set(active_id.into(), MASK_UINT24, OFFSET_ID_REF))
     }
@@ -402,13 +412,21 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `current_time` - The current timestamp
-    pub fn update_time_of_last_update(self, time: &Timestamp) -> PairParameters {
-        // TODO: make sure the time fits into u40!!
+    pub fn update_time_of_last_update(
+        self,
+        time: &Timestamp,
+    ) -> Result<PairParameters, PairParametersError> {
         let current_time = time.seconds();
-        PairParameters(
-            self.0
-                .set(current_time.into(), MASK_UINT40, OFFSET_TIME_LAST_UPDATE),
-        )
+        if current_time > MASK_UINT40.as_u64() {
+            // If not, return an error (you can define a custom error type for this)
+            return Err(PairParametersError::InvalidParameter);
+        } else {
+            Ok(PairParameters(self.0.set(
+                current_time.into(),
+                MASK_UINT40,
+                OFFSET_TIME_LAST_UPDATE,
+            )))
+        }
     }
 
     /// Updates the volatility reference in the encoded pair parameters.
@@ -452,7 +470,7 @@ impl PairParameters {
         } else {
             vol_acc
         };
-        // TODO wrap vol_acc in uint24()?
+        //Check done in volatility accumulator
         self.set_volatility_accumulator(vol_acc)
     }
 
@@ -467,16 +485,20 @@ impl PairParameters {
     ) -> Result<PairParameters, PairParametersError> {
         let dt = time.seconds() - self.get_time_of_last_update();
 
-        if dt >= self.get_filter_period().into() {
-            self = self.update_id_reference();
-            self = if dt < self.get_decay_period().into() {
-                self.update_volatility_reference()?
-            } else {
-                self.set_volatility_reference(0)?
-            };
+        if dt > MASK_UINT40.as_u64() {
+            // If not, return an error (you can define a custom error type for this)
+            return Err(PairParametersError::InvalidParameter);
+        } else {
+            if dt >= self.get_filter_period().into() {
+                self = self.update_id_reference();
+                self = if dt < self.get_decay_period().into() {
+                    self.update_volatility_reference()?
+                } else {
+                    self.set_volatility_reference(0)?
+                };
+            }
+            self.update_time_of_last_update(time)
         }
-
-        Ok(self.update_time_of_last_update(time))
     }
 
     /// Updates the volatility reference and the volatility accumulator in the encoded pair parameters.

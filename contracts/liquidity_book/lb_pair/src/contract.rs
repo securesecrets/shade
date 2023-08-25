@@ -10,25 +10,36 @@ use cosmwasm_std::{
 
 use ethnum::U256;
 
-use interfaces::ILBPair::{LiquidityParameters, MintResponse, RemoveLiquidity};
-use libraries::bin_helper::BinHelper;
-use libraries::constants::SCALE_OFFSET;
-use libraries::fee_helper::FeeHelper;
-use libraries::math::encoded_sample::EncodedSample;
-use libraries::math::packed_u128_math::{Decode, Encode, PackedMath};
-use libraries::math::sample_math::OracleSample;
-use libraries::math::tree_math::TreeUint24;
-use libraries::math::u24::U24;
-use libraries::math::u256x256_math::U256x256Math;
-use libraries::math::uint256_to_u256::{self, ConvertU256, ConvertUint256};
-use libraries::oracle_helper::{Oracle, OracleError, MAX_SAMPLE_LIFETIME};
-use libraries::pair_parameter_helper::PairParameters;
-use libraries::price_helper::PriceHelper;
-use libraries::tokens::TokenType;
-use libraries::types::{Bytes32, LBPairInformation, LiquidityConfigurations, MintArrays};
-use libraries::viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey};
+use bin_helper::BinHelper;
+use constants::SCALE_OFFSET;
+use fee_helper::FeeHelper;
+use math::encoded_sample::EncodedSample;
+use math::packed_u128_math::{Decode, Encode, PackedMath};
+use math::sample_math::OracleSample;
+use math::tree_math::TreeUint24;
+use math::u24::U24;
+use math::u256x256_math::U256x256Math;
+use math::uint256_to_u256::{self, ConvertU256, ConvertUint256};
+use oracle_helper::{Oracle, OracleError, MAX_SAMPLE_LIFETIME};
+use pair_parameter_helper::PairParameters;
+use price_helper::PriceHelper;
+use shade_protocol::contract_interfaces::liquidity_book::lb_pair::{
+    LiquidityParameters, MintResponse, RemoveLiquidity,
+};
+use shade_protocol::lb_libraries::{
+    bin_helper, constants, fee_helper, math, oracle_helper, pair_parameter_helper, price_helper,
+    tokens, types,
+};
+use tokens::TokenType;
+use types::{Bytes32, LBPairInformation, LiquidityConfigurations, MintArrays};
 
-use interfaces::ILBToken::InstantiateMsg as LBTokenInstantiateMsg;
+use shade_protocol::lb_libraries::viewing_keys::{
+    register_receive, set_viewing_key_msg, ViewingKey,
+};
+
+use shade_protocol::contract_interfaces::liquidity_book::{
+    lb_pair, lb_token::InstantiateMsg as LBTokenInstantiateMsg,
+};
 
 use crate::msg::*;
 use crate::prelude::*;
@@ -46,10 +57,13 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response> {
+    //Initializing the Token Contract
+
     // TODO: Only the factory should be allowed to instantiate this contract
     // I think you can restrict that on code upload
     // Proposed solution -> Haseeb, literally hardcore the factory_address
     // let factory_address = Addr::unchecked("factory_contract_address");
+    // And factory is only used at the time of instantiation.
 
     // if info.sender != factory_address {
     //     return Err(Error::OnlyFactory);
@@ -65,7 +79,7 @@ pub fn instantiate(
         symbol: format!(
             "{}/{} LP",
             "tokenX",
-            "tokenY" // TODO: query the token contracts for their symbols to create the LP symbol
+            "tokenY" // TODO: query the token contracts for their symbols to create the LP symbol and also set LbPair name
                      // query::token_symbol(deps.querier, &msg.token_x.address)?,
                      // query::token_symbol(deps.querier, &msg.token_y.address)?
         ),
@@ -91,18 +105,22 @@ pub fn instantiate(
         INSTANTIATE_LP_TOKEN_REPLY_ID,
     ));
 
+    //Initializing PairParameters
     let pair_parameters = PairParameters(EncodedSample([0u8; 32]));
-    let pair_parameters = pair_parameters.set_static_fee_parameters(
-        msg.pair_parameters.base_factor,
-        msg.pair_parameters.filter_period,
-        msg.pair_parameters.decay_period,
-        msg.pair_parameters.reduction_factor,
-        msg.pair_parameters.variable_fee_control,
-        msg.pair_parameters.protocol_share,
-        msg.pair_parameters.max_volatility_accumulator,
-    )?;
-    let pair_parameters = pair_parameters.set_active_id(msg.active_id);
+    let pair_parameters = pair_parameters
+        .set_static_fee_parameters(
+            msg.pair_parameters.base_factor,
+            msg.pair_parameters.filter_period,
+            msg.pair_parameters.decay_period,
+            msg.pair_parameters.reduction_factor,
+            msg.pair_parameters.variable_fee_control,
+            msg.pair_parameters.protocol_share,
+            msg.pair_parameters.max_volatility_accumulator,
+        )
+        .unwrap();
+    let pair_parameters = pair_parameters.set_active_id(msg.active_id)?;
 
+    //RegisterReceiving Token
     let mut messages = vec![];
     let viewing_key = ViewingKey::from(msg.viewing_key.as_str());
     for token in [&msg.token_x, &msg.token_y] {
@@ -111,7 +129,7 @@ pub fn instantiate(
             token_code_hash,
         } = token
         {
-            register_pair_token(&env, &mut messages, token, &viewing_key);
+            register_pair_token(&env, &mut messages, &token, &viewing_key);
         }
     }
 
@@ -141,8 +159,9 @@ pub fn instantiate(
     };
 
     CONFIG.save(deps.storage, &state)?;
-    BIN_TREE.save(deps.storage, &tree)?;
     ORACLE.save(deps.storage, &oracle)?;
+
+    BIN_TREE.save(deps.storage, &tree)?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
         code_hash: msg.lb_token_implementation.code_hash,
@@ -292,12 +311,12 @@ fn try_swap(
     params = params.update_references(&env.block.time)?;
 
     loop {
-        let bin_reserves = BIN_MAP
-            .get(deps.storage, &active_id)
-            .ok_or(Error::Generic(format!(
+        let bin_reserves = BIN_MAP.load(deps.storage, active_id).map_err(|_| {
+            Error::Generic(format!(
                 "could not get bin reserves for active id {}",
                 active_id
-            )))?;
+            ))
+        })?;
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(active_id)?;
 
@@ -327,9 +346,9 @@ fn try_swap(
                     amounts_in_with_fees = amounts_in_with_fees.sub(p_fees);
                 }
 
-                BIN_MAP.insert(
+                BIN_MAP.save(
                     deps.storage,
-                    &active_id,
+                    active_id,
                     &bin_reserves
                         .add(amounts_in_with_fees)
                         .sub(amounts_out_of_bin),
@@ -363,14 +382,14 @@ fn try_swap(
     let mut oracle = ORACLE.load(deps.storage)?;
     params = oracle.update(&env.block.time, params, active_id)?;
 
-    CONFIG.update(deps.storage, |mut state| {
+    CONFIG.update(deps.storage, |mut state| -> Result<_> {
         state.protocol_fees = protocol_fees;
-        state.pair_parameters = PairParameters::set_active_id(params, active_id);
+        state.pair_parameters = PairParameters::set_active_id(params, active_id)?;
         state.reserves = reserves;
         Ok(state)
     })?;
 
-    // TODO: this will take some refactoring... need to create the submessage
+    // TODO: this will take some refactoring. need to create the submessage
     // for the token transfer instead of using those functions
     let mut messages: Vec<CosmosMsg> = Vec::new();
     if swap_for_y {
@@ -711,7 +730,7 @@ fn mint(
         &mut arrays,
     )?;
 
-    CONFIG.update(deps.storage, |mut state| {
+    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
         state.reserves = reserves.add(amounts_received.sub(amounts_left));
 
         Ok(state)
@@ -801,7 +820,7 @@ fn _mint_bins(
 
         let amount = shares.u256_to_uint256();
 
-        let msg = interfaces::ILBPair::LbTokenExecuteMsg::Mint {
+        let msg = lb_pair::LbTokenExecuteMsg::Mint {
             recipient: to.clone(),
             id,
             amount,
@@ -841,7 +860,7 @@ fn _update_bin(
     max_amounts_in_to_bin: Bytes32,
     parameters: PairParameters,
 ) -> Result<(U256, Bytes32, Bytes32)> {
-    let bin_reserves = BIN_MAP.get(deps.storage, &id).unwrap_or([0u8; 32]);
+    let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
     let config = CONFIG.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
 
@@ -891,7 +910,7 @@ fn _update_bin(
 
             if protocol_c_fees != [0u8; 32] {
                 let amounts_in_to_bin = amounts_in_to_bin.sub(protocol_c_fees);
-                CONFIG.update(deps.storage, |mut state| {
+                CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
                     state.protocol_fees = state.protocol_fees.add(protocol_c_fees);
                     Ok(state)
                 })?;
@@ -899,7 +918,7 @@ fn _update_bin(
 
             let mut oracle = ORACLE.load(deps.storage)?;
             parameters = oracle.update(time, parameters, id)?;
-            CONFIG.update(deps.storage, |mut state| {
+            CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
                 state.pair_parameters = parameters;
                 Ok(state)
             })?;
@@ -921,13 +940,13 @@ fn _update_bin(
     }
 
     if total_supply == 0 {
-        BIN_TREE.update(deps.storage, |mut tree| {
+        BIN_TREE.update(deps.storage, |mut tree| -> StdResult<_> {
             tree.add(id);
             Ok(tree)
         })?;
     }
 
-    BIN_MAP.insert(deps.storage, &id, &bin_reserves.add(amounts_in_to_bin))?;
+    BIN_MAP.save(deps.storage, id, &bin_reserves.add(amounts_in_to_bin))?;
 
     Ok((shares, amounts_in, amounts_in_to_bin))
 }
@@ -1085,11 +1104,8 @@ fn burn(
         }
 
         let bin_reserves = BIN_MAP
-            .get(deps.storage, &id)
-            .ok_or(Error::Generic(format!(
-                "could not get bin reserves for bin id {}",
-                i
-            )))?;
+            .load(deps.storage, id)
+            .map_err(|_| Error::Generic(format!("could not get bin reserves for bin id {}", i)))?;
         let total_supply = total_supply(
             deps.as_ref(),
             id,
@@ -1124,9 +1140,9 @@ fn burn(
         let bin_reserves = bin_reserves.sub(amounts_out_from_bin);
 
         if total_supply == amount_to_burn_u256 {
-            BIN_MAP.remove(deps.storage, &id)?;
+            BIN_MAP.remove(deps.storage, id);
         } else {
-            BIN_MAP.insert(deps.storage, &id, &bin_reserves)?;
+            BIN_MAP.save(deps.storage, id, &bin_reserves)?;
         }
 
         amounts[i] = amounts_out_from_bin;
@@ -1176,7 +1192,7 @@ fn _burn(
 ) -> Result<CosmosMsg> {
     // TODO: Implement the burn logic for the provided `id` and `amount`.
     // You might need to call the contract's token burning function or interact with the token's storage directly.
-    let msg = interfaces::ILBPair::LbTokenExecuteMsg::Burn {
+    let msg = lb_pair::LbTokenExecuteMsg::Burn {
         owner: from,
         id,
         amount,
@@ -1209,7 +1225,7 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
 
     if collected_protocol_fees != [0u8; 32] {
         // This is setting the protocol fees to the smallest possible values
-        CONFIG.update(deps.storage, |mut state| {
+        CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
             state.protocol_fees = ones;
             state.reserves = state.reserves.sub(collected_protocol_fees);
             Ok(state)
@@ -1326,7 +1342,7 @@ fn try_set_static_fee_parameters(
         max_volatility_accumulator,
     )?;
 
-    CONFIG.update(deps.storage, |mut state| {
+    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
         Ok(state)
     })?;
@@ -1345,7 +1361,7 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
     params = PairParameters::update_id_reference(params);
     params = PairParameters::update_volatility_reference(params)?;
 
-    CONFIG.update(deps.storage, |mut state| {
+    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
         Ok(state)
     })?;
@@ -1523,7 +1539,7 @@ fn query_active_id(deps: Deps) -> Result<ActiveIdResponse> {
 fn query_bin(deps: Deps, id: u32) -> Result<BinResponse> {
     // TODO: what should happen if the bin doesn't exist?
     // TODO: this should be using the TreeUint24? but the tree doesn't have a direct 'get' method
-    let bin: Bytes32 = BIN_MAP.get(deps.storage, &id).unwrap_or([0u8; 32]);
+    let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
 
     let (bin_reserve_x, bin_reserve_y) = bin.decode();
     Ok(BinResponse {
@@ -1818,7 +1834,7 @@ fn query_swap_in(
     // TODO: do something more idiomatic, like a 'while let Some(item) = iterator.next()' maybe
     loop {
         let bin_reserves = BIN_MAP
-            .get(deps.storage, &id)
+            .load(deps.storage, id)
             .unwrap_or_default()
             .decode_alt(!swap_for_y);
 
@@ -1906,12 +1922,9 @@ fn query_swap_out(
     params = params.update_references(&env.block.time)?;
 
     loop {
-        let bin_reserves = BIN_MAP
-            .get(deps.storage, &id)
-            .ok_or(Error::Generic(format!(
-                "could not get bin reserves for active id {}",
-                id
-            )))?;
+        let bin_reserves = BIN_MAP.load(deps.storage, id).map_err(|_| {
+            Error::Generic(format!("could not get bin reserves for active id {}", id))
+        })?;
 
         if BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(id)?;
@@ -1980,7 +1993,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 // not the best name but it matches the pair key idea
                 let lb_token_key = ephemeral_storage_r(deps.storage).load()?;
 
-                CONFIG.update(deps.storage, |mut state| {
+                CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
                     state.lb_token = ContractInfo {
                         address: contract_address,
                         code_hash: lb_token_key.code_hash,

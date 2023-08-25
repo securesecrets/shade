@@ -2,15 +2,18 @@
 
 #![allow(unused)] // For beginning only.
 
+use bin_helper::BinError;
 use cosmwasm_std::Uint128;
 use ethnum::U256;
-use libraries::bin_helper::BinError;
-use libraries::fee_helper::FeeError;
-use libraries::math::liquidity_configurations::LiquidityConfigurationsError;
-use libraries::math::u128x128_math::U128x128MathError;
-use libraries::math::u256x256_math::U256x256MathError;
-use libraries::oracle_helper::OracleError;
-use libraries::pair_parameter_helper::PairParametersError;
+use fee_helper::FeeError;
+use math::liquidity_configurations::LiquidityConfigurationsError;
+use math::u128x128_math::U128x128MathError;
+use math::u256x256_math::U256x256MathError;
+use oracle_helper::OracleError;
+use pair_parameter_helper::PairParametersError;
+use shade_protocol::lb_libraries::{
+    bin_helper, fee_helper, math, oracle_helper, pair_parameter_helper,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LBPairError {

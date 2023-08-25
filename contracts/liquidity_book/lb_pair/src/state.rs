@@ -1,21 +1,21 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, ContractInfo, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use libraries::pair_parameter_helper::PairParameters;
-use libraries::viewing_keys::ViewingKey;
-use secret_toolkit::serialization::Json;
-use secret_toolkit::storage::{Item, Keymap};
+use pair_parameter_helper::PairParameters; //?
+use shade_protocol::secret_storage_plus::{Bincode2, Item, Map};
 
-use libraries::math::tree_math::TreeUint24;
-use libraries::oracle_helper::Oracle;
-use libraries::types::Bytes32;
+use math::tree_math::TreeUint24; //?
+use oracle_helper::Oracle; //?
+use types::Bytes32; //?
 
-use libraries::tokens::TokenType;
+use shade_protocol::lb_libraries::viewing_keys::ViewingKey;
+use shade_protocol::lb_libraries::{math, oracle_helper, pair_parameter_helper, tokens, types};
+use tokens::TokenType; //?
 
-pub static CONFIG: Item<State, Json> = Item::new(b"config");
-pub static BIN_MAP: Keymap<u32, Bytes32> = Keymap::new(b"bins");
-pub static BIN_TREE: Item<TreeUint24> = Item::new(b"bin_tree");
-pub static ORACLE: Item<Oracle> = Item::new(b"oracle");
+pub const CONFIG: Item<State, Bincode2> = Item::new("config");
+pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins"); //?
+pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
+pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 #[cw_serde]

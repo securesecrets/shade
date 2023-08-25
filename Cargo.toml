@@ -23,7 +23,7 @@ members = [
   "contracts/basic_staking",
   "contracts/snip20_migration",
   "contracts/liquidity_book/lb_factory",
-
+  "contracts/liquidity_book/lb_pair",
   # Staking
   "contracts/basic_staking",
   "contracts/snip20_derivative",

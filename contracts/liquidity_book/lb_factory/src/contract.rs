@@ -338,6 +338,8 @@ fn try_create_lb_pair(
                 lb_token_implementation: state.lb_token_implementation,
                 //TODO add viewing key
                 viewing_key: String::new(),
+                //TODO add pair_name
+                pair_name: String::new(),
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

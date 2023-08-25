@@ -19,6 +19,7 @@ pub struct InstantiateMsg {
     pub active_id: u32,
     pub lb_token_implementation: ContractInstantiationInfo,
     pub viewing_key: String,
+    pub pair_name: String,
 }
 
 // TODO: should do something like this to help with code duplication

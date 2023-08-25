@@ -18,17 +18,17 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-libraries= { path = "../../libraries" }
-interfaces = { path = "../../interfaces" }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret", features = ["stargate"] }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret" }
-cosmwasm-schema = { version = "1.2" }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "liquidity_book","storage_plus","lb-libraries",
+] }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0", features=["iterator"] }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0", features=["iterator"] }
+cosmwasm-schema = "1.1.5"
 # schemars = { version = "0.8" }
 serde = { version = "1" }
 serde-json-wasm = { version = "0.5"}
 thiserror = { version = "1" }
-secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", tag = "v0.8.1", default-features = false, features = ["storage"] }
-# cw-storage-plus = { version = "1", default-features = false, features = ["macro"] }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 ethnum = { version = "1" }
 
 [dev-dependencies]
