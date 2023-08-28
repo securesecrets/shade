@@ -191,11 +191,9 @@ impl BinHelper {
         // println!("Liquidity {:?}", liquidity);
 
         if y > U256::ZERO {
-            let shifted_y = y << 128;
+            let shifted_y = y << SCALE_OFFSET;
             liquidity = liquidity.checked_add(shifted_y).unwrap();
         }
-
-        // println!("Liquidity {:?}", liquidity);
 
         liquidity
     }
@@ -385,11 +383,7 @@ impl BinHelper {
     /// * `amounts` - The amounts, encoded as follows:
     ///     * [0 - 128[: amount_x
     ///     * [128 - 256[: amount_y
-    pub fn received(
-        reserves: Bytes32,
-        amount_received_x: Uint128,
-        amount_received_y: Uint128,
-    ) -> Bytes32 {
+    pub fn received(amount_received_x: Uint128, amount_received_y: Uint128) -> Bytes32 {
         let balance_x = amount_received_x.u128();
         let balance_y = amount_received_y.u128();
 
@@ -584,8 +578,6 @@ mod tests {
             total_supply,
         )
         .unwrap();
-
-
 
         Ok(())
     }

@@ -161,3 +161,61 @@ impl U128x128Math {
         }
     }
 }
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+    use ethnum::{AsI256, U256};
+
+    const PRECISION: u64 = 1_000_000_000_000_000_000; // 1e18
+
+    #[test]
+    fn test_pow() {
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        let y = 100_000;
+        let res = U128x128Math::pow(x, y.into()).unwrap();
+        // let expected = U256::from(7491471493045233295460405875225305845649644);
+        let tolerance = 10 ^ 12;
+
+        let expected = U256::from_str("7491471493045233295460405875225305845649644").unwrap();
+
+        assert!(
+            res > expected - tolerance && res < expected + tolerance,
+            "test_Pow::1 failed"
+        );
+    }
+
+    #[test]
+    fn test_pow_and_log() {
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        let y = 100_000;
+        let res = U128x128Math::pow(x, y.into()).unwrap();
+        // let expected = U256::from(7491471493045233295460405875225305845649644);
+        let tolerance = 10 ^ 12;
+
+        let expected = U256::from_str("7491471493045233295460405875225305845649644").unwrap();
+
+        assert!(
+            res > expected - tolerance && res < expected + tolerance,
+            "test_Pow::1 failed"
+        );
+
+        let base_log2 = U128x128Math::log2(x).unwrap();
+
+        assert_eq!(
+            base_log2,
+            I256::from_str("49089913871092318234424474366155884").unwrap()
+        );
+        let res = U128x128Math::log2(res).unwrap() / base_log2;
+        let expected = 100000;
+
+        assert_eq!(res, I256::from_str("100000").unwrap());
+
+        assert!(
+            res > expected.as_i256() - tolerance.as_i256()
+                && res < expected.as_i256() + tolerance.as_i256(),
+            "test_pow_and_log::1 failed"
+        );
+    }
+}

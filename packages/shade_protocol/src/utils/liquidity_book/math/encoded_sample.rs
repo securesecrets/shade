@@ -1,5 +1,5 @@
 //! ### Liquidity Book Encoded Library
-//! Author: Kent
+//! Author: Kent and Haseeb
 //!
 //! Helper library used for setting and decoding parts of encoded Bytes32.
 
