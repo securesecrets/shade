@@ -9,26 +9,25 @@ Project Description
 - [ ] tokens  
 - [ ] viewing_keys  
 - [ ] types  
-- [ ] price_helper  
 - [ ] oracle_helper  
 - [ ] fee_helper  
 - [ ] bin_helper  
 - [ ] uint256_to_u256  
-- [ ] u256xu256_math  
 - [ ] u24  
-- [ ] u128xu128_math  
 - [ ] tree_math  
 - [ ] simple_math  
 - [ ] packed_u128_math  
-- [ ] liquidity_configurations  
 - [ ] bit math  
-- [ ] liquidity_configurations  
 
 ### In Progress
 
+- [ ] price_helper  
+- [ ] u128xu128_math  
+- [ ] u256xu256_math  
 
 ### Done ✓
 
+- [x] liquidity_configurations  
 - [x] constants  
 - [x] pair_paramater_helper  
 - [x] encoded_sample  

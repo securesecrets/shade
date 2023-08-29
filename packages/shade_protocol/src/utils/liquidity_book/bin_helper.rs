@@ -557,6 +557,8 @@ impl BinHelper {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use cosmwasm_std::StdResult;
     use ethnum::U256;
 
@@ -568,8 +570,9 @@ mod tests {
     fn test_share() -> StdResult<()> {
         let bin_reserves = Encode::encode(10000, 10000);
         let amount_in = Encode::encode(1000, 1000);
-        let price = U256::from(100u128);
-        let total_supply = U256::from(100u128);
+        let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
+        let total_supply =
+            U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
         let ((shares, effective_amounts_in)) = BinHelper::get_shares_and_effective_amounts_in(
             bin_reserves,
@@ -578,6 +581,8 @@ mod tests {
             total_supply,
         )
         .unwrap();
+
+        println!("Shares: {:?}", shares);
 
         Ok(())
     }

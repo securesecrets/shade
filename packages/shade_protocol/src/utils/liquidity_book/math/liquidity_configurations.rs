@@ -9,12 +9,11 @@ use ethnum::U256;
 use crate::utils::liquidity_book::types::Bytes32;
 
 use super::packed_u128_math::{Decode, Encode};
+use crate::utils::liquidity_book::constants::*;
 
 pub const OFFSET_ID: u8 = 0;
 pub const OFFSET_DISTRIBUTION_Y: u8 = 24;
 pub const OFFSET_DISTRIBUTION_X: u8 = 88;
-
-pub const PRECISION: u64 = 1_000_000_000_000_000_000; // 1e18
 
 #[derive(thiserror::Error, Debug)]
 pub enum LiquidityConfigurationsError {
@@ -57,14 +56,6 @@ impl LiquidityConfigurations {
 mod tests {
     use super::*;
     use ethnum::U256;
-
-    fn to_hex_string(bytes: &[u8]) -> String {
-        bytes
-            .iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect::<Vec<String>>()
-            .join("")
-    }
 
     #[test]
     fn test_get_amounts_and_id_normal_case() {

@@ -168,8 +168,6 @@ mod tests {
     use super::*;
     use ethnum::{AsI256, U256};
 
-    const PRECISION: u64 = 1_000_000_000_000_000_000; // 1e18
-
     #[test]
     fn test_pow() {
         let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
