@@ -19,7 +19,7 @@ Project Description
 ### In Progress
 
 - [ ] fee_helper  
-- [ ] bin_helper  
+- [ ] bin_helper (7/10 completed) 
 - [ ] lb pair -> add_liquidity  
 
 ### Done ✓
