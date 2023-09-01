@@ -908,8 +908,6 @@ fn _update_bin(
 
     let amounts_in_to_bin = amounts_in;
 
-    println!("Amounts in bin: {:?}", amounts_in_to_bin.decode());
-
     if id == active_id {
         let mut parameters = parameters.update_volatility_parameters(id, time)?;
 
@@ -923,8 +921,8 @@ fn _update_bin(
         )?;
 
         if fees != [0u8; 32] {
-            let user_liquidity = BinHelper::get_liquidity(amounts_in.sub(fees), price);
-            let bin_liquidity = BinHelper::get_liquidity(bin_reserves, price);
+            let user_liquidity = BinHelper::get_liquidity(amounts_in.sub(fees), price)?;
+            let bin_liquidity = BinHelper::get_liquidity(bin_reserves, price)?;
 
             let shares =
                 U256x256Math::mul_div_round_down(user_liquidity, total_supply, bin_liquidity)?;

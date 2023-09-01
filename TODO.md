@@ -11,7 +11,6 @@ Project Description
 - [ ] types  
 - [ ] oracle_helper  
 - [ ] fee_helper  
-- [ ] bin_helper  
 - [ ] uint256_to_u256  
 - [ ] u24  
 - [ ] tree_math  
@@ -21,12 +20,13 @@ Project Description
 
 ### In Progress
 
-- [ ] price_helper  
+- [ ] bin_helper  
 - [ ] u128xu128_math  
 - [ ] u256xu256_math  
 
 ### Done ✓
 
+- [x] price_helper  
 - [x] liquidity_configurations  
 - [x] constants  
 - [x] pair_paramater_helper  

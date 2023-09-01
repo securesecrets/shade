@@ -120,23 +120,25 @@ impl U128x128Math {
     ///
     /// * `x` - The unsigned 128.128-binary fixed-point number for which to calculate the power
     /// * `y` - A relative number without any decimals, needs to be between ]2^21; 2^21[
-    pub fn pow(x: U256, y: I256) -> Result<U256, U128x128MathError> {
+    pub fn pow(base: U256, power: I256) -> Result<U256, U128x128MathError> {
         let mut invert = false;
-        let abs_y = y.abs().as_u128();
+        let abs_y = power.abs().as_u128();
 
-        if y == 0 {
-            return Ok(SCALE);
+        if power == 0 {
+            return Ok(SCALE); // means Base^0 =1
         }
 
-        if y < 0 {
+        if power < 0 {
             invert = !invert;
         }
 
         let mut result = SCALE;
 
+        //This uses an optimization for small powers (less than 0x100000), where it computes the power through bit manipulation and loop unrolling.
         if abs_y < 0x100000 {
-            let mut squared = x;
-            if x > U256::from(0xffffffffffffffffffffffffffffffffu128) {
+            let mut squared = base;
+            //Before entering the loop, the function checks if the base is greater than 2^128 and adjusts it if so. Flipping the invert flag again if needed.
+            if base > U256::from(0xffffffffffffffffffffffffffffffffu128) {
                 squared = U256::MAX / squared;
                 invert = !invert;
             }
@@ -151,7 +153,7 @@ impl U128x128Math {
 
         // revert if y is too big or if x^y underflowed
         if result == 0 {
-            return Err(U128x128MathError::PowUnderflow(x, y));
+            return Err(U128x128MathError::PowUnderflow(base, power));
         }
 
         if invert {

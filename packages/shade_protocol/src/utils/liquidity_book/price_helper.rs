@@ -39,7 +39,6 @@ impl PriceHelper {
     pub fn get_price_from_id(id: u32, bin_step: u16) -> Result<U256, U128x128MathError> {
         let base = Self::get_base(bin_step);
         let exponent = Self::get_exponent(id);
-
         U128x128Math::pow(base, exponent)
     }
 
@@ -52,9 +51,7 @@ impl PriceHelper {
     /// * `bin_step` - The bin step
     pub fn get_id_from_price(price: U256, bin_step: u16) -> Result<u32, U128x128MathError> {
         let base = Self::get_base(bin_step);
-
         let real_id = U128x128Math::log2(price)? / U128x128Math::log2(base)?;
-
         Ok((REAL_ID_SHIFT + real_id).as_u32())
     }
 
@@ -75,11 +72,13 @@ mod tests {
 
     #[test]
     fn test_get_base() {
-        let bin_step = 100u16;
+        let bin_step = 1000u16;
         let base = PriceHelper::get_base(bin_step);
-
         assert!(base > U256::ZERO);
-        // assert_eq!(base, 374310603613032309809712068174945032601);
+        assert_eq!(
+            base,
+            U256::from_str_prefixed("374310603613032309809712068174945032601").unwrap()
+        );
     }
 
     #[test]
@@ -97,9 +96,19 @@ mod tests {
         let bin_step = 1u16;
         let price = PriceHelper::get_price_from_id(id, bin_step).unwrap();
 
-        assert!(price > U256::ZERO);
-        //42008768657166552252904831246223292524636112144
-        println!("price {}", price);
+        assert_eq!(
+            price,
+            U256::from_str_prefixed("42008768657166552252904831246223292524636112144").unwrap()
+        );
+        let fixed_point =
+            U256::from_str_prefixed("42008768657166552252904831246223292524636112144").unwrap();
+        let integer_part = fixed_point >> 128;
+        let shifted: U256 = U256::from(1u128) << 128;
+        let fractional_part = fixed_point & U256::from(shifted.checked_sub(U256::ONE).unwrap());
+        let fractional_part_decimal = fractional_part / U256::from(shifted);
+        let real_value = integer_part;
+        println!("{:?}", real_value);
+        println!("{:?}", fractional_part_decimal);
     }
 
     #[test]

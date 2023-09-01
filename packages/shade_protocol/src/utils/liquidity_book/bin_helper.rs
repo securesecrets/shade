@@ -125,12 +125,12 @@ impl BinHelper {
     ) -> Result<(U256, Bytes32), BinError> {
         let (mut x, mut y) = amounts_in.decode();
 
-        let user_liquidity = Self::get_liquidity(amounts_in, price);
+        let user_liquidity = Self::get_liquidity(amounts_in, price)?;
         if total_supply == U256::ZERO || user_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }
 
-        let bin_liquidity = Self::get_liquidity(bin_reserves, price);
+        let bin_liquidity = Self::get_liquidity(bin_reserves, price)?;
         if bin_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }
@@ -173,29 +173,28 @@ impl BinHelper {
     ///
     /// * `amounts` - The amount of the tokens
     /// * `price` - The price of the bin
-    pub fn get_liquidity(amounts: [u8; 32], price: U256) -> U256 {
+    pub fn get_liquidity(amounts: [u8; 32], price: U256) -> Result<U256, BinError> {
         let (x, y) = amounts.decode();
-        println!("GET_LIQ X {:?} AND Y,,: {:?}", x, y);
 
         let x = U256::from(x);
         let y = U256::from(y);
-
-        println!("GET_LIQ X {:?} AND Y: {:?}", x, y);
 
         let mut liquidity = U256::ZERO;
 
         if x > U256::ZERO {
             liquidity = price.checked_mul(x).unwrap();
-        }
 
-        // println!("Liquidity {:?}", liquidity);
+            if (liquidity / x != price) {
+                return Err(BinError::LiquidityOverflow);
+            }
+        }
 
         if y > U256::ZERO {
             let shifted_y = y << SCALE_OFFSET;
             liquidity = liquidity.checked_add(shifted_y).unwrap();
         }
 
-        liquidity
+        Ok(liquidity)
     }
 
     /// Verify that the amounts are correct and that the composition factor is not flawed.
@@ -567,23 +566,59 @@ mod tests {
     use super::BinHelper;
 
     #[test]
-    fn test_share() -> StdResult<()> {
-        let bin_reserves = Encode::encode(10000, 10000);
+    fn test_liquidity() -> StdResult<()> {
+        let mut total_supply = U256::from_str("0").unwrap();
+        let max_u256 = U256::MAX;
         let amount_in = Encode::encode(1000, 1000);
         let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
-        let total_supply =
-            U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
-        let ((shares, effective_amounts_in)) = BinHelper::get_shares_and_effective_amounts_in(
-            bin_reserves,
-            amount_in,
-            price,
+        let liquidity = BinHelper::get_liquidity(amount_in, price).unwrap();
+
+        assert_eq!(
+            liquidity,
+            U256::from_str("42008768997448919173843294709597899956404323600000").unwrap()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_share() -> StdResult<()> {
+        let mut total_supply = U256::from_str("0").unwrap();
+        let max_u256 = U256::MAX;
+        let mut bin_reserves = Encode::encode(1000, 1000);
+        let amount_in = Encode::encode(1000, 1000);
+        let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
+
+        for i in 0..10 {
+            // Assume conditions similar to the Solidity test
+            if price > U256::MIN
+                && (bin_reserves == [0u8; 32]
+                    || (price <= max_u256 / 1000 && price * 1000 <= max_u256 - 1000 << 128))
+                && (amount_in == [0u8; 32]
+                    || (price <= max_u256 / 1000 && price * 1000 <= max_u256 - 1000 << 128))
+            {
+                let user_liquidity = BinHelper::get_liquidity(amount_in, price).unwrap();
+                let bin_liquidity = BinHelper::get_liquidity(bin_reserves, price).unwrap();
+                let ((shares, effective_amounts_in)) =
+                    BinHelper::get_shares_and_effective_amounts_in(
+                        bin_reserves,
+                        amount_in,
+                        price,
+                        total_supply,
+                    )
+                    .unwrap();
+
+                total_supply += shares;
+                let (x, y) = effective_amounts_in.decode();
+                bin_reserves =
+                    Encode::encode(bin_reserves.decode_x() + x, bin_reserves.decode_y() + y);
+            }
+        }
+        assert_eq!(
             total_supply,
-        )
-        .unwrap();
-
-        println!("Shares: {:?}", shares);
-
+            U256::from_str("231048229485969055456138120902788449760223779800000").unwrap()
+        );
         Ok(())
     }
 }
