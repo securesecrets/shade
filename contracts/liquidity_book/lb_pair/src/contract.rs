@@ -895,16 +895,12 @@ fn _update_bin(
         config.lb_token.address,
     )?;
 
-    // println!("Bin reserves before: {:?}", bin_reserves);
-
     let (shares, amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
         bin_reserves,
         max_amounts_in_to_bin,
         price,
         total_supply,
     )?;
-
-    // println!("Bin reserves after: {:?}", bin_reserves);
 
     let amounts_in_to_bin = amounts_in;
 

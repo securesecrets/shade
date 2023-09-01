@@ -19,7 +19,7 @@ pub static SCALE_OFFSET: u8 = 128;
 // use this one for ethnum U256:
 pub static SCALE: U256 = U256::from_words(1, 0);
 
-pub static PRECISION: u128 = 1_000_000_000_000_000_000; // 1e18 coz it's ethereum
+pub static PRECISION: u128 = 1_000_000;
 pub static SQUARED_PRECISION: u128 = PRECISION * PRECISION;
 
 pub static MAX_FEE: u128 = 100_000_000_000_000_000; // 10%

@@ -10,22 +10,23 @@ Project Description
 - [ ] viewing_keys  
 - [ ] types  
 - [ ] oracle_helper  
-- [ ] fee_helper  
 - [ ] uint256_to_u256  
-- [ ] u24  
 - [ ] tree_math  
 - [ ] simple_math  
-- [ ] packed_u128_math  
 - [ ] bit math  
+- [ ] packed_u128_math  
 
 ### In Progress
 
+- [ ] fee_helper  
 - [ ] bin_helper  
-- [ ] u128xu128_math  
-- [ ] u256xu256_math  
+- [ ] lb pair -> add_liquidity  
 
 ### Done ✓
 
+- [x] u24  
+- [x] u128xu128_math  
+- [x] u256xu256_math  
 - [x] price_helper  
 - [x] liquidity_configurations  
 - [x] constants  
