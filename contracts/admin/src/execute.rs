@@ -1,7 +1,7 @@
+use crate::shared::{validate_permissions, ADMINS, PERMISSIONS, STATUS, SUPER};
 use shade_protocol::admin::errors::{no_permission, unregistered_admin};
-use shade_protocol::c_std::{DepsMut, Response, Storage, Api, Addr, StdResult};
-use shade_protocol::admin::{RegistryAction, AdminAuthStatus};
-use crate::shared::{STATUS, ADMINS, PERMISSIONS, SUPER, validate_permissions};
+use shade_protocol::admin::{AdminAuthStatus, RegistryAction};
+use shade_protocol::c_std::{Addr, Api, DepsMut, Response, StdResult, Storage};
 
 /// Performs one registry update. Cannot be run during a shutdown.
 pub fn try_update_registry(
