@@ -598,3 +598,314 @@ impl PackedU128 {
         Ok(Bytes32::encode(z1, z2))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::liquidity_book::math::packed_u128_math;
+
+    use super::*;
+
+    #[test]
+    fn test_encode() {
+        // Test typical case
+        let x1: u128 = 42;
+        let x2: u128 = 24;
+        let encoded = Bytes32::encode(x1, x2);
+        let expected: [u8; 32] = [
+            42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        assert_eq!(encoded, expected);
+
+        // Test edge case: Zero values
+        let encoded_zero = Bytes32::encode(0, 0);
+        let expected_zero: [u8; 32] = [0; 32];
+        assert_eq!(encoded_zero, expected_zero);
+
+        // Test edge case: Maximum values
+        let max_value = u128::MAX;
+        let encoded_max = Bytes32::encode(max_value, max_value);
+        let expected_max: [u8; 32] = [255; 32];
+        assert_eq!(encoded_max, expected_max);
+    }
+
+    #[test]
+    fn test_encode_alt() {
+        // Test case: Storing the value in the first 128 bits
+        let x1: u128 = 56;
+        let encoded_first = Bytes32::encode_alt(x1, true);
+        let expected_first: [u8; 32] = [
+            56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
+        assert_eq!(encoded_first, expected_first);
+
+        // Test case: Storing the value in the last 128 bits
+        let x2: u128 = 65;
+        let encoded_second = Bytes32::encode_alt(x2, false);
+        let expected_second: [u8; 32] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
+        assert_eq!(encoded_second, expected_second);
+    }
+
+    #[test]
+    fn test_encode_first() {
+        // Test case: Storing the value 100 in the first 128 bits
+        let x: u128 = 100;
+        let encoded = Bytes32::encode_first(x);
+        let expected: [u8; 32] = [
+            100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        assert_eq!(encoded, expected);
+
+        // Edge case: Storing the value 0 in the first 128 bits
+        let x: u128 = 0;
+        let encoded = Bytes32::encode_first(x);
+        let expected: [u8; 32] = [0; 32]; // All zeros
+        assert_eq!(encoded, expected);
+
+        // Edge case: Storing the maximum u128 value in the first 128 bits
+        let x: u128 = u128::MAX;
+        let encoded = Bytes32::encode_first(x);
+        let mut expected: [u8; 32] = [0; 32];
+        expected[0..16].copy_from_slice(&x.to_le_bytes());
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
+    fn test_encode_second() {
+        // Test case: Storing the value 100 in the last 128 bits
+        let x: u128 = 100;
+        let encoded = Bytes32::encode_second(x);
+        let expected: [u8; 32] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        assert_eq!(encoded, expected);
+
+        // Edge case: Storing the value 0 in the last 128 bits
+        let x: u128 = 0;
+        let encoded = Bytes32::encode_second(x);
+        let expected: [u8; 32] = [0; 32]; // All zeros
+        assert_eq!(encoded, expected);
+
+        // Edge case: Storing the maximum u128 value in the last 128 bits
+        let x: u128 = u128::MAX;
+        let encoded = Bytes32::encode_second(x);
+        let mut expected: [u8; 32] = [0; 32];
+        expected[16..32].copy_from_slice(&x.to_le_bytes());
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
+    fn test_decode() {
+        // Test case 1: Decode a Bytes32 with x1 = 100 and x2 = 200
+        let bytes: Bytes32 = [
+            100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        let (x1, x2) = Bytes32::decode(&bytes);
+        assert_eq!(x1, 100);
+        assert_eq!(x2, 200);
+
+        // Edge case: Decode a Bytes32 with all zeros
+        let bytes: Bytes32 = [0; 32];
+        let (x1, x2) = Bytes32::decode(&bytes);
+        assert_eq!(x1, 0);
+        assert_eq!(x2, 0);
+
+        // Edge case: Decode a Bytes32 with all maximum u8 values
+        let bytes: Bytes32 = [u8::MAX; 32];
+        let (x1, x2) = Bytes32::decode(&bytes);
+        assert_eq!(x1, u128::MAX);
+        assert_eq!(x2, u128::MAX);
+    }
+
+    #[test]
+    fn test_decode_alt() {
+        // Test case 1: Decode a Bytes32 with x1 = 100 and x2 = 200
+        let bytes: Bytes32 = [
+            100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        let val = Bytes32::decode_alt(&bytes, true);
+        assert_eq!(val, 100);
+        let val = Bytes32::decode_alt(&bytes, false);
+        assert_eq!(val, 200);
+
+        // Edge case: Decode a Bytes32 with all zeros
+        let bytes: Bytes32 = [0; 32];
+        let val = Bytes32::decode_alt(&bytes, true);
+        assert_eq!(val, 0);
+        let val = Bytes32::decode_alt(&bytes, false);
+        assert_eq!(val, 0);
+
+        // Edge case: Decode a Bytes32 with all maximum u8 values
+        let bytes: Bytes32 = [u8::MAX; 32];
+        let val = Bytes32::decode_alt(&bytes, true);
+        assert_eq!(val, u128::MAX);
+        let val = Bytes32::decode_alt(&bytes, false);
+        assert_eq!(val, u128::MAX);
+    }
+
+    #[test]
+    fn test_decode_x() {
+        // Test case 1: Basic test case
+        let bytes = Bytes32::encode(15, 25); // 15 is in the x position
+        assert_eq!(Bytes32::decode_x(&bytes), 15);
+
+        // Test case 2: Test with max value
+        let bytes = Bytes32::encode(u128::MAX, 10);
+        assert_eq!(Bytes32::decode_x(&bytes), u128::MAX);
+
+        // Test case 3: Test with zero in x position
+        let bytes = Bytes32::encode(0, 10);
+        assert_eq!(Bytes32::decode_x(&bytes), 0);
+    }
+
+    #[test]
+    fn test_decode_y() {
+        // Test case 1: Basic test case
+        let bytes = Bytes32::encode(15, 25); // 25 is in the y position
+        assert_eq!(Bytes32::decode_y(&bytes), 25);
+
+        // Test case 2: Test with max value
+        let bytes = Bytes32::encode(10, u128::MAX);
+        assert_eq!(Bytes32::decode_y(&bytes), u128::MAX);
+
+        // Test case 3: Test with zero in y position
+        let bytes = Bytes32::encode(10, 0);
+        assert_eq!(Bytes32::decode_y(&bytes), 0);
+    }
+
+    #[test]
+    fn test_add() {
+        // Basic Test Case
+        let bytes1 = Bytes32::encode(15, 25);
+        let bytes2 = Bytes32::encode(10, 20);
+        let result = Bytes32::add(&bytes1, bytes2);
+        assert_eq!(result.decode(), (25, 45));
+
+        // Max Value Test Case
+        let bytes1 = Bytes32::encode(u128::MAX - 1, 0);
+        let bytes2 = Bytes32::encode(1, 0);
+        let result = Bytes32::add(&bytes1, bytes2);
+        assert_eq!(result.decode(), (u128::MAX, 0));
+
+        // Zero Test Case
+        let bytes1 = Bytes32::encode(15, 25);
+        let bytes2 = Bytes32::encode(0, 0);
+        let result = Bytes32::add(&bytes1, bytes2);
+        assert_eq!(result.decode(), (15, 25));
+    }
+
+    #[test]
+    fn test_add_alt() {
+        // Basic Test Case
+        let bytes1 = Bytes32::encode(15, 25);
+        let result = Bytes32::add_alt(&bytes1, 10, 20);
+        assert_eq!(result.decode(), (25, 45));
+
+        // Max Value Test Case
+        let bytes1 = Bytes32::encode(u128::MAX - 1, 0);
+        let result = Bytes32::add_alt(&bytes1, 1, 0);
+        assert_eq!(result.decode(), (u128::MAX, 0));
+
+        // Zero Test Case
+        let bytes1 = Bytes32::encode(15, 25);
+        let result = Bytes32::add_alt(&bytes1, 0, 0);
+        assert_eq!(result.decode(), (15, 25));
+    }
+
+    #[test]
+    fn test_sub() {
+        // Basic Test Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let bytes2 = Bytes32::encode(10, 20);
+        let result = Bytes32::sub(&bytes1, bytes2);
+        assert_eq!(result.decode(), (15, 25));
+
+        // Underflow Test Case
+        let bytes1 = Bytes32::encode(0, 0);
+        let bytes2 = Bytes32::encode(10, 20);
+        // This should panic
+        // let result = Bytes32::sub(&bytes1, bytes2);
+
+        // Zero Test Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let bytes2 = Bytes32::encode(0, 0);
+        let result = Bytes32::sub(&bytes1, bytes2);
+        assert_eq!(result.decode(), (25, 45));
+    }
+
+    #[test]
+    fn test_sub_alt() {
+        // Basic Test Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let result = Bytes32::sub_alt(&bytes1, 10, 20);
+        assert_eq!(result.decode(), (15, 25));
+
+        // Zero Test Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let result = Bytes32::sub_alt(&bytes1, 0, 0);
+        assert_eq!(result.decode(), (25, 45));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_sub_alt_panic() {
+        // Underflow Test Case
+        let bytes1 = Bytes32::encode(0, 0);
+        // This should panic
+        let result = Bytes32::sub_alt(&bytes1, 10, 20);
+    }
+
+    #[test]
+    fn test_lt() {
+        // True Case
+        let bytes1 = Bytes32::encode(10, 20);
+        let bytes2 = Bytes32::encode(25, 45);
+        assert!(<[u8; 32] as packed_u128_math::PackedMath>::lt(
+            &bytes1, bytes2
+        ));
+
+        // False Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let bytes2 = Bytes32::encode(10, 20);
+        assert!(!<[u8; 32] as packed_u128_math::PackedMath>::lt(
+            &bytes1, bytes2
+        ));
+
+        // Equal Case
+        let bytes1 = Bytes32::encode(10, 20);
+        let bytes2 = Bytes32::encode(10, 20);
+        assert!(!<[u8; 32] as packed_u128_math::PackedMath>::lt(
+            &bytes1, bytes2
+        ));
+    }
+
+    #[test]
+    fn test_gt() {
+        // True Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let bytes2 = Bytes32::encode(10, 20);
+        assert!(<[u8; 32] as packed_u128_math::PackedMath>::gt(
+            &bytes1, bytes2
+        ));
+        // False Case
+        let bytes1 = Bytes32::encode(10, 20);
+        let bytes2 = Bytes32::encode(25, 45);
+        assert!(!<[u8; 32] as packed_u128_math::PackedMath>::gt(
+            &bytes1, bytes2
+        ));
+        // Equal Case
+        let bytes1 = Bytes32::encode(25, 45);
+        let bytes2 = Bytes32::encode(25, 45);
+        assert!(!<[u8; 32] as packed_u128_math::PackedMath>::gt(
+            &bytes1, bytes2
+        ));
+    }
+}

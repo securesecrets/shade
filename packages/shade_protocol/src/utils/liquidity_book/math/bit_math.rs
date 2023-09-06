@@ -147,28 +147,6 @@ mod tests2 {
     use ethnum::U256;
 
     #[test]
-    fn test_most_significant_bit() {
-        for i in 0..256u32 {
-            assert_eq!(
-                BitMath::most_significant_bit(U256::from(1u32) << i),
-                i as u8,
-                "test_MostSignificantBit::1"
-            );
-        }
-    }
-
-    #[test]
-    fn test_least_significant_bit() {
-        for i in 0..256u32 {
-            assert_eq!(
-                BitMath::least_significant_bit(U256::from(1u32) << i),
-                i as u8,
-                "test_LeastSignificantBit::1"
-            );
-        }
-    }
-
-    #[test]
     fn test_closest_bit_right() {
         for i in 0..256u32 {
             assert_eq!(
@@ -186,6 +164,27 @@ mod tests2 {
                 BitMath::closest_bit_left(U256::from(1u32) << i, 0),
                 U256::from(i),
                 "test_ClosestBitLeft::1"
+            );
+        }
+    }
+    #[test]
+    fn test_most_significant_bit() {
+        for i in 0..256u32 {
+            assert_eq!(
+                BitMath::most_significant_bit(U256::from(1u32) << i),
+                i as u8,
+                "test_MostSignificantBit::1"
+            );
+        }
+    }
+
+    #[test]
+    fn test_least_significant_bit() {
+        for i in 0..256u32 {
+            assert_eq!(
+                BitMath::least_significant_bit(U256::from(1u32) << i),
+                i as u8,
+                "test_LeastSignificantBit::1"
             );
         }
     }

@@ -6,24 +6,25 @@ Project Description
 
 ### Todo
 
-- [ ] tokens  
-- [ ] viewing_keys  
-- [ ] types  
-- [ ] oracle_helper  
-- [ ] uint256_to_u256  
-- [ ] tree_math  
-- [ ] simple_math  
-- [ ] bit math  
-- [ ] packed_u128_math  
 
 ### In Progress
 
-- [ ] fee_helper  
-- [ ] bin_helper (7/10 completed) 
-- [ ] lb pair -> add_liquidity  
+- [ ] simple_math  
+- [ ] oracle_helper  
 
 ### Done ✓
 
+- [x] tree_math  
+- [x] tokens  
+- [x] lb token  
+- [x] lb pair -> add_liquidity(testing blocked by lb_token)  
+- [x] bin_helper (blocked by lb-token)  
+- [x] bit math  
+- [x] uint256_to_u256  
+- [x] viewing_keys  
+- [x] packed_u128_math  
+- [x] types  
+- [x] fee_helper  
 - [x] u24  
 - [x] u128xu128_math  
 - [x] u256xu256_math  

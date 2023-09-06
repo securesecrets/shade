@@ -261,6 +261,7 @@ impl PairParameters {
     pub fn get_total_fee(&self, bin_step: u16) -> u128 {
         let base_fee = Self::get_base_fee(&self, bin_step);
         let variable_fee = Self::get_variable_fee(&self, bin_step);
+        println!("Variable fee: {:?}", variable_fee);
         base_fee + variable_fee
     }
 

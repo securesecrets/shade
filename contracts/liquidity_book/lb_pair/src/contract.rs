@@ -907,6 +907,7 @@ fn _update_bin(
     if id == active_id {
         let mut parameters = parameters.update_volatility_parameters(id, time)?;
 
+        // Helps calculate fee if there's an implict swap.
         let fees = BinHelper::get_composition_fees(
             bin_reserves,
             parameters,
@@ -968,6 +969,7 @@ fn _update_bin(
     Ok((shares, amounts_in, amounts_in_to_bin))
 }
 
+//TODO: Move this to some library
 fn total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
     let msg = crate::msg::LbTokenQueryMsg::TotalSupply { id };
 
@@ -1141,8 +1143,10 @@ fn burn(
 
         let amount_to_burn_u256 = amount_to_burn.uint256_to_u256();
 
-        let amounts_out_from_bin =
+        let amounts_out_from_bin_vals =
             BinHelper::get_amount_out_of_bin(bin_reserves, amount_to_burn_u256, total_supply)?;
+        let amounts_out_from_bin: Bytes32 =
+            Encode::encode(amounts_out_from_bin_vals.0, amounts_out_from_bin_vals.1);
 
         if amounts_out_from_bin.iter().all(|&x| x == 0) {
             return Err(Error::ZeroAmountsOut {

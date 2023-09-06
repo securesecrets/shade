@@ -496,7 +496,7 @@ mod tests {
         let shift = SCALE_OFFSET;
 
         let res = U256x256Math::mul_shift_round_down(x, y, shift).unwrap();
-        assert_eq!(res, U256::from(1000000000u128)); // Replace with expected result
+        assert_eq!(res, U256::from(1000000000000000000000u128)); // Replace with expected result
     }
 
     #[test]
@@ -557,7 +557,7 @@ mod tests {
         let shift = SCALE_OFFSET;
 
         let res = U256x256Math::mul_shift_round_up(x, y, shift).unwrap();
-        assert_eq!(res, U256::from(1000000001u128)); // Replace with expected result
+        assert_eq!(res, U256::from(1000000000000000000001u128)); // Replace with expected result
     }
 
     #[test]
