@@ -1,21 +1,20 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
 
     use cosmwasm_std::{
-        from_binary, from_slice,
+        from_slice,
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-        to_binary, Addr, Binary, ContractInfo, ContractInfoResponse, ContractResult, DepsMut,
-        Empty, OwnedDeps, Querier, QuerierResult, QueryRequest, Response, SystemError,
-        SystemResult, Uint128, Uint256, WasmQuery,
+        to_binary, Addr, ContractInfo, ContractResult, Empty, OwnedDeps, Querier, QuerierResult,
+        QueryRequest, Response, SystemError, SystemResult, Uint128, Uint256, WasmQuery,
     };
-    use ethnum::U256;
-    use interfaces::ILBPair::{ExecuteMsg, LiquidityParameters, RemoveLiquidity};
-    use libraries::{
+
+    use shade_protocol::contract_interfaces::liquidity_book::lb_pair::{
+        ExecuteMsg, InstantiateMsg, LiquidityParameters, RemoveLiquidity,
+    };
+    use shade_protocol::lb_libraries::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
     };
-    use serde::Deserialize;
 
     use crate::{
         contract::{execute, instantiate},
@@ -30,11 +29,9 @@ mod tests {
         //     let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let common_divisor = 10000u64;
-
         let mock_message_info = mock_info("", &[]);
 
-        let init_msg = interfaces::ILBPair::InstantiateMsg {
+        let init_msg = InstantiateMsg {
             factory: ContractInfo {
                 address: Addr::unchecked("factory_address"),
                 code_hash: "factory_code_hash".to_string(),
@@ -63,6 +60,7 @@ mod tests {
                 code_hash: "lb_token_code_hash".to_string(),
             },
             viewing_key: "viewing_key".to_string(),
+            pair_name: String::new(),
         };
 
         // uint16 internal constant DEFAULT_BIN_STEP = 10;
@@ -112,8 +110,8 @@ mod tests {
             active_id_desired: 8388608,
             id_slippage: 15,
             delta_ids: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].into(),
-            distribution_x: distribution_x,
-            distribution_y: distribution_y,
+            distribution_x,
+            distribution_y,
             deadline: 9999999999,
         };
 
@@ -124,8 +122,6 @@ mod tests {
         };
 
         let _res = execute(deps.as_mut(), env, info, msg).unwrap();
-
-        println!("-----------------------------------------------------------------------");
 
         let info = mock_info("HASEEB", &[]);
         let env = mock_env();
@@ -173,8 +169,8 @@ mod tests {
             active_id_desired: 8388608,
             id_slippage: 15,
             delta_ids: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].into(),
-            distribution_x: distribution_x,
-            distribution_y: distribution_y,
+            distribution_x,
+            distribution_y,
             deadline: 9999999999,
         };
 
@@ -200,7 +196,7 @@ mod tests {
             deps.as_mut(),
             env,
             info,
-            interfaces::ILBPair::ExecuteMsg::RemoveLiquidity {
+            ExecuteMsg::RemoveLiquidity {
                 remove_liquidity_params: msg,
             },
         )
@@ -292,8 +288,8 @@ mod tests {
             active_id_desired: 8388608,
             id_slippage: 15,
             delta_ids: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].into(),
-            distribution_x: distribution_x,
-            distribution_y: distribution_y,
+            distribution_x,
+            distribution_y,
             deadline: 9999999999,
         };
 
@@ -309,7 +305,7 @@ mod tests {
             deps.as_mut(),
             env,
             info.clone(),
-            interfaces::ILBPair::ExecuteMsg::Swap {
+            ExecuteMsg::Swap {
                 swap_for_y: true,
                 to: info.sender,
                 amount_received: Uint128::from(9999990000000u128),

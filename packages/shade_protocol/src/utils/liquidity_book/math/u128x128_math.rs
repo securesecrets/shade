@@ -120,23 +120,25 @@ impl U128x128Math {
     ///
     /// * `x` - The unsigned 128.128-binary fixed-point number for which to calculate the power
     /// * `y` - A relative number without any decimals, needs to be between ]2^21; 2^21[
-    pub fn pow(x: U256, y: I256) -> Result<U256, U128x128MathError> {
+    pub fn pow(base: U256, power: I256) -> Result<U256, U128x128MathError> {
         let mut invert = false;
-        let abs_y = y.abs().as_u128();
+        let abs_y = power.abs().as_u128();
 
-        if y == 0 {
-            return Ok(SCALE);
+        if power == 0 {
+            return Ok(SCALE); // means Base^0 =1
         }
 
-        if y < 0 {
+        if power < 0 {
             invert = !invert;
         }
 
         let mut result = SCALE;
 
+        //This uses an optimization for small powers (less than 0x100000), where it computes the power through bit manipulation and loop unrolling.
         if abs_y < 0x100000 {
-            let mut squared = x;
-            if x > U256::from(0xffffffffffffffffffffffffffffffffu128) {
+            let mut squared = base;
+            //Before entering the loop, the function checks if the base is greater than 2^128 and adjusts it if so. Flipping the invert flag again if needed.
+            if base > U256::from(0xffffffffffffffffffffffffffffffffu128) {
                 squared = U256::MAX / squared;
                 invert = !invert;
             }
@@ -151,7 +153,7 @@ impl U128x128Math {
 
         // revert if y is too big or if x^y underflowed
         if result == 0 {
-            return Err(U128x128MathError::PowUnderflow(x, y));
+            return Err(U128x128MathError::PowUnderflow(base, power));
         }
 
         if invert {
@@ -159,5 +161,61 @@ impl U128x128Math {
         } else {
             Ok(result)
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+    use ethnum::{AsI256, U256};
+
+    #[test]
+    fn test_pow() {
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        let y = 100_000;
+        let res = U128x128Math::pow(x, y.into()).unwrap();
+        // let expected = U256::from(7491471493045233295460405875225305845649644);
+        let tolerance = 10 ^ 12;
+
+        let expected = U256::from_str("7491471493045233295460405875225305845649644").unwrap();
+
+        assert!(
+            res > expected - tolerance && res < expected + tolerance,
+            "test_Pow::1 failed"
+        );
+    }
+
+    #[test]
+    fn test_pow_and_log() {
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        let y = 100_000;
+        let res = U128x128Math::pow(x, y.into()).unwrap();
+        // let expected = U256::from(7491471493045233295460405875225305845649644);
+        let tolerance = 10 ^ 12;
+
+        let expected = U256::from_str("7491471493045233295460405875225305845649644").unwrap();
+
+        assert!(
+            res > expected - tolerance && res < expected + tolerance,
+            "test_Pow::1 failed"
+        );
+
+        let base_log2 = U128x128Math::log2(x).unwrap();
+
+        assert_eq!(
+            base_log2,
+            I256::from_str("49089913871092318234424474366155884").unwrap()
+        );
+        let res = U128x128Math::log2(res).unwrap() / base_log2;
+        let expected = 100000;
+
+        assert_eq!(res, I256::from_str("100000").unwrap());
+
+        assert!(
+            res > expected.as_i256() - tolerance.as_i256()
+                && res < expected.as_i256() + tolerance.as_i256(),
+            "test_pow_and_log::1 failed"
+        );
     }
 }
