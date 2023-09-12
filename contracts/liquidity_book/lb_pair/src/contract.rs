@@ -639,52 +639,6 @@ fn calculate_id(
     Ok(id as u32)
 }
 
-// fn calculate_id(
-//     liquidity_parameters: &LiquidityParameters,
-//     active_id: u32,
-//     i: usize,
-// ) -> Result<u32> {
-//     let id: u32;
-//     if let Some((is_negative, delta_id)) = check_value(liquidity_parameters.delta_ids[i]) {
-//         if is_negative {
-//             if active_id < delta_id {
-//                 return Err(Error::IdUnderflows {
-//                     id: active_id,
-//                     delta_id,
-//                 });
-//             }
-//             id = active_id - delta_id;
-//         } else {
-//             match active_id.checked_add(delta_id) {
-//                 Some(v) => id = v,
-//                 None => return Err(Error::IdOverflows { id: active_id }),
-//             }
-//         }
-//     } else {
-//         return Err(Error::DeltaIdOverflows {
-//             delta_id: liquidity_parameters.delta_ids[i],
-//         });
-//     }
-//     Ok(id)
-// }
-// fn check_value(value: i64) -> Option<(bool, u32)> {
-//     if value < -(U24::MAX as i64) || value > (U24::MAX as i64) {
-//         return Err(Error::DeltaIdOverflows {
-//             delta_id: liquidity_parameters.delta_ids[i],
-//         });
-//     } else {
-//         let is_negative = value < 0;
-//         let val: u32;
-//         if is_negative {
-//             val = (-value) as u32;
-//         } else {
-//             val = value as u32;
-//         }
-
-//         Some((is_negative, val))
-//     }
-// }
-
 /// Mint liquidity tokens by depositing tokens into the pool.
 ///
 /// It will mint Liquidity Book (LB) tokens for each bin where the user adds liquidity.
@@ -981,9 +935,8 @@ fn total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result
             &(&msg),
         )?;
     let mut total_supply_uint256 = Uint256::zero();
-    if let crate::msg::TotalSupplyResponse { total_supply } = res {
-        total_supply_uint256 = total_supply;
-    }
+    let crate::msg::TotalSupplyResponse { total_supply } = res;
+    total_supply_uint256 = total_supply;
 
     Ok(total_supply_uint256.uint256_to_u256())
     // Ok(U256::new(6186945938883118954998384437402923)) // incase of unit-tests

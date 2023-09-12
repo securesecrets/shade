@@ -37,18 +37,10 @@ impl TreeUint24 {
     /// Checks if the tree contains the given `id`.
     ///
     /// Returns `true` if the tree contains the `id`.
-    // pub fn contains(&self, id: u32) -> bool {
-    //     let key2: [u8; 32] = (U256::from(id) >> 8u8).to_le_bytes();
-
-    //     let Some(l2_val) = self.level2.get(&key2)else{
-    //         return false;
-    //     };
-
-    //     l2_val & [((1u32 << (id & u8::MAX as u32)).to_le_bytes() != [0; 4]) as u8; 32]
-    // }
-
     pub fn contains(&self, id: u32) -> bool {
+        // Help estimates the Level1 key for the id so it can be fetched
         let key2: [u8; 32] = (U256::from(id) >> 8u8).to_le_bytes();
+        // Act as modulo of 255 so every id stays within 0-255 range.
         let target_bit_u256 = U256::from(U256::ONE << (id & u8::MAX as u32));
         let leaf2_u256 = U256::from_le_bytes(*self.level2.get(&key2).unwrap_or(&[0u8; 32]));
         // Perform bitwise AND and check if result is not zero
@@ -73,14 +65,14 @@ impl TreeUint24 {
 
             if leaves == U256::ZERO {
                 let key1 = key2 >> 8u8;
-                let leaves = U256::from_le_bytes(
+                let leaves_1 = U256::from_le_bytes(
                     *self.level1.get(&key1.to_le_bytes()).unwrap_or(&[0u8; 32]),
                 );
 
-                let value1 = leaves | (U256::ONE << (key2 & U256::from(u8::MAX)));
+                let value1 = leaves_1 | (U256::ONE << (key2 & U256::from(u8::MAX)));
                 self.level1.insert(key1.to_le_bytes(), value1.to_le_bytes());
 
-                if leaves == U256::ZERO {
+                if leaves_1 == U256::ZERO {
                     let value0 = U256::from_le_bytes(self.level0)
                         | (U256::ONE << (key1 & U256::from(u8::MAX)));
                     self.level0 = value0.to_le_bytes();

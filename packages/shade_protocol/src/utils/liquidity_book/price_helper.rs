@@ -107,8 +107,6 @@ mod tests {
         let fractional_part = fixed_point & U256::from(shifted.checked_sub(U256::ONE).unwrap());
         let fractional_part_decimal = fractional_part / U256::from(shifted);
         let real_value = integer_part;
-        println!("{:?}", real_value);
-        println!("{:?}", fractional_part_decimal);
     }
 
     #[test]
@@ -116,8 +114,6 @@ mod tests {
         let price = U256::from(100u128);
         let bin_step = 1u16;
         let id = PriceHelper::get_id_from_price(price, bin_step).unwrap();
-
-        println!("{:?}", id);
 
         assert!(id > 0);
     }
@@ -133,11 +129,8 @@ mod tests {
     #[test]
     fn test_convert128x128_price_to_decimal() {
         let price128x128 = U256::from(1000000000000000000000000000000000u128);
-        println!("price128x128 price: {}", price128x128);
 
         let converted_price = PriceHelper::convert128x128_price_to_decimal(price128x128).unwrap();
-
-        println!("Converted price: {}", converted_price);
 
         assert!(converted_price > U256::ZERO);
     }
