@@ -20,6 +20,7 @@ pub struct InstantiateMsg {
     pub lb_token_implementation: ContractInstantiationInfo,
     pub viewing_key: String,
     pub pair_name: String,
+    pub entropy: String,
 }
 
 // TODO: should do something like this to help with code duplication

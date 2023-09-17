@@ -27,11 +27,13 @@ use serde::Serialize;
 use shade_protocol::contract_interfaces::liquidity_book::lb_pair::{
     LiquidityParameters, MintResponse, RemoveLiquidity,
 };
+use shade_protocol::lb_libraries::lb_token::state_structs::LbPair;
 use shade_protocol::lb_libraries::math::liquidity_configurations::LiquidityConfigurations;
 use shade_protocol::lb_libraries::{
     bin_helper, constants, fee_helper, math, oracle_helper, pair_parameter_helper, price_helper,
     tokens, types,
 };
+// use shade_protocol::liquidity_book::lb_token::LbPair;
 use tokens::TokenType;
 use types::{Bytes32, LBPairInformation, MintArrays};
 
@@ -72,21 +74,22 @@ pub fn instantiate(
     // }
 
     let instantiate_token_msg = LBTokenInstantiateMsg {
-        name: format!(
-            "Liquidity Provider (LP) token for {}-{}-{}",
-            &msg.token_x.unique_key(),
-            &msg.token_y.unique_key(),
-            &msg.bin_step
-        ),
-        symbol: format!(
-            "{}/{} LP",
-            "tokenX",
-            "tokenY" // TODO: query the token contracts for their symbols to create the LP symbol and also set LbPair name
-                     // query::token_symbol(deps.querier, &msg.token_x.address)?,
-                     // query::token_symbol(deps.querier, &msg.token_y.address)?
-        ),
-        decimals: 18,
-        lb_pair: env.contract.address.clone(),
+        has_admin: false,
+        admin: None,
+        curators: [env.contract.address.clone()].to_vec(),
+        entropy: msg.entropy,
+        lb_pair_info: LbPair {
+            name: format!(
+                "{}-{}-lbtoken-{}",
+                &msg.token_x.unique_key(),
+                &msg.token_y.unique_key(),
+                &msg.bin_step
+            ),
+            symbol: format!("{}/{}-LB-{} LP", "tokenX", "tokenY", &msg.bin_step),
+            lb_pair_address: env.contract.address.clone(),
+            decimals: 18,
+        },
+        initial_tokens: Vec::new(),
     };
 
     let mut response = Response::new();

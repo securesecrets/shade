@@ -61,6 +61,7 @@ mod tests {
             },
             viewing_key: "viewing_key".to_string(),
             pair_name: String::new(),
+            entropy: String::new(),
         };
 
         // uint16 internal constant DEFAULT_BIN_STEP = 10;

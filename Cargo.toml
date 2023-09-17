@@ -24,6 +24,7 @@ members = [
   "contracts/snip20_migration",
   "contracts/liquidity_book/lb_factory",
   "contracts/liquidity_book/lb_pair",
+  "contracts/liquidity_book/lb_token_replacement",
   # Staking
   "contracts/basic_staking",
   "contracts/snip20_derivative",
