@@ -43,12 +43,12 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    /// curates new token_ids. Only curators can access this function.
-    CurateTokenIds {
-        initial_tokens: Vec<CurateTokenId>,
-        memo: Option<String>,
-        padding: Option<String>,
-    },
+    // /// curates new token_ids. Only curators can access this function.
+    // CurateTokenIds {
+    //     initial_tokens: Vec<CurateTokenId>,
+    //     memo: Option<String>,
+    //     padding: Option<String>,
+    // },
     /// mints additional tokens of existing fungible token_ids, if configuration allows this, ie
     /// `enable_mint == true`.
     /// Only minters can access this function

@@ -117,11 +117,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     blockinfo_w(deps.storage).save(&env.block)?;
 
     let response = match msg {
-        ExecuteMsg::CurateTokenIds {
-            initial_tokens,
-            memo,
-            padding: _,
-        } => try_curate_token_ids(deps, env, info, initial_tokens, memo),
+        // ExecuteMsg::CurateTokenIds {
+        //     initial_tokens,
+        //     memo,
+        //     padding: _,
+        // } => try_curate_token_ids(deps, env, info, initial_tokens, memo),
         ExecuteMsg::MintTokens {
             mint_tokens,
             memo,
@@ -256,37 +256,37 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     pad_response(response)
 }
 
-fn try_curate_token_ids(
-    mut deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    initial_tokens: Vec<CurateTokenId>,
-    memo: Option<String>,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
-    // check if sender is a curator
-    verify_curator(&config, &info)?;
+// fn try_curate_token_ids(
+//     mut deps: DepsMut,
+//     env: Env,
+//     info: MessageInfo,
+//     initial_tokens: Vec<CurateTokenId>,
+//     memo: Option<String>,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
+//     // check if sender is a curator
+//     verify_curator(&config, &info)?;
 
-    // curate new token_ids
-    for initial_token in initial_tokens {
-        exec_curate_token_id(
-            &mut deps,
-            &env,
-            &info,
-            &mut config,
-            initial_token,
-            memo.clone(),
-        )?;
-    }
+//     // curate new token_ids
+//     for initial_token in initial_tokens {
+//         exec_curate_token_id(
+//             &mut deps,
+//             &env,
+//             &info,
+//             &mut config,
+//             initial_token,
+//             memo.clone(),
+//         )?;
+//     }
 
-    contr_conf_w(deps.storage).save(&config)?;
+//     contr_conf_w(deps.storage).save(&config)?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::CurateTokenIds {
-            status: Success,
-        })?),
-    )
-}
+//     Ok(
+//         Response::new().set_data(to_binary(&ExecuteAnswer::CurateTokenIds {
+//             status: Success,
+//         })?),
+//     )
+// }
 
 fn try_mint_tokens(
     mut deps: DepsMut,
@@ -332,7 +332,6 @@ fn try_mint_tokens(
                 curate_token,
                 memo.clone(),
             )?;
-
             continue;
         }
 

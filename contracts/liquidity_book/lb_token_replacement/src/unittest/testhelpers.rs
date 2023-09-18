@@ -154,50 +154,64 @@ pub fn curate_addtl_default(
     let addr2 = Addr::unchecked("addr2".to_string());
 
     // fungible token_id "0a"
-    let mut curate0a = default_curate_value();
-    curate0a.token_info.token_id = "0a".to_string();
-    curate0a.token_info.name = "token0a".to_string();
-    curate0a.token_info.symbol = "TKNO".to_string();
-    curate0a.balances[0].address = addr0;
-    curate0a.balances[0].amount = Uint256::from(800u128);
-
-    // fungible token_id "1"
-    let mut curate1 = default_curate_value();
-    curate1.token_info.token_id = "1".to_string();
-    curate1.token_info.name = "token1".to_string();
-    curate1.token_info.symbol = "TKNA".to_string();
-    curate1.balances[0].address = addr1;
-    curate1.balances[0].amount = Uint256::from(500u128);
-
-    // NFT "2"
-    let mut curate2 = default_curate_value();
-    curate2.token_info.token_id = "2".to_string();
-    curate2.token_info.name = "token2".to_string();
-    curate2.token_info.symbol = "TKNB".to_string();
-    curate2.token_info.token_config = default_token_config_nft();
-    curate2.balances = vec![TokenIdBalance {
-        address: addr2.clone(),
-        amount: Uint256::from(1u128),
-    }];
-
-    // NFT "2a"
-    let mut curate2a = default_curate_value();
-    curate2a.token_info.token_id = "2a".to_string();
-    curate2a.token_info.name = "token2a".to_string();
-    curate2a.token_info.symbol = "TKNBA".to_string();
-    curate2a.token_info.token_config = default_token_config_nft();
-    curate2a.balances = vec![TokenIdBalance {
-        address: addr2,
-        amount: Uint256::from(1u128),
-    }];
-
-    // batch curate token_id "0a", "1", NFT "2" and NFT "3"
-    let msg = ExecuteMsg::CurateTokenIds {
-        initial_tokens: vec![curate0a, curate1, curate2, curate2a],
+    let mint_non_exist = TokenAmount {
+        token_id: "0a".to_string(),
+        balances: vec![TokenIdBalance {
+            address: addr0,
+            amount: Uint256::from(800u128),
+        }],
+    };
+    let msg = ExecuteMsg::MintTokens {
+        mint_tokens: vec![mint_non_exist],
         memo: None,
         padding: None,
     };
-    execute(deps.as_mut(), env, info, msg)?;
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
+
+    // fungible token_id "1"
+    let mint_non_exist = TokenAmount {
+        token_id: "1".to_string(),
+        balances: vec![TokenIdBalance {
+            address: addr1,
+            amount: Uint256::from(500u128),
+        }],
+    };
+    let msg = ExecuteMsg::MintTokens {
+        mint_tokens: vec![mint_non_exist],
+        memo: None,
+        padding: None,
+    };
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
+
+    // fungible token_id "2"
+    let mint_non_exist = TokenAmount {
+        token_id: "2".to_string(),
+        balances: vec![TokenIdBalance {
+            address: addr2.clone(),
+            amount: Uint256::from(1u128),
+        }],
+    };
+    let msg = ExecuteMsg::MintTokens {
+        mint_tokens: vec![mint_non_exist],
+        memo: None,
+        padding: None,
+    };
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
+
+    // NFT "2a"
+    let mint_non_exist = TokenAmount {
+        token_id: "2a".to_string(),
+        balances: vec![TokenIdBalance {
+            address: addr2,
+            amount: Uint256::from(1u128),
+        }],
+    };
+    let msg = ExecuteMsg::MintTokens {
+        mint_tokens: vec![mint_non_exist],
+        memo: None,
+        padding: None,
+    };
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
 
     Ok(())
 }

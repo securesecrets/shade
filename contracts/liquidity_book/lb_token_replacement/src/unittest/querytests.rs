@@ -368,57 +368,57 @@ fn test_query_all_balance() -> StdResult<()> {
         _ => panic!("query error"),
     }
 
-    // curate a list of tokens
-    let mut curate0 = default_curate_value();
-    curate0.token_info.token_id = "test_foo".to_string();
-    let mut curate1 = default_curate_value();
-    curate1.token_info.token_id = "test_bar".to_string();
-    let mut curate2 = default_curate_value();
-    curate2.token_info.token_id = "test_hello".to_string();
-    let mut curate3 = default_curate_value();
-    curate3.token_info.token_id = "test_aha".to_string();
-    let msg_curate = ExecuteMsg::CurateTokenIds {
-        initial_tokens: vec![curate0, curate1, curate2, curate3],
-        memo: None,
-        padding: None,
-    };
-    info.sender = addr.a();
-    execute(deps.as_mut(), mock_env(), info, msg_curate)?;
+    // // curate a list of tokens
+    // let mut curate0 = default_curate_value();
+    // curate0.token_info.token_id = "test_foo".to_string();
+    // let mut curate1 = default_curate_value();
+    // curate1.token_info.token_id = "test_bar".to_string();
+    // let mut curate2 = default_curate_value();
+    // curate2.token_info.token_id = "test_hello".to_string();
+    // let mut curate3 = default_curate_value();
+    // curate3.token_info.token_id = "test_aha".to_string();
+    // let msg_curate = ExecuteMsg::CurateTokenIds {
+    //     initial_tokens: vec![curate0, curate1, curate2, curate3],
+    //     memo: None,
+    //     padding: None,
+    // };
+    // info.sender = addr.a();
+    // execute(deps.as_mut(), mock_env(), info, msg_curate)?;
 
-    // returns all balances in token_id alphabetical order
-    let q_answer = from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_q_allbal)?)?;
-    match q_answer {
-        QueryAnswer::AllBalances(i) => assert_eq!(
-            i,
-            vec![
-                OwnerBalance {
-                    token_id: "0".to_string(),
-                    amount: Uint256::from(1100u128)
-                },
-                OwnerBalance {
-                    token_id: "0a".to_string(),
-                    amount: Uint256::from(800u128)
-                },
-                OwnerBalance {
-                    token_id: "test_aha".to_string(),
-                    amount: Uint256::from(1000u128)
-                },
-                OwnerBalance {
-                    token_id: "test_bar".to_string(),
-                    amount: Uint256::from(1000u128)
-                },
-                OwnerBalance {
-                    token_id: "test_foo".to_string(),
-                    amount: Uint256::from(1000u128)
-                },
-                OwnerBalance {
-                    token_id: "test_hello".to_string(),
-                    amount: Uint256::from(1000u128)
-                },
-            ]
-        ),
-        _ => panic!("query error"),
-    }
+    // // returns all balances in token_id alphabetical order
+    // let q_answer = from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_q_allbal)?)?;
+    // match q_answer {
+    //     QueryAnswer::AllBalances(i) => assert_eq!(
+    //         i,
+    //         vec![
+    //             OwnerBalance {
+    //                 token_id: "0".to_string(),
+    //                 amount: Uint256::from(1100u128)
+    //             },
+    //             OwnerBalance {
+    //                 token_id: "0a".to_string(),
+    //                 amount: Uint256::from(800u128)
+    //             },
+    //             OwnerBalance {
+    //                 token_id: "test_aha".to_string(),
+    //                 amount: Uint256::from(1000u128)
+    //             },
+    //             OwnerBalance {
+    //                 token_id: "test_bar".to_string(),
+    //                 amount: Uint256::from(1000u128)
+    //             },
+    //             OwnerBalance {
+    //                 token_id: "test_foo".to_string(),
+    //                 amount: Uint256::from(1000u128)
+    //             },
+    //             OwnerBalance {
+    //                 token_id: "test_hello".to_string(),
+    //                 amount: Uint256::from(1000u128)
+    //             },
+    //         ]
+    //     ),
+    //     _ => panic!("query error"),
+    // }
 
     Ok(())
 }
