@@ -1,6 +1,7 @@
 #![allow(unused)] // For beginning only.
 
 use crate::{prelude::*, state::*};
+use core::panic;
 use cosmwasm_std::{
     to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
     StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
@@ -33,6 +34,7 @@ use shade_protocol::{
         tokens, types,
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
+    snip20,
 };
 use std::collections::HashMap;
 use tokens::TokenType;
@@ -62,6 +64,22 @@ pub fn instantiate(
     //     return Err(Error::OnlyFactory);
     // }
 
+    let token_x_symbol = match msg.token_x.clone() {
+        TokenType::CustomToken {
+            contract_addr,
+            token_code_hash,
+        } => query_token_symbol(deps.as_ref(), token_code_hash, contract_addr)?,
+        TokenType::NativeToken { denom } => denom,
+    };
+
+    let token_y_symbol = match msg.token_y.clone() {
+        TokenType::CustomToken {
+            contract_addr,
+            token_code_hash,
+        } => query_token_symbol(deps.as_ref(), token_code_hash, contract_addr)?,
+        TokenType::NativeToken { denom } => denom,
+    };
+
     let instantiate_token_msg = LBTokenInstantiateMsg {
         has_admin: false,
         admin: None,
@@ -69,12 +87,10 @@ pub fn instantiate(
         entropy: msg.entropy,
         lb_pair_info: LbPair {
             name: format!(
-                "{}-{}-{}",
-                &msg.token_x.unique_key()[0..5],
-                &msg.token_y.unique_key()[0..5],
-                &msg.bin_step
+                "Lb-token-{}-{}-{}",
+                token_x_symbol, token_y_symbol, &msg.bin_step
             ),
-            symbol: format!("ABCS"),
+            symbol: format!("LB-{}-{}-{}", token_x_symbol, token_y_symbol, &msg.bin_step),
             lb_pair_address: env.contract.address.clone(),
             decimals: 18,
         },
@@ -90,9 +106,7 @@ pub fn instantiate(
             msg: to_binary(&instantiate_token_msg)?,
             label: format!(
                 "{}-{}-Pair-Token-{}",
-                &msg.token_x.unique_key(),
-                &msg.token_y.unique_key(),
-                &env.contract.address
+                token_x_symbol, token_y_symbol, msg.bin_step
             ),
             funds: vec![],
         }),
@@ -844,7 +858,7 @@ fn _update_bin(
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
 
     // TODO: this function needs to query the token contract for the total supply
-    let total_supply = total_supply(
+    let total_supply = _query_total_supply(
         deps.as_ref(),
         id,
         config.lb_token.code_hash,
@@ -926,7 +940,7 @@ fn _update_bin(
 }
 
 //TODO: Move this to some library
-fn total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
+fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
     let msg = lb_token::QueryMsg::IdTotalBalance { id: id.to_string() };
 
     let res = deps.querier.query_wasm_smart::<lb_token::QueryAnswer>(
@@ -941,7 +955,29 @@ fn total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result
     };
 
     Ok(total_supply_uint256.uint256_to_u256())
-    // Ok(U256::new(6186945938883118954998384437402923)) // incase of unit-tests
+}
+
+//TODO: Move this to some library
+fn query_token_symbol(deps: Deps, code_hash: String, address: Addr) -> Result<String> {
+    let msg = snip20::QueryMsg::TokenInfo {};
+
+    let res = deps.querier.query_wasm_smart::<snip20::QueryAnswer>(
+        code_hash,
+        address.to_string(),
+        &(&msg),
+    )?;
+
+    let symbol = match res {
+        snip20::QueryAnswer::TokenInfo {
+            name,
+            symbol,
+            decimals,
+            total_supply,
+        } => (symbol),
+        _ => panic!("{}", format!("Token {} not valid", address)),
+    };
+
+    Ok(symbol)
 }
 
 pub fn try_remove_liquidity(
@@ -1083,7 +1119,7 @@ fn burn(
         let bin_reserves = BIN_MAP
             .load(deps.storage, id)
             .map_err(|_| Error::Generic(format!("could not get bin reserves for bin id {}", i)))?;
-        let total_supply = total_supply(
+        let total_supply = _query_total_supply(
             deps.as_ref(),
             id,
             config.lb_token.code_hash.clone(),
@@ -2005,7 +2041,8 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<TotalSupplyResponse> {
     let factory = state.factory.address;
 
     let total_supply =
-        total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?.u256_to_uint256();
+        _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
+            .u256_to_uint256();
     Ok(TotalSupplyResponse { total_supply })
 }
 
