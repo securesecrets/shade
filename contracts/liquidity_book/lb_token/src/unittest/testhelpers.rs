@@ -4,7 +4,8 @@ use serde::de::DeserializeOwned;
 use shade_protocol::lb_libraries::lb_token::metadata::{Extension, Metadata};
 use std::any::Any;
 
-use super::super::{handles::*, state::*};
+use crate::contract::{execute, instantiate, query};
+use crate::state::balances_r;
 use cosmwasm_std::{
     from_binary, testing::*, to_binary, Addr, CosmosMsg, Env, MessageInfo, OwnedDeps, Response,
     StdError, StdResult, Storage, Uint256, WasmMsg,
@@ -143,7 +144,7 @@ pub fn init_helper_default() -> (
 /// * 500 fungible token_id 1 to addr1,
 /// * 1 NFT token_id 2 to addr2
 /// * 1 NFT token_id 2a to addr2
-pub fn curate_addtl_default(
+pub fn mint_addtl_default(
     deps: &mut OwnedDeps<MockStorage, MockApi, MockQuerier>,
     env: Env,
     info: MessageInfo,

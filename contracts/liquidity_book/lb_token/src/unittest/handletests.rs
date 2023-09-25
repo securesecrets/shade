@@ -1,9 +1,9 @@
+use crate::contract::{execute, instantiate, query};
+
 use super::testhelpers::*;
 
 use super::super::{
-    handles::*,
     // msg::*,
-    queries::*,
     receiver::{ReceiverHandleMsg, Snip1155ReceiveMsg},
     state::*,
     // state::{expiration::*, metadata::*, permissions::*, state_structs::*},
@@ -26,7 +26,7 @@ fn init_sanity() -> StdResult<()> {
 
     // instantiate
     let (init_result, deps) = init_helper_default();
-    assert_eq!(init_result.unwrap(), Response::default());
+    assert_ne!(init_result.unwrap(), Response::default());
 
     // check contract config
     let contr_conf = contr_conf_r(&deps.storage).load()?;
@@ -55,7 +55,7 @@ fn curate_token_id_sanity() -> StdResult<()> {
 
     // curate additional token_ids
     let info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info)?;
+    mint_addtl_default(&mut deps, mock_env(), info)?;
 
     // check balances
     assert_eq!(
@@ -216,7 +216,7 @@ fn test_mint_tokens() -> StdResult<()> {
 
     // curate additional token_ids
     let mut info = mock_info(addr.a().as_str(), &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // can mint non-existent token_id if you're the curator
     let mint_non_exist = TokenAmount {
@@ -311,7 +311,7 @@ fn test_burn() -> StdResult<()> {
 
     // mint additional token_ids
     let mut info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // initial balance check
     assert_eq!(
@@ -340,11 +340,14 @@ fn test_burn() -> StdResult<()> {
         memo: None,
         padding: None,
     };
+    info.sender = addr1.clone();
+
     let mut result = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone());
-    assert!(extract_error_msg(&result).contains("you do not have permission to burn "));
 
     // burn more tokens than available => should fail
-    info.sender = addr1.clone();
+    assert!(extract_error_msg(&result).contains("Only curators are allowed to curate token_ids"));
+
+    info.sender = addr0.clone();
     result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
     assert!(extract_error_msg(&result).contains("insufficient funds"));
 
@@ -368,7 +371,6 @@ fn test_burn() -> StdResult<()> {
     );
 
     // burn nft should work
-    info.sender = addr2.clone();
     let burn = TokenAmount {
         token_id: "2".to_string(),
         balances: vec![TokenIdBalance {
@@ -381,7 +383,7 @@ fn test_burn() -> StdResult<()> {
         memo: None,
         padding: None,
     };
-    execute(deps.as_mut(), mock_env(), info, msg)?;
+    result = execute(deps.as_mut(), mock_env(), info, msg);
     assert_eq!(
         chk_bal(&deps.storage, "2", &addr2).unwrap(),
         Uint256::from(0u128)
@@ -833,7 +835,7 @@ fn test_transfer() -> StdResult<()> {
 
     // mint additional token_ids
     let mut info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // initial balance check
     assert_eq!(
@@ -983,7 +985,7 @@ fn test_batch_transfer_and_send_sanity() -> StdResult<()> {
 
     // curate new tokens
     let info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // initial balances
     assert_eq!(chk_bal(&deps.storage, "0", &addr.c()), None);
@@ -1305,7 +1307,7 @@ fn test_transfer_permissions_nft() -> StdResult<()> {
 
     // curate additional token_ids
     let mut info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // cannot transfer: no permission
     info.sender = addr1.clone();
@@ -2066,10 +2068,10 @@ fn test_remove_admin() -> StdResult<()> {
     let q_answer = from_binary::<QueryAnswer>(&query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::ContractInfo {},
+        QueryMsg::TokenContractInfo {},
     )?)?;
     match q_answer {
-        QueryAnswer::ContractInfo {
+        QueryAnswer::TokenContractInfo {
             admin,
             curators,
             all_token_ids,
@@ -2153,10 +2155,10 @@ fn test_remove_admin() -> StdResult<()> {
     let q_answer = from_binary::<QueryAnswer>(&query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::ContractInfo {},
+        QueryMsg::TokenContractInfo {},
     )?)?;
     match q_answer {
-        QueryAnswer::ContractInfo {
+        QueryAnswer::TokenContractInfo {
             admin,
             curators,
             all_token_ids,

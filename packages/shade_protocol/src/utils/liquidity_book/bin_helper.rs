@@ -245,11 +245,19 @@ impl BinHelper {
 
         let (amount_x, amount_y) = amounts_in.decode();
 
+        let (bin_reserves_x, bin_reserves_y) = bin_reserves.decode();
+
         let (received_amount_x, received_amount_y) = Self::get_amount_out_of_bin(
             bin_reserves.add(amounts_in),
             shares,
             total_supply + shares,
         )?;
+
+        // println!(
+        //     "received_amount_x {:?}\nreceived_amount_y:{:?}\namount_x {:?}\namount_y {:?}\nshare {:?}\ntotal_supply {:?}\nbin_reserves_x {:?}\nbin_reserves_y {:?}",
+        //     received_amount_x, received_amount_y,amount_x,amount_y,shares,total_supply,bin_reserves_x,bin_reserves_y
+        // );
+
         let mut fees = Bytes32::default();
 
         if (received_amount_x > amount_x) {
@@ -477,12 +485,10 @@ impl BinHelper {
                     contract_addr,
                     token_code_hash,
                 } => {
-                    let msg = HandleMsg::Send {
+                    let msg = HandleMsg::Transfer {
                         recipient: recipient.to_string(),
                         amount,
                         padding: None,
-                        msg: None,
-                        recipient_code_hash: None,
                         memo: None,
                     };
                     // //TODO add token hash

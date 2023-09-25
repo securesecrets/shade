@@ -8,10 +8,7 @@ use shade_protocol::{
     multi_test::App,
     utils::{
         cycle::{parse_utc_datetime, Cycle},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
+        ExecuteCallback, InstantiateCallback, MultiTestable, Query,
     },
 };
 
@@ -33,6 +30,7 @@ fn allowance_cycle(
         height: 1,
         time: Timestamp::from_seconds(start.timestamp() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let admin = Addr::unchecked("admin");
@@ -71,8 +69,13 @@ fn allowance_cycle(
         viewing_key: viewing_key.clone(),
         multisig: admin.to_string().clone(),
     }
-    .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
-    ])
+    .test_init(
+        Treasury::default(),
+        &mut app,
+        admin.clone(),
+        "treasury",
+        &[],
+    )
     .unwrap();
 
     // Set admin viewing key
@@ -191,6 +194,7 @@ fn allowance_cycle(
         height: 1,
         time: Timestamp::from_seconds(not_refreshed.timestamp() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Update treasury
@@ -219,6 +223,7 @@ fn allowance_cycle(
         height: 1,
         time: Timestamp::from_seconds(refreshed.timestamp() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Update treasury

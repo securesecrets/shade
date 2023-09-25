@@ -6,7 +6,6 @@ use cosmwasm_std::{
     Addr,
     Binary,
     CosmosMsg,
-    Deps,
     DepsMut,
     Env,
     MessageInfo,
@@ -390,6 +389,7 @@ fn try_burn_tokens(
     memo: Option<String>,
 ) -> StdResult<Response> {
     let mut config = contr_conf_r(deps.storage).load()?;
+    verify_curator(&config, &info)?;
 
     // burn tokens
     for burn_token in burn_tokens {

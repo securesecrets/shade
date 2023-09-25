@@ -135,7 +135,11 @@ pub fn try_remove_minters(
     }
     minters.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveMinters { status: Success })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::RemoveMinters {
+            status: Success,
+        })?),
+    )
 }
 
 pub fn try_set_minters(

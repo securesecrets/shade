@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{
-    to_binary, Addr, Coin, ContractInfo, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg,
-};
+use cosmwasm_std::{Addr, ContractInfo, Uint128, Uint256};
 
-use crate::utils::liquidity_book::{
-    tokens::TokenType,
-    transfer::space_pad,
-    types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+use crate::utils::{
+    liquidity_book::{
+        tokens::TokenType,
+        types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+    },
+    ExecuteCallback, InstantiateCallback, Query,
 };
 
 #[cw_serde]
@@ -21,6 +21,10 @@ pub struct InstantiateMsg {
     pub viewing_key: String,
     pub pair_name: String,
     pub entropy: String,
+}
+
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 // TODO: should do something like this to help with code duplication
@@ -71,6 +75,10 @@ pub enum ExecuteMsg {
     ForceDecay {},
 }
 
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[cw_serde]
 pub struct MintResponse {
     pub amounts_received: Bytes32,
@@ -79,57 +87,10 @@ pub struct MintResponse {
 }
 
 #[cw_serde]
-pub enum LbTokenExecuteMsg {
-    Mint {
-        recipient: Addr,
-        id: u32,
-        amount: Uint256,
-    },
-    Burn {
-        owner: Addr,
-        id: u32,
-        amount: Uint256,
-    },
-}
-
-impl LbTokenExecuteMsg {
-    /// Returns a StdResult<CosmosMsg> used to execute a SNIP20 contract function
-    ///
-    /// # Arguments
-    ///
-    /// * `block_size` - pad the message to blocks of this size
-    /// * `callback_code_hash` - String holding the code hash of the contract being called
-    /// * `contract_addr` - address of the contract being called
-    /// * `send_amount` - Optional Uint128 amount of native coin to send with the callback message
-    ///                 NOTE: Only a Deposit message should have an amount sent with it
-    pub fn to_cosmos_msg(
-        &self,
-        code_hash: String,
-        contract_addr: String,
-        send_amount: Option<Uint128>,
-    ) -> StdResult<CosmosMsg> {
-        let mut msg = to_binary(self)?;
-        space_pad(&mut msg.0, 256);
-        let mut funds = Vec::new();
-        if let Some(amount) = send_amount {
-            funds.push(Coin {
-                amount,
-                denom: String::from("uscrt"),
-            });
-        }
-        let execute = WasmMsg::Execute {
-            contract_addr,
-            code_hash,
-            msg,
-            funds,
-        };
-        Ok(execute.into())
-    }
-}
-#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // GetCount returns the current count as a json-encoded number
+    #[returns(LbTokenResponse)]
+    GetLbToken {},
     #[returns(FactoryResponse)]
     GetFactory {},
     #[returns(TokensResponse)]
@@ -172,8 +133,17 @@ pub enum QueryMsg {
         amount_in: Uint128,
         swap_for_y: bool,
     },
+    #[returns(TotalSupplyResponse)]
+    TotalSupply { id: u32 },
+}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
+#[cw_serde]
+pub struct LbTokenResponse {
+    pub lb_token: ContractInfo,
+}
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct FactoryResponse {
@@ -188,12 +158,12 @@ pub struct TokensResponse {
 
 #[cw_serde]
 pub struct TokenXResponse {
-    pub token_x: Addr,
+    pub token_x: TokenType,
 }
 
 #[cw_serde]
 pub struct TokenYResponse {
-    pub token_y: Addr,
+    pub token_y: TokenType,
 }
 
 #[cw_serde]

@@ -3,7 +3,7 @@
 #![allow(unused)] // For beginning only.
 
 use bin_helper::BinError;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{StdError, Uint128};
 use ethnum::U256;
 use fee_helper::FeeError;
 use math::liquidity_configurations::LiquidityConfigurationsError;

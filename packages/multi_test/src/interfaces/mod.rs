@@ -6,6 +6,10 @@ pub mod manager;
 #[cfg(feature = "dao")]
 pub mod adapter;
 */
+#[cfg(feature = "lb_pair")]
+pub mod lb_pair;
+#[cfg(feature = "lb_token")]
+pub mod lb_token;
 #[cfg(feature = "snip20")]
 pub mod snip20;
 #[cfg(feature = "treasury")]

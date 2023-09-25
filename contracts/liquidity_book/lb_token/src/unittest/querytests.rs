@@ -3,7 +3,7 @@ use std::ops::Add;
 
 use super::testhelpers::*;
 
-use super::super::{handles::*, queries::*};
+use crate::contract::{execute, instantiate, query};
 
 use shade_protocol::lb_libraries::lb_token::{
     expiration::*, permissions::*, state_structs::*, txhistory::*,
@@ -23,14 +23,14 @@ fn test_q_init() -> StdResult<()> {
 
     // instantiate
     let (init_result, mut deps) = init_helper_default();
-    assert_eq!(init_result.unwrap(), Response::default());
+    assert_ne!(init_result.unwrap(), Response::default());
 
     // check contract info
-    let msg = QueryMsg::ContractInfo {};
+    let msg = QueryMsg::TokenContractInfo {};
     let q_result = query(deps.as_ref(), mock_env(), msg);
     let q_answer = from_binary::<QueryAnswer>(&q_result?)?;
     match q_answer {
-        QueryAnswer::ContractInfo {
+        QueryAnswer::TokenContractInfo {
             admin,
             curators,
             all_token_ids,
@@ -135,7 +135,7 @@ fn test_query_balance() -> StdResult<()> {
     // instantiate + curate more tokens
     let (_init_result, mut deps) = init_helper_default();
     let mut info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // cannot view balance without viewing keys
     let msg0_q_bal0_novk = QueryMsg::Balance {
@@ -286,7 +286,7 @@ fn test_query_all_balance() -> StdResult<()> {
     let (_init_result, mut deps) = init_helper_default();
 
     let mut info = mock_info("addr0", &[]);
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
     let vks = generate_viewing_keys(
         &mut deps,
         mock_env(),
@@ -469,7 +469,7 @@ fn test_query_transaction_history() -> StdResult<()> {
     }
 
     // curate more tokens
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
     // query tx history
     let q_answer = from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_tx_hist_a_a)?)?;
     if let QueryAnswer::TransactionHistory { txs, total } = q_answer {
@@ -571,7 +571,7 @@ fn test_query_transaction_history() -> StdResult<()> {
         memo: None,
         padding: None,
     };
-    info.sender = addr.b();
+    info.sender = addr.a();
     execute(deps.as_mut(), mock_env(), info, msg_burn)?;
 
     let q_answer = from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_tx_hist_b_b)?)?;
@@ -717,7 +717,7 @@ fn test_query_all_permissions() -> StdResult<()> {
     let vks = generate_viewing_keys(&mut deps, mock_env(), info.clone(), addr.all())?;
 
     // curate additional tokens
-    curate_addtl_default(&mut deps, mock_env(), info.clone())?;
+    mint_addtl_default(&mut deps, mock_env(), info.clone())?;
 
     // give permission to transfer: addr.a grants addr.b
     let msg0_perm_b = ExecuteMsg::GivePermission {

@@ -1,9 +1,7 @@
-use super::*;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Api, BlockInfo, CanonicalAddr, StdResult, Storage, Uint256};
+use cosmwasm_std::{Addr, Api, CanonicalAddr, StdResult, Uint256};
 /// tx type and specifics for storage
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]

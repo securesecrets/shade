@@ -1,9 +1,6 @@
 use super::*;
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{to_binary, Addr, BlockInfo, StdError, StdResult, Storage, Uint256};
+use cosmwasm_std::{to_binary, Addr, StdError, StdResult, Storage};
 
 use secret_toolkit::storage::AppendStore;
 use shade_protocol::lb_libraries::lb_token::permissions::PermissionKey;

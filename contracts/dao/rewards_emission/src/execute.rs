@@ -1,37 +1,19 @@
 use shade_protocol::c_std::{
-    to_binary,
-    MessageInfo,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    StdError,
-    StdResult,
-    Uint128,
+    to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
 };
 
-use shade_protocol::snip20::helpers::{
-    // TODO: This message type needs to be implemented.
-    send_from_msg,
-};
+use shade_protocol::snip20::helpers::send_from_msg;
 
 use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            rewards_emission::{Config, ExecuteAnswer, Reward},
-        },
-    },
+    contract_interfaces::dao::rewards_emission::{Config, ExecuteAnswer, Reward},
     utils::{
-        asset::{Contract},
+        asset::Contract,
+        cycle::{exceeds_cycle, parse_utc_datetime, utc_now, Cycle},
         generic_response::ResponseStatus,
-        cycle::{Cycle, exceeds_cycle, utc_now, parse_utc_datetime},
     },
 };
 
-use crate::{
-    storage::*,
-};
+use crate::storage::*;
 
 pub fn receive(
     _deps: DepsMut,
@@ -63,33 +45,36 @@ pub fn try_update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
+    )
 }
 
-pub fn refill_rewards(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-) -> StdResult<Response> {
-
+pub fn refill_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     let mut messages = vec![];
 
     if let Some(mut reward) = REWARD.may_load(deps.storage, info.sender.clone())? {
-
         let token = TOKEN.load(deps.storage)?;
         let now = utc_now(&env);
 
         // Check expiration
         if let Some(expiry) = reward.expiration.clone() {
             if now > parse_utc_datetime(&expiry)? {
-                return Err(StdError::generic_err(format!("Rewards expired on {}", expiry)));
+                return Err(StdError::generic_err(format!(
+                    "Rewards expired on {}",
+                    expiry
+                )));
             }
         }
 
-        if exceeds_cycle(&now, &parse_utc_datetime(&reward.last_refresh.clone())?, reward.cycle.clone()) {
+        if exceeds_cycle(
+            &now,
+            &parse_utc_datetime(&reward.last_refresh.clone())?,
+            reward.cycle.clone(),
+        ) {
             reward.last_refresh = now.to_rfc3339();
             REWARD.save(deps.storage, info.sender, &reward)?;
             // Send from treasury
@@ -102,21 +87,21 @@ pub fn refill_rewards(
                 None,
                 &token.contract.clone(),
             )?);
+        } else {
+            return Err(StdError::generic_err(format!(
+                "Last rewards were requested on {}",
+                reward.last_refresh
+            )));
         }
-        else {
-            return Err(StdError::generic_err(format!("Last rewards were requested on {}", reward.last_refresh)));
-        }
-    }
-    else {
+    } else {
         return Err(StdError::generic_err("No rewards for you"));
     }
 
     Ok(Response::new()
-       .add_messages(messages)
-       .set_data(to_binary(&ExecuteAnswer::RefillRewards {
+        .add_messages(messages)
+        .set_data(to_binary(&ExecuteAnswer::RefillRewards {
             status: ResponseStatus::Success,
-        })?)
-   )
+        })?))
 }
 
 pub fn register_rewards(
@@ -129,24 +114,27 @@ pub fn register_rewards(
     cycle: Cycle,
     expiration: Option<String>,
 ) -> StdResult<Response> {
-
     if token != TOKEN.load(deps.storage)?.contract.address {
         return Err(StdError::generic_err("Invalid token"));
     }
 
-    REWARD.save(deps.storage, info.sender, &Reward {
-        distributor,
-        amount,
-        cycle,
-        //TODO change to null/zero for first refresh
-        last_refresh: utc_now(&env).to_rfc3339(),
-        expiration,
-    })?;
+    REWARD.save(
+        deps.storage,
+        info.sender,
+        &Reward {
+            distributor,
+            amount,
+            cycle,
+            //TODO change to null/zero for first refresh
+            last_refresh: utc_now(&env).to_rfc3339(),
+            expiration,
+        },
+    )?;
 
-    Ok(Response::new()
-       .set_data(to_binary(&ExecuteAnswer::RegisterReward{
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterReward {
             status: ResponseStatus::Success,
-        })?)
+        })?),
     )
 }
 

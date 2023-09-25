@@ -1,13 +1,18 @@
-use cosmwasm_std::{Addr, Binary, StdResult, Uint256};
+use cosmwasm_std::{
+    to_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::utils::liquidity_book::lb_token::{
-    expiration::Expiration,
-    metadata::Metadata,
-    permissions::{Permission, PermissionKey},
-    state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
-    txhistory::Tx,
+use crate::utils::{
+    liquidity_book::lb_token::{
+        expiration::Expiration,
+        metadata::Metadata,
+        permissions::{Permission, PermissionKey},
+        state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
+        txhistory::Tx,
+    },
+    InstantiateCallback, Query,
 };
 
 use secret_toolkit::permit::Permit;
@@ -30,6 +35,9 @@ pub struct InstantiateMsg {
     pub entropy: String,
     pub lb_pair_info: LbPair,
     pub initial_tokens: Vec<CurateTokenId>,
+}
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -207,6 +215,32 @@ pub enum ExecuteMsg {
     },
 }
 
+impl ExecuteMsg {
+    pub fn to_cosmos_msg(
+        &self,
+        code_hash: String,
+        contract_addr: String,
+        send_amount: Option<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        let mut msg = to_binary(self)?;
+        space_pad(256, &mut msg.0);
+        let mut funds = Vec::new();
+        if let Some(amount) = send_amount {
+            funds.push(Coin {
+                amount,
+                denom: String::from("uscrt"),
+            });
+        }
+        let execute = WasmMsg::Execute {
+            contract_addr,
+            code_hash,
+            msg,
+            funds,
+        };
+        Ok(execute.into())
+    }
+}
+
 /// Handle answers in the `data` field of `HandleResponse`. See
 /// [HandleMsg](crate::msg::HandleMsg), which has more details
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
@@ -244,7 +278,10 @@ pub enum ExecuteAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// returns public information of the SNIP1155 contract
-    ContractInfo {},
+    TokenContractInfo {},
+    IdTotalBalance {
+        id: String,
+    },
     Balance {
         owner: Addr,
         viewer: Addr,
@@ -310,7 +347,8 @@ impl QueryMsg {
             } => Ok((vec![owner, allowed_address], key.clone())),
             Self::AllPermissions { address, key, .. } => Ok((vec![address], key.clone())),
             Self::TokenIdPrivateInfo { address, key, .. } => Ok((vec![address], key.clone())),
-            Self::ContractInfo {}
+            Self::TokenContractInfo {}
+            | Self::IdTotalBalance { .. }
             | Self::TokenIdPublicInfo { .. }
             | Self::RegisteredCodeHash { .. }
             | Self::WithPermit { .. } => {
@@ -318,6 +356,10 @@ impl QueryMsg {
             }
         }
     }
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -354,13 +396,16 @@ pub enum QueryWithPermit {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     /// returns contract-level information:
-    ContractInfo {
+    TokenContractInfo {
         // the address of the admin, or `None` for an admin-free contract
         admin: Option<Addr>,
         /// the list of curators in the contract
         curators: Vec<Addr>,
         /// the list of all token_ids that have been curated
         all_token_ids: Vec<String>,
+    },
+    IdTotalBalance {
+        amount: Uint256,
     },
     /// returns balance of a specific token_id. Owners can give permission to other addresses to query their balance
     Balance {

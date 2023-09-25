@@ -63,10 +63,13 @@ pub fn deposit_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Deposit { padding }.to_cosmos_msg(contract, vec![Coin {
-        denom: "uscrt".to_string(),
-        amount,
-    }])
+    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
+        contract,
+        vec![Coin {
+            denom: "uscrt".to_string(),
+            amount,
+        }],
+    )
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Mint
@@ -242,7 +245,7 @@ pub fn increase_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -271,7 +274,7 @@ pub fn decrease_allowance_msg(
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
@@ -301,7 +304,7 @@ pub fn allowance_query(
     owner: Addr,
     spender: Addr,
     key: String,
-    block_size: usize,
+    _block_size: usize,
     contract: &Contract,
 ) -> StdResult<AllowanceResponse> {
     let answer: QueryAnswer = QueryMsg::Allowance {
@@ -333,13 +336,14 @@ pub fn transfer_from_msg(
     amount: Uint128,
     memo: Option<String>,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::TransferFrom { 
+    ExecuteMsg::TransferFrom {
         owner,
         recipient,
         amount,
         memo,
         padding,
-    }.to_cosmos_msg(contract, vec![])
+    }
+    .to_cosmos_msg(contract, vec![])
 }
