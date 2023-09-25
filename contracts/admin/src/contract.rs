@@ -1,36 +1,18 @@
 use shade_protocol::{
     admin::{
-        errors::unauthorized_super,
-        AdminAuthStatus,
-        AdminsResponse,
-        ConfigResponse,
-        ExecuteMsg,
-        InstantiateMsg,
-        PermissionsResponse,
-        QueryMsg,
+        errors::unauthorized_super, AdminAuthStatus, AdminsResponse, ConfigResponse, ExecuteMsg,
+        InstantiateMsg, PermissionsResponse, QueryMsg,
     },
     c_std::{
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        QueryResponse,
-        Response,
-        StdResult,
-        Storage,
+        shd_entry_point, to_binary, Addr, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response,
+        StdResult, Storage,
     },
     utils::pad_handle_result,
 };
 
 use crate::{
     execute::{
-        try_self_destruct,
-        try_toggle_status,
-        try_transfer_super,
-        try_update_registry,
+        try_self_destruct, try_toggle_status, try_transfer_super, try_update_registry,
         try_update_registry_bulk,
     },
     query::query_validate_permission,
