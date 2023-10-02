@@ -1,58 +1,51 @@
 #![allow(unused)] // For beginning only.
 
-use std::collections::HashMap;
-
+use crate::{prelude::*, state::*};
+use core::panic;
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Reply, Response, StdError, StdResult, SubMsg, SubMsgResult, Timestamp, Uint128, Uint256,
-    WasmMsg,
+    to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
+    StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
 };
-
 use ethnum::U256;
-
-use bin_helper::BinHelper;
-use constants::SCALE_OFFSET;
-use fee_helper::FeeHelper;
-use math::encoded_sample::EncodedSample;
-use math::packed_u128_math::{Decode, Encode, PackedMath};
-use math::sample_math::OracleSample;
-use math::tree_math::TreeUint24;
-use math::u24::U24;
-use math::u256x256_math::U256x256Math;
-use math::uint256_to_u256::{self, ConvertU256, ConvertUint256};
-use oracle_helper::{Oracle, OracleError, MAX_SAMPLE_LIFETIME};
-use pair_parameter_helper::PairParameters;
-use price_helper::PriceHelper;
 use serde::Serialize;
-use shade_protocol::contract_interfaces::liquidity_book::lb_pair::{
-    LiquidityParameters, MintResponse, RemoveLiquidity,
+use shade_protocol::{
+    c_std::{shd_entry_point, Reply, SubMsg},
+    contract_interfaces::liquidity_book::{
+        lb_pair::*, lb_token, lb_token::InstantiateMsg as LBTokenInstantiateMsg,
+    },
+    lb_libraries::{
+        bin_helper::{self, BinHelper},
+        constants::{self, SCALE_OFFSET},
+        fee_helper::{self, FeeHelper},
+        lb_token::state_structs::{LbPair, TokenAmount, TokenIdBalance},
+        math::{
+            encoded_sample::EncodedSample,
+            liquidity_configurations::LiquidityConfigurations,
+            packed_u128_math::{Decode, Encode, PackedMath},
+            sample_math::OracleSample,
+            tree_math::TreeUint24,
+            u24::U24,
+            u256x256_math::U256x256Math,
+            uint256_to_u256::{self, ConvertU256, ConvertUint256},
+        },
+        oracle_helper::{Oracle, OracleError, MAX_SAMPLE_LIFETIME},
+        pair_parameter_helper::PairParameters,
+        price_helper::PriceHelper,
+        tokens, types,
+        viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
+    },
+    snip20,
 };
-use shade_protocol::lb_libraries::math::liquidity_configurations::LiquidityConfigurations;
-use shade_protocol::lb_libraries::{
-    bin_helper, constants, fee_helper, math, oracle_helper, pair_parameter_helper, price_helper,
-    tokens, types,
-};
+use std::collections::HashMap;
 use tokens::TokenType;
 use types::{Bytes32, LBPairInformation, MintArrays};
-
-use shade_protocol::lb_libraries::viewing_keys::{
-    register_receive, set_viewing_key_msg, ViewingKey,
-};
-
-use shade_protocol::contract_interfaces::liquidity_book::{
-    lb_pair, lb_token::InstantiateMsg as LBTokenInstantiateMsg,
-};
-
-use crate::msg::*;
-use crate::prelude::*;
-use crate::state::*;
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
 
 /////////////// INSTANTIATE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -71,22 +64,37 @@ pub fn instantiate(
     //     return Err(Error::OnlyFactory);
     // }
 
+    let token_x_symbol = match msg.token_x.clone() {
+        TokenType::CustomToken {
+            contract_addr,
+            token_code_hash,
+        } => query_token_symbol(deps.as_ref(), token_code_hash, contract_addr)?,
+        TokenType::NativeToken { denom } => denom,
+    };
+
+    let token_y_symbol = match msg.token_y.clone() {
+        TokenType::CustomToken {
+            contract_addr,
+            token_code_hash,
+        } => query_token_symbol(deps.as_ref(), token_code_hash, contract_addr)?,
+        TokenType::NativeToken { denom } => denom,
+    };
+
     let instantiate_token_msg = LBTokenInstantiateMsg {
-        name: format!(
-            "Liquidity Provider (LP) token for {}-{}-{}",
-            &msg.token_x.unique_key(),
-            &msg.token_y.unique_key(),
-            &msg.bin_step
-        ),
-        symbol: format!(
-            "{}/{} LP",
-            "tokenX",
-            "tokenY" // TODO: query the token contracts for their symbols to create the LP symbol and also set LbPair name
-                     // query::token_symbol(deps.querier, &msg.token_x.address)?,
-                     // query::token_symbol(deps.querier, &msg.token_y.address)?
-        ),
-        decimals: 18,
-        lb_pair: env.contract.address.clone(),
+        has_admin: false,
+        admin: None,
+        curators: [env.contract.address.clone()].to_vec(),
+        entropy: msg.entropy,
+        lb_pair_info: LbPair {
+            name: format!(
+                "Lb-token-{}-{}-{}",
+                token_x_symbol, token_y_symbol, &msg.bin_step
+            ),
+            symbol: format!("LB-{}-{}-{}", token_x_symbol, token_y_symbol, &msg.bin_step),
+            lb_pair_address: env.contract.address.clone(),
+            decimals: 18,
+        },
+        initial_tokens: Vec::new(),
     };
 
     let mut response = Response::new();
@@ -94,14 +102,12 @@ pub fn instantiate(
     response = response.add_submessage(SubMsg::reply_on_success(
         CosmosMsg::Wasm(WasmMsg::Instantiate {
             code_id: msg.lb_token_implementation.id,
+            code_hash: msg.lb_token_implementation.code_hash.clone(),
             msg: to_binary(&instantiate_token_msg)?,
             label: format!(
                 "{}-{}-Pair-Token-{}",
-                &msg.token_x.unique_key(),
-                &msg.token_y.unique_key(),
-                &env.contract.address
+                token_x_symbol, token_y_symbol, msg.bin_step
             ),
-            code_hash: msg.lb_token_implementation.code_hash.clone(),
             funds: vec![],
         }),
         INSTANTIATE_LP_TOKEN_REPLY_ID,
@@ -178,7 +184,7 @@ pub fn instantiate(
 
 /////////////// EXECUTE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
     match msg {
         ExecuteMsg::Swap {
@@ -409,9 +415,7 @@ fn try_swap(
     }
 
     // TODO: decide on the nature of the return message / event
-    Ok(Response::default()
-        .add_attribute_plaintext("hello", "world")
-        .add_messages(messages))
+    Ok(Response::default().add_messages(messages))
 }
 
 /// Flash loan tokens from the pool to a receiver contract and execute a callback function.
@@ -468,7 +472,6 @@ pub fn try_add_liquidity(
         return Err(Error::WrongPair);
     }
     let mut transfer_messages = Vec::new();
-
     // 2- tokens checking and transfer
     for (token, amount) in [
         (config.token_x.clone(), liquidity_parameters.amount_x),
@@ -483,6 +486,7 @@ pub fn try_add_liquidity(
             } => {
                 let msg =
                     token.transfer_from(*amount, info.sender.clone(), env.contract.address.clone());
+
                 if let Some(m) = msg {
                     transfer_messages.push(m);
                 }
@@ -572,13 +576,13 @@ pub fn add_liquidity_internal(
     let deposit_ids_string = serialize_or_err(&deposit_ids)?;
     let liquidity_minted_string = serialize_or_err(&liq_minted)?;
 
-    response = response
-        .add_attribute("amount_x_added", amount_x_added)
-        .add_attribute("amount_y_added", amount_y_added)
-        .add_attribute("amount_x_left", amount_x_left)
-        .add_attribute("amount_y_left", amount_y_left)
-        .add_attribute("liquidity_minted", liquidity_minted_string)
-        .add_attribute("deposit_ids", deposit_ids_string);
+    // response = response
+    //     .add_attribute("amount_x_added", amount_x_added)
+    //     .add_attribute("amount_y_added", amount_y_added)
+    //     .add_attribute("amount_x_left", amount_x_left)
+    //     .add_attribute("amount_y_left", amount_y_left)
+    //     .add_attribute("liquidity_minted", liquidity_minted_string)
+    //     .add_attribute("deposit_ids", deposit_ids_string);
 
     Ok((response))
 }
@@ -639,52 +643,6 @@ fn calculate_id(
     Ok(id as u32)
 }
 
-// fn calculate_id(
-//     liquidity_parameters: &LiquidityParameters,
-//     active_id: u32,
-//     i: usize,
-// ) -> Result<u32> {
-//     let id: u32;
-//     if let Some((is_negative, delta_id)) = check_value(liquidity_parameters.delta_ids[i]) {
-//         if is_negative {
-//             if active_id < delta_id {
-//                 return Err(Error::IdUnderflows {
-//                     id: active_id,
-//                     delta_id,
-//                 });
-//             }
-//             id = active_id - delta_id;
-//         } else {
-//             match active_id.checked_add(delta_id) {
-//                 Some(v) => id = v,
-//                 None => return Err(Error::IdOverflows { id: active_id }),
-//             }
-//         }
-//     } else {
-//         return Err(Error::DeltaIdOverflows {
-//             delta_id: liquidity_parameters.delta_ids[i],
-//         });
-//     }
-//     Ok(id)
-// }
-// fn check_value(value: i64) -> Option<(bool, u32)> {
-//     if value < -(U24::MAX as i64) || value > (U24::MAX as i64) {
-//         return Err(Error::DeltaIdOverflows {
-//             delta_id: liquidity_parameters.delta_ids[i],
-//         });
-//     } else {
-//         let is_negative = value < 0;
-//         let val: u32;
-//         if is_negative {
-//             val = (-value) as u32;
-//         } else {
-//             val = value as u32;
-//         }
-
-//         Some((is_negative, val))
-//     }
-// }
-
 /// Mint liquidity tokens by depositing tokens into the pool.
 ///
 /// It will mint Liquidity Book (LB) tokens for each bin where the user adds liquidity.
@@ -732,14 +690,15 @@ fn mint(
     }
 
     let mut mint_arrays = MintArrays {
-        ids: Vec::with_capacity(liquidity_configs.len()),
-        amounts: Vec::with_capacity(liquidity_configs.len()),
-        liquidity_minted: Vec::with_capacity(liquidity_configs.len()),
+        ids: (vec![U256::MIN; liquidity_configs.len()]),
+        amounts: (vec![[0u8; 32]; liquidity_configs.len()]),
+        liquidity_minted: (vec![U256::MIN; liquidity_configs.len()]),
     };
 
     //TODO: make things more efficient maybe avoid this encoding
     let amounts_received = BinHelper::received(amount_received_x, amount_received_y);
     let mut messages: Vec<CosmosMsg> = Vec::new();
+
     //TODO MINT TOKENS
     let (amounts_left) = _mint_bins(
         &mut deps,
@@ -763,25 +722,25 @@ fn mint(
         };
     }
 
-    // TODO: decide on the nature of the return message / event
-    let transfer_batch = vec![
-        ("sender", info.sender.as_str()),
-        // This is just to say that tokens are being newly minted.
-        ("from", "0000000000000000000"),
-        ("to", to.as_str()),
-        ("ids", "arrays.ids"),
-        ("amounts", "liquidity_minted"),
-    ];
-    let deposited_to_bins = vec![
-        ("sender", info.sender.as_str()),
-        ("to", to.as_str()),
-        ("ids", "arrays.ids"),
-        ("amounts", "arrays.amounts"),
-    ];
+    // // TODO: decide on the nature of the return message / event
+    // let transfer_batch = vec![
+    //     ("sender", info.sender.as_str()),
+    //     // This is just to say that tokens are being newly minted.
+    //     ("from", "0000000000000000000"),
+    //     ("to", to.as_str()),
+    //     ("ids", "arrays.ids"),
+    //     ("amounts", "liquidity_minted"),
+    // ];
+    // let deposited_to_bins = vec![
+    //     ("sender", info.sender.as_str()),
+    //     ("to", to.as_str()),
+    //     ("ids", "arrays.ids"),
+    //     ("amounts", "arrays.amounts"),
+    // ];
 
     response = response
-        .add_attributes(transfer_batch)
-        .add_attributes(deposited_to_bins)
+        // .add_attributes(transfer_batch)
+        // .add_attributes(deposited_to_bins)
         .add_messages(messages);
 
     Ok((
@@ -820,6 +779,10 @@ fn _mint_bins(
 
     let mut amounts_left = amounts_received;
 
+    //Minting tokens
+
+    let mut mint_tokens: Vec<TokenAmount> = Vec::new();
+
     for (index, liq_conf) in liquidity_configs.iter().enumerate() {
         let (max_amounts_in_to_bin, id) = liq_conf.get_amounts_and_id(amounts_received)?;
 
@@ -843,19 +806,26 @@ fn _mint_bins(
         let amount = shares.u256_to_uint256();
 
         //Minting tokens
-        let msg = lb_pair::LbTokenExecuteMsg::Mint {
-            recipient: to.clone(),
-            id,
-            amount,
-        }
-        .to_cosmos_msg(
-            config.lb_token.code_hash.clone(),
-            config.lb_token.address.to_string(),
-            None,
-        )?;
-
-        messages.push(msg)
+        mint_tokens.push(TokenAmount {
+            token_id: id.to_string(),
+            balances: vec![TokenIdBalance {
+                address: to.clone(),
+                amount,
+            }],
+        });
     }
+    let msg = lb_token::ExecuteMsg::MintTokens {
+        mint_tokens,
+        memo: None,
+        padding: None,
+    }
+    .to_cosmos_msg(
+        config.lb_token.code_hash.clone(),
+        config.lb_token.address.to_string(),
+        None,
+    )?;
+
+    messages.push(msg);
     Ok(amounts_left)
 }
 
@@ -888,7 +858,7 @@ fn _update_bin(
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
 
     // TODO: this function needs to query the token contract for the total supply
-    let total_supply = total_supply(
+    let total_supply = _query_total_supply(
         deps.as_ref(),
         id,
         config.lb_token.code_hash,
@@ -941,13 +911,13 @@ fn _update_bin(
                 Ok(state)
             })?;
 
-            // TODO: figure out a way to return this to the 'try_mint' function to use in the response
-            let composition_fees = vec![
-                ("sender", "info.sender"),
-                ("id", "id"),
-                ("fees", "fees"),
-                ("protocol_c_fees", "protocol_c_fees"),
-            ];
+            //     // TODO: figure out a way to return this to the 'try_mint' function to use in the response
+            //     let composition_fees = vec![
+            //         ("sender", "info.sender"),
+            //         ("id", "id"),
+            //         ("fees", "fees"),
+            //         ("protocol_c_fees", "protocol_c_fees"),
+            //     ];
         }
     } else {
         BinHelper::verify_amounts(amounts_in, active_id, id)?;
@@ -970,23 +940,44 @@ fn _update_bin(
 }
 
 //TODO: Move this to some library
-fn total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
-    let msg = crate::msg::LbTokenQueryMsg::TotalSupply { id };
+fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
+    let msg = lb_token::QueryMsg::IdTotalBalance { id: id.to_string() };
 
-    let res = deps
-        .querier
-        .query_wasm_smart::<crate::msg::TotalSupplyResponse>(
-            code_hash,
-            address.to_string(),
-            &(&msg),
-        )?;
+    let res = deps.querier.query_wasm_smart::<lb_token::QueryAnswer>(
+        code_hash,
+        address.to_string(),
+        &(&msg),
+    )?;
     let mut total_supply_uint256 = Uint256::zero();
-    if let crate::msg::TotalSupplyResponse { total_supply } = res {
-        total_supply_uint256 = total_supply;
-    }
+    match res {
+        lb_token::QueryAnswer::IdTotalBalance { amount } => total_supply_uint256 = amount,
+        _ => (),
+    };
 
     Ok(total_supply_uint256.uint256_to_u256())
-    // Ok(U256::new(6186945938883118954998384437402923)) // incase of unit-tests
+}
+
+//TODO: Move this to some library
+fn query_token_symbol(deps: Deps, code_hash: String, address: Addr) -> Result<String> {
+    let msg = snip20::QueryMsg::TokenInfo {};
+
+    let res = deps.querier.query_wasm_smart::<snip20::QueryAnswer>(
+        code_hash,
+        address.to_string(),
+        &(&msg),
+    )?;
+
+    let symbol = match res {
+        snip20::QueryAnswer::TokenInfo {
+            name,
+            symbol,
+            decimals,
+            total_supply,
+        } => (symbol),
+        _ => panic!("{}", format!("Token {} not valid", address)),
+    };
+
+    Ok(symbol)
 }
 
 pub fn try_remove_liquidity(
@@ -1034,19 +1025,19 @@ pub fn try_remove_liquidity(
         remove_liquidity_params.amounts,
     )?;
 
-    response = response
-        .add_attribute("action", "remove_liquidity")
-        .add_attribute("to", info.sender.as_str());
+    // response = response
+    //     .add_attribute("action", "remove_liquidity")
+    //     .add_attribute("to", info.sender.as_str());
 
-    if is_wrong_order {
-        response = response
-            .add_attribute("amount_x", amount_y.u128().to_string())
-            .add_attribute("amount_y", amount_x.u128().to_string());
-    } else {
-        response = response
-            .add_attribute("amount_x", amount_x.u128().to_string())
-            .add_attribute("amount_y", amount_y.u128().to_string());
-    }
+    // if is_wrong_order {
+    //     response = response
+    //         .add_attribute("amount_x", amount_y.u128().to_string())
+    //         .add_attribute("amount_y", amount_x.u128().to_string());
+    // } else {
+    //     response = response
+    //         .add_attribute("amount_x", amount_x.u128().to_string())
+    //         .add_attribute("amount_y", amount_y.u128().to_string());
+    // }
 
     Ok(response)
 }
@@ -1111,6 +1102,9 @@ fn burn(
         return Err(Error::InvalidInput);
     }
 
+    let mut messages: Vec<CosmosMsg> = Vec::new();
+    let mut burn_tokens: Vec<TokenAmount> = Vec::new();
+
     let mut amounts = vec![[0u8; 32]; ids.len()];
     let mut amounts_out = [0u8; 32];
 
@@ -1125,21 +1119,20 @@ fn burn(
         let bin_reserves = BIN_MAP
             .load(deps.storage, id)
             .map_err(|_| Error::Generic(format!("could not get bin reserves for bin id {}", i)))?;
-        let total_supply = total_supply(
+        let total_supply = _query_total_supply(
             deps.as_ref(),
             id,
             config.lb_token.code_hash.clone(),
             config.lb_token.address.clone(),
         )?;
 
-        let message = _burn(
-            &mut deps,
-            config.lb_token.code_hash.clone(),
-            config.lb_token.address.clone(),
-            info.sender.clone(),
-            id,
-            amount_to_burn,
-        )?;
+        burn_tokens.push(TokenAmount {
+            token_id: id.to_string(),
+            balances: vec![TokenIdBalance {
+                address: info.sender.clone(),
+                amount: amount_to_burn,
+            }],
+        });
 
         let amount_to_burn_u256 = amount_to_burn.uint256_to_u256();
 
@@ -1170,35 +1163,46 @@ fn burn(
         amounts_out = amounts_out.add(amounts_out_from_bin);
     }
 
+    let msg = lb_token::ExecuteMsg::BurnTokens {
+        burn_tokens,
+        memo: None,
+        padding: None,
+    }
+    .to_cosmos_msg(
+        config.lb_token.code_hash,
+        config.lb_token.address.to_string(),
+        None,
+    )?;
+
+    messages.push(msg);
+
     config.reserves = config.reserves.sub(amounts_out);
 
     let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender.clone());
-
-    let mut messages: Vec<CosmosMsg> = Vec::new();
 
     if let Some(msgs) = raw_msgs {
         messages.extend(msgs)
     }
 
-    let transfer_batch = vec![
-        ("sender", info.sender.as_str()),
-        ("from", info.sender.as_str()),
-        ("to", "0000000000000000000"),
-        ("ids", "ids"),
-        ("amounts", "amounts_to_burn"),
-    ];
-    let withdrawn_from_bins = vec![
-        ("sender", info.sender.as_str()),
-        ("to", info.sender.as_str()),
-        ("ids", "ids"),
-        ("amounts", "amounts"),
-    ];
+    // let transfer_batch = vec![
+    //     ("sender", info.sender.as_str()),
+    //     ("from", info.sender.as_str()),
+    //     ("to", "0000000000000000000"),
+    //     ("ids", "ids"),
+    //     ("amounts", "amounts_to_burn"),
+    // ];
+    // let withdrawn_from_bins = vec![
+    //     ("sender", info.sender.as_str()),
+    //     ("to", info.sender.as_str()),
+    //     ("ids", "ids"),
+    //     ("amounts", "amounts"),
+    // ];
 
     Ok((
         amounts,
         Response::default()
-            .add_attributes(transfer_batch)
-            .add_attributes(withdrawn_from_bins)
+            // .add_attributes(transfer_batch)
+            // .add_attributes(withdrawn_from_bins)
             .add_messages(messages),
     ))
 }
@@ -1213,10 +1217,16 @@ fn _burn(
 ) -> Result<CosmosMsg> {
     // TODO: Implement the burn logic for the provided `id` and `amount`.
     // You might need to call the contract's token burning function or interact with the token's storage directly.
-    let msg = lb_pair::LbTokenExecuteMsg::Burn {
-        owner: from,
-        id,
-        amount,
+    let msg = lb_token::ExecuteMsg::BurnTokens {
+        burn_tokens: vec![TokenAmount {
+            token_id: id.to_string(),
+            balances: vec![TokenIdBalance {
+                address: from,
+                amount,
+            }],
+        }],
+        memo: None,
+        padding: None,
     }
     .to_cosmos_msg(code_hash, contract_address.to_string(), None)?;
 
@@ -1416,7 +1426,7 @@ fn serialize_or_err<T: Serialize>(data: &T) -> Result<String> {
 /////////////// QUERY ///////////////
 
 // TODO: refactor this like the LBFactory contract
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetFactory {} => to_binary(&query_factory(deps)?).map_err(Error::CwErr),
@@ -1463,6 +1473,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::TotalSupply { id } => {
             to_binary(&query_total_supply(deps, id)?).map_err(Error::CwErr)
         }
+        QueryMsg::GetLbToken {} => to_binary(&query_lb_token(deps)?).map_err(Error::CwErr),
+        QueryMsg::GetTokens {} => to_binary(&query_tokens(deps)?).map_err(Error::CwErr),
     }
 }
 
@@ -1475,6 +1487,30 @@ fn query_factory(deps: Deps) -> Result<FactoryResponse> {
     let state = CONFIG.load(deps.storage)?;
     let factory = state.factory.address;
     Ok(FactoryResponse { factory })
+}
+
+/// Returns the Liquidity Book Factory.
+///
+/// # Returns
+///
+/// * `factory` - The Liquidity Book Factory
+fn query_lb_token(deps: Deps) -> Result<LbTokenResponse> {
+    let state = CONFIG.load(deps.storage)?;
+    let lb_token = state.lb_token;
+    Ok(LbTokenResponse { lb_token })
+}
+
+/// Returns the token X and Y of the Liquidity Book Pair.
+///
+/// # Returns
+///
+/// * `token_x` - The address of the token X
+fn query_tokens(deps: Deps) -> Result<TokensResponse> {
+    let state = CONFIG.load(deps.storage)?;
+    Ok(TokensResponse {
+        token_x: state.token_x,
+        token_y: state.token_y,
+    })
 }
 
 /// Returns the token X of the Liquidity Book Pair.
@@ -2005,16 +2041,19 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<TotalSupplyResponse> {
     let factory = state.factory.address;
 
     let total_supply =
-        total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?.u256_to_uint256();
+        _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
+            .u256_to_uint256();
     Ok(TotalSupplyResponse { total_supply })
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     match (msg.id, msg.result) {
         (INSTANTIATE_LP_TOKEN_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
-                let contract_address = deps.api.addr_validate(&String::from_utf8(x.to_vec())?)?;
+                let contract_address_string = &String::from_utf8(x.to_vec())?;
+                let trimmed_str = contract_address_string.trim_matches('\"');
+                let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
                 let lb_token_key = ephemeral_storage_r(deps.storage).load()?;
 

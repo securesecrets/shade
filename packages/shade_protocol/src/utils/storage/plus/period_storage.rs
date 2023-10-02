@@ -6,7 +6,6 @@ use crate::{
 };
 pub use secret_storage_plus::{Item, Json, Map, PrimaryKey, Serde};
 
-
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -112,7 +111,7 @@ where
      */
     fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
-            let mut items = self.all.load(storage, seconds)?;
+            let items = self.all.load(storage, seconds)?;
 
             for period in Period::iter() {
                 let k = map_key(seconds, period);
@@ -225,12 +224,10 @@ mod test {
         );
 
         let now = parse_utc_datetime(&"1995-11-13T01:00:00.00Z".to_string()).unwrap();
-        assert!(
-            STORAGE
-                .load_period(&storage, now.timestamp() as u64, Period::Hour)
-                .unwrap()
-                .is_empty(),
-        );
+        assert!(STORAGE
+            .load_period(&storage, now.timestamp() as u64, Period::Hour)
+            .unwrap()
+            .is_empty(),);
 
         STORAGE
             .append(
@@ -280,12 +277,10 @@ mod test {
         );
 
         let now = parse_utc_datetime(&"1995-11-14T00:00:00.00Z".to_string()).unwrap();
-        assert!(
-            STORAGE
-                .load_period(&storage, now.timestamp() as u64, Period::Day)
-                .unwrap()
-                .is_empty(),
-        );
+        assert!(STORAGE
+            .load_period(&storage, now.timestamp() as u64, Period::Day)
+            .unwrap()
+            .is_empty(),);
 
         STORAGE
             .append(
@@ -335,12 +330,10 @@ mod test {
         );
 
         let now = parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string()).unwrap();
-        assert!(
-            STORAGE
-                .load_period(&storage, now.timestamp() as u64, Period::Month)
-                .unwrap()
-                .is_empty(),
-        );
+        assert!(STORAGE
+            .load_period(&storage, now.timestamp() as u64, Period::Month)
+            .unwrap()
+            .is_empty(),);
 
         STORAGE
             .append(

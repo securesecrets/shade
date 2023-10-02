@@ -41,7 +41,7 @@ pub struct StaticFeeParameters {
     pub max_volatility_accumulator: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MintArrays {
     pub ids: Vec<U256>,
     pub amounts: Vec<Bytes32>,

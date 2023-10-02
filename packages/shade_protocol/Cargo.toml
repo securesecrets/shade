@@ -117,7 +117,10 @@ cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
 cosmwasm-schema = "1.1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
 ethnum = { version = "1" }
-
+ secret-toolkit = { version = "0.9.0", default-features = false, features = [
+  "storage", "viewing-key", "permit", "serialization", 
+  #"crypto", "utils", 
+] }
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"

@@ -1,15 +1,30 @@
 [package]
 name = "lb_token"
 version = "0.1.0"
+authors = ["DDT5","itsHaseebSaeed"]
 edition = "2021"
+
 exclude = [
-  # Those files are contract-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
   "contract.wasm",
   "hash.txt",
 ]
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
 
 [features]
 default = []
@@ -18,21 +33,24 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-libraries={path = "../../libraries"}
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret", features = ["stargate"] }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret" }
-cosmwasm-schema = { version = "1.2" }
-# schemars = { version = "0.8" }
-serde = { version = "1" }
-# serde-json-wasm = { version = "0.5"}
-thiserror = { version = "1" }
-secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", tag = "v0.8.1", default-features = false, features = ["storage"] }
-# cw-storage-plus = { version = "1", default-features = false, features = ["macro"] }
-ethnum = { version = "1" }
+#snafu = { version = "0.6.3" }
+serde = { version = "1.0.158", default-features = false, features = ["derive"] }
+schemars = "0.8.12"
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.10" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.1.10"  }
+ secret-toolkit = { version = "0.9.0", default-features = false, features = [
+  "storage", "viewing-key", "permit", "serialization", 
+  #"crypto", "utils", 
+] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "liquidity_book","lb-libraries",
+] }
+
+#base64 = "0.21.2"
+#rand = { version = "0.8.5", default-features = false }
+#getrandom = { version = "0.2.10", features = ["js"] }  # nope
 
 [dev-dependencies]
-anyhow = "1"
-# cw-multi-test = { version = "0.16.0", default-features = false }
-
-[[bin]]
-name = "schema"
+cosmwasm-schema = "1.1.8"
+serde_json = "1.0.8"
+secret-toolkit = { version = "0.9.0", default-features = false, features = ["crypto"] }

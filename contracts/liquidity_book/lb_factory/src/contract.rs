@@ -340,6 +340,7 @@ fn try_create_lb_pair(
                 viewing_key: String::new(),
                 //TODO add pair_name
                 pair_name: String::new(),
+                entropy: String::new(),
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

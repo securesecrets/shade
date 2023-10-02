@@ -21,13 +21,7 @@ use crate::{
         snip20::{
             errors::{invalid_decimals, invalid_name_format, invalid_symbol_format},
             manager::{
-                Admin,
-                Balance,
-                CoinInfo,
-                Config,
-                ContractStatusLevel,
-                Minters,
-                RandSeed,
+                Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed,
                 TotalSupply,
             },
             transaction_history::{RichTx, Tx},
@@ -35,10 +29,7 @@ use crate::{
     },
     snip20::manager::QueryAuth,
     utils::{
-        crypto::sha_256,
-        generic_response::ResponseStatus,
-        ExecuteCallback,
-        InstantiateCallback,
+        crypto::sha_256, generic_response::ResponseStatus, ExecuteCallback, InstantiateCallback,
         Query,
     },
     Contract,

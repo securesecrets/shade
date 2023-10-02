@@ -229,8 +229,6 @@ pub fn balance_query(
             msg: to_binary(&msg)?,
         }))?;
 
-    match result {
-        QueryAnswer::Balance { amount, .. } => Ok(amount),
-        _ => Err(StdError::generic_err("Invalid Balance Response")), //TODO: better error
-    }
+    let QueryAnswer::Balance { amount, .. } = result;
+    Ok(amount)
 }

@@ -34,6 +34,11 @@ ethnum = { version = "1" }
 [dev-dependencies]
 anyhow = "1"
 # cw-multi-test = { version = "0.16.0", default-features = false }
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+  "lb_pair",
+  "lb_token",
+  "snip20",
+] }
 
 [[bin]]
 name = "schema"

@@ -14,6 +14,8 @@ default = []
 airdrop = ["dep:airdrop"]
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
+lb_pair = ["dep:lb_pair"]
+lb_token = ["dep:lb_token"]
 #liability_mint = ["dep:liability_mint"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
@@ -38,6 +40,8 @@ snip20_migration = ["dep:snip20_migration"]
 [dependencies]
 airdrop = { path = "../../contracts/airdrop", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
+lb_pair = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_pair", optional = true }
+lb_token = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_token", optional = true }
 #liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }

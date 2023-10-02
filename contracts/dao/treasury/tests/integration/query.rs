@@ -1,7 +1,6 @@
 use shade_multi_test::interfaces::{
     dao::{init_dao, mock_adapter_sub_tokens, update_dao},
-    snip20,
-    treasury,
+    snip20, treasury,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
@@ -26,6 +25,7 @@ pub fn query() {
                 .timestamp() as u64,
         ),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
     init_dao(
         &mut app,
@@ -78,15 +78,13 @@ pub fn query() {
     assert!(!treasury::batch_balance_query(&app, &contracts, vec!["SSCRT", "SHD"]).is_ok());
     assert!(!treasury::balance_query(&app, &contracts, "SHD",).is_ok());
     assert!(!treasury::reserves_query(&app, &contracts, "SHD",).is_ok());
-    assert!(
-        !treasury::allowance_query(
-            &app,
-            &contracts,
-            "SHD",
-            SupportedContracts::TreasuryManager(0)
-        )
-        .is_ok()
-    );
+    assert!(!treasury::allowance_query(
+        &app,
+        &contracts,
+        "SHD",
+        SupportedContracts::TreasuryManager(0)
+    )
+    .is_ok());
     treasury::register_asset_exec(&mut app, "admin", &contracts, "SHD").unwrap();
     assert_eq!(
         treasury::batch_balance_query(&app, &contracts, vec!["SSCRT", "SHD"]).unwrap(),
@@ -96,102 +94,86 @@ pub fn query() {
         treasury::run_level_query(&app, &contracts,).unwrap(),
         dao::treasury::RunLevel::Normal
     );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            Some("1995-11-13T00:00:00.00Z".to_string()),
-            None,
-            Period::Hour,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            Some("1995-11-13T00:00:00.00Z".to_string()),
-            None,
-            Period::Day,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            Some("1995-11-13T00:00:00.00Z".to_string()),
-            None,
-            Period::Month,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            None,
-            Some(Uint128::new(816220800)),
-            Period::Hour,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            None,
-            Some(Uint128::new(816220800)),
-            Period::Day,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            None,
-            Some(Uint128::new(816220800)),
-            Period::Month,
-        )
-        .unwrap()
-        .is_empty()
-    );
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        Some("1995-11-13T00:00:00.00Z".to_string()),
+        None,
+        Period::Hour,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        Some("1995-11-13T00:00:00.00Z".to_string()),
+        None,
+        Period::Day,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        Some("1995-11-13T00:00:00.00Z".to_string()),
+        None,
+        Period::Month,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        None,
+        Some(Uint128::new(816220800)),
+        Period::Hour,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        None,
+        Some(Uint128::new(816220800)),
+        Period::Day,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        None,
+        Some(Uint128::new(816220800)),
+        Period::Month,
+    )
+    .unwrap()
+    .is_empty());
     assert!(
         !treasury::metrics_query(&app, &contracts, None, None, Period::Month,)
             .unwrap()
             .is_empty()
     );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            Some("1995-11-13T00:00:00.00Z".to_string()),
-            Some(Uint128::new(816220800)),
-            Period::Month,
-        )
-        .is_ok()
-    );
-    assert!(
-        treasury::metrics_query(
-            &app,
-            &contracts,
-            None,
-            Some(Uint128::new(
-                parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
-                    .unwrap()
-                    .timestamp() as u128
-            )),
-            Period::Month,
-        )
-        .unwrap()
-        .is_empty()
-    );
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        Some("1995-11-13T00:00:00.00Z".to_string()),
+        Some(Uint128::new(816220800)),
+        Period::Month,
+    )
+    .is_ok());
+    assert!(treasury::metrics_query(
+        &app,
+        &contracts,
+        None,
+        Some(Uint128::new(
+            parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
+                .unwrap()
+                .timestamp() as u128
+        )),
+        Period::Month,
+    )
+    .unwrap()
+    .is_empty());
     mock_adapter_sub_tokens(
         &mut app,
         "admin",
@@ -208,33 +190,30 @@ pub fn query() {
                 .timestamp() as u64,
         ),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            None,
-            Some(Uint128::new(
-                parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
-                    .unwrap()
-                    .timestamp() as u128
-            )),
-            Period::Month,
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert!(
-        !treasury::metrics_query(
-            &app,
-            &contracts,
-            Some("1995-12-13T00:00:00.00Z".to_string()),
-            None,
-            Period::Month,
-        )
-        .unwrap()
-        .is_empty()
-    );
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        None,
+        Some(Uint128::new(
+            parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
+                .unwrap()
+                .timestamp() as u128
+        )),
+        Period::Month,
+    )
+    .unwrap()
+    .is_empty());
+    assert!(!treasury::metrics_query(
+        &app,
+        &contracts,
+        Some("1995-12-13T00:00:00.00Z".to_string()),
+        None,
+        Period::Month,
+    )
+    .unwrap()
+    .is_empty());
 }

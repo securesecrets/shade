@@ -233,3 +233,81 @@ impl OracleSample {
         (cumulative_id, cumulative_volatility, cumulative_bin_crossed)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encode() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_oracle_length(), 3);
+        assert_eq!(sample.get_cumulative_id(), 1000);
+        assert_eq!(sample.get_cumulative_volatility(), 2000);
+        assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
+        assert_eq!(sample.get_sample_lifetime(), 4);
+        assert_eq!(sample.get_sample_creation(), 123456);
+    }
+
+    #[test]
+    fn test_get_oracle_length() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_oracle_length(), 3);
+    }
+
+    #[test]
+    fn test_get_cumulative_id() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_cumulative_id(), 1000);
+    }
+
+    #[test]
+    fn test_get_cumulative_volatility() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_cumulative_volatility(), 2000);
+    }
+
+    #[test]
+    fn test_get_cumulative_bin_crossed() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
+    }
+
+    #[test]
+    fn test_get_sample_lifetime() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_sample_lifetime(), 4);
+    }
+
+    #[test]
+    fn test_get_sample_creation() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_sample_creation(), 123456);
+    }
+
+    #[test]
+    fn test_get_sample_last_update() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        assert_eq!(sample.get_sample_last_update(), 123460); // 123456 + 4
+    }
+
+    #[test]
+    fn test_get_weighted_average() {
+        let sample1 = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        let sample2 = OracleSample::encode(3, 2000, 4000, 6000, 4, 123456);
+        let (avg_id, avg_vol, avg_bin) = OracleSample::get_weighted_average(sample1, sample2, 1, 1);
+        assert_eq!(avg_id, 1500);
+        assert_eq!(avg_vol, 3000);
+        assert_eq!(avg_bin, 4500);
+    }
+
+    #[test]
+    fn test_update() {
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
+        let (new_id, new_vol, new_bin) = sample.update(1, 1000, 2000, 3000);
+
+        assert_eq!(new_id, 2000);
+        assert_eq!(new_vol, 4000);
+        assert_eq!(new_bin, 6000);
+    }
+}

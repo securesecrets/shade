@@ -9,7 +9,7 @@ use crate::utils::liquidity_book::transfer::HandleMsg;
 // use crate::utils::crypto::{sha_256, Prng};
 
 pub const VIEWING_KEY_SIZE: usize = 32;
-const VIEWING_KEY_PREFIX: &str = "api_key_";
+// const VIEWING_KEY_PREFIX: &str = "api_key_";
 
 #[cw_serde]
 pub struct ViewingKey(pub String);

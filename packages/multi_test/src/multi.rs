@@ -20,6 +20,18 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
+#[cfg(feature = "lb_pair")]
+pub mod lb_pair {
+    use lb_pair;
+    multi_derive::implement_multi_with_reply!(LbPair, lb_pair);
+}
+
+#[cfg(feature = "lb_token")]
+pub mod lb_token {
+    use lb_token;
+    multi_derive::implement_multi!(LbToken, lb_token);
+}
+
 #[cfg(feature = "liability_mint")]
 pub mod liability_mint {
     use liability_mint;

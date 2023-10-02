@@ -72,6 +72,92 @@ pub fn deposit_exec(
     }
 }
 
+pub fn add_minters_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    minters: Vec<String>,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::AddMinters {
+        minters,
+        padding: None,
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &vec![],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
+pub fn mint_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    coins: &Vec<Coin>,
+    recipient: String,
+    amount: Uint128,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::Mint {
+        padding: None,
+        recipient,
+        amount,
+        memo: None,
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        coins,
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
+pub fn set_allowance_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    spender: String,
+    amount: Uint128,
+    expiration: Option<u64>,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::IncreaseAllowance {
+        spender,
+        amount,
+        expiration,
+        padding: None,
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &vec![],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
 pub fn set_viewing_key_exec(
     chain: &mut App,
     sender: &str,
