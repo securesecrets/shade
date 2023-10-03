@@ -12,7 +12,7 @@ use crate::utils::{
         state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
         txhistory::Tx,
     },
-    InstantiateCallback, Query,
+    ExecuteCallback, InstantiateCallback, Query,
 };
 
 use secret_toolkit::permit::Permit;
@@ -213,6 +213,10 @@ pub enum ExecuteMsg {
         code_hash: String,
         padding: Option<String>,
     },
+}
+
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 impl ExecuteMsg {

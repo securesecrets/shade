@@ -321,8 +321,8 @@ fn try_mint_tokens(
             let curate_token = CurateTokenId {
                 token_info: TokenInfoMsg {
                     token_id: mint_token.token_id.clone(),
-                    name: format!("{}-{}", &config.lb_pair_info.name, mint_token.token_id),
-                    symbol: format!("{}", &config.lb_pair_info.symbol),
+                    name: format!("LP-{}", &config.lb_pair_info.symbol),
+                    symbol: format!("LP-{}", &config.lb_pair_info.symbol),
                     token_config: TknConfig::Fungible {
                         minters: Vec::new(), // No need for minter curator will be the minter
                         decimals: config.lb_pair_info.decimals,
@@ -364,6 +364,7 @@ fn try_mint_tokens(
         // check if sender is a minter
         // verify_minter(token_info_op.as_ref().unwrap(), &info)?;
         // add balances
+
         for add_balance in mint_token.balances {
             exec_change_balance(
                 deps.storage,
@@ -994,10 +995,12 @@ fn is_valid_name(name: &str) -> bool {
 
 fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
-    let len_is_valid = (3..=50).contains(&len);
+    (3..=30).contains(&len)
+    // let len = symbol.len();
+    // let len_is_valid = (3..=50).contains(&len);
 
-    // len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
-    len_is_valid && symbol.bytes().all(|byte| byte.is_ascii_uppercase())
+    // // len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
+    // len_is_valid && symbol.bytes().all(|byte| byte.is_ascii_uppercase())
 }
 
 fn verify_admin(contract_config: &ContractConfig, info: &MessageInfo) -> StdResult<()> {
@@ -1100,6 +1103,7 @@ fn exec_curate_token_id(
             "Ticker symbol is not in expected format [A-Z]{3,6}",
         ));
     }
+
     if initial_token.token_info.token_config.flatten().decimals > 18 {
         return Err(StdError::generic_err("Decimals must not exceed 18"));
     }

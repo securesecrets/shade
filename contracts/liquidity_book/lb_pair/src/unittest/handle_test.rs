@@ -5,7 +5,7 @@ use cosmwasm_std::{Uint128, Uint256};
 use shade_multi_test::interfaces::{lb_pair, lb_token, snip20};
 use shade_protocol::contract_interfaces::liquidity_book::lb_token::QueryAnswer;
 
-use super::test_helper::{init_addrs, remove_liquidity_parameters_helper};
+use crate::test_helper::{init_addrs, remove_liquidity_parameters_helper};
 use crate::unittest::test_helper::{
     assert_approx_eq_rel, init_lb_pair, liquidity_parameters_helper,
     lp_tokens_tempate_for_100_sscrts, mint_increase_allowance_helper,

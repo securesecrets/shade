@@ -63,7 +63,6 @@ pub enum ExecuteMsg {
         new_length: u16,
     },
     SetStaticFeeParameters {
-        active_id: u32,
         base_factor: u16,
         filter_period: u16,
         decay_period: u16,

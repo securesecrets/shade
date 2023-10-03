@@ -12,4 +12,5 @@ pub struct NextPairKey {
     pub token_b: TokenType,
     pub bin_step: u16,
     pub code_hash: String,
+    pub is_open: bool,
 }

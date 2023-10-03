@@ -1,15 +1,6 @@
 use shade_protocol::{
     c_std::{
-        to_binary,
-        Addr,
-        Binary,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdResult,
-        Storage,
-        SubMsg,
+        to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdResult, Storage, SubMsg,
         Uint128,
     },
     contract_interfaces::snip20::{
@@ -17,8 +8,7 @@ use shade_protocol::{
         errors::transfer_disabled,
         manager::{Allowance, Balance, CoinInfo, Config, ReceiverHash},
         transaction_history::store_transfer,
-        ExecuteAnswer,
-        ReceiverHandleMsg,
+        ExecuteAnswer, ReceiverHandleMsg,
     },
     utils::{
         generic_response::ResponseStatus::Success,
@@ -102,7 +92,11 @@ pub fn try_batch_transfer(
             &block,
         )?;
     }
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::BatchTransfer { status: Success })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::BatchTransfer {
+            status: Success,
+        })?),
+    )
 }
 
 #[allow(clippy::too_many_arguments)]

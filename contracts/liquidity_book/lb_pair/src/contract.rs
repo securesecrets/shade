@@ -3,8 +3,8 @@
 use crate::{prelude::*, state::*};
 use core::panic;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
+    to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
 };
 use ethnum::U256;
 use serde::Serialize;
@@ -36,7 +36,7 @@ use shade_protocol::{
     },
     snip20,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Sub};
 use tokens::TokenType;
 use types::{Bytes32, LBPairInformation, MintArrays};
 
@@ -126,7 +126,9 @@ pub fn instantiate(
             msg.pair_parameters.max_volatility_accumulator,
         )
         .unwrap();
-    let pair_parameters = pair_parameters.set_active_id(msg.active_id)?;
+    let pair_parameters = pair_parameters
+        .set_active_id(msg.active_id)?
+        .update_id_reference();
 
     //RegisterReceiving Token
     let mut messages = vec![];
@@ -204,7 +206,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             try_increase_oracle_length(deps, env, info, new_length)
         }
         ExecuteMsg::SetStaticFeeParameters {
-            active_id,
             base_factor,
             filter_period,
             decay_period,
@@ -216,7 +217,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             deps,
             env,
             info,
-            active_id,
             base_factor,
             filter_period,
             decay_period,
@@ -304,7 +304,6 @@ fn try_swap(
     } else {
         BinHelper::received_y(amounts_received)
     };
-    // TODO: compare with 0 instead
     if amounts_left == [0u8; 32] {
         return Err(Error::InsufficientAmountIn);
     };
@@ -325,6 +324,7 @@ fn try_swap(
                 active_id
             ))
         })?;
+
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(active_id)?;
 
@@ -363,7 +363,7 @@ fn try_swap(
                 )?;
 
                 // TODO: decide on the nature of the return message / event
-                return Ok(Response::default());
+                // return Ok(Response::default());
             }
         }
 
@@ -372,10 +372,9 @@ fn try_swap(
         } else {
             let next_id = _get_next_non_empty_bin(&tree, swap_for_y, active_id);
 
-            if next_id == 0 || next_id == (2u32 ^ 24 - 1) {
+            if next_id == 0 || next_id == (U24::MAX) {
                 return Err(Error::OutOfLiquidity);
             }
-
             active_id = next_id;
         }
     }
@@ -471,35 +470,12 @@ pub fn try_add_liquidity(
     {
         return Err(Error::WrongPair);
     }
-    let mut transfer_messages = Vec::new();
-    // 2- tokens checking and transfer
-    for (token, amount) in [
-        (config.token_x.clone(), liquidity_parameters.amount_x),
-        (config.token_y.clone(), liquidity_parameters.amount_y),
-    ]
-    .iter()
-    {
-        match token {
-            TokenType::CustomToken {
-                contract_addr,
-                token_code_hash,
-            } => {
-                let msg =
-                    token.transfer_from(*amount, info.sender.clone(), env.contract.address.clone());
 
-                if let Some(m) = msg {
-                    transfer_messages.push(m);
-                }
-            }
-            TokenType::NativeToken { .. } => {
-                token.assert_sent_native_token_balance(&info, *amount)?;
-            }
-        }
-    }
-    response = response.add_messages(transfer_messages);
+    // response = response.add_messages(transfer_messages);
 
     //3- Main function -> add_liquidity_internal
-    let response = add_liquidity_internal(deps, env, info, &liquidity_parameters, response)?;
+    let response =
+        add_liquidity_internal(deps, env, info, &config, &liquidity_parameters, response)?;
 
     Ok(response)
 }
@@ -508,6 +484,7 @@ pub fn add_liquidity_internal(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    config: &State,
     liquidity_parameters: &LiquidityParameters,
     mut response: Response,
 ) -> Result<Response> {
@@ -543,6 +520,7 @@ pub fn add_liquidity_internal(
         deps,
         env,
         info.clone(),
+        &config,
         info.sender.clone(),
         liquidity_configs,
         info.sender,
@@ -670,6 +648,7 @@ fn mint(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    config: &State,
     to: Addr,
     liquidity_configs: Vec<LiquidityConfigurations>,
     refund_to: Addr,
@@ -716,32 +695,49 @@ fn mint(
         state.reserves = state.reserves.add(amounts_received.sub(amounts_left)); //Total liquidity of pool
         Ok(state)
     })?;
-    if amounts_left.iter().any(|&x| x != 0) {
-        if let Some(msgs) = BinHelper::transfer(amounts_left, token_x, token_y, refund_to) {
-            messages.extend(msgs);
-        };
+    // if amounts_left.iter().any(|&x| x != 0) {
+    //     if let Some(msgs) = BinHelper::transfer(amounts_left, token_x, token_y, refund_to) {
+    //         messages.extend(msgs);
+    //     };
+    // }
+
+    let (amount_left_x, amount_left_y) = amounts_left.decode();
+
+    let mut transfer_messages = Vec::new();
+    // 2- tokens checking and transfer
+    for (token, amount) in [
+        (
+            config.token_x.clone(),
+            amount_received_x.sub(Uint128::from(amount_left_x)),
+        ),
+        (
+            config.token_y.clone(),
+            amount_received_y.sub(Uint128::from(amount_left_y)),
+        ),
+    ]
+    .iter()
+    {
+        match token {
+            TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+            } => {
+                let msg =
+                    token.transfer_from(*amount, info.sender.clone(), env.contract.address.clone());
+
+                if let Some(m) = msg {
+                    transfer_messages.push(m);
+                }
+            }
+            TokenType::NativeToken { .. } => {
+                token.assert_sent_native_token_balance(&info, *amount)?;
+            }
+        }
     }
 
-    // // TODO: decide on the nature of the return message / event
-    // let transfer_batch = vec![
-    //     ("sender", info.sender.as_str()),
-    //     // This is just to say that tokens are being newly minted.
-    //     ("from", "0000000000000000000"),
-    //     ("to", to.as_str()),
-    //     ("ids", "arrays.ids"),
-    //     ("amounts", "liquidity_minted"),
-    // ];
-    // let deposited_to_bins = vec![
-    //     ("sender", info.sender.as_str()),
-    //     ("to", to.as_str()),
-    //     ("ids", "arrays.ids"),
-    //     ("amounts", "arrays.amounts"),
-    // ];
-
     response = response
-        // .add_attributes(transfer_batch)
-        // .add_attributes(deposited_to_bins)
-        .add_messages(messages);
+        .add_messages(messages)
+        .add_messages(transfer_messages);
 
     Ok((
         amounts_received,
@@ -924,7 +920,7 @@ fn _update_bin(
     }
 
     if shares == 0 || amounts_in_to_bin == [0u8; 32] {
-        return Err(Error::ZeroShares { id });
+        return Err(Error::ZeroAmount { id });
     }
 
     if total_supply == 0 {
@@ -1016,7 +1012,7 @@ pub fn try_remove_liquidity(
 
     let (amount_x, amount_y, mut response) = remove_liquidity(
         deps,
-        env,
+        env.clone(),
         info.clone(),
         info.sender.clone(),
         amount_x_min,
@@ -1024,20 +1020,6 @@ pub fn try_remove_liquidity(
         remove_liquidity_params.ids,
         remove_liquidity_params.amounts,
     )?;
-
-    // response = response
-    //     .add_attribute("action", "remove_liquidity")
-    //     .add_attribute("to", info.sender.as_str());
-
-    // if is_wrong_order {
-    //     response = response
-    //         .add_attribute("amount_x", amount_y.u128().to_string())
-    //         .add_attribute("amount_y", amount_x.u128().to_string());
-    // } else {
-    //     response = response
-    //         .add_attribute("amount_x", amount_x.u128().to_string())
-    //         .add_attribute("amount_y", amount_y.u128().to_string());
-    // }
 
     Ok(response)
 }
@@ -1113,7 +1095,7 @@ fn burn(
         let amount_to_burn = amounts_to_burn[i];
 
         if amount_to_burn.is_zero() {
-            return Err(Error::ZeroAmount { id });
+            return Err(Error::ZeroShares { id });
         }
 
         let bin_reserves = BIN_MAP
@@ -1155,6 +1137,10 @@ fn burn(
 
         if total_supply == amount_to_burn_u256 {
             BIN_MAP.remove(deps.storage, id);
+            BIN_TREE.update(deps.storage, |mut tree| -> StdResult<_> {
+                tree.remove(id);
+                Ok(tree)
+            })?;
         } else {
             BIN_MAP.save(deps.storage, id, &bin_reserves)?;
         }
@@ -1180,57 +1166,16 @@ fn burn(
 
     let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender.clone());
 
+    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
+        state.reserves = state.reserves.sub(amounts_out);
+        Ok(state)
+    })?;
+
     if let Some(msgs) = raw_msgs {
         messages.extend(msgs)
     }
 
-    // let transfer_batch = vec![
-    //     ("sender", info.sender.as_str()),
-    //     ("from", info.sender.as_str()),
-    //     ("to", "0000000000000000000"),
-    //     ("ids", "ids"),
-    //     ("amounts", "amounts_to_burn"),
-    // ];
-    // let withdrawn_from_bins = vec![
-    //     ("sender", info.sender.as_str()),
-    //     ("to", info.sender.as_str()),
-    //     ("ids", "ids"),
-    //     ("amounts", "amounts"),
-    // ];
-
-    Ok((
-        amounts,
-        Response::default()
-            // .add_attributes(transfer_batch)
-            // .add_attributes(withdrawn_from_bins)
-            .add_messages(messages),
-    ))
-}
-
-fn _burn(
-    deps: &mut DepsMut,
-    code_hash: String,
-    contract_address: Addr,
-    from: Addr,
-    id: u32,
-    amount: Uint256,
-) -> Result<CosmosMsg> {
-    // TODO: Implement the burn logic for the provided `id` and `amount`.
-    // You might need to call the contract's token burning function or interact with the token's storage directly.
-    let msg = lb_token::ExecuteMsg::BurnTokens {
-        burn_tokens: vec![TokenAmount {
-            token_id: id.to_string(),
-            balances: vec![TokenIdBalance {
-                address: from,
-                amount,
-            }],
-        }],
-        memo: None,
-        padding: None,
-    }
-    .to_cosmos_msg(code_hash, contract_address.to_string(), None)?;
-
-    Ok(msg)
+    Ok((amounts, Response::default().add_messages(messages)))
 }
 
 /// Collect the protocol fees from the pool.
@@ -1348,7 +1293,6 @@ fn try_set_static_fee_parameters(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    active_id: u32,
     base_factor: u16,
     filter_period: u16,
     decay_period: u16,
@@ -1761,7 +1705,13 @@ fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
         })
     } else {
         // This happens if the oracle hasn't been used yet.
-        Err(Error::OracleErr(OracleError::InvalidOracleId))
+        Ok(OracleParametersResponse {
+            sample_lifetime,
+            size: 0,
+            active_size: 0,
+            last_updated: 0,
+            first_timestamp: 0,
+        })
     }
 }
 
@@ -1892,7 +1842,6 @@ fn query_swap_in(
 
     params = params.update_references(&env.block.time)?;
 
-    // TODO: do something more idiomatic, like a 'while let Some(item) = iterator.next()' maybe
     loop {
         let bin_reserves = BIN_MAP
             .load(deps.storage, id)
@@ -1930,8 +1879,7 @@ fn query_swap_in(
             break;
         } else {
             let next_id = _get_next_non_empty_bin(&tree, swap_for_y, id);
-            // TODO: or next_id == uint24::MAX
-            if next_id == 0 || next_id == u32::MAX {
+            if next_id == 0 || next_id == U24::MAX {
                 break;
             }
 
@@ -1983,11 +1931,8 @@ fn query_swap_out(
     params = params.update_references(&env.block.time)?;
 
     loop {
-        let bin_reserves = BIN_MAP.load(deps.storage, id).map_err(|_| {
-            Error::Generic(format!("could not get bin reserves for active id {}", id))
-        })?;
-
-        if BinHelper::is_empty(bin_reserves, !swap_for_y) {
+        let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or_default();
+        if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(id)?;
 
             let (amounts_in_with_fees, amounts_out_of_bin, total_fees) = BinHelper::get_amounts(
@@ -1998,6 +1943,7 @@ fn query_swap_out(
                 id,
                 amounts_in_left,
             )?;
+
             // TODO: have a way to compare a packed_u128 with an integer?
             if amounts_in_with_fees > [0u8; 32] {
                 amounts_in_left = amounts_in_left.sub(amounts_in_with_fees);
@@ -2014,7 +1960,7 @@ fn query_swap_out(
             let next_id = _get_next_non_empty_bin(&tree, swap_for_y, id);
 
             // TODO: or next_id == uint24::MAX
-            if next_id == 0 || next_id == u32::MAX {
+            if next_id == 0 || next_id == U24::MAX {
                 break;
             }
 

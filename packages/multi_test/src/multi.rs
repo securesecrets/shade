@@ -20,6 +20,12 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
+#[cfg(feature = "lb_factory")]
+pub mod lb_factory {
+    use lb_factory;
+    multi_derive::implement_multi_with_reply!(LbFactory, lb_factory);
+}
+
 #[cfg(feature = "lb_pair")]
 pub mod lb_pair {
     use lb_pair;

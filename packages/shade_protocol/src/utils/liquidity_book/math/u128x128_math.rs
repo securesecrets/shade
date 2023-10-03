@@ -21,8 +21,8 @@ pub enum U128x128MathError {
 
 const LOG_SCALE_OFFSET: U256 = U256::new(127u128);
 const LOG_SCALE: U256 = U256::new(1u128 << 127u128);
-// TODO: verify this works out to 2^256
-const LOG_SCALE_SQUARED: U256 = U256::from_words(1u128 << 127u128, 0);
+// TODO: verify this works out to 2^256, 2^127 * 2^127
+const LOG_SCALE_SQUARED: U256 = U256::from_words(1u128 << 127u128 - 1, 0);
 
 pub struct U128x128Math;
 
@@ -76,6 +76,7 @@ impl U128x128Math {
         }
 
         // Calculate the integer part of the logarithm and add it to the result and finally calculate y = x * 2^(-n).
+
         let n = BitMath::most_significant_bit(x >> LOG_SCALE_OFFSET);
 
         // The integer part of the logarithm as a signed 129.127-binary fixed-point number. The operation can't overflow

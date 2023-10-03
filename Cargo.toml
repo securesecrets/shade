@@ -26,6 +26,8 @@ members = [
   "contracts/liquidity_book/lb_pair",
   "contracts/liquidity_book/lb_token",
   #"contracts/liquidity_book/router",
+  "contracts/liquidity_book/tests",
+
 
   # Staking
   #"contracts/basic_staking",
