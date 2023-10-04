@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Decimal, Uint128};
-use shade_protocol::utils::asset::{Contract, RawContract};
+use shade_protocol::utils::{Query, asset::{Contract, RawContract}};
 
 use lending_utils::amount::token_to_base;
 
@@ -86,6 +86,10 @@ pub enum ControllerQuery {
     },
 }
 
+impl Query for ControllerQuery {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[cw_serde]
 pub struct TransferableAmountResp {
     pub transferable: Uint128,
@@ -115,6 +119,10 @@ pub enum QueryMsg {
     /// Queries for funds distributed but not yet withdrawn by owner
     #[returns(WithdrawableFundsResponse)]
     WithdrawableFunds { owner: String },
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
