@@ -24,13 +24,16 @@ members = [
 
   # DAO
   # - Core
-  "contracts/dao/treasury", 
-  "contracts/dao/treasury_manager", 
+  "contracts/dao/treasury",
+  "contracts/dao/treasury_manager",
   # - Adapters
   "contracts/dao/scrt_staking",
   "contracts/dao/stkd_scrt",
   # "contracts/dao/rewards_emission",
   # "contracts/dao/lp_shdswap",
+
+  # Lending protocol
+  "contracts/lend-token",
 
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1

@@ -1,10 +1,10 @@
 [package]
 name = "lend-token"
-version = { workspace = true }
+version = "0.0.1"
 authors = ["Jakub <jakub@moonbite.space>"]
-edition = { workspace = true }
+edition = "2021"
 description = "Implementation of Token contract for lending protocol"
-repository = { workspace = true }
+repository = "https://github.com/securesecrets/shade"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -27,5 +27,4 @@ thiserror = "1"
 # utils = { version = "0.7.0", path = "./packages/utils" }
 
 [dev-dependencies]
-shade-multi-test = { path = "../../../packages/multi_test", features = [ "snip20" ] }
 anyhow = "1"

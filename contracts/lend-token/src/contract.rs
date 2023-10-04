@@ -4,7 +4,6 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
     Uint128,
 };
-use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 use utils::amount::{base_to_token, token_to_base};
 use utils::coin::Coin;
@@ -30,8 +29,6 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     let token_info = TokenInfo {
         name: msg.name,
         symbol: msg.symbol,
