@@ -39,6 +39,9 @@ members = [
   # Lending protocol
   "contracts/lend-token",
 
+  # Lending protocol
+  "contracts/lend-token",
+
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1
   # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
