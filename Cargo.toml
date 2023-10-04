@@ -7,6 +7,7 @@ members = [
   "packages/multi_test",
   "packages/multi_derive",
   "packages/contract_derive",
+  "packages/lending_utils",
 
   # Network setups
   "contracts/airdrop",

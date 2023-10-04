@@ -16,7 +16,6 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "snip20",
   "storage_plus",
 ] }
-cw20 = { workspace = true }
 schemars = "0.8"
 serde = "1"
 thiserror = "1"
