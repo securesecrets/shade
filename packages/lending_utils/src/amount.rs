@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Fraction, Uint128, Uint256};
+use shade_protocol::c_std::{Decimal, Fraction, Uint128, Uint256};
 
 /// Converts the given amount of base tokens to the equivalent amount of cTokens
 pub fn base_to_token(amount: Uint128, multiplier: Decimal) -> Uint128 {
