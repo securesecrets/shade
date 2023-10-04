@@ -124,6 +124,7 @@ pub fn instantiate(
             msg.pair_parameters.variable_fee_control,
             msg.pair_parameters.protocol_share,
             msg.pair_parameters.max_volatility_accumulator,
+            msg.bin_step,
         )
         .unwrap();
     let pair_parameters = pair_parameters
@@ -154,10 +155,11 @@ pub fn instantiate(
         reserves: [0u8; 32],
         protocol_fees: [0u8; 32],
         lb_token: ContractInfo {
-            address: Addr::unchecked("lb_token".to_string()),
-            code_hash: "lb_token".to_string(),
+            address: Addr::unchecked("".to_string()),
+            code_hash: "".to_string(),
         },
         viewing_key,
+        protocol_fees_recipient: msg.protocol_fee_recipient,
     };
 
     deps.api
@@ -194,6 +196,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             to,
             amount_received,
         } => try_swap(deps, env, info, swap_for_y, to, amount_received),
+        //TODO: Flash loan
         ExecuteMsg::FlashLoan {} => todo!(),
         ExecuteMsg::AddLiquidity {
             liquidity_parameters,
@@ -1181,7 +1184,7 @@ fn burn(
 /// Collect the protocol fees from the pool.
 fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_protocol_fee_recipient(&info.sender, &state.factory.address)?;
+    // only_protocol_fee_recipient(&info.sender, &state.factory.address)?;
 
     let token_x = state.token_x;
     let token_y = state.token_y;
@@ -1212,7 +1215,7 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
                 collected_protocol_fees,
                 token_x,
                 token_y,
-                info.sender.clone(),
+                state.protocol_fees_recipient,
             ) {
                 messages.extend(msgs);
             };
@@ -1228,7 +1231,7 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
             .add_attribute("Action performed by", info.sender.to_string())
             .add_messages(messages))
     } else {
-        Err(Error::Generic("???".to_string()))
+        Err(Error::Generic("Not Enough funds".to_string()))
     }
 }
 
@@ -1315,6 +1318,7 @@ fn try_set_static_fee_parameters(
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
+        state.bin_step,
     )?;
 
     CONFIG.update(deps.storage, |mut state| -> StdResult<State> {

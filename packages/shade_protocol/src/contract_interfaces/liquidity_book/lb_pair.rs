@@ -21,6 +21,7 @@ pub struct InstantiateMsg {
     pub viewing_key: String,
     pub pair_name: String,
     pub entropy: String,
+    pub protocol_fee_recipient: Addr,
 }
 
 impl InstantiateCallback for InstantiateMsg {

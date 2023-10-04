@@ -30,6 +30,7 @@ pub struct State {
     pub reserves: Bytes32,
     pub protocol_fees: Bytes32,
     pub lb_token: ContractInfo,
+    pub protocol_fees_recipient: Addr,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextTokenKey> {

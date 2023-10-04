@@ -56,6 +56,9 @@ impl Addrs {
     pub fn scare_crow(&self) -> Addr {
         self.addrs[4].clone()
     }
+    pub fn altaf_bhai(&self) -> Addr {
+        self.addrs[5].clone()
+    }
     pub fn all(&self) -> Vec<Addr> {
         self.addrs.clone()
     }
@@ -75,13 +78,14 @@ impl Addrs {
 
 /// inits 3 addresses
 pub fn init_addrs() -> Addrs {
-    let addr_strs = vec!["addr0", "addr1", "addr2", "addr3", "addr4"];
+    let addr_strs = vec!["addr0", "addr1", "addr2", "addr3", "addr4", "addr5"];
     let hashes = vec![
         "addr0_hash".to_string(),
         "addr1_hash".to_string(),
         "addr2_hash".to_string(),
         "addr3_hash".to_string(),
         "addr4_hash".to_string(),
+        "addr5_hash".to_string(),
     ];
     let mut addrs: Vec<Addr> = vec![];
     for addr in addr_strs {
@@ -216,7 +220,7 @@ pub fn setup() -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
     .unwrap();
 
     //2. init factory
-    let lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.admin(), 0)?;
+    let lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.altaf_bhai(), 0)?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
 

@@ -355,6 +355,7 @@ fn try_create_lb_pair(
                 //TODO add pair_name
                 pair_name: String::new(),
                 entropy: String::new(),
+                protocol_fee_recipient: state.fee_recipient,
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -487,6 +488,7 @@ fn try_set_pair_preset(
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
+        bin_step,
     )?;
 
     if is_open {

@@ -24,6 +24,7 @@ pub fn init(
     viewing_key: String,
     pair_name: String,
     entropy: String,
+    protocol_fee_recipient: Addr,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -37,6 +38,7 @@ pub fn init(
             viewing_key,
             pair_name,
             entropy,
+            protocol_fee_recipient,
         }
         .test_init(
             LbPair::default(),
@@ -99,6 +101,18 @@ pub fn swap(
     }
     .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
     {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn collect_protocol_fees(app: &mut App, sender: &str, lb_pair: &ContractInfo) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::CollectProtocolFees {}.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
