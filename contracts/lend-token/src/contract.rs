@@ -1,11 +1,12 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
-    Uint128,
-};
 use lending_utils::amount::{base_to_token, token_to_base};
-use shade_protocol::utils::asset::Contract;
+use shade_protocol::{
+    c_std::{
+        shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo,
+        Response, StdResult, SubMsg, Uint128,
+    },
+    utils::asset::Contract,
+};
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -21,7 +22,7 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:lend-token";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -68,6 +69,11 @@ fn can_transfer(
             account,
         },
     )?;
+    let transferable: TransferableAmountResp = ControllerQuery::TransferableAmount {
+        token: env.contract.address.to_string(),
+        account,
+    }
+    .query(deps.querier, controller)?;
 
     if amount <= transferable.transferable {
         Ok(())
@@ -413,7 +419,7 @@ fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
 }
 
 /// Execution entry point
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -551,7 +557,7 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
 }
 
 /// `QueryMsg` entry point
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     use QueryMsg::*;
 
