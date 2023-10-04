@@ -1,7 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Decimal, Uint128};
+use shade_protocol::utils::asset::{Contract, RawContract};
 
-use utils::{amount::token_to_base, coin::Coin, token::Token};
+use lending_utils::amount::token_to_base;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -15,7 +16,7 @@ pub struct InstantiateMsg {
     /// enable transfer. Usually it is an wynd_lend market contract.
     pub controller: String,
     /// Token which will be distributed via this contract by cw2222 interface
-    pub distributed_token: Token,
+    pub distributed_token: RawContract,
 }
 
 #[cw_serde]
@@ -112,7 +113,7 @@ pub enum QueryMsg {
     #[returns(FundsResponse)]
     UndistributedFunds {},
     /// Queries for funds distributed but not yet withdrawn by owner
-    #[returns(Coin)]
+    #[returns(WithdrawableFundsResponse)]
     WithdrawableFunds { owner: String },
 }
 
@@ -144,5 +145,12 @@ pub struct MultiplierResponse {
 
 #[cw_serde]
 pub struct FundsResponse {
-    pub funds: Coin,
+    pub token: Contract,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct WithdrawableFundsResponse {
+    pub token: Contract,
+    pub amount: Uint128,
 }

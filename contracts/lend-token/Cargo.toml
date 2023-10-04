@@ -1,6 +1,6 @@
 [package]
 name = "lend-token"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Jakub <jakub@moonbite.space>"]
 edition = "2021"
 description = "Implementation of Token contract for lending protocol"
@@ -24,7 +24,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.8"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = "1"
-# utils = { version = "0.7.0", path = "./packages/utils" }
+lending-utils = { version = "0.1.0", path = "../../packages/lending_utils" }
 
 [dev-dependencies]
 anyhow = "1"
