@@ -4,9 +4,8 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
     Uint128,
 };
-use cw20::Cw20ReceiveMsg;
-use utils::amount::{base_to_token, token_to_base};
-use utils::coin::Coin;
+use lending_utils::amount::{base_to_token, token_to_base};
+use shade_protocol::utils::asset::Contract;
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -38,7 +37,7 @@ pub fn instantiate(
     TOKEN_INFO.save(deps.storage, &token_info)?;
 
     let distribution = Distribution {
-        denom: msg.distributed_token,
+        denom: msg.distributed_token.into_valid(deps.api)?,
         points_per_token: Uint128::zero(),
         points_leftover: Uint128::zero(),
         distributed_total: Uint128::zero(),
@@ -377,12 +376,8 @@ pub fn distribute(
     let mut resp = Response::new()
         .add_attribute("action", "distribute_tokens")
         .add_attribute("sender", sender.as_str())
-        .add_attribute("amount", amount.to_string());
-
-    match distribution.denom {
-        utils::token::Token::Native(denom) => resp = resp.add_attribute("denom", denom),
-        utils::token::Token::Cw20(address) => resp = resp.add_attribute("cw20_address", address),
-    }
+        .add_attribute("amount", amount.to_string())
+        .add_attribute("snip20_address", distribution.denom.address);
 
     Ok(resp)
 }
@@ -411,12 +406,8 @@ fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
         .add_attribute("amount", token.amount.to_string())
         .add_submessage(SubMsg::new(
             token.denom.send_msg(info.sender, token.amount)?,
-        ));
-
-    match distribution.denom {
-        utils::token::Token::Native(denom) => resp = resp.add_attribute("denom", denom),
-        utils::token::Token::Cw20(address) => resp = resp.add_attribute("cw20_address", address),
-    }
+        ))
+        .add_attribute("snip20_address", distribution.denom.address);
 
     Ok(resp)
 }
@@ -527,7 +518,8 @@ pub fn query_multiplier(deps: Deps) -> StdResult<MultiplierResponse> {
 pub fn query_distributed_funds(deps: Deps) -> StdResult<FundsResponse> {
     let distribution = DISTRIBUTION.load(deps.storage)?;
     Ok(FundsResponse {
-        funds: Coin::new(distribution.distributed_total.into(), distribution.denom),
+        token: distribution.denom,
+        amount: distribution.distributed_total.into(),
     })
 }
 
@@ -538,10 +530,8 @@ pub fn query_undistributed_funds(deps: Deps, env: Env) -> StdResult<FundsRespons
         .denom
         .query_balance(deps, env.contract.address)?;
     Ok(FundsResponse {
-        funds: Coin::new(
-            balance - distribution.withdrawable_total.u128(),
-            distribution.denom,
-        ),
+        token: distribution.denom,
+        amount: balance - distribution.withdrawable_total.u128(),
     })
 }
 
@@ -553,8 +543,10 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
         .may_load(deps.storage, &owner)?
         .unwrap_or_default();
 
+    let withdrawable_funds = withdrawable_funds(deps, &owner, &distribution, &adjustment)?;
     Ok(FundsResponse {
-        funds: withdrawable_funds(deps, &owner, &distribution, &adjustment)?,
+        token: withdrawable_funds.1,
+        amount: withdrawable_funds.0.into(),
     })
 }
 
@@ -580,7 +572,7 @@ pub fn withdrawable_funds(
     owner: &Addr,
     distribution: &Distribution,
     adjustment: &WithdrawAdjustment,
-) -> StdResult<Coin> {
+) -> StdResult<(u128, Contract)> {
     let ppt: u128 = distribution.points_per_token.into();
     let tokens: u128 = BALANCES
         .may_load(deps.storage, owner)?
@@ -593,7 +585,7 @@ pub fn withdrawable_funds(
     let amount = points as u128 / POINTS_SCALE;
     let amount = amount - withdrawn;
 
-    Ok(Coin::new(amount, distribution.denom.clone()))
+    Ok((amount, distribution.denom.clone()))
 }
 
 /// Applies points correction for given address.
