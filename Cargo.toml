@@ -16,7 +16,7 @@ members = [
   "contracts/governance",
   # "contracts/bonds", //TODO: migrate to v1
   # "contracts/liability_mint", //TODO: migrate
-  "contracts/sky", 
+  "contracts/sky",
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
@@ -29,16 +29,19 @@ members = [
 
   # DAO
   # - Core
-  "contracts/dao/treasury", 
-  "contracts/dao/treasury_manager", 
+  "contracts/dao/treasury",
+  "contracts/dao/treasury_manager",
   # - Adapters
   "contracts/dao/scrt_staking",
   "contracts/dao/stkd_scrt",
   "contracts/dao/rewards_emission",
   "contracts/dao/lp_shdswap",
 
+  # Lending protocol
+  "contracts/lend-token",
+
   # "contracts/snip20_staking", //TODO: migrate to v1
-  
+
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1
   # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
