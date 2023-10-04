@@ -15,3 +15,9 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "snip20",
   "storage_plus",
 ] }
+<<<<<<< HEAD
+=======
+schemars = "0.8"
+serde = "1"
+thiserror = "1"
+>>>>>>> 89eb9e01 (Lending-utils: Remove cw20 from utils)
