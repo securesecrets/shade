@@ -5,6 +5,7 @@ use shade_protocol::{
         shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo,
         Response, StdResult, SubMsg, Uint128,
     },
+    contract_interfaces::snip20::Snip20ReceiveMsg,
     utils::asset::Contract,
 };
 
@@ -62,13 +63,6 @@ fn can_transfer(
     amount: Uint128,
 ) -> Result<(), ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    let transferable: TransferableAmountResp = deps.querier.query_wasm_smart(
-        controller,
-        &ControllerQuery::TransferableAmount {
-            token: env.contract.address.to_string(),
-            account,
-        },
-    )?;
     let transferable: TransferableAmountResp = ControllerQuery::TransferableAmount {
         token: env.contract.address.to_string(),
         account,
@@ -183,10 +177,13 @@ fn send(
         .add_attribute("to", &recipient)
         .add_attribute("amount", amount)
         .add_message(
-            Cw20ReceiveMsg {
+            // TODO: Import into cosmos msg
+            Snip20ReceiveMsg {
                 sender: info.sender.into(),
+                from: info.sender.into(),
                 amount,
-                msg,
+                memo: None,
+                msg: Some(msg),
             }
             .into_cosmos_msg(recipient)?,
         );
@@ -347,9 +344,16 @@ pub fn distribute(
 
     let withdrawable: u128 = distribution.withdrawable_total.into();
 
-    let balance = distribution
-        .denom
-        .query_balance(deps.as_ref(), env.contract.address)?;
+    let balance = snip20::helpers::balance_query(
+        &deps.querier,
+        env.contract.address.clone(),
+        VIEWING_KEY.load(deps.storage)?,
+        &full_asset.contract.clone(),
+    )?;
+
+    // let balance = distribution
+    //     .denom
+    //     .query_balance(deps.as_ref(), env.contract.address)?;
 
     let amount = balance - withdrawable;
     if amount == 0 {
