@@ -2,8 +2,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Item, Map};
-use utils::token::Token;
+use shade_protocol::{
+    secret_storage_plus::{Item, Map},
+    utils::asset::Contract,
+};
 
 use crate::i128::Int128;
 
@@ -18,7 +20,7 @@ pub struct TokenInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Distribution {
     /// Token distributed by this contract.
-    pub denom: Token,
+    pub denom: Contract,
     /// How much points is single division of wynd_lend worth at this point.
     pub points_per_token: Uint128,
     /// Points which were not fully distributed on previous distribution, and should be
