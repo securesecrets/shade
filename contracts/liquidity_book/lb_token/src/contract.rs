@@ -113,8 +113,8 @@ pub fn instantiate(
     contr_conf_w(deps.storage).save(&config)?;
     let response = Response::new().set_data(to_binary(&env.contract.address)?);
 
-    deps.api
-        .debug(format!("Contract address {}", env.contract.address).as_str());
+    // deps.api
+    //     .debug(format!("Contract address {}", env.contract.address).as_str());
     Ok(response)
 }
 

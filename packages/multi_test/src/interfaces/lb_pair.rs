@@ -1,7 +1,8 @@
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, StdError, StdResult, Uint128, Uint256},
+    c_std::{to_binary, Addr, ContractInfo, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::liquidity_book::lb_pair,
+    contract_interfaces::snip20,
     lb_libraries::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
@@ -86,23 +87,32 @@ pub fn remove_liquidity(
     }
 }
 
-pub fn swap(
+pub fn swap_snip_20(
     app: &mut App,
     sender: &str,
     lb_pair: &ContractInfo,
-    swap_for_y: bool,
-    to: Addr,
-    amount_received: Uint128,
+    to: Option<String>,
+    lb_token: &ContractInfo,
+
+    amount: Uint128,
 ) -> StdResult<()> {
-    match (lb_pair::ExecuteMsg::Swap {
-        swap_for_y,
+    let msg = to_binary(&lb_pair::InvokeMsg::SwapTokens {
+        expected_return: None,
         to,
-        amount_received,
+        padding: None,
+    })?;
+    match (snip20::ExecuteMsg::Send {
+        amount,
+        msg: Some(msg),
+        memo: None,
+        padding: None,
+        recipient_code_hash: Some(lb_pair.code_hash.clone()),
+        recipient: lb_pair.address.to_string(),
     }
-    .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
+    .test_exec(&lb_token, app, Addr::unchecked(sender), &[]))
     {
         Ok(_) => Ok(()),
-        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+        Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
 
@@ -113,6 +123,34 @@ pub fn collect_protocol_fees(app: &mut App, sender: &str, lb_pair: &ContractInfo
         Addr::unchecked(sender),
         &[],
     )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn set_static_fee_parameters(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    base_factor: u16,
+    filter_period: u16,
+    decay_period: u16,
+    reduction_factor: u16,
+    variable_fee_control: u32,
+    protocol_share: u16,
+    max_volatility_accumulator: u32,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::SetStaticFeeParameters {
+        base_factor,
+        filter_period,
+        decay_period,
+        reduction_factor,
+        variable_fee_control,
+        protocol_share,
+        max_volatility_accumulator,
+    }
+    .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
+    {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }

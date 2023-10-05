@@ -42,3 +42,4 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "lb_factory"
 ] }
 
+shadeswap-shared = {  version = "0.1.0", path = "../../../packages/shadeswap_shared", features = []  }

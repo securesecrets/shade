@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   # Packages
   "packages/shade_protocol",
+  "packages/shadeswap_shared",
   "packages/secretcli",
   "packages/multi_test",
   "packages/multi_derive",
@@ -25,7 +26,7 @@ members = [
   "contracts/liquidity_book/lb_factory",
   "contracts/liquidity_book/lb_pair",
   "contracts/liquidity_book/lb_token",
-  #"contracts/liquidity_book/router",
+  "contracts/liquidity_book/router",
   "contracts/liquidity_book/tests",
 
 

@@ -116,7 +116,7 @@ pub fn assert_approx_eq_abs(a: Uint256, b: Uint256, delta: Uint256, error_messag
     }
 }
 
-pub fn setup() -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
+pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
     // init snip-20's
     let mut app = App::default();
     let addrs = init_addrs();
@@ -244,7 +244,7 @@ pub fn setup() -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
         &mut app,
         addrs.admin().as_str(),
         &lb_factory.clone().into(),
-        DEFAULT_BIN_STEP,
+        bin_step.unwrap_or(DEFAULT_BIN_STEP),
         DEFAULT_BASE_FACTOR,
         DEFAULT_FILTER_PERIOD,
         DEFAULT_DECAY_PERIOD,

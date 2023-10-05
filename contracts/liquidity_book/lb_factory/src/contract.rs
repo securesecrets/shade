@@ -58,8 +58,7 @@ pub fn instantiate(
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
     };
-    deps.api
-        .debug(format!("Contract was initialized by {}", info.sender).as_str());
+
     CONFIG.save(deps.storage, &state)?;
 
     // TODO: decide on response output and format
@@ -488,7 +487,6 @@ fn try_set_pair_preset(
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-        bin_step,
     )?;
 
     if is_open {
@@ -496,18 +494,6 @@ fn try_set_pair_preset(
     }
 
     PRESETS.save(deps.storage, bin_step, &preset)?;
-
-    // TODO: add all this to the response
-    // emit PresetSet(
-    //     binStep,
-    //     baseFactor,
-    //     filterPeriod,
-    //     decayPeriod,
-    //     reductionFactor,
-    //     variableFeeControl,
-    //     protocolShare,
-    //     maxVolatilityAccumulator
-    //     );
 
     Ok(Response::default().add_attribute_plaintext("set preset", bin_step.to_string()))
 }

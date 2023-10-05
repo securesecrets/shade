@@ -9,7 +9,10 @@ use cosmwasm_std::{ContractInfo, StdError, Uint128};
 use shade_multi_test::interfaces::{
     lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
-use shade_protocol::{lb_libraries::types::LBPairInformation, multi_test::App};
+use shade_protocol::{
+    lb_libraries::{tokens::SwapTokenAmount, types::LBPairInformation},
+    multi_test::App,
+};
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000 as u128;
 
@@ -26,7 +29,7 @@ pub fn lb_pair_setup() -> Result<
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup()?;
+    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -123,7 +126,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
 
     let (amount_in, amount_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, true)?;
-    assert_eq!(amount_out_left, Uint128::MIN);
+    assert_eq!(amount_out_left, Uint128::zero());
 
     let tokens_to_mint = vec![(SHADE, amount_in)];
 
@@ -135,21 +138,23 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
         tokens_to_mint.clone(),
     )?;
 
-    snip20::transfer_exec(
+    let shd_balance = snip20::balance_query(
         &mut app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
-        lb_pair.lb_pair.contract.address.to_string(),
-        amount_in,
+        "viewing_key".to_owned(),
     )?;
+    assert_eq!(shd_balance, amount_in);
 
-    lb_pair::swap(
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+
+    lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        true,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_x,
         amount_in,
     )?;
 
@@ -195,21 +200,14 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
         tokens_to_mint.clone(),
     )?;
 
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SILK,
-        lb_pair.lb_pair.contract.address.to_string(),
-        amount_in,
-    )?;
+    let token_y = &extract_contract_info(&deployed_contracts, SILK)?;
 
-    lb_pair::swap(
+    lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        false,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_y,
         amount_in,
     )?;
 
@@ -257,21 +255,14 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
         tokens_to_mint.clone(),
     )?;
 
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SHADE,
-        lb_pair.lb_pair.contract.address.to_string(),
-        amount_in,
-    )?;
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
 
-    lb_pair::swap(
+    lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        true,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_x,
         amount_in,
     )?;
 
@@ -319,21 +310,14 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
         tokens_to_mint.clone(),
     )?;
 
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SILK,
-        lb_pair.lb_pair.contract.address.to_string(),
-        amount_in,
-    )?;
+    let token_y = &extract_contract_info(&deployed_contracts, SILK)?;
 
-    lb_pair::swap(
+    lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        false,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_y,
         amount_in,
     )?;
 
@@ -359,16 +343,19 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+
 pub fn test_revert_swap_insufficient_amount_in() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, _deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
 
-    let result = lb_pair::swap(
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        true,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_x,
         Uint128::zero(),
     );
 
@@ -379,12 +366,14 @@ pub fn test_revert_swap_insufficient_amount_in() -> Result<(), anyhow::Error> {
         })
     );
 
-    let result = lb_pair::swap(
+    let token_y = &extract_contract_info(&deployed_contracts, SILK)?;
+
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        false,
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_y,
         Uint128::zero(),
     );
 
@@ -415,21 +404,15 @@ pub fn test_revert_swap_insufficient_amount_out() -> Result<(), anyhow::Error> {
         addrs.batman().into_string(),
         tokens_to_mint.clone(),
     )?;
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SHADE,
-        lb_pair.lb_pair.contract.address.to_string(),
-        token_amount,
-    )?;
 
-    let result = lb_pair::swap(
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        true, // swap_for_y
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_x,
         token_amount,
     );
 
@@ -449,22 +432,15 @@ pub fn test_revert_swap_insufficient_amount_out() -> Result<(), anyhow::Error> {
         addrs.batman().into_string(),
         tokens_to_mint.clone(),
     )?;
-    // For usdc
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SILK,
-        lb_pair.lb_pair.contract.address.to_string(),
-        token_amount,
-    )?;
 
-    let result = lb_pair::swap(
+    let token_y = &extract_contract_info(&deployed_contracts, SILK)?;
+
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        false, // swap_for_y
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_y,
         token_amount,
     );
 
@@ -495,24 +471,16 @@ pub fn test_revert_swap_out_of_liquidity() -> Result<(), anyhow::Error> {
         tokens_to_mint.clone(),
     )?;
 
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SHADE,
-        lb_pair.lb_pair.contract.address.to_string(),
-        token_amount,
-    )?;
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
 
-    let result = lb_pair::swap(
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        true, // swap_for_y
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_x,
         token_amount,
     );
-
     // Check for the expected error
     assert_eq!(
         result,
@@ -530,21 +498,14 @@ pub fn test_revert_swap_out_of_liquidity() -> Result<(), anyhow::Error> {
         addrs.batman().into_string(),
         tokens_to_mint.clone(),
     )?;
-    snip20::transfer_exec(
-        &mut app,
-        addrs.batman().as_str(),
-        &deployed_contracts,
-        SILK,
-        lb_pair.lb_pair.contract.address.to_string(),
-        token_amount,
-    )?;
+    let token_y = &extract_contract_info(&deployed_contracts, SILK)?;
 
-    let result = lb_pair::swap(
+    let result = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
-        false, // swap_for_y
-        addrs.batman(),
+        Some(addrs.batman().to_string()),
+        token_y,
         token_amount,
     );
 

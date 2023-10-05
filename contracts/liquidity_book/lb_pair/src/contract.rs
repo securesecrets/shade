@@ -3,8 +3,9 @@
 use crate::{prelude::*, state::*};
 use core::panic;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
+    from_binary, to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, Deps, DepsMut,
+    Env, MessageInfo, Response, StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256,
+    WasmMsg,
 };
 use ethnum::U256;
 use serde::Serialize;
@@ -15,7 +16,7 @@ use shade_protocol::{
     },
     lb_libraries::{
         bin_helper::{self, BinHelper},
-        constants::{self, SCALE_OFFSET},
+        constants::{self, MAX_FEE, SCALE_OFFSET},
         fee_helper::{self, FeeHelper},
         lb_token::state_structs::{LbPair, TokenAmount, TokenIdBalance},
         math::{
@@ -35,6 +36,8 @@ use shade_protocol::{
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
     snip20,
+    utils::pad_handle_result,
+    BLOCK_SIZE,
 };
 use std::{collections::HashMap, ops::Sub};
 use tokens::TokenType;
@@ -124,7 +127,6 @@ pub fn instantiate(
             msg.pair_parameters.variable_fee_control,
             msg.pair_parameters.protocol_share,
             msg.pair_parameters.max_volatility_accumulator,
-            msg.bin_step,
         )
         .unwrap();
     let pair_parameters = pair_parameters
@@ -146,7 +148,6 @@ pub fn instantiate(
 
     let state = State {
         creator: info.sender.clone(),
-        // TODO: the factory should be hardcoded? that makes deploying way harder
         factory: msg.factory,
         token_x: msg.token_x,
         token_y: msg.token_y,
@@ -157,13 +158,13 @@ pub fn instantiate(
         lb_token: ContractInfo {
             address: Addr::unchecked("".to_string()),
             code_hash: "".to_string(),
-        },
+        }, // intentionally keeping this empty will be filled in reply
         viewing_key,
         protocol_fees_recipient: msg.protocol_fee_recipient,
     };
 
-    deps.api
-        .debug(format!("Contract was initialized by {}", info.sender).as_str());
+    // deps.api
+    //     .debug(format!("Contract was initialized by {}", info.sender).as_str());
 
     let tree = TreeUint24::new();
     let oracle = Oracle {
@@ -187,15 +188,44 @@ pub fn instantiate(
 }
 
 /////////////// EXECUTE ///////////////
-
+//TODO: add contract status
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
     match msg {
-        ExecuteMsg::Swap {
-            swap_for_y,
+        ExecuteMsg::Receive(msg) => {
+            let checked_addr = deps.api.addr_validate(&msg.from)?;
+            receiver_callback(deps, env, info, checked_addr, msg.amount, msg.msg)
+        }
+        ExecuteMsg::SwapTokens {
             to,
-            amount_received,
-        } => try_swap(deps, env, info, swap_for_y, to, amount_received),
+            offer,
+            expected_return,
+            padding,
+        } => {
+            let config = CONFIG.load(deps.storage)?;
+            if !offer.token.is_native_token() {
+                return Err(Error::UseReceiveInterface);
+            }
+
+            offer
+                .token
+                .assert_sent_native_token_balance(&info, offer.amount)?;
+
+            let checked_to = if let Some(to) = to {
+                deps.api.addr_validate(to.as_str())?
+            } else {
+                info.sender.clone()
+            };
+
+            let swap_for_y: bool;
+            if info.sender == config.token_x.unique_key() {
+                swap_for_y = true;
+            } else {
+                swap_for_y = false;
+            }
+
+            try_swap(deps, env, info, swap_for_y, checked_to, offer.amount)
+        }
         //TODO: Flash loan
         ExecuteMsg::FlashLoan {} => todo!(),
         ExecuteMsg::AddLiquidity {
@@ -321,12 +351,9 @@ fn try_swap(
     params = params.update_references(&env.block.time)?;
 
     loop {
-        let bin_reserves = BIN_MAP.load(deps.storage, active_id).map_err(|_| {
-            Error::Generic(format!(
-                "could not get bin reserves for active id {}",
-                active_id
-            ))
-        })?;
+        let bin_reserves = BIN_MAP
+            .load(deps.storage, active_id)
+            .map_err(|_| Error::ZeroBinReserve { active_id })?;
 
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(active_id)?;
@@ -341,18 +368,14 @@ fn try_swap(
                     amounts_left,
                 )?;
 
-            //Proposed Option
-            // if amounts_in_with_fees.iter().any(|&x| x != 0) {}
-            if amounts_in_with_fees > [0u8; 32] {
+            if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
                 amounts_left = amounts_left.sub(amounts_in_with_fees);
                 amounts_out = amounts_out.add(amounts_out_of_bin);
 
                 let p_fees = total_fees
                     .scalar_mul_div_basis_point_round_down(params.get_protocol_share().into())?;
-                // TODO: need a zero impl for Bytes32 or something...
-                //Proposed Option
-                // if p_fees.iter().any(|&x| x != 0) {}
-                if p_fees > [0u8; 32] {
+
+                if U256::from_le_bytes(p_fees) > U256::ZERO {
                     protocol_fees = protocol_fees.add(p_fees);
                     amounts_in_with_fees = amounts_in_with_fees.sub(p_fees);
                 }
@@ -364,9 +387,6 @@ fn try_swap(
                         .add(amounts_in_with_fees)
                         .sub(amounts_out_of_bin),
                 )?;
-
-                // TODO: decide on the nature of the return message / event
-                // return Ok(Response::default());
             }
         }
 
@@ -388,7 +408,6 @@ fn try_swap(
 
     reserves = reserves.sub(amounts_out);
 
-    // TODO: review this part carefully. I might be mixing up oracle params and pair params.
     let mut oracle = ORACLE.load(deps.storage)?;
     params = oracle.update(&env.block.time, params, active_id)?;
 
@@ -399,8 +418,6 @@ fn try_swap(
         Ok(state)
     })?;
 
-    // TODO: this will take some refactoring. need to create the submessage
-    // for the token transfer instead of using those functions
     let mut messages: Vec<CosmosMsg> = Vec::new();
     if swap_for_y {
         let msg = BinHelper::transfer_y(amounts_out, token_y, to);
@@ -416,7 +433,6 @@ fn try_swap(
         }
     }
 
-    // TODO: decide on the nature of the return message / event
     Ok(Response::default().add_messages(messages))
 }
 
@@ -681,7 +697,6 @@ fn mint(
     let amounts_received = BinHelper::received(amount_received_x, amount_received_y);
     let mut messages: Vec<CosmosMsg> = Vec::new();
 
-    //TODO MINT TOKENS
     let (amounts_left) = _mint_bins(
         &mut deps,
         &env.block.time,
@@ -797,7 +812,6 @@ fn _mint_bins(
 
         amounts_left = amounts_left.sub(amounts_in);
 
-        // TODO: imo these are useless pls remove if not emits them with events
         mint_arrays.ids[index] = id.into();
         mint_arrays.amounts[index] = amounts_in_to_bin;
         mint_arrays.liquidity_minted[index] = shares;
@@ -856,7 +870,6 @@ fn _update_bin(
     let config = CONFIG.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
 
-    // TODO: this function needs to query the token contract for the total supply
     let total_supply = _query_total_supply(
         deps.as_ref(),
         id,
@@ -909,14 +922,6 @@ fn _update_bin(
                 state.pair_parameters = parameters;
                 Ok(state)
             })?;
-
-            //     // TODO: figure out a way to return this to the 'try_mint' function to use in the response
-            //     let composition_fees = vec![
-            //         ("sender", "info.sender"),
-            //         ("id", "id"),
-            //         ("fees", "fees"),
-            //         ("protocol_c_fees", "protocol_c_fees"),
-            //     ];
         }
     } else {
         BinHelper::verify_amounts(amounts_in, active_id, id)?;
@@ -938,7 +943,6 @@ fn _update_bin(
     Ok((shares, amounts_in, amounts_in_to_bin))
 }
 
-//TODO: Move this to some library
 fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) -> Result<U256> {
     let msg = lb_token::QueryMsg::IdTotalBalance { id: id.to_string() };
 
@@ -956,7 +960,6 @@ fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) ->
     Ok(total_supply_uint256.uint256_to_u256())
 }
 
-//TODO: Move this to some library
 fn query_token_symbol(deps: Deps, code_hash: String, address: Addr) -> Result<String> {
     let msg = snip20::QueryMsg::TokenInfo {};
 
@@ -1103,7 +1106,9 @@ fn burn(
 
         let bin_reserves = BIN_MAP
             .load(deps.storage, id)
-            .map_err(|_| Error::Generic(format!("could not get bin reserves for bin id {}", i)))?;
+            .map_err(|_| Error::ZeroBinReserve {
+                active_id: i as u32,
+            })?;
         let total_supply = _query_total_supply(
             deps.as_ref(),
             id,
@@ -1193,8 +1198,6 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
 
     let protocol_fees = state.protocol_fees;
 
-    // TODO: this seems like a weird way to check if the protocol fees are non-zero
-    // Can probably refactor this.
     let (x, y) = protocol_fees.decode();
     let ones = Bytes32::encode(if x > 0 { 1 } else { 0 }, if y > 0 { 1 } else { 0 });
 
@@ -1202,7 +1205,7 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
     //This is done to avoid completely draining the fees and possibly causing any issues with calculations that depend on non-zero values
     let collected_protocol_fees = protocol_fees.sub(ones);
 
-    if collected_protocol_fees != [0u8; 32] {
+    if U256::from_le_bytes(collected_protocol_fees) != U256::ZERO {
         // This is setting the protocol fees to the smallest possible values
         CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
             state.protocol_fees = ones;
@@ -1213,25 +1216,27 @@ fn try_collect_protocol_fees(deps: DepsMut, env: Env, info: MessageInfo) -> Resu
         if collected_protocol_fees.iter().any(|&x| x != 0) {
             if let Some(msgs) = BinHelper::transfer(
                 collected_protocol_fees,
-                token_x,
-                token_y,
+                token_x.clone(),
+                token_y.clone(),
                 state.protocol_fees_recipient,
             ) {
                 messages.extend(msgs);
             };
         }
 
-        // TODO: decide on the nature of the return message / event
         Ok(Response::default()
             .add_attribute(
-                "Collected Protocol Fees",
-                // TODO: figure out how to format the protocol fees
-                "collected_protocol_fees.decode()",
+                format!("Collected Protocol Fees for token {}", token_x.unique_key()),
+                collected_protocol_fees.decode_x().to_string(),
+            )
+            .add_attribute(
+                format!("Collected Protocol Fees for token {}", token_y.unique_key()),
+                collected_protocol_fees.decode_y().to_string(),
             )
             .add_attribute("Action performed by", info.sender.to_string())
             .add_messages(messages))
     } else {
-        Err(Error::Generic("Not Enough funds".to_string()))
+        Err(Error::NotEnoughFunds)
     }
 }
 
@@ -1257,26 +1262,13 @@ fn try_increase_oracle_length(
         params = PairParameters::set_oracle_id(params, oracle_id);
     }
 
-    // TODO: I think this works but is kind of clunky
-    // ORACLE.update(deps.storage, |mut oracle| {
-    //     let oracle = oracle
-    //         .increase_length(oracle_id, new_length)
-    //         .map_err(|err| StdError::GenericErr {
-    //             msg: err.to_string(),
-    //         })?;
-    //     Ok(oracle)
-    // });
-
     ORACLE.update(deps.storage, |mut oracle| {
         oracle
             .increase_length(oracle_id, new_length)
             .map_err(|err| StdError::generic_err(err.to_string()))
     })?;
 
-    // TODO: decide on the nature of the return message / event
-    Ok(Response::default()
-        .add_attribute("Oracle Length Increased", new_length.to_string())
-        .add_attribute("Action performed by", info.sender.to_string()))
+    Ok(Response::default().add_attribute("Oracle Length Increased to", new_length.to_string()))
 }
 
 /// Sets the static fee parameters of the pool.
@@ -1318,8 +1310,15 @@ fn try_set_static_fee_parameters(
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-        state.bin_step,
     )?;
+
+    {
+        let total_fee =
+            params.get_base_fee(state.bin_step) + params.get_variable_fee(state.bin_step);
+        if total_fee > MAX_FEE {
+            return Err(Error::MaxTotalFeeExceeded {});
+        }
+    }
 
     CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
@@ -1345,9 +1344,12 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
         Ok(state)
     })?;
 
-    // emit ForcedDecay(msg.sender, parameters.getIdReference(), parameters.getVolatilityReference());
-    // TODO: decide on the nature of the return message / event
-    Ok(Response::default().add_attribute_plaintext("hello", "world"))
+    Ok(Response::default()
+        .add_attribute_plaintext("Id_reference", params.get_id_reference().to_string())
+        .add_attribute_plaintext(
+            "Volatility_reference",
+            params.get_volatility_reference().to_string(),
+        ))
 }
 
 fn only_factory(sender: &Addr, factory: &Addr) -> Result<()> {
@@ -1357,23 +1359,65 @@ fn only_factory(sender: &Addr, factory: &Addr) -> Result<()> {
     Ok(())
 }
 
-// TODO: I think the factory has the protocol_fee_recipient, so we'll need to query it for that info
-fn only_protocol_fee_recipient(sender: &Addr, factory: &Addr) -> Result<()> {
-    let protocol_fee_recipient = &Addr::unchecked("some address");
-
-    if sender != protocol_fee_recipient {
-        return Err(Error::OnlyFactory);
-    }
-    panic!("only_protocol_fee_recipient function incomplete")
-}
-
 fn serialize_or_err<T: Serialize>(data: &T) -> Result<String> {
     serde_json_wasm::to_string(data).map_err(|_| Error::SerializationError)
 }
 
+fn receiver_callback(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    from: Addr,
+    amount: Uint128,
+    msg: Option<Binary>,
+) -> Result<Response> {
+    let msg = msg.ok_or_else(|| Error::ReceiverMsgEmpty)?;
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let mut response = Response::new();
+    match from_binary(&msg)? {
+        InvokeMsg::SwapTokens {
+            to,
+            expected_return,
+            padding: _,
+        } => {
+            // this check needs to be here instead of in execute() because it is impossible to (cleanly) distinguish between swaps and lp withdraws until this point
+            // if contract_status is FreezeAll, this fn will never be called, so only need to check LpWithdrawOnly here
+            //TODO: add status: check
+            // if contract_status == ContractStatus::LpWithdrawOnly {
+            //     return Err(StdError::generic_err(
+            //         "Transaction is blocked by contract status",
+            //     ));
+            // }
+
+            //validate recipient address
+            let checked_to = if let Some(to) = to {
+                deps.api.addr_validate(to.as_str())?
+            } else {
+                from
+            };
+
+            if info.sender != config.token_x.unique_key()
+                && info.sender != config.token_y.unique_key()
+            {
+                return Err(Error::NoMatchingTokenInPair);
+            }
+            let swap_for_y: bool;
+            if info.sender == config.token_x.unique_key() {
+                swap_for_y = true;
+            } else {
+                swap_for_y = false;
+            }
+
+            response = try_swap(deps, env, info, swap_for_y, checked_to, amount)?;
+        }
+    };
+    Ok(response)
+}
+
 /////////////// QUERY ///////////////
 
-// TODO: refactor this like the LBFactory contract
 #[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
@@ -1546,8 +1590,6 @@ fn query_active_id(deps: Deps) -> Result<ActiveIdResponse> {
 /// * `bin_reserve_x` - The reserve of token X in the bin
 /// * `bin_reserve_y` - The reserve of token Y in the bin
 fn query_bin(deps: Deps, id: u32) -> Result<BinResponse> {
-    // TODO: what should happen if the bin doesn't exist?
-    // TODO: this should be using the TreeUint24? but the tree doesn't have a direct 'get' method
     let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
 
     let (bin_reserve_x, bin_reserve_y) = bin.decode();
@@ -1767,9 +1809,7 @@ fn query_oracle_sample_at(
             cumulative_bin_crossed,
         })
     } else {
-        Err(Error::Generic(
-            "time_of_last_update was later than look_up_timestamp".to_string(),
-        ))
+        Err(Error::LastUpdateTimestampGreaterThanLookupTimestamp)
     }
 }
 
@@ -1948,8 +1988,7 @@ fn query_swap_out(
                 amounts_in_left,
             )?;
 
-            // TODO: have a way to compare a packed_u128 with an integer?
-            if amounts_in_with_fees > [0u8; 32] {
+            if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
                 amounts_in_left = amounts_in_left.sub(amounts_in_with_fees);
 
                 amount_out += Bytes32::decode_alt(&amounts_out_of_bin, !swap_for_y);
@@ -1963,7 +2002,6 @@ fn query_swap_out(
         } else {
             let next_id = _get_next_non_empty_bin(&tree, swap_for_y, id);
 
-            // TODO: or next_id == uint24::MAX
             if next_id == 0 || next_id == U24::MAX {
                 break;
             }

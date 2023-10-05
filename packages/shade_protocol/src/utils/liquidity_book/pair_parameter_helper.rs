@@ -358,7 +358,6 @@ impl PairParameters {
         variable_fee_control: u32,       //u24
         protocol_share: u16,             //u14
         max_volatility_accumulator: u32, //u20
-        bin_step: u16,
     ) -> Result<PairParameters, PairParametersError> {
         if (filter_period > decay_period) | (decay_period > MASK_UINT12.as_u16())
             || reduction_factor > BASIS_POINT_MAX as u16
@@ -393,25 +392,6 @@ impl PairParameters {
             OFFSET_MAX_VOL_ACC,
         );
 
-        {
-            let max_parameters = new_parameters.set(
-                max_volatility_accumulator.into(),
-                MASK_UINT20,
-                OFFSET_MAX_VOL_ACC,
-            );
-            let max_parameters = PairParameters(self.0.set(
-                U256::from_le_bytes(max_parameters.0),
-                MASK_STATIC_PARAMETER.into(),
-                0,
-            ));
-
-            let total_fee =
-                max_parameters.get_base_fee(bin_step) + max_parameters.get_variable_fee(bin_step);
-
-            if total_fee > MAX_FEE {
-                return Err(PairParametersError::MaxTotalFeeExceeded {});
-            }
-        }
         Ok(PairParameters(self.0.set(
             U256::from_le_bytes(new_parameters.0),
             MASK_STATIC_PARAMETER.into(),
@@ -571,7 +551,6 @@ mod tests {
             MAX_STATIC_FEE_PARAMETER.variable_fee_control,
             MAX_STATIC_FEE_PARAMETER.protocol_share,
             MAX_STATIC_FEE_PARAMETER.max_volatility_accumulator,
-            10u16,
         );
         assert_eq!(
             raw_new_param.unwrap_err(),
@@ -587,7 +566,6 @@ mod tests {
             MAX_STATIC_FEE_PARAMETER.variable_fee_control,
             MAX_STATIC_FEE_PARAMETER.protocol_share,
             MAX_STATIC_FEE_PARAMETER.max_volatility_accumulator,
-            10u16,
         );
 
         assert!(result.is_ok(), "Invalid Parameters");
@@ -799,7 +777,6 @@ mod tests {
                 MAX_STATIC_FEE_PARAMETER.variable_fee_control,
                 MAX_STATIC_FEE_PARAMETER.protocol_share,
                 MAX_STATIC_FEE_PARAMETER.max_volatility_accumulator,
-                10u16,
             )
             .unwrap();
         let bin_step: u16 = 100;
@@ -987,7 +964,6 @@ mod tests {
                     sfp.variable_fee_control,
                     sfp.protocol_share,
                     sfp.max_volatility_accumulator,
-                    10u16,
                 )
                 .unwrap()
                 .update_time_of_last_update(&current_timestamp)
@@ -1060,7 +1036,6 @@ mod tests {
                     sfp.variable_fee_control,
                     sfp.protocol_share,
                     sfp.max_volatility_accumulator,
-                    10u16,
                 )
                 .unwrap()
                 .update_time_of_last_update(&current_timestamp)

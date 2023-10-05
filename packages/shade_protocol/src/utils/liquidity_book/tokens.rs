@@ -10,6 +10,12 @@ use cosmwasm_std::{
 };
 
 #[cw_serde]
+pub struct SwapTokenAmount {
+    pub token: TokenType,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,

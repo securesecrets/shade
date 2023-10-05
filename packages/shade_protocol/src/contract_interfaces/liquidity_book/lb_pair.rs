@@ -1,12 +1,16 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, ContractInfo, Uint128, Uint256};
 
-use crate::utils::{
-    liquidity_book::{
-        tokens::TokenType,
-        types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+use crate::{
+    lb_libraries::tokens::SwapTokenAmount,
+    snip20::Snip20ReceiveMsg,
+    utils::{
+        liquidity_book::{
+            tokens::TokenType,
+            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+        },
+        ExecuteCallback, InstantiateCallback, Query,
     },
-    ExecuteCallback, InstantiateCallback, Query,
 };
 
 #[cw_serde]
@@ -38,11 +42,13 @@ impl InstantiateCallback for InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Swap {
-        swap_for_y: bool,
-        to: Addr,
-        amount_received: Uint128,
+    SwapTokens {
+        offer: SwapTokenAmount,
+        expected_return: Option<Uint128>,
+        to: Option<String>,
+        padding: Option<String>,
     },
+    Receive(Snip20ReceiveMsg),
     AddLiquidity {
         liquidity_parameters: LiquidityParameters,
     },
@@ -76,6 +82,19 @@ pub enum ExecuteMsg {
 }
 
 impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[cw_serde]
+pub enum InvokeMsg {
+    SwapTokens {
+        expected_return: Option<Uint128>,
+        to: Option<String>,
+        padding: Option<String>,
+    },
+}
+
+impl ExecuteCallback for InvokeMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

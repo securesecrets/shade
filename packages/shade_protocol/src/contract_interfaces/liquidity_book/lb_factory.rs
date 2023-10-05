@@ -1,11 +1,10 @@
 use super::super::super::lb_libraries::types::{LBPair, LBPairInformation};
 use super::super::super::lb_libraries::{tokens::TokenType, types::ContractInstantiationInfo};
+use super::lb_pair;
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
-
-use super::lb_pair;
 
 #[cw_serde]
 pub struct InstantiateMsg {
