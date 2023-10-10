@@ -6,6 +6,7 @@ use shade_protocol::{
         Response, StdResult, SubMsg, Uint128,
     },
     contract_interfaces::snip20::Snip20ReceiveMsg,
+    snip20,
     utils::asset::Contract,
 };
 
@@ -16,7 +17,7 @@ use crate::msg::{
 };
 use crate::state::{
     Distribution, TokenInfo, WithdrawAdjustment, BALANCES, CONTROLLER, DISTRIBUTION, MULTIPLIER,
-    POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, WITHDRAW_ADJUSTMENT,
+    POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY, WITHDRAW_ADJUSTMENT,
 };
 
 // version info for migration info
@@ -51,6 +52,8 @@ pub fn instantiate(
     TOTAL_SUPPLY.save(deps.storage, &Uint128::zero())?;
     CONTROLLER.save(deps.storage, &deps.api.addr_validate(&msg.controller)?)?;
     MULTIPLIER.save(deps.storage, &Decimal::from_ratio(1u128, 100_000u128))?;
+
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     Ok(Response::new())
 }
@@ -348,12 +351,9 @@ pub fn distribute(
         &deps.querier,
         env.contract.address.clone(),
         VIEWING_KEY.load(deps.storage)?,
-        &full_asset.contract.clone(),
-    )?;
-
-    // let balance = distribution
-    //     .denom
-    //     .query_balance(deps.as_ref(), env.contract.address)?;
+        &distribution.denom.clone(),
+    )?
+    .u128();
 
     let amount = balance - withdrawable;
     if amount == 0 {
@@ -496,9 +496,12 @@ pub fn query_base_balance(deps: Deps, address: String) -> StdResult<BalanceRespo
 /// Handler for `QueryMsg::Balance`
 pub fn query_balance(deps: Deps, address: String) -> StdResult<BalanceResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let balance = BALANCES
-        .may_load(deps.storage, &address)?
-        .unwrap_or_default();
+    let balance = snip20::helpers::balance_query(
+        &deps.querier,
+        address,
+        VIEWING_KEY.load(deps.storage)?,
+        &distribution.denom.address.clone(),
+    )?;
     Ok(BalanceResponse { balance })
 }
 
@@ -536,12 +539,15 @@ pub fn query_distributed_funds(deps: Deps) -> StdResult<FundsResponse> {
 /// Handler for `QueryMsg::UndistributedFunds`
 pub fn query_undistributed_funds(deps: Deps, env: Env) -> StdResult<FundsResponse> {
     let distribution = DISTRIBUTION.load(deps.storage)?;
-    let balance = distribution
-        .denom
-        .query_balance(deps, env.contract.address)?;
+    let balance = snip20::helpers::balance_query(
+        &deps.querier,
+        env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        &distribution.denom.clone(),
+    )?;
     Ok(FundsResponse {
         token: distribution.denom,
-        amount: balance - distribution.withdrawable_total.u128(),
+        amount: balance - distribution.withdrawable_total,
     })
 }
 

@@ -55,3 +55,5 @@ pub const BALANCES: Map<&Addr, Uint128> = Map::new("balance");
 pub const MULTIPLIER: Item<Decimal> = Item::new("multiplier");
 pub const DISTRIBUTION: Item<Distribution> = Item::new("distribution");
 pub const WITHDRAW_ADJUSTMENT: Map<&Addr, WithdrawAdjustment> = Map::new("withdraw_adjustment");
+
+pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");

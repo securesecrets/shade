@@ -1,6 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Decimal, Uint128};
-use shade_protocol::utils::{Query, asset::{Contract, RawContract}};
+use shade_protocol::utils::{
+    asset::{Contract, RawContract},
+    Query,
+};
 
 use lending_utils::amount::token_to_base;
 
@@ -17,6 +20,8 @@ pub struct InstantiateMsg {
     pub controller: String,
     /// Token which will be distributed via this contract by cw2222 interface
     pub distributed_token: RawContract,
+    /// Key used for reading data in queries
+    pub viewing_key: String,
 }
 
 #[cw_serde]
