@@ -3,11 +3,11 @@ use lending_utils::amount::{base_to_token, token_to_base};
 use shade_protocol::{
     c_std::{
         shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo,
-        Response, StdResult, SubMsg, Uint128,
+        Response, StdResult, Uint128,
     },
     contract_interfaces::snip20::Snip20ReceiveMsg,
     snip20,
-    utils::{asset::Contract, Query},
+    utils::Query,
 };
 
 use crate::error::ContractError;
@@ -19,10 +19,6 @@ use crate::state::{
     Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER, DISTRIBUTION,
     MULTIPLIER, POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY, WITHDRAW_ADJUSTMENT,
 };
-
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:lend-token";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -56,6 +52,65 @@ pub fn instantiate(
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     Ok(Response::new())
+}
+
+/// Execution entry point
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
+    use ExecuteMsg::*;
+
+    match msg {
+        Transfer { recipient, amount } => {
+            let recipient = deps.api.addr_validate(&recipient)?;
+            transfer(deps, env, info, recipient, amount)
+        }
+        TransferFrom {
+            sender,
+            recipient,
+            amount,
+        } => {
+            let recipient = deps.api.addr_validate(&recipient)?;
+            let sender = deps.api.addr_validate(&sender)?;
+            transfer_from(deps, info, sender, recipient, amount)
+        }
+        TransferBaseFrom {
+            sender,
+            recipient,
+            amount,
+        } => {
+            let controller = CONTROLLER.load(deps.storage)?;
+
+            if info.sender != controller.address {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            let recipient = deps.api.addr_validate(&recipient)?;
+            let sender = deps.api.addr_validate(&sender)?;
+            let multiplier = MULTIPLIER.load(deps.storage)?;
+            let amount = base_to_token(amount, multiplier);
+            transfer_from(deps, info, sender, recipient, amount)
+        }
+        Send {
+            contract,
+            amount,
+            msg,
+        } => {
+            let recipient = deps.api.addr_validate(&contract)?;
+            send(deps, env, info, recipient, amount, msg)
+        }
+        Mint { recipient, amount } => mint(deps, info, recipient, amount),
+        MintBase { recipient, amount } => mint_base(deps, info, recipient, amount),
+        BurnFrom { owner, amount } => burn_from(deps, info, owner, amount),
+        BurnBaseFrom { owner, amount } => burn_base_from(deps, info, owner, amount),
+        Rebase { ratio } => rebase(deps, info, ratio),
+        Distribute { sender } => distribute(deps, env, info, sender),
+        WithdrawFunds {} => withdraw_funds(deps, env, info),
+    }
 }
 
 /// Ensures, that tokens can be transferred from given account
@@ -180,9 +235,8 @@ fn send(
         .add_attribute("to", &recipient)
         .add_attribute("amount", amount)
         .add_message(
-            // TODO: Import into cosmos msg
             Snip20ReceiveMsg {
-                sender: info.sender.into(),
+                sender: info.sender.clone().into(),
                 from: info.sender.into(),
                 amount,
                 memo: None,
@@ -383,7 +437,7 @@ pub fn distribute(
 
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
-    let mut resp = Response::new()
+    let resp = Response::new()
         .add_attribute("action", "distribute_tokens")
         .add_attribute("sender", sender.as_str())
         .add_attribute("amount", amount.to_string())
@@ -393,7 +447,7 @@ pub fn distribute(
 }
 
 /// Handler for `ExecuteMsg::WithdrawFunds`
-fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+fn withdraw_funds(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let mut distribution = DISTRIBUTION.load(deps.storage)?;
     let mut adjustment = WITHDRAW_ADJUSTMENT
         .may_load(deps.storage, &info.sender)?
@@ -410,75 +464,23 @@ fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
     distribution.withdrawable_total -= token.amount;
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
-    let mut resp = Response::new()
+    let resp = Response::new()
         .add_attribute("action", "withdraw_tokens")
         .add_attribute("owner", info.sender.as_str())
         .add_attribute("amount", token.amount.to_string())
-        .add_submessage(SubMsg::new(
-            token.denom.send_msg(info.sender, token.amount)?,
-        ))
+        .add_message(
+            Snip20ReceiveMsg {
+                sender: env.contract.address.clone().into(),
+                from: env.contract.address.into(),
+                amount: token.amount,
+                memo: None,
+                msg: None,
+            }
+            .into_cosmos_msg(env.contract.code_hash, info.sender.to_string())?,
+        )
         .add_attribute("snip20_address", distribution.denom.address);
 
     Ok(resp)
-}
-
-/// Execution entry point
-#[cfg_attr(not(feature = "library"), shd_entry_point)]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
-    use ExecuteMsg::*;
-
-    match msg {
-        Transfer { recipient, amount } => {
-            let recipient = deps.api.addr_validate(&recipient)?;
-            transfer(deps, env, info, recipient, amount)
-        }
-        TransferFrom {
-            sender,
-            recipient,
-            amount,
-        } => {
-            let recipient = deps.api.addr_validate(&recipient)?;
-            let sender = deps.api.addr_validate(&sender)?;
-            transfer_from(deps, info, sender, recipient, amount)
-        }
-        TransferBaseFrom {
-            sender,
-            recipient,
-            amount,
-        } => {
-            let controller = CONTROLLER.load(deps.storage)?;
-
-            if info.sender != controller.address {
-                return Err(ContractError::Unauthorized {});
-            }
-
-            let recipient = deps.api.addr_validate(&recipient)?;
-            let sender = deps.api.addr_validate(&sender)?;
-            let multiplier = MULTIPLIER.load(deps.storage)?;
-            let amount = base_to_token(amount, multiplier);
-            transfer_from(deps, info, sender, recipient, amount)
-        }
-        Send {
-            contract,
-            amount,
-            msg,
-        } => {
-            let recipient = deps.api.addr_validate(&contract)?;
-            send(deps, env, info, recipient, amount, msg)
-        }
-        Mint { recipient, amount } => mint(deps, info, recipient, amount),
-        MintBase { recipient, amount } => mint_base(deps, info, recipient, amount),
-        BurnFrom { owner, amount } => burn_from(deps, info, owner, amount),
-        BurnBaseFrom { owner, amount } => burn_base_from(deps, info, owner, amount),
-        Rebase { ratio } => rebase(deps, info, ratio),
-        Distribute { sender } => distribute(deps, env, info, sender),
-        WithdrawFunds {} => withdraw_funds(deps, info),
-    }
 }
 
 /// Handler for `QueryMsg::BaseBalance`
@@ -600,7 +602,7 @@ pub fn withdrawable_funds(
 
     Ok(Withdrawable {
         amount: Uint128::new(amount),
-        denom: distribution.denom.address.clone(),
+        denom: distribution.denom.clone(),
     })
 }
 
