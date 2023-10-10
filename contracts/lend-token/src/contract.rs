@@ -189,7 +189,7 @@ fn send(
                 memo: None,
                 msg: Some(msg),
             }
-            .into_cosmos_msg(recipient)?,
+            .into_cosmos_msg(env.contract.code_hash, recipient.to_string())?,
         );
 
     Ok(res)
