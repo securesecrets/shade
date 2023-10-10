@@ -42,7 +42,7 @@ pub struct WithdrawAdjustment {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Withdrawable {
-    pub denom: Addr,
+    pub denom: Contract,
     pub amount: Uint128,
 }
 
