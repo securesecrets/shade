@@ -8,6 +8,7 @@ use shade_protocol::{
     contract_interfaces::snip20::Snip20ReceiveMsg,
     snip20,
     utils::asset::Contract,
+    Query,
 };
 
 use crate::error::ContractError;
@@ -16,8 +17,8 @@ use crate::msg::{
     MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
 };
 use crate::state::{
-    Distribution, TokenInfo, WithdrawAdjustment, BALANCES, CONTROLLER, DISTRIBUTION, MULTIPLIER,
-    POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY, WITHDRAW_ADJUSTMENT,
+    Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER, DISTRIBUTION,
+    MULTIPLIER, POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY, WITHDRAW_ADJUSTMENT,
 };
 
 // version info for migration info
@@ -496,12 +497,9 @@ pub fn query_base_balance(deps: Deps, address: String) -> StdResult<BalanceRespo
 /// Handler for `QueryMsg::Balance`
 pub fn query_balance(deps: Deps, address: String) -> StdResult<BalanceResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let balance = snip20::helpers::balance_query(
-        &deps.querier,
-        address,
-        VIEWING_KEY.load(deps.storage)?,
-        &distribution.denom.address.clone(),
-    )?;
+    let balance = BALANCES
+        .may_load(deps.storage, &address)?
+        .unwrap_or_default();
     Ok(BalanceResponse { balance })
 }
 
@@ -561,8 +559,8 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
 
     let withdrawable_funds = withdrawable_funds(deps, &owner, &distribution, &adjustment)?;
     Ok(FundsResponse {
-        token: withdrawable_funds.1,
-        amount: withdrawable_funds.0.into(),
+        token: withdrawable_funds.denom,
+        amount: withdrawable_funds.amount.into(),
     })
 }
 
@@ -588,7 +586,7 @@ pub fn withdrawable_funds(
     owner: &Addr,
     distribution: &Distribution,
     adjustment: &WithdrawAdjustment,
-) -> StdResult<(u128, Contract)> {
+) -> StdResult<Withdrawable> {
     let ppt: u128 = distribution.points_per_token.into();
     let tokens: u128 = BALANCES
         .may_load(deps.storage, owner)?
@@ -601,7 +599,10 @@ pub fn withdrawable_funds(
     let amount = points as u128 / POINTS_SCALE;
     let amount = amount - withdrawn;
 
-    Ok((amount, distribution.denom.clone()))
+    Ok(Withdrawable {
+        amount: Uint128::new(amount),
+        denom: distribution.denom.address.clone(),
+    })
 }
 
 /// Applies points correction for given address.

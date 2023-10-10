@@ -1,8 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Decimal, Uint128};
-use shade_protocol::utils::{
-    asset::{Contract, RawContract},
-    Query,
+use shade_protocol::{
+    c_std::{Binary, Decimal, Uint128},
+    utils::{
+        asset::{Contract, RawContract},
+        Query,
+    },
 };
 
 use lending_utils::amount::token_to_base;

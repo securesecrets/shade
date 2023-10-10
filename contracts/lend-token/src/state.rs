@@ -1,8 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, Uint128};
 use shade_protocol::{
+    c_std::{Addr, Decimal, Uint128},
     secret_storage_plus::{Item, Map},
     utils::asset::Contract,
 };
@@ -38,6 +38,12 @@ pub struct WithdrawAdjustment {
     pub points_correction: Int128,
     /// How much funds was already withdrawn.
     pub withdrawn_funds: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct Withdrawable {
+    pub denom: Addr,
+    pub amount: Uint128,
 }
 
 /// How much points is the worth of single token in token distribution.
