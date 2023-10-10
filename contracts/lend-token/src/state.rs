@@ -56,7 +56,7 @@ pub const POINTS_SCALE: u128 = 4_000_000_000;
 
 pub const TOKEN_INFO: Item<TokenInfo> = Item::new("token_info");
 pub const TOTAL_SUPPLY: Item<Uint128> = Item::new("total_supply");
-pub const CONTROLLER: Item<Addr> = Item::new("controller");
+pub const CONTROLLER: Item<Contract> = Item::new("controller");
 pub const BALANCES: Map<&Addr, Uint128> = Map::new("balance");
 pub const MULTIPLIER: Item<Decimal> = Item::new("multiplier");
 pub const DISTRIBUTION: Item<Distribution> = Item::new("distribution");

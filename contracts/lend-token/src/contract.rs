@@ -7,8 +7,7 @@ use shade_protocol::{
     },
     contract_interfaces::snip20::Snip20ReceiveMsg,
     snip20,
-    utils::asset::Contract,
-    Query,
+    utils::{asset::Contract, Query},
 };
 
 use crate::error::ContractError;
@@ -51,7 +50,7 @@ pub fn instantiate(
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
     TOTAL_SUPPLY.save(deps.storage, &Uint128::zero())?;
-    CONTROLLER.save(deps.storage, &deps.api.addr_validate(&msg.controller)?)?;
+    CONTROLLER.save(deps.storage, &msg.controller.into_valid(deps.api)?)?;
     MULTIPLIER.save(deps.storage, &Decimal::from_ratio(1u128, 100_000u128))?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
@@ -71,7 +70,7 @@ fn can_transfer(
         token: env.contract.address.to_string(),
         account,
     }
-    .query(deps.querier, controller)?;
+    .query(&deps.querier, &controller)?;
 
     if amount <= transferable.transferable {
         Ok(())
@@ -147,7 +146,7 @@ fn transfer_from(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -214,7 +213,7 @@ pub fn mint(
 ) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
 
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -267,7 +266,7 @@ pub fn burn_from(
     let controller = CONTROLLER.load(deps.storage)?;
     let owner = deps.api.addr_validate(&owner)?;
 
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -311,7 +310,7 @@ pub fn burn_from(
 /// Handler for `ExecuteMsg::Rebase`
 pub fn rebase(deps: DepsMut, info: MessageInfo, ratio: Decimal) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -454,7 +453,7 @@ pub fn execute(
         } => {
             let controller = CONTROLLER.load(deps.storage)?;
 
-            if info.sender != controller {
+            if info.sender != controller.address {
                 return Err(ContractError::Unauthorized {});
             }
 

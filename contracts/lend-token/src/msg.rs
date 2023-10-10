@@ -19,7 +19,7 @@ pub struct InstantiateMsg {
     pub decimals: u8,
     /// Controller is contract allowed to ming, burn, rebase, and must be checked with to
     /// enable transfer. Usually it is an wynd_lend market contract.
-    pub controller: String,
+    pub controller: RawContract,
     /// Token which will be distributed via this contract by cw2222 interface
     pub distributed_token: RawContract,
     /// Key used for reading data in queries
