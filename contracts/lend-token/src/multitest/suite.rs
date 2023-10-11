@@ -8,6 +8,7 @@ use crate::multitest::controller::Controller;
 use crate::multitest::receiver::{QueryResp as ReceiverQueryResp, Receiver};
 use anyhow::{anyhow, Result as AnyResult};
 
+use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::{
     c_std::{Addr, Binary, Coin as StdCoin, Decimal, Empty, Uint128},
     contract_interfaces::snip20::Snip20ReceiveMsg,
@@ -27,20 +28,14 @@ fn contract_token() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-fn contract_cw20_base() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(
-        cw20_base::contract::execute,
-        cw20_base::contract::instantiate,
-        cw20_base::contract::query,
-    ))
+pub fn init_snip20(chain: &App, init_msg: snip20::InstantiateMsg) -> ContractInfo {
+    let snip20 = chain
+        .instantiate_contract(stored_code, None, &init_msg, &[], "admin", None)
+        .unwrap();
+
+    snip20
 }
 
-#[derive(Debug)]
-#[allow(clippy::large_enum_variant)]
-enum TokenData {
-    Native(String),
-    Cw20(cw20_base::msg::InstantiateMsg),
-}
 /// Builder for test suite
 #[derive(Debug)]
 pub struct SuiteBuilder {
@@ -53,7 +48,7 @@ pub struct SuiteBuilder {
     /// Amount of tokens controller would allow to transfer
     transferable: HashMap<String, Uint128>,
     /// Token distributed by this contract
-    distributed_token: TokenData,
+    distributed_token: snip20::InstantiateMsg,
     /// Initial funds of native tokens
     funds: Vec<(Addr, Vec<StdCoin>)>,
 }
@@ -65,7 +60,16 @@ impl SuiteBuilder {
             symbol: "LDX".to_owned(),
             decimals: 9,
             transferable: HashMap::new(),
-            distributed_token: TokenData::Native("gov".to_string()),
+            distributed_token: snip20::InstantiateMsg {
+                name: "Distribution Token".to_string(),
+                admin: None,
+                query_auth: None,
+                symbol: "DIST".to_string(),
+                decimals: decimals as u8,
+                initial_balances: None,
+                prng_seed: Binary::default(),
+                config: None,
+            },
             funds: Vec::new(),
         }
     }
@@ -98,7 +102,7 @@ impl SuiteBuilder {
     pub fn with_distributed_cw20_token(
         mut self,
         decimals: u8,
-        initial_balances: Vec<cw20::Cw20Coin>,
+        initial_balances: Vec<snip20::InitialBalance>,
     ) -> Self {
         self.distributed_token = TokenData::Cw20(cw20_base::msg::InstantiateMsg {
             name: "Distribution token".to_string(),
@@ -140,24 +144,8 @@ impl SuiteBuilder {
             )
             .unwrap();
 
-        let distributed_token = match self.distributed_token {
-            TokenData::Cw20(instantiate) => {
-                let id = app.store_code(contract_cw20_base());
-                let token = app
-                    .instantiate_contract(
-                        id,
-                        owner.clone(),
-                        &instantiate,
-                        &[],
-                        "Distribution Token",
-                        None,
-                    )
-                    .unwrap();
-
-                Token::Cw20(token.to_string())
-            }
-            TokenData::Native(denom) => Token::Native(denom),
-        };
+        let snip20_id = app.store_code(Snip20::default().contract());
+        let distributed_token = init_snip20(&app, self.distributed_token);
 
         let token_id = app.store_code(contract_token());
         let token = app
@@ -170,6 +158,7 @@ impl SuiteBuilder {
                     decimals: self.decimals,
                     controller: controller.to_string(),
                     distributed_token: distributed_token.clone(),
+                    viewing_key: "VIEWING_KEY".to_string(),
                 },
                 &[],
                 "WyndLend",
