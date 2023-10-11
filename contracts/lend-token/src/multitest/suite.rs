@@ -7,8 +7,13 @@ use crate::msg::{
 use crate::multitest::controller::Controller;
 use crate::multitest::receiver::{QueryResp as ReceiverQueryResp, Receiver};
 use anyhow::{anyhow, Result as AnyResult};
-use cosmwasm_std::{Addr, Binary, Coin as StdCoin, Decimal, Empty, Uint128};
-use cw_multi_test::{App, AppResponse, BasicAppBuilder, Contract, ContractWrapper, Executor};
+
+use shade_protocol::{
+    c_std::{Addr, Binary, Coin as StdCoin, Decimal, Empty, Uint128},
+    contract_interfaces::snip20::Snip20ReceiveMsg,
+    multi_test::{App, AppResponse, BasicAppBuilder, Contract, ContractWrapper, Executor},
+    secret_storage_plus::Item,
+};
 
 use utils::{coin::Coin, token::Token};
 

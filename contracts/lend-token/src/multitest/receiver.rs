@@ -1,12 +1,14 @@
 use anyhow::{anyhow, bail, Result as AnyResult};
-use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
-    Response, StdResult, Uint128,
-};
-use cw20::Cw20ReceiveMsg;
-use cw_multi_test::Contract;
-use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
+use shade_protocol::{
+    c_std::{
+        from_binary, from_slice, to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply,
+        Response, StdResult, Uint128,
+    },
+    contract_interfaces::snip20::Snip20ReceiveMsg,
+    multi_test::Contract,
+    secret_storage_plus::Item,
+};
 
 /// Cw20 Execute message
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
