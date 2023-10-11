@@ -1,9 +1,6 @@
 use crate::{
-    c_std::{Addr, Binary, Decimal, Uint128},
-    query_auth::{
-        helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
-        QueryPermit,
-    },
+    c_std::{Addr, Binary, Uint128},
+    query_auth::QueryPermit,
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,

@@ -129,7 +129,7 @@ where
 mod test {
 
     use super::*;
-    use crate::c_std::{MemoryStorage, Timestamp, Uint128};
+    use crate::c_std::{MemoryStorage, Timestamp};
 
     fn test_push(now: String) {
         let now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
