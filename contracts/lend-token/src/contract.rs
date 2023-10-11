@@ -625,7 +625,6 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
     use super::*;
-    use utils::token::Token;
 
     #[test]
     fn rebase_works() {
@@ -637,6 +636,7 @@ mod tests {
             decimals: 9,
             controller: controller.to_string(),
             distributed_token: Token::Native(String::new()),
+            viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
         let env = mock_env();
@@ -673,6 +673,7 @@ mod tests {
             decimals: 9,
             controller: controller.to_string(),
             distributed_token: Token::Native(String::new()),
+            viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
         let env = mock_env();

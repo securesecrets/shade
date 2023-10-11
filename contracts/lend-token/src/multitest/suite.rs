@@ -14,9 +14,12 @@ use shade_protocol::{
     contract_interfaces::snip20::Snip20ReceiveMsg,
     multi_test::{App, AppResponse, BasicAppBuilder, Contract, ContractWrapper, Executor},
     secret_storage_plus::Item,
+    snip20
 };
 
 use utils::{coin::Coin, token::Token};
+
+pub const VIEWING_KEY: &str = "viewing_key";
 
 fn contract_token() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -94,24 +97,22 @@ impl SuiteBuilder {
         self
     }
 
-    pub fn with_distributed_native_token(mut self, token: impl ToString) -> Self {
-        self.distributed_token = TokenData::Native(token.to_string());
-        self
-    }
 
     pub fn with_distributed_cw20_token(
         mut self,
         decimals: u8,
         initial_balances: Vec<snip20::InitialBalance>,
     ) -> Self {
-        self.distributed_token = TokenData::Cw20(cw20_base::msg::InstantiateMsg {
-            name: "Distribution token".to_string(),
-            symbol: "DIST".to_string(),
-            decimals,
-            initial_balances,
-            mint: None,
-            marketing: None,
-        }); // will be set when contract is instantiated
+        self.distributed_token = snip20::InstantiateMsg {
+                name: "Distribution Token".to_string(),
+                admin: None,
+                query_auth: None,
+                symbol: "DIST".to_string(),
+                decimals: decimals as u8,
+                initial_balances: None,
+                prng_seed: Binary::default(),
+                config: None,
+        }; // will be set when contract is instantiated
         self
     }
 
@@ -156,9 +157,9 @@ impl SuiteBuilder {
                     name: self.name,
                     symbol: self.symbol,
                     decimals: self.decimals,
-                    controller: controller.to_string(),
+                    controller,
                     distributed_token: distributed_token.clone(),
-                    viewing_key: "VIEWING_KEY".to_string(),
+                    viewing_key: viewing_key.to_string(),
                 },
                 &[],
                 "WyndLend",
@@ -173,10 +174,10 @@ impl SuiteBuilder {
 
         Suite {
             app,
-            controller,
-            token,
-            receiver,
-            distributed_token,
+            controller: controller.address,
+            token: token.address,
+            receiver: token.address,
+            distributed_token: distributed_token.address,
         }
     }
 }
@@ -501,36 +502,39 @@ impl Suite {
         Ok(amount.into())
     }
 
-    /// Sends the given amount of cw20 token from `sender` to the token contract
-    pub fn cw20_send_to_token_contract(
+    /// Sends the given amount of snip20 token from `sender` to the token contract
+    pub fn snip20_send_to_token_contract(
         &mut self,
-        cw20_contract: &str,
+        snip20_contract: &ContractInfo,
         sender: &str,
         amount: u128,
     ) -> AnyResult<AppResponse> {
         self.app.execute_contract(
             Addr::unchecked(sender),
-            Addr::unchecked(cw20_contract),
-            &cw20::Cw20ExecuteMsg::Transfer {
+            snip20_contract,
+            &snip20::ExecuteMsg::Send {
                 recipient: self.token.to_string(),
+                recipient_code_hash: None,
                 amount: amount.into(),
+                msg: None,
+                memo: None,
+                padding: None,
             },
             &[],
         )
     }
 
     /// Queries the balance of the given cw20 token of the address
-    pub fn cw20_balance(&mut self, cw20_contract: &str, address: &str) -> AnyResult<u128> {
+    pub fn snip20_balance(&mut self, snip20_contract: &str, address: &str) -> AnyResult<u128> {
         Ok(self
             .app
             .wrap()
-            .query_wasm_smart::<BalanceResponse>(
-                Addr::unchecked(cw20_contract),
-                &cw20::Cw20QueryMsg::Balance {
+            .query::<snip20::QueryAnswer::Balance>(
+                &snip20::QueryMsg::Balance {
                     address: address.to_string(),
+                    key: VIEWING_KEY.to_string(),
                 },
             )?
-            .balance
             .u128())
     }
 }
