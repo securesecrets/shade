@@ -622,20 +622,24 @@ pub fn apply_points_correction(deps: DepsMut, addr: &Addr, ppt: u128, diff: i128
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use shade_protocol::{
+        c_std::testing::{mock_dependencies, mock_env, mock_info},
+        utils::asset::RawContract,
+    };
 
     use super::*;
 
     #[test]
     fn rebase_works() {
         let mut deps = mock_dependencies();
-        let controller = "controller";
+        let controller = RawContract::new(&"controller".to_string(), &"".to_string());
+        let distributed_token = RawContract::new(&"SHADE".to_string(), &"".to_string());
         let instantiate_msg = InstantiateMsg {
             name: "Cash Token".to_string(),
             symbol: "CASH".to_string(),
             decimals: 9,
-            controller: controller.to_string(),
-            distributed_token: Token::Native(String::new()),
+            controller,
+            distributed_token,
             viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
@@ -648,7 +652,7 @@ mod tests {
         assert_eq!(basic_mul, MULTIPLIER.load(&deps.storage).unwrap());
 
         // We rebase by 1.2, multiplier is 1.2
-        let info = mock_info(controller, &[]);
+        let info = mock_info(&controller.address, &[]);
         rebase(deps.as_mut(), info.clone(), Decimal::percent(120)).unwrap();
         assert_eq!(
             basic_mul * Decimal::percent(120),
@@ -666,13 +670,14 @@ mod tests {
     #[test]
     fn rebase_query_works() {
         let mut deps = mock_dependencies();
-        let controller = "controller";
+        let controller = RawContract::new(&"controller".to_string(), &"".to_string());
+        let distributed_token = RawContract::new(&"SHADE".to_string(), &"".to_string());
         let instantiate_msg = InstantiateMsg {
             name: "Cash Token".to_string(),
             symbol: "CASH".to_string(),
             decimals: 9,
-            controller: controller.to_string(),
-            distributed_token: Token::Native(String::new()),
+            controller,
+            distributed_token,
             viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
@@ -682,7 +687,7 @@ mod tests {
 
         let basic_mul = MULTIPLIER.load(&deps.storage).unwrap();
 
-        let info = mock_info(controller, &[]);
+        let info = mock_info(&controller.address, &[]);
         rebase(deps.as_mut(), info, Decimal::percent(120)).unwrap();
         assert_eq!(
             basic_mul * Decimal::percent(120),

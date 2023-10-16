@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result as AnyResult};
 use std::collections::HashMap;
 
 use crate::msg::{
@@ -6,15 +7,18 @@ use crate::msg::{
 };
 use crate::multitest::controller::Controller;
 use crate::multitest::receiver::{QueryResp as ReceiverQueryResp, Receiver};
-use anyhow::{anyhow, Result as AnyResult};
 
 use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::{
-    c_std::{Addr, Binary, Coin as StdCoin, Decimal, Empty, Uint128},
+    c_std::{coin, Addr, Binary, Coin as StdCoin, ContractInfo, Decimal, Empty, Uint128},
     contract_interfaces::snip20::Snip20ReceiveMsg,
-    multi_test::{App, AppResponse, BasicAppBuilder, Contract, ContractWrapper, Executor},
+    multi_test::{
+        App, AppResponse, BasicAppBuilder, Contract, ContractInstantiationInfo, ContractWrapper,
+        Executor,
+    },
     secret_storage_plus::Item,
-    snip20
+    snip20,
+    utils::MultiTestable,
 };
 
 use utils::{coin::Coin, token::Token};
@@ -31,9 +35,20 @@ fn contract_token() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-pub fn init_snip20(chain: &App, init_msg: snip20::InstantiateMsg) -> ContractInfo {
+pub fn init_snip20(
+    chain: &App,
+    stored_code: ContractInstantiationInfo,
+    init_msg: snip20::InstantiateMsg,
+) -> ContractInfo {
     let snip20 = chain
-        .instantiate_contract(stored_code, None, &init_msg, &[], "admin", None)
+        .instantiate_contract(
+            stored_code,
+            Addr::unchecked("admin"),
+            &init_msg,
+            &[],
+            "Distribution token",
+            Some("admin".to_string()),
+        )
         .unwrap();
 
     snip20
@@ -68,7 +83,7 @@ impl SuiteBuilder {
                 admin: None,
                 query_auth: None,
                 symbol: "DIST".to_string(),
-                decimals: decimals as u8,
+                decimals: 6u8,
                 initial_balances: None,
                 prng_seed: Binary::default(),
                 config: None,
@@ -97,21 +112,20 @@ impl SuiteBuilder {
         self
     }
 
-
     pub fn with_distributed_cw20_token(
         mut self,
         decimals: u8,
         initial_balances: Vec<snip20::InitialBalance>,
     ) -> Self {
         self.distributed_token = snip20::InstantiateMsg {
-                name: "Distribution Token".to_string(),
-                admin: None,
-                query_auth: None,
-                symbol: "DIST".to_string(),
-                decimals: decimals as u8,
-                initial_balances: None,
-                prng_seed: Binary::default(),
-                config: None,
+            name: "Distribution Token".to_string(),
+            admin: None,
+            query_auth: None,
+            symbol: "DIST".to_string(),
+            decimals: decimals as u8,
+            initial_balances: None,
+            prng_seed: Binary::default(),
+            config: None,
         }; // will be set when contract is instantiated
         self
     }
@@ -146,7 +160,7 @@ impl SuiteBuilder {
             .unwrap();
 
         let snip20_id = app.store_code(Snip20::default().contract());
-        let distributed_token = init_snip20(&app, self.distributed_token);
+        let distributed_token = init_snip20(&app, snip20_id, self.distributed_token);
 
         let token_id = app.store_code(contract_token());
         let token = app
@@ -157,9 +171,9 @@ impl SuiteBuilder {
                     name: self.name,
                     symbol: self.symbol,
                     decimals: self.decimals,
-                    controller,
-                    distributed_token: distributed_token.clone(),
-                    viewing_key: viewing_key.to_string(),
+                    controller: controller.clone().into(),
+                    distributed_token: distributed_token.clone().into(),
+                    viewing_key: VIEWING_KEY.to_string(),
                 },
                 &[],
                 "WyndLend",
@@ -174,10 +188,10 @@ impl SuiteBuilder {
 
         Suite {
             app,
-            controller: controller.address,
-            token: token.address,
-            receiver: token.address,
-            distributed_token: distributed_token.address,
+            controller,
+            token,
+            receiver: token,
+            distributed_token,
         }
     }
 }
@@ -187,13 +201,13 @@ pub struct Suite {
     /// The multitest app
     app: App,
     /// Address of controller contract
-    controller: Addr,
+    controller: ContractInfo,
     /// Address of token contract
-    token: Addr,
+    token: ContractInfo,
     /// The token that is distributed by the contract
-    distributed_token: Token,
+    distributed_token: ContractInfo,
     /// Address of cw1 contract
-    receiver: Addr,
+    receiver: ContractInfo,
 }
 
 impl Suite {
@@ -204,17 +218,17 @@ impl Suite {
 
     /// Gives controller address back
     pub fn controller(&self) -> Addr {
-        self.controller.clone()
+        self.controller.address.clone()
     }
 
     /// Gives receiver address back
     pub fn receiver(&self) -> Addr {
-        self.receiver.clone()
+        self.receiver.address.clone()
     }
 
     /// Gives token address back
     pub fn token(&self) -> Addr {
-        self.token.clone()
+        self.token.address.clone()
     }
 
     /// Gives distributed token back
@@ -232,7 +246,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::Transfer {
                     recipient: recipient.to_owned(),
                     amount,
@@ -251,8 +265,8 @@ impl Suite {
     ) -> AnyResult<AppResponse> {
         self.app
             .execute_contract(
-                self.controller.clone(),
-                self.token.clone(),
+                self.controller.address.clone(),
+                &self.token,
                 &ExecuteMsg::TransferBaseFrom {
                     sender: sender.to_owned(),
                     recipient: recipient.to_owned(),
@@ -274,7 +288,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::Send {
                     contract: recipient.to_owned(),
                     amount,
@@ -295,7 +309,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::Mint {
                     recipient: recipient.to_owned(),
                     amount,
@@ -315,7 +329,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::MintBase {
                     recipient: recipient.to_owned(),
                     amount,
@@ -330,7 +344,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::BurnFrom {
                     owner: account.to_string(),
                     amount,
@@ -350,7 +364,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(sender),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::BurnBaseFrom {
                     owner: account.to_string(),
                     amount,
@@ -365,7 +379,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(executor),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::Rebase { ratio },
                 &[],
             )
@@ -383,7 +397,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(executor),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::Distribute { sender },
                 funds,
             )
@@ -395,7 +409,7 @@ impl Suite {
         self.app
             .execute_contract(
                 Addr::unchecked(executor),
-                self.token.clone(),
+                &self.token,
                 &ExecuteMsg::WithdrawFunds {},
                 &[],
             )
@@ -405,7 +419,8 @@ impl Suite {
     /// Queries token contract for balance
     pub fn query_base_balance(&self, address: &str) -> AnyResult<Uint128> {
         let resp: BalanceResponse = self.app.wrap().query_wasm_smart(
-            self.token.clone(),
+            self.token.address.clone(),
+            self.token.code_hash.clone(),
             &QueryMsg::BaseBalance {
                 address: address.to_owned(),
             },
@@ -416,7 +431,8 @@ impl Suite {
     /// Queries token contract for balance
     pub fn query_balance(&self, address: &str) -> AnyResult<Uint128> {
         let resp: BalanceResponse = self.app.wrap().query_wasm_smart(
-            self.token.clone(),
+            self.token.address.clone(),
+            self.token.code_hash.clone(),
             &QueryMsg::Balance {
                 address: address.to_owned(),
             },
@@ -428,7 +444,11 @@ impl Suite {
     pub fn query_token_info(&self) -> AnyResult<TokenInfoResponse> {
         self.app
             .wrap()
-            .query_wasm_smart(self.token.clone(), &QueryMsg::TokenInfo {})
+            .query_wasm_smart(
+                self.token.address.clone(),
+                self.token.code_hash.clone(),
+                &QueryMsg::TokenInfo {},
+            )
             .map_err(|err| anyhow!(err))
     }
 
@@ -437,7 +457,11 @@ impl Suite {
         let resp: ReceiverQueryResp = self
             .app
             .wrap()
-            .query_wasm_smart(self.receiver.clone(), &Empty {})
+            .query_wasm_smart(
+                self.receiver.address.clone(),
+                self.receiver.code_hash.clone(),
+                &Empty {},
+            )
             .map_err(|err| anyhow!(err))?;
 
         Ok(resp.counter.into())
@@ -448,7 +472,11 @@ impl Suite {
         let resp: MultiplierResponse = self
             .app
             .wrap()
-            .query_wasm_smart(self.token.clone(), &QueryMsg::Multiplier {})
+            .query_wasm_smart(
+                self.token.address.clone(),
+                self.token.code_hash.clone(),
+                &QueryMsg::Multiplier {},
+            )
             .map_err(|err| anyhow!(err))?;
 
         Ok(resp.multiplier)
@@ -459,10 +487,14 @@ impl Suite {
         let resp: FundsResponse = self
             .app
             .wrap()
-            .query_wasm_smart(self.token.clone(), &QueryMsg::DistributedFunds {})
+            .query_wasm_smart(
+                self.token.address.clone(),
+                self.token.code_hash.clone(),
+                &QueryMsg::DistributedFunds {},
+            )
             .map_err(|err| anyhow!(err))?;
 
-        Ok(resp.funds)
+        Ok(coin(resp.amount.u128(), resp.token.address))
     }
 
     /// Queries undistributed funds
@@ -470,10 +502,14 @@ impl Suite {
         let resp: FundsResponse = self
             .app
             .wrap()
-            .query_wasm_smart(self.token.clone(), &QueryMsg::UndistributedFunds {})
+            .query_wasm_smart(
+                self.token.address.clone(),
+                self.token.code_hash.clone(),
+                &QueryMsg::UndistributedFunds {},
+            )
             .map_err(|err| anyhow!(err))?;
 
-        Ok(resp.funds)
+        Ok(coin(resp.amount.u128(), resp.token.address))
     }
 
     /// Queries withdrawable funds
@@ -482,14 +518,15 @@ impl Suite {
             .app
             .wrap()
             .query_wasm_smart(
-                self.token.clone(),
+                self.token.address.clone(),
+                self.token.code_hash.clone(),
                 &QueryMsg::WithdrawableFunds {
                     owner: addr.to_owned(),
                 },
             )
             .map_err(|err| anyhow!(err))?;
 
-        Ok(resp.funds)
+        Ok(coin(resp.amount.u128(), resp.token.address))
     }
 
     /// Queries for balance of native token
@@ -513,7 +550,7 @@ impl Suite {
             Addr::unchecked(sender),
             snip20_contract,
             &snip20::ExecuteMsg::Send {
-                recipient: self.token.to_string(),
+                recipient: self.token.address.to_string(),
                 recipient_code_hash: None,
                 amount: amount.into(),
                 msg: None,
@@ -529,12 +566,8 @@ impl Suite {
         Ok(self
             .app
             .wrap()
-            .query::<snip20::QueryAnswer::Balance>(
-                &snip20::QueryMsg::Balance {
-                    address: address.to_string(),
-                    key: VIEWING_KEY.to_string(),
-                },
-            )?
+            .query_balance(address.to_string(), snip20_contract.to_string())?
+            .amount
             .u128())
     }
 }
