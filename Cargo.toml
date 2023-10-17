@@ -22,10 +22,13 @@ members = [
   "contracts/basic_staking",
   "contracts/snip20_derivative",
 
+  # Lending
+  "contracts/lending/*",
+
   # DAO
   # - Core
-  "contracts/dao/treasury", 
-  "contracts/dao/treasury_manager", 
+  "contracts/dao/treasury",
+  "contracts/dao/treasury_manager",
   # - Adapters
   "contracts/dao/scrt_staking",
   "contracts/dao/stkd_scrt",
