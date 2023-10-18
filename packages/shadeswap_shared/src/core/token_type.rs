@@ -1,19 +1,6 @@
-use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Coin, ContractInfo, CosmosMsg, Deps, MessageInfo, StdError,
-    StdResult, Uint128, Uint256, WasmMsg,
-};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::Contract;
-use shade_protocol::{
-    snip20::{
-        helpers::{balance_query, token_info},
-        ExecuteMsg::Send,
-    },
-    utils::liquidity_book::tokens::TokenType,
-};
-
-use super::TokenAmount;
+use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StableTokenData {

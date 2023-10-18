@@ -8,8 +8,14 @@ use math::tree_math::TreeUint24; //?
 use oracle_helper::Oracle; //?
 use types::Bytes32; //?
 
-use shade_protocol::lb_libraries::viewing_keys::ViewingKey;
-use shade_protocol::lb_libraries::{math, oracle_helper, pair_parameter_helper, tokens, types};
+use shade_protocol::lb_libraries::{
+    math,
+    oracle_helper,
+    pair_parameter_helper,
+    tokens,
+    types,
+    viewing_keys::ViewingKey,
+};
 use tokens::TokenType; //?
 
 pub const CONFIG: Item<State, Bincode2> = Item::new("config");

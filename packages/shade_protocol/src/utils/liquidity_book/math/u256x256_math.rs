@@ -407,9 +407,9 @@ mod tests {
 
     use ethnum::U256;
 
-    use crate::{
-        utils::liquidity_book::constants::{PRECISION, SCALE_OFFSET},
-        utils::liquidity_book::math::u256x256_math::U256x256Math,
+    use crate::utils::liquidity_book::{
+        constants::{PRECISION, SCALE_OFFSET},
+        math::u256x256_math::U256x256Math,
     };
 
     #[test]
@@ -418,7 +418,7 @@ mod tests {
             U256::from_str_prefixed("42008768997448919173843294709597899956404323600000").unwrap();
         let y =
             U256::from_str_prefixed("42008768997448919173843294709597899956404323600000").unwrap();
-        let z = U256x256Math::_get_mul_prods(x, y);
+        let _z = U256x256Math::_get_mul_prods(x, y);
     }
 
     #[test]

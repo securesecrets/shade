@@ -2,13 +2,11 @@ use crate::{
     interfaces::utils::{DeployedContracts, SupportedContracts},
     multi::{admin::init_admin_auth, router::Router},
 };
-use ::router::contract::{execute, instantiate, query, reply};
 use anyhow::Error;
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, Coin, ContractInfo, Empty, StdError, StdResult, Uint128},
-    contract_interfaces::snip20,
+    c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128},
     liquidity_book::lb_pair::SwapResult,
-    multi_test::{App, ContractWrapper},
+    multi_test::App,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
@@ -90,14 +88,14 @@ pub fn register_snip20_token(
     router: &ContractInfo,
     snip20_token: &ContractInfo,
 ) -> Result<(), anyhow::Error> {
-    match (router::ExecuteMsg::RegisterSNIP20Token {
+    let res = router::ExecuteMsg::RegisterSNIP20Token {
         token_addr: snip20_token.address.to_string(),
         token_code_hash: snip20_token.code_hash.to_string(),
         oracle_key: None,
         padding: None,
     }
-    .test_exec(&router, chain, Addr::unchecked(sender), &[]))
-    {
+    .test_exec(&router, chain, Addr::unchecked(sender), &[]);
+    match res {
         Ok(_) => Ok::<(), Error>(()),
         Err(e) => return Err(e),
     };

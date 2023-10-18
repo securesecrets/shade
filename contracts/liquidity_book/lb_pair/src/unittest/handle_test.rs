@@ -5,10 +5,14 @@ use cosmwasm_std::{Uint128, Uint256};
 use shade_multi_test::interfaces::{lb_pair, lb_token, snip20};
 use shade_protocol::contract_interfaces::liquidity_book::lb_token::QueryAnswer;
 
-use crate::test_helper::{init_addrs, remove_liquidity_parameters_helper};
 use crate::unittest::test_helper::{
-    assert_approx_eq_rel, init_lb_pair, liquidity_parameters_helper,
-    lp_tokens_tempate_for_100_sscrts, mint_increase_allowance_helper,
+    assert_approx_eq_rel,
+    init_addrs,
+    init_lb_pair,
+    liquidity_parameters_helper,
+    lp_tokens_tempate_for_100_sscrts,
+    mint_increase_allowance_helper,
+    remove_liquidity_parameters_helper,
 };
 
 /***********************************************
@@ -28,7 +32,7 @@ fn test_init() -> Result<(), anyhow::Error> {
 
     let lb_token_info = lb_pair::lb_token_query(&app, &lb_pair_contract_info.clone().into())?;
 
-    let contract_info_lb_token = lb_token::contract_info_query(&app, &lb_token_info)?;
+    let contract_info_lb_token = lb_token::query_contract_info(&app, &lb_token_info)?;
 
     match contract_info_lb_token {
         QueryAnswer::TokenContractInfo { curators, .. } => {
@@ -112,7 +116,7 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
 
     let mut i = 0;
     for id in log_shares_array {
-        let liquidity = lb_token::id_balance_query(&app, &lb_token_info, id.0.to_string())?;
+        let liquidity = lb_token::query_id_balance(&app, &lb_token_info, id.0.to_string())?;
 
         match liquidity {
             shade_protocol::liquidity_book::lb_token::QueryAnswer::IdTotalBalance { amount } => {
@@ -240,7 +244,7 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
 
     let mut i = 0;
     for (id, amt) in remove_liq_log {
-        let liquidity = lb_token::id_balance_query(&app, &lb_token_info, id.to_string())?;
+        let liquidity = lb_token::query_id_balance(&app, &lb_token_info, id.to_string())?;
 
         match liquidity {
             shade_protocol::liquidity_book::lb_token::QueryAnswer::IdTotalBalance { amount } => {

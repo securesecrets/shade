@@ -21,7 +21,6 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Uint128,
-    Uint256,
 };
 use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
 use shadeswap_shared::{

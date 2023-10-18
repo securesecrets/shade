@@ -1,12 +1,17 @@
-use crate::utils::liquidity_book::tokens::{SwapTokenAmount, TokenAmount, TokenType};
 use crate::{
     snip20::Snip20ReceiveMsg,
     utils::{
-        liquidity_book::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        ExecuteCallback, InstantiateCallback, Query,
+        liquidity_book::{
+            tokens::{SwapTokenAmount, TokenAmount, TokenType},
+            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+        },
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
     },
     Contract,
 };
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256};
 

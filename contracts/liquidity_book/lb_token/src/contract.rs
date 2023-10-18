@@ -27,36 +27,38 @@ use secret_toolkit::{
     viewing_key::{ViewingKey, ViewingKeyStore},
 };
 
-use crate::state::{
-    balances_r, blockinfo_r, contr_conf_r, get_receiver_hash,
-    permissions::{list_owner_permission_keys, may_load_any_permission},
-    tkn_info_r, tkn_tot_supply_r,
-    txhistory::{get_txs, may_get_current_owner},
-    PREFIX_REVOKED_PERMITS,
-};
 use crate::{
     receiver::Snip1155ReceiveMsg,
     state::{
-        balances_w, blockinfo_w, contr_conf_w,
-        permissions::{new_permission, update_permission},
-        set_receiver_hash, tkn_info_w, tkn_tot_supply_w,
-        txhistory::{append_new_owner, store_burn, store_mint, store_transfer},
-        RESPONSE_BLOCK_SIZE,
+        balances_r, balances_w, blockinfo_r, blockinfo_w, contr_conf_r, contr_conf_w,
+        get_receiver_hash,
+        permissions::{
+            list_owner_permission_keys, may_load_any_permission, new_permission, update_permission,
+        },
+        set_receiver_hash, tkn_info_r, tkn_info_w, tkn_tot_supply_r, tkn_tot_supply_w,
+        txhistory::{
+            append_new_owner, get_txs, may_get_current_owner, store_burn, store_mint,
+            store_transfer,
+        },
+        PREFIX_REVOKED_PERMITS, RESPONSE_BLOCK_SIZE,
     },
 };
 
 use secret_toolkit::permit::{validate, Permit, TokenPermissions};
-use shade_protocol::lb_libraries::lb_token::{
-    expiration::Expiration,
-    metadata::Metadata,
-    permissions::{Permission, PermissionKey},
-    state_structs::{
-        ContractConfig, CurateTokenId, OwnerBalance, StoredTokenInfo, TknConfig, TokenAmount,
-        TokenInfoMsg,
+use shade_protocol::{
+    lb_libraries::lb_token::{
+        expiration::Expiration,
+        metadata::Metadata,
+        permissions::{Permission, PermissionKey},
+        state_structs::{
+            ContractConfig, CurateTokenId, OwnerBalance, StoredTokenInfo, TknConfig, TokenAmount,
+            TokenInfoMsg,
+        },
     },
-};
-use shade_protocol::liquidity_book::lb_token::{
-    ExecuteAnswer, ExecuteMsg, InstantiateMsg, ResponseStatus::Success, SendAction, TransferAction,
+    liquidity_book::lb_token::{
+        ExecuteAnswer, ExecuteMsg, InstantiateMsg, ResponseStatus::Success, SendAction,
+        TransferAction,
+    },
 };
 /////////////////////////////////////////////////////////////////////////////////
 // Init
@@ -410,8 +412,8 @@ fn try_burn_tokens(
 
         if token_info_op.is_none() {
             return Err(StdError::generic_err(
-                  "token_id does not exist. Cannot burn non-existent `token_ids`. Use `curate_token_ids` to create tokens on new `token_ids`"
-              ));
+                "token_id does not exist. Cannot burn non-existent `token_ids`. Use `curate_token_ids` to create tokens on new `token_ids`",
+            ));
         }
 
         let token_info = token_info_op.clone().unwrap();
@@ -475,7 +477,7 @@ fn try_change_metadata(
             return Err(StdError::generic_err(format!(
                 "token_id {} does not exist",
                 token_id
-            )))
+            )));
         }
         Some(i) => i.token_config.flatten(),
     };
@@ -499,7 +501,7 @@ fn try_change_metadata(
             return Err(StdError::generic_err(format!(
                 "unable to change the metadata for token_id {}",
                 token_id
-            )))
+            )));
         }
         true => {
             let mut tkn_info = tkn_info_op.unwrap();
@@ -1080,9 +1082,9 @@ fn exec_curate_token_id(
     if initial_token.token_info.token_config.flatten().is_nft {
         if initial_token.balances.len() > 1 {
             return Err(StdError::generic_err(format!(
-                  "token_id {} is an NFT; there can only be one NFT. Balances should only have one address",
-                  initial_token.token_info.token_id
-              )));
+                "token_id {} is an NFT; there can only be one NFT. Balances should only have one address",
+                initial_token.token_info.token_id
+            )));
         } else if initial_token.balances[0].amount != Uint256::from(1_u64) {
             return Err(StdError::generic_err(format!(
                 "token_id {} is an NFT; there can only be one NFT. Balances.amount must == 1",
@@ -1229,14 +1231,14 @@ fn impl_transfer(
                 return Err(StdError::generic_err(format!(
                     "Allowance has expired: {}",
                     perm.trfer_allowance_exp
-                )))
+                )));
             }
             // not enough allowance to transfer amount
             Some(perm) if perm.trfer_allowance_perm < amount => {
                 return Err(StdError::generic_err(format!(
                     "Insufficient transfer allowance: {}",
                     perm.trfer_allowance_perm
-                )))
+                )));
             }
             // success, so need to reduce allowance
             Some(mut perm) if perm.trfer_allowance_perm >= amount => {
@@ -1263,7 +1265,7 @@ fn impl_transfer(
         true => {
             return Err(StdError::generic_err(
                 "These tokens do not exist or you have no permission to transfer",
-            ))
+            ));
         }
         false => (),
     }
@@ -1383,7 +1385,7 @@ fn exec_change_balance(
                 Err(_e) => {
                     return Err(StdError::generic_err(
                         "total supply exceeds max allowed of 2^128",
-                    ))
+                    ));
                 }
             };
             tkn_tot_supply_w(storage).save(token_info.token_id.as_bytes(), &new_amount)?;
@@ -1499,7 +1501,9 @@ fn permit_queries(deps: Deps, permit: Permit, query: QueryWithPermit) -> Result<
             if account != owner.as_str() && account != allowed_address.as_str() {
                 return Err(StdError::generic_err(format!(
                     "Cannot query permission. Requires permit for either owner {:?} or viewer||spender {:?}, got permit for {:?}",
-                    owner.as_str(), allowed_address.as_str(), account.as_str()
+                    owner.as_str(),
+                    allowed_address.as_str(),
+                    account.as_str()
                 )));
             }
 
@@ -1662,7 +1666,7 @@ fn query_token_id_private_info(deps: Deps, viewer: &Addr, token_id: String) -> S
             None => {
                 return Err(StdError::generic_err(
                     "you do have have permission to view private token info",
-                ))
+                ));
             }
             Some(perm) => {
                 let block: BlockInfo =
@@ -1715,7 +1719,7 @@ fn query_balance(deps: Deps, owner: &Addr, viewer: &Addr, token_id: String) -> S
             None => {
                 return Err(StdError::generic_err(
                     "you do have have permission to view balance",
-                ))
+                ));
             }
             Some(perm) => {
                 let block: BlockInfo =

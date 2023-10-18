@@ -1,11 +1,10 @@
-use cosmwasm_std::StdError;
-use cosmwasm_std::{MessageInfo, StdResult, Uint128};
+#[warn(unused_imports)]
+use cosmwasm_std::{MessageInfo, StdError, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
 use super::TokenPair;
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenPairAmount {
     pub pair: TokenPair,
@@ -54,8 +53,9 @@ impl TokenPairAmount {
 }
 
 impl<'a> IntoIterator for &'a TokenPairAmount {
-    type Item = (Uint128, &'a TokenType);
     type IntoIter = TokenPairAmountIterator<'a>;
+    type Item = (Uint128, &'a TokenType);
+
     fn into_iter(self) -> Self::IntoIter {
         TokenPairAmountIterator {
             pair: self,
@@ -71,6 +71,7 @@ pub struct TokenPairAmountIterator<'a> {
 
 impl<'a> Iterator for TokenPairAmountIterator<'a> {
     type Item = (Uint128, &'a TokenType);
+
     fn next(&mut self) -> Option<Self::Item> {
         let result = match self.index {
             0 => Some((self.pair.amount_0, &self.pair.pair.0)),
@@ -147,8 +148,10 @@ pub mod tests {
             },
             false,
         );
-        assert!(reverse_amount
-            .create_new_pair_amount_to_match_order_of(&broken_pair)
-            .is_err());
+        assert!(
+            reverse_amount
+                .create_new_pair_amount_to_match_order_of(&broken_pair)
+                .is_err()
+        );
     }
 }

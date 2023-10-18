@@ -1,9 +1,7 @@
-use cosmwasm_std::StdResult;
-use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Deps, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use shade_protocol::utils::liquidity_book::tokens::TokenType;
-use shade_protocol::Contract;
+use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
 
 use super::TokenPairAmount;
 
@@ -40,6 +38,7 @@ impl TokenPair {
             _ => None,
         }
     }
+
     pub fn new_from_custom(token_a: Contract, token_b: Contract, is_stable: bool) -> Self {
         Self(
             TokenType::CustomToken {
@@ -53,6 +52,7 @@ impl TokenPair {
             is_stable,
         )
     }
+
     pub fn new_amount(
         &self,
         amount_a: impl Into<Uint128> + Copy,
@@ -84,11 +84,11 @@ impl TokenPair {
         Ok([amount_0, amount_1])
     }
 
-    pub fn query_decimals(&self, deps: &Deps) -> StdResult<[u8; 2]> {
-        let decimal_0 = self.0.query_decimals(deps)?;
-        let decimal_1 = self.1.query_decimals(deps)?;
-        Ok([decimal_0, decimal_1])
-    }
+    // pub fn query_decimals(&self, deps: &Deps) -> StdResult<[u8; 2]> {
+    //     let decimal_0 = self.0.query_decimals(deps)?;
+    //     let decimal_1 = self.1.query_decimals(deps)?;
+    //     Ok([decimal_0, decimal_1])
+    // }
 }
 
 impl PartialEq for TokenPair {
@@ -99,8 +99,9 @@ impl PartialEq for TokenPair {
 }
 
 impl<'a> IntoIterator for &'a TokenPair {
-    type Item = &'a TokenType;
     type IntoIter = TokenPairIterator<'a>;
+    type Item = &'a TokenType;
+
     fn into_iter(self) -> Self::IntoIter {
         TokenPairIterator {
             pair: self,
