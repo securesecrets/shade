@@ -36,9 +36,11 @@ rand = "0.8"
 anyhow = "1"
 # cw-multi-test = { version = "0.16.0", default-features = false }
 shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+  "admin",
   "lb_pair",
   "lb_token",
   "snip20",
+  "router",
   "lb_factory"
 ] }
 

@@ -30,6 +30,7 @@ serde-json-wasm = { version = "0.5"}
 thiserror = { version = "1" }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 ethnum = { version = "1" }
+shadeswap-shared = {  version = "0.1.0", path = "../../../packages/shadeswap_shared", features = []  }
 
 [dev-dependencies]
 anyhow = "1"

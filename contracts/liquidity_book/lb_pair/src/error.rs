@@ -146,6 +146,13 @@ pub enum LBPairError {
     #[error("Id overflows. Id: {id}")]
     IdOverflows { id: u32 },
 
+    #[error("Amount left unswapped. : Amount Left In: {amount_left_in}, Total Amount: {total_amount}, swapped_amount: {swapped_amount}")]
+    AmountInLeft {
+        amount_left_in: Uint128,
+        total_amount: Uint128,
+        swapped_amount: Uint128,
+    },
+
     #[error("Id slippage caught. Active id desired: {active_id_desired}, Id slippage: {id_slippage}, Active id: {active_id}")]
     IdSlippageCaught {
         active_id_desired: u32,

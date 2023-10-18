@@ -3,12 +3,15 @@
 use crate::{prelude::*, state::*};
 use core::panic;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, Deps, DepsMut,
-    Env, MessageInfo, Response, StdError, StdResult, SubMsgResult, Timestamp, Uint128, Uint256,
-    WasmMsg,
+    from_binary, to_binary, Addr, Attribute, BankMsg, Binary, Coin, ContractInfo, CosmosMsg,
+    Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsgResult,
+    Timestamp, Uint128, Uint256, WasmMsg,
 };
+
 use ethnum::U256;
 use serde::Serialize;
+use shade_protocol::lb_libraries::constants::PRECISION;
+use shade_protocol::liquidity_book::lb_pair::QueryMsg::GetPairInfo;
 use shade_protocol::{
     c_std::{shd_entry_point, Reply, SubMsg},
     contract_interfaces::liquidity_book::{
@@ -39,6 +42,7 @@ use shade_protocol::{
     utils::pad_handle_result,
     BLOCK_SIZE,
 };
+use shadeswap_shared::router::ExecuteMsgResponse;
 use std::{collections::HashMap, ops::Sub};
 use tokens::TokenType;
 use types::{Bytes32, LBPairInformation, MintArrays};
@@ -218,7 +222,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             };
 
             let swap_for_y: bool;
-            if info.sender == config.token_x.unique_key() {
+            if offer.token.unique_key() == config.token_x.unique_key() {
                 swap_for_y = true;
             } else {
                 swap_for_y = false;
@@ -419,21 +423,38 @@ fn try_swap(
     })?;
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
+    let amount_out;
     if swap_for_y {
-        let msg = BinHelper::transfer_y(amounts_out, token_y, to);
+        amount_out = amounts_out.decode_y();
+        let msg = BinHelper::transfer_y(amounts_out, token_y.clone(), to);
 
         if let Some(message) = msg {
             messages.push(message);
         }
     } else {
-        let msg = BinHelper::transfer_x(amounts_out, token_x, to);
+        amount_out = amounts_out.decode_x();
+        let msg = BinHelper::transfer_x(amounts_out, token_x.clone(), to);
 
         if let Some(message) = msg {
             messages.push(message);
         }
     }
 
-    Ok(Response::default().add_messages(messages))
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attributes(vec![
+            Attribute::new("amount_in", amounts_received),
+            Attribute::new("amount_out", amount_out.to_string()),
+            Attribute::new("lp_fee_amount", "0".to_string()), // TODO FILL with correct parameters
+            Attribute::new("total_fee_amount", "0".to_string()), // TODO FILL with correct parameters
+            Attribute::new("shade_dao_fee_amount", "0".to_string()), // TODO FILL with correct parameters
+            Attribute::new("token_in_key", token_x.unique_key()),
+            Attribute::new("token_out_key", token_y.unique_key()),
+        ])
+        .set_data(to_binary(&ExecuteMsgResponse::SwapResult {
+            amount_in: amounts_received,
+            amount_out: Uint128::from(amount_out),
+        })?))
 }
 
 /// Flash loan tokens from the pool to a receiver contract and execute a callback function.
@@ -1421,6 +1442,7 @@ fn receiver_callback(
 #[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
+        QueryMsg::GetPairInfo {} => to_binary(&query_pair_info(deps)?).map_err(Error::CwErr),
         QueryMsg::GetFactory {} => to_binary(&query_factory(deps)?).map_err(Error::CwErr),
         QueryMsg::GetTokenX {} => to_binary(&query_token_x(deps)?).map_err(Error::CwErr),
         QueryMsg::GetTokenY {} => to_binary(&query_token_y(deps)?).map_err(Error::CwErr),
@@ -1467,7 +1489,116 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         }
         QueryMsg::GetLbToken {} => to_binary(&query_lb_token(deps)?).map_err(Error::CwErr),
         QueryMsg::GetTokens {} => to_binary(&query_tokens(deps)?).map_err(Error::CwErr),
+        GetPairInfo {} => todo!(),
+        QueryMsg::SwapSimulation { offer, exclude_fee } => {
+            to_binary(&query_swap_simulation(deps, env, offer, exclude_fee)?).map_err(Error::CwErr)
+        }
     }
+}
+
+/// Returns the Liquidity Book Factory.
+///
+/// # Returns
+///
+/// * `factory` - The Liquidity Book Factory
+fn query_pair_info(deps: Deps) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
+    let state = CONFIG.load(deps.storage)?;
+
+    let (mut reserve_x, mut reserve_y) = state.reserves.decode();
+    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
+
+    Ok(
+        shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
+            liquidity_token: shade_protocol::Contract {
+                address: state.lb_token.address,
+                code_hash: state.lb_token.code_hash,
+            },
+            factory: Some(shade_protocol::Contract {
+                address: state.factory.address,
+                code_hash: state.factory.code_hash,
+            }),
+            pair: shadeswap_shared::core::TokenPair {
+                0: state.token_x,
+                1: state.token_y,
+                2: false,
+            },
+            amount_0: Uint128::from(reserve_x),
+            amount_1: Uint128::from(reserve_y),
+            total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
+            contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
+            fee_info: shadeswap_shared::amm_pair::FeeInfo {
+                shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
+                lp_fee: shadeswap_shared::core::Fee {
+                    // TODO set this
+                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    denom: 1_000_000_000_000_000_000,
+                },
+                shade_dao_fee: shadeswap_shared::core::Fee {
+                    // TODO set this
+                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    denom: 1_000_000_000_000_000_000,
+                },
+                stable_lp_fee: shadeswap_shared::core::Fee {
+                    // TODO set this
+                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    denom: 1_000_000_000_000_000_000,
+                },
+                stable_shade_dao_fee: shadeswap_shared::core::Fee {
+                    // TODO set this
+                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    denom: 1_000_000_000_000_000_000,
+                },
+            },
+            stable_info: None,
+        },
+    )
+}
+
+// / Returns the Liquidity Book Factory.
+// /
+// / # Returns
+// /
+// / * `factory` - The Liquidity Book Factory
+fn query_swap_simulation(
+    deps: Deps,
+    env: Env,
+    offer: shade_protocol::lb_libraries::tokens::TokenAmount,
+    exclude_fee: Option<bool>,
+) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
+    let state = CONFIG.load(deps.storage)?;
+
+    let (mut reserve_x, mut reserve_y) = state.reserves.decode();
+    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
+    let mut swap_for_y = false;
+    match offer.token {
+        token if token == state.token_x => swap_for_y = true,
+        token if token == state.token_y => {}
+        _ => panic!("No such token"),
+    };
+
+    let res = query_swap_out(deps, env, offer.amount.into(), swap_for_y)?;
+
+    if (res.amount_in_left.u128() > 0u128) {
+        return Err(Error::AmountInLeft {
+            amount_left_in: res.amount_in_left,
+            total_amount: offer.amount,
+            swapped_amount: res.amount_out,
+        });
+    }
+
+    let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
+
+    Ok(
+        shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
+            total_fee_amount: res.fee,
+            lp_fee_amount: res.fee,        //TODO lpfee
+            shade_dao_fee_amount: res.fee, // dao fee
+            result: SwapResult {
+                return_amount: res.amount_out,
+            },
+            price,
+        },
+    )
 }
 
 /// Returns the Liquidity Book Factory.

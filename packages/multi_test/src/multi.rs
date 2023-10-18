@@ -20,6 +20,12 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
+#[cfg(feature = "router")]
+pub mod router {
+    use router;
+    multi_derive::implement_multi_with_reply!(Router, router);
+}
+
 #[cfg(feature = "lb_factory")]
 pub mod lb_factory {
     use lb_factory;

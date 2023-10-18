@@ -13,9 +13,12 @@ pub mod staking;
 
 pub mod router {
 
-    use super::{amm_pair::SwapResult, *};
-    use crate::core::{TokenAmount, TokenType};
-    use shade_protocol::{snip20::Snip20ReceiveMsg, Contract};
+    use super::*;
+    use crate::core::TokenAmount;
+    use shade_protocol::{
+        liquidity_book::lb_pair::SwapResult, snip20::Snip20ReceiveMsg,
+        utils::liquidity_book::tokens::TokenType, Contract,
+    };
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -133,14 +136,17 @@ pub mod amm_pair {
     use crate::{
         core::{
             ContractInstantiationInfo, CustomFee, Fee, StableTokenData, TokenAmount, TokenPair,
-            TokenPairAmount, TokenType,
+            TokenPairAmount,
         },
         staking::StakingContractInstantiateInfo,
     };
     use cosmwasm_std::{Addr, Decimal256, Uint256};
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
-    use shade_protocol::{snip20::Snip20ReceiveMsg, Contract, utils::asset::RawContract};
+    use shade_protocol::{
+        liquidity_book::lb_pair::SwapResult, snip20::Snip20ReceiveMsg, utils::asset::RawContract,
+        utils::liquidity_book::tokens::TokenType, Contract,
+    };
 
     /// Represents the address of an exchange and the pair that it manages
     #[derive(Serialize, Deserialize, JsonSchema, Clone, PartialEq, Debug)]
@@ -236,11 +242,6 @@ pub mod amm_pair {
     pub struct VirtualSwapResponse {
         pub output: TokenPairAmount,
         pub swap_info: Option<SwapInfo>,
-    }
-
-    #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, JsonSchema)]
-    pub struct SwapResult {
-        pub return_amount: Uint128,
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, JsonSchema)]

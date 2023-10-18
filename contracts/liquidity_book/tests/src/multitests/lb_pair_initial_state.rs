@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::multitests::test_helper::{
-    extract_contract_info, generate_random, token_type_generator, DEFAULT_BASE_FACTOR,
+    extract_contract_info, generate_random, token_type_snip20_generator, DEFAULT_BASE_FACTOR,
     DEFAULT_BIN_STEP, DEFAULT_DECAY_PERIOD, DEFAULT_FILTER_PERIOD,
     DEFAULT_MAX_VOLATILITY_ACCUMULATOR, DEFAULT_PROTOCOL_SHARE, DEFAULT_REDUCTION_FACTOR,
     DEFAULT_VARIABLE_FEE_CONTROL, SHADE, SSCRT,
@@ -24,8 +24,8 @@ pub fn lb_pair_setup(
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
 
-    let token_x = token_type_generator(&shd)?;
-    let token_y = token_type_generator(&sscrt)?;
+    let token_x = token_type_snip20_generator(&shd)?;
+    let token_y = token_type_snip20_generator(&sscrt)?;
 
     lb_factory::create_lb_pair(
         &mut app,
@@ -62,7 +62,7 @@ pub fn test_query_factory() -> Result<(), anyhow::Error> {
 pub fn test_query_token_x() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let shd = token_type_generator(&extract_contract_info(&deployed_contracts, SHADE)?)?;
+    let shd = token_type_snip20_generator(&extract_contract_info(&deployed_contracts, SHADE)?)?;
 
     let token_x = lb_pair::query_token_x(&app, &lb_pair.lb_pair.contract)?;
 
@@ -75,7 +75,7 @@ pub fn test_query_token_x() -> Result<(), anyhow::Error> {
 pub fn test_query_token_y() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let sscrt = token_type_generator(&extract_contract_info(&deployed_contracts, SSCRT)?)?;
+    let sscrt = token_type_snip20_generator(&extract_contract_info(&deployed_contracts, SSCRT)?)?;
 
     let token_y = lb_pair::query_token_y(&app, &lb_pair.lb_pair.contract)?;
 

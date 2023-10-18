@@ -2,7 +2,13 @@
 //! Author: Haseeb
 //!
 
-use crate::utils::liquidity_book::transfer::{self, HandleMsg, QueryAnswer, QueryMsg};
+use crate::{
+    snip20::helpers::token_info,
+    utils::liquidity_book::transfer::{self, HandleMsg, QueryAnswer, QueryMsg},
+    Contract,
+};
+use std::fmt::{Display, Formatter, Result};
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Addr, BankMsg, Coin, ContractInfo, CosmosMsg, Deps, MessageInfo, QuerierWrapper,
@@ -20,7 +26,6 @@ pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
         token_code_hash: String,
-        //viewing_key: String,
     },
     NativeToken {
         denom: String,
@@ -28,6 +33,28 @@ pub enum TokenType {
 }
 
 impl TokenType {
+    pub fn query_decimals(&self, deps: &Deps) -> StdResult<u8> {
+        match self {
+            TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+                ..
+            } => Ok(token_info(
+                &deps.querier,
+                &Contract {
+                    address: contract_addr.clone(),
+                    code_hash: token_code_hash.clone(),
+                },
+            )?
+            .decimals),
+            TokenType::NativeToken { denom } => match denom.as_str() {
+                "uscrt" => Ok(6),
+                _ => Err(StdError::generic_err(
+                    "Cannot retrieve decimals for native token",
+                )),
+            },
+        }
+    }
     pub fn is_native_token(&self) -> bool {
         match self {
             TokenType::NativeToken { .. } => true,
@@ -41,6 +68,24 @@ impl TokenType {
                 contract_addr,
                 token_code_hash: _,
             } => contract_addr.to_string(),
+        }
+    }
+    pub fn address(&self) -> Addr {
+        match self {
+            TokenType::NativeToken { .. } => panic!("Doesn't work for native tokens"),
+            TokenType::CustomToken {
+                contract_addr,
+                token_code_hash: _,
+            } => contract_addr.clone(),
+        }
+    }
+    pub fn code_hash(&self) -> String {
+        match self {
+            TokenType::NativeToken { .. } => panic!("Doesn't work for native tokens"),
+            TokenType::CustomToken {
+                contract_addr: _,
+                token_code_hash,
+            } => token_code_hash.to_string(),
         }
     }
     pub fn is_custom_token(&self) -> bool {
@@ -181,12 +226,7 @@ impl TokenType {
         }
     }
 
-    pub fn create_send_msg(
-        &self,
-        _sender: String,
-        recipient: String,
-        amount: Uint128,
-    ) -> StdResult<CosmosMsg> {
+    pub fn create_send_msg(&self, recipient: String, amount: Uint128) -> StdResult<CosmosMsg> {
         let msg = match self {
             TokenType::CustomToken {
                 contract_addr,
@@ -237,4 +277,26 @@ pub fn balance_query(
 
     let QueryAnswer::Balance { amount, .. } = result;
     Ok(amount)
+}
+
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            TokenType::NativeToken { denom, .. } => write!(f, "{}", denom),
+            TokenType::CustomToken { contract_addr, .. } => write!(f, "{}", contract_addr),
+        }
+    }
+}
+
+#[cw_serde]
+pub struct TokenAmount {
+    pub token: TokenType,
+    pub amount: Uint128,
+}
+
+impl TokenAmount {
+    pub fn assert_sent_native_token_balance(&self, info: &MessageInfo) -> StdResult<()> {
+        self.token
+            .assert_sent_native_token_balance(info, self.amount)
+    }
 }

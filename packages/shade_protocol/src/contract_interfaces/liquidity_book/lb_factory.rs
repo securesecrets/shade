@@ -1,6 +1,7 @@
-use super::super::super::lb_libraries::types::{LBPair, LBPairInformation};
-use super::super::super::lb_libraries::{tokens::TokenType, types::ContractInstantiationInfo};
 use super::lb_pair;
+use crate::utils::liquidity_book::types::{LBPair, LBPairInformation};
+use crate::utils::liquidity_book::{tokens::TokenType, types::ContractInstantiationInfo};
+
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;

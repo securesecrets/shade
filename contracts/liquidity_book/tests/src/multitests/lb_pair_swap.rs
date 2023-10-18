@@ -33,8 +33,8 @@ pub fn lb_pair_setup() -> Result<
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
-    let token_x = token_type_generator(&shade)?;
-    let token_y = token_type_generator(&silk)?;
+    let token_x = token_type_snip20_generator(&shade)?;
+    let token_y = token_type_snip20_generator(&silk)?;
 
     lb_factory::create_lb_pair(
         &mut app,

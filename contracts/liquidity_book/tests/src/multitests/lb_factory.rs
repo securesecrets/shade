@@ -1,5 +1,5 @@
 use crate::multitests::test_helper::{
-    extract_contract_info, generate_random, token_type_generator, DEFAULT_BASE_FACTOR,
+    extract_contract_info, generate_random, token_type_snip20_generator, DEFAULT_BASE_FACTOR,
     DEFAULT_BIN_STEP, DEFAULT_DECAY_PERIOD, DEFAULT_FILTER_PERIOD,
     DEFAULT_MAX_VOLATILITY_ACCUMULATOR, DEFAULT_OPEN_STATE, DEFAULT_PROTOCOL_SHARE,
     DEFAULT_REDUCTION_FACTOR, DEFAULT_VARIABLE_FEE_CONTROL, SBTC, SHADE, SILK, SSCRT, USDC,
@@ -126,8 +126,8 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
-    let token_x = token_type_generator(&shd)?;
-    let token_y = token_type_generator(&sscrt)?;
+    let token_x = token_type_snip20_generator(&shd)?;
+    let token_y = token_type_snip20_generator(&sscrt)?;
 
     lb_factory::create_lb_pair(
         &mut app,
@@ -211,8 +211,8 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
-    let token_x = token_type_generator(&shd)?;
-    let token_y = token_type_generator(&sscrt)?;
+    let token_x = token_type_snip20_generator(&shd)?;
+    let token_y = token_type_snip20_generator(&sscrt)?;
     // try creating as 'batman' and get an error
     let res = lb_factory::create_lb_pair(
         &mut app,
@@ -299,8 +299,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
-    let token_x = token_type_generator(&shd)?;
-    let token_y = token_type_generator(&sscrt)?;
+    let token_x = token_type_snip20_generator(&shd)?;
+    let token_y = token_type_snip20_generator(&sscrt)?;
     //Batmam tried to create a lb_pair
     let res = lb_factory::create_lb_pair(
         &mut app,
@@ -359,8 +359,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     //can't create a pair if quote asset is not whitelisted
     let sbtc = extract_contract_info(&deployed_contracts, SBTC)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
-    let token_x = token_type_generator(&sbtc)?;
-    let token_y = token_type_generator(&silk)?;
+    let token_x = token_type_snip20_generator(&sbtc)?;
+    let token_y = token_type_snip20_generator(&silk)?;
     let res = lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
@@ -650,8 +650,8 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
 
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
-    let token_x = token_type_generator(&sscrt)?;
-    let token_y = token_type_generator(&shd)?;
+    let token_x = token_type_snip20_generator(&sscrt)?;
+    let token_y = token_type_snip20_generator(&shd)?;
     lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
@@ -821,7 +821,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
     let min_bin_step = lb_factory::query_min_bin_step(&mut app, &lb_factory.clone().into())?;
     let max_bin_step = u16::MAX;
 
-    let mut bin_step: u16 = generate_random(min_bin_step as u16, max_bin_step);
+    let bin_step: u16 = generate_random(min_bin_step as u16, max_bin_step);
 
     // Presets are not open to the public by default
     if bin_step == DEFAULT_BIN_STEP {
@@ -943,7 +943,7 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
     )
     .unwrap();
     let sbtc = extract_contract_info(&deployed_contracts, "SBTC")?;
-    let new_token = token_type_generator(&sbtc)?;
+    let new_token = token_type_snip20_generator(&sbtc)?;
     // Check if the new token is a quote asset
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), new_token.clone())?;
@@ -1034,7 +1034,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     )
     .unwrap();
     let usdc_info: ContractInfo = extract_contract_info(&deployed_contracts, USDC)?;
-    let usdc_token_type = token_type_generator(&usdc_info)?;
+    let usdc_token_type = token_type_snip20_generator(&usdc_info)?;
     let usdc = usdc_token_type;
 
     // Add the new token as a quote asset
@@ -1106,10 +1106,10 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let (mut app, lb_factory, deployed_contracts) = setup(None)?; // Setup
 
     let sscrt_info = extract_contract_info(&deployed_contracts, SSCRT)?;
-    let sscrt = token_type_generator(&sscrt_info)?;
+    let sscrt = token_type_snip20_generator(&sscrt_info)?;
 
     let shd_info = extract_contract_info(&deployed_contracts, SHADE)?;
-    let shd = token_type_generator(&shd_info)?;
+    let shd = token_type_snip20_generator(&shd_info)?;
 
     // Create a new LBPair with usdt and usdc
     lb_factory::create_lb_pair(
@@ -1164,8 +1164,8 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
-    let token_x = token_type_generator(&shd)?;
-    let token_y = token_type_generator(&sscrt)?;
+    let token_x = token_type_snip20_generator(&shd)?;
+    let token_y = token_type_snip20_generator(&sscrt)?;
 
     lb_factory::set_pair_preset(
         &mut app,

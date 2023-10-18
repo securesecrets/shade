@@ -5,6 +5,7 @@ use std::collections::HashMap;
 pub enum SupportedContracts {
     AdminAuth,
     Snip20(String),
+    Router,
     Treasury,
     TreasuryManager(usize),
     MockAdapter(usize),

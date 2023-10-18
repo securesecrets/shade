@@ -1,6 +1,6 @@
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
-    c_std::{to_binary, Addr, ContractInfo, StdError, StdResult, Uint128, Uint256},
+    c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::liquidity_book::lb_pair,
     contract_interfaces::snip20,
     lb_libraries::{
@@ -65,6 +65,23 @@ pub fn add_liquidity(
         liquidity_parameters,
     }
     .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
+    {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn add_native_liquidity(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    liquidity_parameters: LiquidityParameters,
+    native_funds: Vec<Coin>,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::AddLiquidity {
+        liquidity_parameters,
+    }
+    .test_exec(lb_pair, app, Addr::unchecked(sender), &native_funds))
     {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),

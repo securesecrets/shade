@@ -1,11 +1,11 @@
+use crate::liquidity_book::lb_pair::TokenPair;
 use crate::{
     c_std::{Addr, Binary, Uint128},
-    utils::{
-        asset::Contract,
-        Query,
-    },
+    lb_libraries::tokens::TokenType,
+    utils::{asset::Contract, Query},
 };
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Decimal256, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -49,22 +49,16 @@ impl Query for PairQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cw_serde]
-pub enum TokenType {
-    CustomToken {
-        contract_addr: Addr,
-        token_code_hash: String,
-    },
-    NativeToken {
-        denom: String,
-    },
-}
-
-#[cw_serde]
-pub struct TokenPair {
-    pub token_0: TokenType,
-    pub token_1: TokenType,
-}
+// #[cw_serde]
+// pub enum TokenType {
+//     CustomToken {
+//         contract_addr: Addr,
+//         token_code_hash: String,
+//     },
+//     NativeToken {
+//         denom: String,
+//     },
+// }
 
 /*
 #[cw_serde]
@@ -149,6 +143,73 @@ pub struct TradeHistory {
     pub shade_dao_fee_amount: Uint128,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct FeeInfo {
+    pub shade_dao_address: Addr,
+    pub lp_fee: Fee,
+    pub shade_dao_fee: Fee,
+    pub stable_lp_fee: Fee,
+    pub stable_shade_dao_fee: Fee,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct StablePairInfoResponse {
+    pub stable_params: StableParams,
+    pub stable_token0_data: StableTokenData,
+    pub stable_token1_data: StableTokenData,
+    //p is optional so that the PairInfo query can still return even when the calculation of p fails
+    pub p: Option<Decimal256>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CustomIterationControls {
+    pub epsilon: Uint256, // assumed to have same decimals as SignedDecimal
+    pub max_iter_newton: u16,
+    pub max_iter_bisect: u16,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct StableParams {
+    pub a: Decimal256,
+    pub gamma1: Uint256,
+    pub gamma2: Uint256,
+    pub oracle: Contract,
+    pub min_trade_size_x_for_y: Decimal256,
+    pub min_trade_size_y_for_x: Decimal256,
+    pub max_price_impact_allowed: Decimal256,
+    pub custom_iteration_controls: Option<CustomIterationControls>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct StableTokenData {
+    pub oracle_key: String,
+    pub decimals: u8,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Fee {
+    pub nom: u64,
+    pub denom: u64,
+}
+
+impl Fee {
+    pub fn new(nom: u64, denom: u64) -> Self {
+        Self { nom, denom }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CustomFee {
+    pub shade_dao_fee: Fee,
+    pub lp_fee: Fee,
+}
 /*
 #[cw_serde]
 pub struct PoolResponse {

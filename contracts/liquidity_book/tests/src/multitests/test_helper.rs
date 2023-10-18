@@ -345,11 +345,14 @@ pub fn extract_contract_info(
         .into())
 }
 
-pub fn token_type_generator(contract: &ContractInfo) -> StdResult<TokenType> {
+pub fn token_type_snip20_generator(contract: &ContractInfo) -> StdResult<TokenType> {
     Ok(TokenType::CustomToken {
         contract_addr: contract.address.clone(),
         token_code_hash: contract.code_hash.clone(),
     })
+}
+pub fn token_type_native_generator(denom: String) -> StdResult<TokenType> {
+    Ok(TokenType::NativeToken { denom })
 }
 
 fn safe64_divide(numerator: u128, denominator: u64) -> u64 {
@@ -456,6 +459,96 @@ pub fn liquidity_parameters_generator(
             contract_addr: token_y.address,
             token_code_hash: token_y.code_hash,
         },
+        bin_step: DEFAULT_BIN_STEP,
+        amount_x,
+        amount_y,
+        amount_x_min: amount_x.multiply_ratio(90u128, 100u128),
+        amount_y_min: amount_y.multiply_ratio(90u128, 100u128),
+        active_id_desired: active_id,
+        id_slippage: 15,
+        delta_ids: delta_ids.into(),
+        distribution_x,
+        distribution_y,
+        deadline: 99999999999,
+    };
+
+    Ok(liquidity_parameters)
+}
+
+pub fn liquidity_parameters_generator_with_native(
+    // Assuming lbPair has methods to get tokenX and tokenY
+    // lbPair: &LBPair,
+    _deployed_contracts: &DeployedContracts,
+    active_id: u32,
+    token_x: TokenType,
+    token_y: TokenType,
+    amount_x: Uint128,
+    amount_y: Uint128,
+    nb_bins_x: u8,
+    nb_bins_y: u8,
+) -> StdResult<LiquidityParameters> {
+    let total = get_total_bins(nb_bins_x, nb_bins_y);
+
+    if active_id > U24::MAX {
+        panic!("active_id too big");
+    }
+
+    let mut distribution_x: Vec<u64> = Vec::new();
+    let mut distribution_y: Vec<u64> = Vec::new();
+
+    let mut delta_ids = Vec::new();
+
+    for i in 0..total {
+        if nb_bins_y > 0 {
+            delta_ids.push(i as i64 - nb_bins_y as i64 + 1 as i64);
+        } else {
+            delta_ids.push(i as i64);
+        }
+        let id = get_id(active_id, i.into(), nb_bins_y);
+        let distrib_x = if id >= active_id && nb_bins_x > 0 {
+            safe64_divide(PRECISION, nb_bins_x as u64)
+        } else {
+            0
+        };
+
+        distribution_x.push(distrib_x);
+
+        let distrib_y = if id <= active_id && nb_bins_y > 0 {
+            safe64_divide(PRECISION, nb_bins_y as u64)
+        } else {
+            0
+        };
+        distribution_y.push(distrib_y);
+    }
+
+    let token_x_temp;
+    let token_y_temp;
+
+    if token_x.is_native_token() {
+        token_x_temp = TokenType::NativeToken {
+            denom: token_x.unique_key(),
+        }
+    } else {
+        token_x_temp = TokenType::CustomToken {
+            contract_addr: token_x.address(),
+            token_code_hash: token_x.code_hash(),
+        }
+    }
+
+    if token_y.is_native_token() {
+        token_y_temp = TokenType::NativeToken {
+            denom: token_y.unique_key(),
+        }
+    } else {
+        token_y_temp = TokenType::CustomToken {
+            contract_addr: token_y.address(),
+            token_code_hash: token_y.code_hash(),
+        }
+    }
+
+    let liquidity_parameters = LiquidityParameters {
+        token_x: token_x_temp,
+        token_y: token_y_temp,
         bin_step: DEFAULT_BIN_STEP,
         amount_x,
         amount_y,

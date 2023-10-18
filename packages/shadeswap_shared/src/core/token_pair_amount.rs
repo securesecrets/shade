@@ -2,9 +2,9 @@ use cosmwasm_std::StdError;
 use cosmwasm_std::{MessageInfo, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
 use super::TokenPair;
-use super::TokenType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenPairAmount {
@@ -84,8 +84,9 @@ impl<'a> Iterator for TokenPairAmountIterator<'a> {
 
 pub mod tests {
     use cosmwasm_std::{Addr, Uint128};
+    use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
-    use crate::core::{TokenPair, TokenType};
+    use crate::core::TokenPair;
 
     use super::TokenPairAmount;
 

@@ -337,6 +337,15 @@ pub fn query_max_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> Std
     max_fee
 }
 
+pub fn query_number_of_lb_pairs(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u32> {
+    let lb_pair_number =
+        match (lb_factory::QueryMsg::GetNumberOfLBPairs {}.test_query(lb_factory, app)) {
+            Ok(lb_factory::NumberOfLBPairsResponse { lb_pair_number }) => Ok(lb_pair_number),
+            Err(e) => return Err(StdError::generic_err(e.to_string())),
+        };
+    lb_pair_number
+}
+
 pub fn query_all_lb_pairs(
     app: &mut App,
     lb_factory: &ContractInfo,

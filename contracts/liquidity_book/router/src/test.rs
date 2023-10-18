@@ -25,6 +25,7 @@ pub mod tests {
     use serde::Deserialize;
     use serde::Serialize;
     use shade_protocol::snip20::Snip20ReceiveMsg;
+    use shade_protocol::utils::liquidity_book::tokens::TokenType;
     use shadeswap_shared::admin::ValidateAdminPermissionResponse;
     use shadeswap_shared::amm_pair::FeeInfo;
     use shadeswap_shared::core::TokenPair;
@@ -46,7 +47,6 @@ pub mod tests {
     use shadeswap_shared::core::ContractInstantiationInfo;
     use shadeswap_shared::core::Fee;
     use shadeswap_shared::core::TokenAmount;
-    use shadeswap_shared::core::TokenType;
     use shadeswap_shared::router::ExecuteMsg;
     use shadeswap_shared::router::Hop;
     use shadeswap_shared::router::InitMsg;

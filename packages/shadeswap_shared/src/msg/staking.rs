@@ -1,12 +1,10 @@
-use crate::{
-    core::{ContractInstantiationInfo, TokenType},
-    BLOCK_SIZE,
-};
+use crate::{core::ContractInstantiationInfo, BLOCK_SIZE};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint128, Uint256};
 use shade_protocol::{
     query_auth::QueryPermit,
     snip20::Snip20ReceiveMsg,
+    utils::liquidity_book::tokens::TokenType,
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
 };

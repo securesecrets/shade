@@ -2,8 +2,7 @@ use cosmwasm_std::StdResult;
 use cosmwasm_std::{MessageInfo, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use super::TokenType;
+use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenAmount {

@@ -4,17 +4,11 @@ use crate::{
         mint::mint,
         snip20::helpers::send_msg,
     },
+    lb_libraries::tokens::TokenType,
     utils::{asset::Contract, Query},
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    to_binary,
-    CosmosMsg,
-    Deps,
-    StdError,
-    StdResult,
-    Uint128,
-};
+use cosmwasm_std::{to_binary, CosmosMsg, Deps, StdError, StdResult, Uint128};
 
 #[cw_serde]
 pub struct ArbPair {
@@ -62,7 +56,7 @@ impl ArbPair {
                         amount_1,
                         ..
                     } => match pair.token_0 {
-                        shadeswap::TokenType::CustomToken { contract_addr, .. } => {
+                        TokenType::CustomToken { contract_addr, .. } => {
                             if contract_addr == self.token0.address.clone() {
                                 self.token0_amount = Some(amount_0);
                                 self.token1_amount = Some(amount_1);
@@ -144,7 +138,7 @@ impl ArbPair {
             Dex::ShadeSwap => {
                 let res = shadeswap::PairQuery::GetEstimatedPrice {
                     offer: shadeswap::TokenAmount {
-                        token: shadeswap::TokenType::CustomToken {
+                        token: TokenType::CustomToken {
                             token_code_hash: offer.asset.code_hash.clone(),
                             contract_addr: offer.asset.address.clone(),
                         },

@@ -15,6 +15,7 @@ airdrop = ["dep:airdrop"]
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
 lb_pair = ["dep:lb_pair"]
+router = ["dep:router"]
 lb_token = ["dep:lb_token"]
 lb_factory = ["dep:lb_factory"]
 #liability_mint = ["dep:liability_mint"]
@@ -42,6 +43,7 @@ snip20_migration = ["dep:snip20_migration"]
 airdrop = { path = "../../contracts/airdrop", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 lb_pair = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_pair", optional = true }
+router = { version = "0.1.0", path = "../../contracts/liquidity_book/router", optional = true }
 lb_token = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_token", optional = true }
 lb_factory = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_factory", optional = true}
 #liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
@@ -64,6 +66,8 @@ mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../..
 mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
 snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
+shadeswap-shared = {  version = "0.1.0", path = "../../packages/shadeswap_shared", features = []  }
+anyhow = "1"
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }

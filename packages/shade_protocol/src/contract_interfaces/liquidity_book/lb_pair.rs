@@ -1,17 +1,14 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, ContractInfo, Uint128, Uint256};
-
+use crate::utils::liquidity_book::tokens::{SwapTokenAmount, TokenAmount, TokenType};
 use crate::{
-    lb_libraries::tokens::SwapTokenAmount,
     snip20::Snip20ReceiveMsg,
     utils::{
-        liquidity_book::{
-            tokens::TokenType,
-            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        },
+        liquidity_book::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         ExecuteCallback, InstantiateCallback, Query,
     },
+    Contract,
 };
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -110,6 +107,13 @@ pub struct MintResponse {
 pub enum QueryMsg {
     #[returns(LbTokenResponse)]
     GetLbToken {},
+    #[returns(GetPairInfoResponse)]
+    GetPairInfo {},
+    #[returns(SwapSimulationResponse)]
+    SwapSimulation {
+        offer: TokenAmount,
+        exclude_fee: Option<bool>,
+    },
     #[returns(FactoryResponse)]
     GetFactory {},
     #[returns(TokensResponse)]
@@ -162,6 +166,26 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub struct LbTokenResponse {
     pub lb_token: ContractInfo,
+}
+#[cw_serde]
+pub struct GetPairInfoResponse {
+    pub liquidity_token: Contract,
+    pub factory: Option<Contract>,
+    pub pair: TokenPair,
+    pub amount_0: Uint128,
+    pub amount_1: Uint128,
+    pub total_liquidity: Uint128,
+    pub contract_version: u32,
+    pub fee_info: FeeInfo,
+    pub stable_info: Option<StablePairInfoResponse>,
+}
+#[cw_serde]
+pub struct SwapSimulationResponse {
+    total_fee_amount: Uint128,
+    lp_fee_amount: Uint128,
+    shade_dao_fee_amount: Uint128,
+    result: SwapResult,
+    price: String,
 }
 // We define a custom struct for each query response
 #[cw_serde]
@@ -316,4 +340,83 @@ pub struct RemoveLiquidity {
     pub ids: Vec<u32>,
     pub amounts: Vec<Uint256>,
     pub deadline: u64,
+}
+
+#[cw_serde]
+
+pub struct FeeInfo {
+    pub shade_dao_address: Addr,
+    pub lp_fee: Fee,
+    pub shade_dao_fee: Fee,
+    pub stable_lp_fee: Fee,
+    pub stable_shade_dao_fee: Fee,
+}
+
+#[cw_serde]
+
+pub struct StablePairInfoResponse {
+    pub stable_params: StableParams,
+    pub stable_token0_data: StableTokenData,
+    pub stable_token1_data: StableTokenData,
+    //p is optional so that the PairInfo query can still return even when the calculation of p fails
+    pub p: Option<Decimal256>,
+}
+
+#[cw_serde]
+
+pub struct CustomIterationControls {
+    pub epsilon: Uint256, // assumed to have same decimals as SignedDecimal
+    pub max_iter_newton: u16,
+    pub max_iter_bisect: u16,
+}
+
+#[cw_serde]
+
+pub struct StableParams {
+    pub a: Decimal256,
+    pub gamma1: Uint256,
+    pub gamma2: Uint256,
+    pub oracle: Contract,
+    pub min_trade_size_x_for_y: Decimal256,
+    pub min_trade_size_y_for_x: Decimal256,
+    pub max_price_impact_allowed: Decimal256,
+    pub custom_iteration_controls: Option<CustomIterationControls>,
+}
+
+#[cw_serde]
+
+pub struct StableTokenData {
+    pub oracle_key: String,
+    pub decimals: u8,
+}
+
+#[cw_serde]
+
+pub struct Fee {
+    pub nom: u64,
+    pub denom: u64,
+}
+
+impl Fee {
+    pub fn new(nom: u64, denom: u64) -> Self {
+        Self { nom, denom }
+    }
+}
+
+#[cw_serde]
+
+pub struct CustomFee {
+    pub shade_dao_fee: Fee,
+    pub lp_fee: Fee,
+}
+
+#[cw_serde]
+pub struct TokenPair {
+    pub token_0: TokenType,
+    pub token_1: TokenType,
+}
+
+#[cw_serde]
+pub struct SwapResult {
+    pub return_amount: Uint128,
 }

@@ -2,9 +2,9 @@ use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, DepsMut, Env, Response, StdError, StdResult, Storage, SubMsg,
     Uint128, WasmMsg,
 };
-use shade_protocol::Contract;
+use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
 use shadeswap_shared::{
-    core::{TokenAmount, TokenType},
+    core::TokenAmount,
     msg::amm_pair::{
         ExecuteMsg as AMMPairExecuteMsg, InvokeMsg as AMMPairInvokeMsg,
         QueryMsgResponse as AMMPairQueryReponse,
