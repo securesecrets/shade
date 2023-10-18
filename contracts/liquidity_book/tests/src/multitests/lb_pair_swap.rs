@@ -10,11 +10,11 @@ use shade_multi_test::interfaces::{
     lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
-    lb_libraries::{tokens::SwapTokenAmount, types::LBPairInformation},
+    lb_libraries::{types::LBPairInformation},
     multi_test::App,
 };
 
-pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000 as u128;
+pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000_u128;
 
 pub const ACTIVE_ID: u32 = ID_ONE;
 
@@ -49,8 +49,8 @@ pub fn lb_pair_setup() -> Result<
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
         &lb_factory.clone().into(),
-        token_x.clone(),
-        token_y.clone(),
+        token_x,
+        token_y,
     )?;
     let lb_pair = all_pairs[0].clone();
 
@@ -58,7 +58,7 @@ pub fn lb_pair_setup() -> Result<
 
     lb_token::set_viewing_key(
         &mut app,
-        &addrs.batman().as_str(),
+        addrs.batman().as_str(),
         &lb_token,
         "viewing_key".to_owned(),
     )?;
@@ -103,7 +103,7 @@ pub fn lb_pair_setup() -> Result<
 
     lb_pair::add_liquidity(
         &mut app,
-        &addrs.batman().as_str(),
+        addrs.batman().as_str(),
         &lb_pair.lb_pair.contract,
         liquidity_parameters,
     )?;
@@ -460,7 +460,7 @@ pub fn test_revert_swap_out_of_liquidity() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
 
     // Simulate transferring 2e18 tokens to the LB pair contract
-    let token_amount = Uint128::from(2 * DEPOSIT_AMOUNT as u128);
+    let token_amount = Uint128::from(2 * DEPOSIT_AMOUNT);
     let tokens_to_mint = vec![(SHADE, token_amount)];
 
     mint_token_helper(

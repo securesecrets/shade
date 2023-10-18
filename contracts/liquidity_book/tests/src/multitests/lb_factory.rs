@@ -42,8 +42,8 @@ pub fn test_setup() -> Result<(), anyhow::Error> {
 
     //query getMaxFlashLoanFee
     let max_flash_loan_fee =
-        lb_factory::query_max_flash_loan_fee(&mut app, &lb_factory.clone().into())?;
-    assert_eq!(max_flash_loan_fee, 1 * 10 ^ 17);
+        lb_factory::query_max_flash_loan_fee(&mut app, &lb_factory.into())?;
+    assert_eq!(max_flash_loan_fee, 10 ^ 17);
     Ok(())
 }
 
@@ -61,7 +61,7 @@ pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
         lb_pair_stored_code.code_hash,
     )?;
     let lb_pair_code_info =
-        lb_factory::query_lb_pair_implementation(&mut app, &lb_factory.clone().into())?;
+        lb_factory::query_lb_pair_implementation(&mut app, &lb_factory.into())?;
     assert_eq!(lb_pair_stored_code.code_id, lb_pair_code_info.id);
 
     Ok(())
@@ -77,13 +77,13 @@ pub fn test_revert_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.admin().as_str(),
         &lb_factory.clone().into(),
-        lb_pair_stored_code.code_id.clone(),
+        lb_pair_stored_code.code_id,
         lb_pair_stored_code.code_hash.clone(),
     )?;
     let err = lb_factory::set_lb_pair_implementation(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         lb_pair_stored_code.code_id,
         lb_pair_stored_code.code_hash,
     );
@@ -112,7 +112,7 @@ pub fn test_set_lb_token_implementation() -> Result<(), anyhow::Error> {
         lb_token_stored_code.code_hash,
     )?;
     let lb_token_code_info =
-        lb_factory::query_lb_token_implementation(&mut app, &lb_factory.clone().into())?;
+        lb_factory::query_lb_token_implementation(&mut app, &lb_factory.into())?;
     assert_eq!(lb_token_stored_code.code_id, lb_token_code_info.id);
     Ok(())
 }
@@ -152,7 +152,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     // 5. Get the LBPair information using `factory.getLBPairInformation`.
     let lb_pair_info = lb_factory::query_lb_pair_information(
         &mut app,
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         token_x.clone(),
         token_y.clone(),
         DEFAULT_BIN_STEP,
@@ -160,8 +160,8 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
 
     assert_eq!(lb_pair_info, all_pairs[0]);
     assert_eq!(lb_pair_info.bin_step, DEFAULT_BIN_STEP);
-    assert_eq!(lb_pair_info.created_by_owner, true);
-    assert_eq!(lb_pair_info.ignored_for_routing, false);
+    assert!(lb_pair_info.created_by_owner);
+    assert!(!lb_pair_info.ignored_for_routing);
 
     // 6. Validate that the returned information matches the expected values (binStep, LBPair address, createdByOwner, ignoredForRouting).
     //SORTED token
@@ -259,7 +259,7 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
         token_y.clone(),
         DEFAULT_BIN_STEP,
     )?;
-    assert_eq!(lb_pair_info.created_by_owner, false);
+    assert!(!lb_pair_info.created_by_owner);
 
     // close preset
     // set open preset for bin_id
@@ -274,11 +274,11 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
     let res = lb_factory::create_lb_pair(
         &mut app,
         addrs.scare_crow().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         DEFAULT_BIN_STEP,
         ID_ONE,
-        token_x.clone(),
-        token_y.clone(),
+        token_x,
+        token_y,
         "viewing_key".to_string(),
     );
     assert_eq!(
@@ -305,7 +305,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     let res = lb_factory::create_lb_pair(
         &mut app,
         addrs.batman().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         DEFAULT_BIN_STEP,
         ID_ONE,
         token_x.clone(),
@@ -331,8 +331,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         &new_lb_factory.clone().into(),
         DEFAULT_BIN_STEP,
         ID_ONE,
-        token_x.clone(),
-        token_y.clone(),
+        token_x,
+        token_y,
         "viewing_key".to_string(),
     );
     //Check failing error
@@ -431,7 +431,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     //Check failing error
     assert_eq!(
         res.unwrap_err(),
-        StdError::generic_err(format!("The LBPair implementation has not been set yet!",))
+        StdError::generic_err("The LBPair implementation has not been set yet!".to_string())
     );
 
     //can't create a pair the same pair twice
@@ -466,7 +466,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     let res = lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
-        &new_lb_factory.clone().into(),
+        &new_lb_factory.into(),
         DEFAULT_BIN_STEP,
         ID_ONE,
         token_x.clone(),
@@ -548,7 +548,7 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
         protocol_share_view,
         max_volatility_accumulator_view,
         is_open_view,
-    ) = lb_factory::query_preset(&mut app, &lb_factory.clone().into(), bin_step)?;
+    ) = lb_factory::query_preset(&mut app, &lb_factory.into(), bin_step)?;
 
     assert_eq!(base_factor, base_factor_view);
     assert_eq!(filter_period, filter_period_view);
@@ -632,7 +632,7 @@ fn test_remove_preset() -> Result<(), anyhow::Error> {
     let res = lb_factory::remove_preset(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         DEFAULT_BIN_STEP,
     );
     assert!(
@@ -746,7 +746,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     let res = lb_factory::set_fees_parameters_on_pair(
         &mut app,
         addrs.batman().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         token_x,
         token_y,
         DEFAULT_BIN_STEP,
@@ -761,7 +761,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         res.unwrap_err(),
-        StdError::generic_err(format!("Only the Owner can do that!"))
+        StdError::generic_err("Only the Owner can do that!".to_string())
     );
 
     Ok(())
@@ -802,7 +802,7 @@ pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
     let err = lb_factory::set_fee_recipient(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         addrs.batman(),
     );
     assert_eq!(
@@ -834,10 +834,10 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
             err.unwrap_err(),
             StdError::generic_err(
                 StdError::GenericErr {
-                    msg: String::from(format!(
+                    msg: format!(
                         "Querier contract error: Bin step {} has no preset!",
                         bin_step
-                    ))
+                    )
                 }
                 .to_string()
             )
@@ -905,7 +905,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
     let err = lb_factory::set_preset_open_state(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         bin_step,
         false,
     );
@@ -993,7 +993,7 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
     let err = lb_factory::add_quote_asset(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         new_token.clone(),
     );
     assert_eq!(
@@ -1086,7 +1086,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     let err = lb_factory::remove_quote_asset(
         &mut app,
         addrs.admin().as_str(),
-        &lb_factory.clone().into(),
+        &lb_factory.into(),
         usdc.clone(),
     );
     assert_eq!(
@@ -1126,8 +1126,8 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
         &lb_factory.clone().into(),
-        sscrt.clone(),
-        shd.clone(),
+        sscrt,
+        shd,
     )?;
 
     let lb_pair = all_pairs[0].clone().lb_pair;
@@ -1144,8 +1144,8 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let err = lb_factory::force_decay(
         &mut app,
         addrs.batman().as_str(),
-        &lb_factory.clone().into(),
-        lb_pair.clone(),
+        &lb_factory.into(),
+        lb_pair,
     );
     assert_eq!(
         err.unwrap_err(),
@@ -1221,9 +1221,9 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
 
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
-        &lb_factory.clone().into(),
-        token_x.clone(),
-        token_y.clone(),
+        &lb_factory.into(),
+        token_x,
+        token_y,
     )?;
 
     assert_eq!(all_pairs.len(), 2);
