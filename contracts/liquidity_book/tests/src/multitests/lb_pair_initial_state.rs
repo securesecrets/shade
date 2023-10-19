@@ -1,10 +1,19 @@
 use std::str::FromStr;
 
 use crate::multitests::test_helper::{
-    extract_contract_info, generate_random, token_type_snip20_generator, DEFAULT_BASE_FACTOR,
-    DEFAULT_BIN_STEP, DEFAULT_DECAY_PERIOD, DEFAULT_FILTER_PERIOD,
-    DEFAULT_MAX_VOLATILITY_ACCUMULATOR, DEFAULT_PROTOCOL_SHARE, DEFAULT_REDUCTION_FACTOR,
-    DEFAULT_VARIABLE_FEE_CONTROL, SHADE, SSCRT,
+    extract_contract_info,
+    generate_random,
+    token_type_snip20_generator,
+    DEFAULT_BASE_FACTOR,
+    DEFAULT_BIN_STEP,
+    DEFAULT_DECAY_PERIOD,
+    DEFAULT_FILTER_PERIOD,
+    DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
+    DEFAULT_PROTOCOL_SHARE,
+    DEFAULT_REDUCTION_FACTOR,
+    DEFAULT_VARIABLE_FEE_CONTROL,
+    SHADE,
+    SSCRT,
 };
 
 use super::test_helper::{assert_approx_eq_abs, assert_approx_eq_rel, init_addrs, setup, ID_ONE};
@@ -16,8 +25,8 @@ use shade_protocol::{
     multi_test::App,
 };
 
-pub fn lb_pair_setup(
-) -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
+pub fn lb_pair_setup()
+-> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
 
@@ -37,12 +46,8 @@ pub fn lb_pair_setup(
         token_y.clone(),
         "viewing_key".to_string(),
     )?;
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
     Ok((app, lb_factory.into(), deployed_contracts, lb_pair))
 }

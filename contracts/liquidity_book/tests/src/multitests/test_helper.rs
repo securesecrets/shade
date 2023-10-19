@@ -3,7 +3,8 @@ use cosmwasm_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128,
 use rand::Rng;
 use shade_multi_test::{
     interfaces::{
-        lb_factory, snip20,
+        lb_factory,
+        snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
     multi::{lb_pair::LbPair, lb_token::LbToken},
@@ -44,33 +45,43 @@ impl Addrs {
     pub fn admin(&self) -> Addr {
         self.addrs[0].clone()
     }
+
     pub fn user1(&self) -> Addr {
         self.addrs[1].clone()
     }
+
     pub fn user2(&self) -> Addr {
         self.addrs[2].clone()
     }
+
     pub fn batman(&self) -> Addr {
         self.addrs[3].clone()
     }
+
     pub fn scare_crow(&self) -> Addr {
         self.addrs[4].clone()
     }
-    pub fn altaf_bhai(&self) -> Addr {
+
+    pub fn joker(&self) -> Addr {
         self.addrs[5].clone()
     }
+
     pub fn all(&self) -> Vec<Addr> {
         self.addrs.clone()
     }
+
     pub fn a_hash(&self) -> String {
         self.hashes[0].clone()
     }
+
     pub fn b_hash(&self) -> String {
         self.hashes[1].clone()
     }
+
     pub fn c_hash(&self) -> String {
         self.hashes[2].clone()
     }
+
     pub fn _d_hash(&self) -> String {
         self.hashes[3].clone()
     }
@@ -220,7 +231,7 @@ pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts)
     .unwrap();
 
     //2. init factory
-    let lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.altaf_bhai(), 0)?;
+    let lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.joker(), 0)?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
 
@@ -689,13 +700,9 @@ pub fn mint_token_helper(
 
     // Adding minters and minting for SSCRT and SHADE
     for (token, amount) in tokens_to_mint {
-        snip20::add_minters_exec(
-            app,
-            admin,
-            deployed_contracts,
-            token,
-            vec![admin.to_string()],
-        )?;
+        snip20::add_minters_exec(app, admin, deployed_contracts, token, vec![
+            admin.to_string(),
+        ])?;
         snip20::mint_exec(
             app,
             admin,

@@ -124,12 +124,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     //  TODO: d. Staking contract
 
     //     13. LIST the AMM pairs and ASSERT that there's only 1 AMM pair.
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     assert_eq!(all_pairs.len(), 1);
     let shd_silk_lb_pair = all_pairs[0].clone();
 
@@ -328,14 +324,14 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         &addrs,
-        addrs.altaf_bhai().into_string(),
+        addrs.joker().into_string(),
         tokens_to_mint.clone(),
     )?;
 
     increase_allowance_helper(
         &mut app,
         &deployed_contracts,
-        addrs.altaf_bhai().into_string(),
+        addrs.joker().into_string(),
         scrt_silk_lb_pair.lb_pair.contract.address.to_string(),
         tokens_to_mint,
     )?;
@@ -359,7 +355,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     app.init_modules(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &addrs.altaf_bhai(), vec![Coin {
+            .init_balance(storage, &addrs.joker(), vec![Coin {
                 denom: "uscrt".into(),
                 amount: amount_x.add(Uint128::from(SWAP_AMOUNT)),
             }])
@@ -368,7 +364,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     lb_pair::add_native_liquidity(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &scrt_silk_lb_pair.lb_pair.contract,
         liquidity_parameters,
         vec![Coin {
@@ -380,7 +376,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let res: BalanceResponse = app
         .wrap()
         .query::<BalanceResponse>(&QueryRequest::Bank(BankQuery::Balance {
-            address: addrs.altaf_bhai().to_string(),
+            address: addrs.joker().to_string(),
             denom: "uscrt".to_string(),
         }))
         .unwrap();
@@ -432,7 +428,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     snip20::send_exec(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         router.address.to_string(),
@@ -443,7 +439,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     //Query SILK and uscrt balance
     snip20::set_viewing_key_exec(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -451,7 +447,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     let altaf_bhai_balance = snip20::balance_query(
         &app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -461,7 +457,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let res: BalanceResponse = app
         .wrap()
         .query::<BalanceResponse>(&QueryRequest::Bank(BankQuery::Balance {
-            address: addrs.altaf_bhai().to_string(),
+            address: addrs.joker().to_string(),
             denom: "uscrt".to_string(),
         }))
         .unwrap();
@@ -483,7 +479,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     router::swap_tokens_for_exact_tokens(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &router,
         offer,
         Some(Uint128::new(999u128)),
@@ -497,7 +493,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     //Query SILK and uscrt balance
     snip20::set_viewing_key_exec(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -505,7 +501,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     let altaf_bhai_balance = snip20::balance_query(
         &app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -515,7 +511,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let res: BalanceResponse = app
         .wrap()
         .query::<BalanceResponse>(&QueryRequest::Bank(BankQuery::Balance {
-            address: addrs.altaf_bhai().to_string(),
+            address: addrs.joker().to_string(),
             denom: "uscrt".to_string(),
         }))
         .unwrap();

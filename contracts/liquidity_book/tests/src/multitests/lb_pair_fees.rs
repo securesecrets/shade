@@ -1,13 +1,21 @@
 use crate::multitests::test_helper::*;
 
 use super::test_helper::{
-    increase_allowance_helper, init_addrs, liquidity_parameters_generator, mint_token_helper,
-    setup, ID_ONE,
+    increase_allowance_helper,
+    init_addrs,
+    liquidity_parameters_generator,
+    mint_token_helper,
+    setup,
+    ID_ONE,
 };
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
 use shade_multi_test::interfaces::{
-    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
+    lb_factory,
+    lb_pair,
+    lb_token,
+    snip20,
+    utils::DeployedContracts,
 };
 use shade_protocol::{
     lb_libraries::{
@@ -50,12 +58,8 @@ pub fn lb_pair_setup() -> Result<
         token_y.clone(),
         "viewing_key".to_string(),
     )?;
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
     let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
@@ -103,7 +107,7 @@ pub fn lb_pair_setup() -> Result<
 
     snip20::set_viewing_key_exec(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_string(),
@@ -111,7 +115,7 @@ pub fn lb_pair_setup() -> Result<
 
     snip20::set_viewing_key_exec(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_string(),
@@ -1787,7 +1791,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -1797,7 +1801,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -1853,7 +1857,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -1863,7 +1867,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -1964,7 +1968,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -1974,7 +1978,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -2038,7 +2042,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -2048,7 +2052,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -2108,7 +2112,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -2118,7 +2122,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -2141,7 +2145,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_x = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -2151,7 +2155,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 
     let balance_y = snip20::balance_query(
         &mut app,
-        addrs.altaf_bhai().as_str(),
+        addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -2184,12 +2188,8 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
         token_y.clone(),
         "viewing_key".to_string(),
     )?;
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
     let base_factor = Uint128::from(generate_random(1u16, u16::MAX));
     let variable_fee_control = Uint128::from(generate_random(1u32, U24::MAX));
