@@ -5,6 +5,7 @@ use crate::{
             tokens::{SwapTokenAmount, TokenAmount, TokenType},
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         },
+        space_pad,
         ExecuteCallback,
         InstantiateCallback,
         Query,
@@ -13,7 +14,18 @@ use crate::{
 };
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256};
+use cosmwasm_std::{
+    to_binary,
+    Addr,
+    Coin,
+    ContractInfo,
+    CosmosMsg,
+    Decimal256,
+    StdResult,
+    Uint128,
+    Uint256,
+    WasmMsg,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -81,6 +93,32 @@ pub enum ExecuteMsg {
         max_volatility_accumulator: u32,
     },
     ForceDecay {},
+}
+
+impl ExecuteMsg {
+    pub fn to_cosmos_msg(
+        &self,
+        code_hash: String,
+        contract_addr: String,
+        send_amount: Option<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        let mut msg = to_binary(self)?;
+        space_pad(&mut msg.0, 256);
+        let mut funds = Vec::new();
+        if let Some(amount) = send_amount {
+            funds.push(Coin {
+                amount,
+                denom: String::from("uscrt"),
+            });
+        }
+        let execute = WasmMsg::Execute {
+            contract_addr,
+            code_hash,
+            msg,
+            funds,
+        };
+        Ok(execute.into())
+    }
 }
 
 impl ExecuteCallback for ExecuteMsg {

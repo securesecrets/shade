@@ -3,23 +3,42 @@
 use crate::{prelude::*, state::*};
 use core::panic;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Attribute, BankMsg, Binary, Coin, ContractInfo, CosmosMsg,
-    Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsgResult,
-    Timestamp, Uint128, Uint256, WasmMsg,
+    from_binary,
+    to_binary,
+    Addr,
+    Attribute,
+    BankMsg,
+    Binary,
+    Coin,
+    ContractInfo,
+    CosmosMsg,
+    Decimal,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Response,
+    StdError,
+    StdResult,
+    SubMsgResult,
+    Timestamp,
+    Uint128,
+    Uint256,
+    WasmMsg,
 };
 
 use ethnum::U256;
 use serde::Serialize;
-use shade_protocol::lb_libraries::constants::PRECISION;
-use shade_protocol::liquidity_book::lb_pair::QueryMsg::GetPairInfo;
 use shade_protocol::{
     c_std::{shd_entry_point, Reply, SubMsg},
     contract_interfaces::liquidity_book::{
-        lb_pair::*, lb_token, lb_token::InstantiateMsg as LBTokenInstantiateMsg,
+        lb_pair::*,
+        lb_token,
+        lb_token::InstantiateMsg as LBTokenInstantiateMsg,
     },
     lb_libraries::{
         bin_helper::{self, BinHelper},
-        constants::{self, MAX_FEE, SCALE_OFFSET},
+        constants::{self, MAX_FEE, PRECISION, SCALE_OFFSET},
         fee_helper::{self, FeeHelper},
         lb_token::state_structs::{LbPair, TokenAmount, TokenIdBalance},
         math::{
@@ -35,9 +54,11 @@ use shade_protocol::{
         oracle_helper::{Oracle, OracleError, MAX_SAMPLE_LIFETIME},
         pair_parameter_helper::PairParameters,
         price_helper::PriceHelper,
-        tokens, types,
+        tokens,
+        types,
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
+    liquidity_book::lb_pair::QueryMsg::GetPairInfo,
     snip20,
     utils::pad_handle_result,
     BLOCK_SIZE,
