@@ -5,9 +5,13 @@
 
 use ethnum::{I256, U256};
 
-use super::constants::*;
-use super::math::u128x128_math::{U128x128Math, U128x128MathError};
-use super::math::u256x256_math::{U256x256Math, U256x256MathError};
+use super::{
+    constants::*,
+    math::{
+        u128x128_math::{U128x128Math, U128x128MathError},
+        u256x256_math::{U256x256Math, U256x256MathError},
+    },
+};
 
 // represents a 23 bit number (uint24, which we're not using yet)
 const REAL_ID_SHIFT: I256 = I256::new(1 << 23);
@@ -105,8 +109,8 @@ mod tests {
         let integer_part = fixed_point >> 128;
         let shifted: U256 = U256::from(1u128) << 128;
         let fractional_part = fixed_point & U256::from(shifted.checked_sub(U256::ONE).unwrap());
-        let fractional_part_decimal = fractional_part / U256::from(shifted);
-        let real_value = integer_part;
+        let _fractional_part_decimal = fractional_part / U256::from(shifted);
+        let _real_value = integer_part;
     }
 
     #[test]

@@ -1,0 +1,34 @@
+[package]
+name = "shadeswap-shared"
+version = "0.1.0"
+authors = ["Tony <plutonyium@gmail.com>"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+utils = []
+staking = []
+
+[dependencies]
+schemars = "0.8.11"
+serde = { version = "1.0.114", default-features = false, features = ["derive"] }
+cosmwasm-std = { version = "1.0.0", package = "secret-cosmwasm-std" }
+cosmwasm-storage = { version = "1.0.0", package = "secret-cosmwasm-storage" }
+cosmwasm-schema = { version = "1.1.8" }
+subtle = { version = "2.2.3", default-features = false }
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", branch = "cosmwasm_v1_upgrade" }
+shade-protocol = {  version = "0.1.0", path = "../shade_protocol", features = ["snip20", "admin", "query_auth", "airdrop","liquidity_book"] }
+
+better-secret-math = { git = "https://github.com/securesecrets/better-secret-math" }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils" }

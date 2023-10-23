@@ -821,6 +821,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_sub() {
         // Basic Test Case
         let bytes1 = Bytes32::encode(25, 45);
@@ -831,7 +832,7 @@ mod tests {
         // Underflow Test Case
         let bytes1 = Bytes32::encode(0, 0);
         let bytes2 = Bytes32::encode(10, 20);
-        // This should panic
+        Bytes32::sub(&bytes1, bytes2);
         // let result = Bytes32::sub(&bytes1, bytes2);
 
         // Zero Test Case
@@ -860,7 +861,7 @@ mod tests {
         // Underflow Test Case
         let bytes1 = Bytes32::encode(0, 0);
         // This should panic
-        let result = Bytes32::sub_alt(&bytes1, 10, 20);
+        let _result = Bytes32::sub_alt(&bytes1, 10, 20);
     }
 
     #[test]

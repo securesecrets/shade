@@ -180,6 +180,35 @@ pub fn set_viewing_key_exec(
     }
 }
 
+pub fn transfer_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    recipient: String,
+    amount: Uint128,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::Transfer {
+        recipient,
+        amount,
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
 pub fn send_exec(
     chain: &mut App,
     sender: &str,
@@ -208,7 +237,7 @@ pub fn send_exec(
         &[],
     )) {
         Ok(_) => Ok(()),
-        Err(_) => Err(StdError::generic_err("snip20 send failed")),
+        Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
 

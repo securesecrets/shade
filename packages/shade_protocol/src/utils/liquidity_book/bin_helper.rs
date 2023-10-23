@@ -287,9 +287,10 @@ impl BinHelper {
     /// * `is_x` - Whether the reserve to check is the X reserve (true) or the Y reserve (false)
     pub fn is_empty(bin_reserves: Bytes32, is_x: bool) -> bool {
         if is_x {
-            return bin_reserves.decode_alt(is_x) == 0;
+            return bin_reserves.decode_x() == 0;
+        } else {
+            return bin_reserves.decode_y() == 0;
         }
-        bin_reserves.decode_alt(!is_x) == 0
     }
 
     /// Returns the amounts of tokens that will be added and removed from the bin during a swap
@@ -334,15 +335,21 @@ impl BinHelper {
 
         let max_amount_in = max_amount_in + max_fee;
 
-        let amount_in128 = amounts_in_left.decode_alt(swap_for_y);
-        let (fee128, amount_out128) = if amount_in128 >= max_amount_in {
-            (max_fee, bin_reserve_out)
+        let mut amount_in128 = amounts_in_left.decode_alt(swap_for_y);
+
+        let mut fee128;
+        let mut amount_out128;
+
+        if amount_in128 >= max_amount_in {
+            fee128 = max_fee;
+            amount_in128 = max_amount_in.as_u128();
+            amount_out128 = bin_reserve_out;
         } else {
-            let fee128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
+            fee128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
 
             let amount_in = amount_in128 - fee128;
 
-            let amount_out128 = if swap_for_y {
+            amount_out128 = if swap_for_y {
                 U256x256Math::mul_shift_round_down(U256::from(amount_in), price, SCALE_OFFSET)?
                     .min(U256::from(u128::MAX))
                     .as_u128()
@@ -353,9 +360,7 @@ impl BinHelper {
             };
 
             if amount_out128 > bin_reserve_out {
-                (fee128, bin_reserve_out)
-            } else {
-                (fee128, amount_out128)
+                amount_out128 = bin_reserve_out;
             }
         };
 

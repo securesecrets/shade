@@ -4,12 +4,10 @@ use cosmwasm_std::{
     to_binary, Binary, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128, Uint256,
     WasmQuery,
 };
-use shade_protocol::Contract;
+use shade_protocol::{liquidity_book::lb_pair::SwapResult, Contract};
 use shadeswap_shared::{
     core::TokenAmount,
-    msg::amm_pair::{
-        QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse, SwapResult,
-    },
+    msg::amm_pair::{QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse},
     router::{Hop, QueryMsgResponse},
 };
 

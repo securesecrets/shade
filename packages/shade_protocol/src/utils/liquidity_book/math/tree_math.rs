@@ -477,4 +477,28 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_test() {
+        let mut tree = TreeUint24::new();
+        let id = 8363961;
+
+        tree.add(id + 1);
+        tree.add(id);
+        tree.add(id - 1);
+
+        tree.remove(id);
+
+        assert_eq!(
+            tree.find_first_left(id - 1),
+            id + 1,
+            "test_remove_logic_and_search_right::1"
+        );
+
+        assert_eq!(
+            tree.find_first_right(id + 1),
+            id - 1,
+            "test_remove_logic_and_search_right::2"
+        );
+    }
 }

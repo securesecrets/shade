@@ -12,9 +12,9 @@ use cosmwasm_storage::Singleton;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use shade_protocol::utils::liquidity_book::tokens::TokenType;
 use shade_protocol::Contract;
 use shadeswap_shared::core::TokenAmount;
-use shadeswap_shared::core::TokenType;
 use shadeswap_shared::router::Hop;
 
 pub static CONFIG: &[u8] = b"config";

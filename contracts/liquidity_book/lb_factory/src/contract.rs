@@ -1,13 +1,35 @@
 #![allow(unused)] // For beginning only.
 
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Reply, Response, StdError, StdResult, Storage, SubMsg, SubMsgResult, Timestamp, Uint256,
+    entry_point,
+    to_binary,
+    Addr,
+    Binary,
+    ContractInfo,
+    CosmosMsg,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Reply,
+    Response,
+    StdError,
+    StdResult,
+    Storage,
+    SubMsg,
+    SubMsgResult,
+    Timestamp,
+    Uint256,
     WasmMsg,
 };
-use shade_protocol::lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types};
-
 use ethnum::U256;
+use shade_protocol::{
+    lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types, viewing_keys},
+    liquidity_book::{
+        lb_factory::*,
+        lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+    },
+};
 
 use math::encoded_sample::EncodedSample;
 use pair_parameter_helper::PairParameters;
@@ -15,14 +37,15 @@ use price_helper::PriceHelper;
 use tokens::TokenType;
 use types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters};
 
-use crate::msg::*;
-use crate::prelude::*;
-use crate::state::*;
-use crate::types::{LBPair, LBPairInformation, NextPairKey};
+use crate::{
+    prelude::*,
+    state::*,
+    types::{LBPair, LBPairInformation, NextPairKey},
+};
 
 pub static _OFFSET_IS_PRESET_OPEN: u8 = 255;
 pub static _MIN_BIN_STEP: u8 = 1; // 0.001%
-pub static _MAX_FLASHLOAN_FEE: u8 = 10; // 10%
+pub static _MAX_FLASHLOAN_FEE: u8 = 10 ^ 17; // 10%
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1u64;
 
@@ -54,8 +77,7 @@ pub fn instantiate(
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
     };
-    deps.api
-        .debug(format!("Contract was initialized by {}", info.sender).as_str());
+
     CONFIG.save(deps.storage, &state)?;
 
     // TODO: decide on response output and format
@@ -78,7 +100,17 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             token_y,
             active_id,
             bin_step,
-        } => try_create_lb_pair(deps, env, info, token_x, token_y, active_id, bin_step),
+            viewing_key,
+        } => try_create_lb_pair(
+            deps,
+            env,
+            info,
+            token_x,
+            token_y,
+            active_id,
+            bin_step,
+            viewing_key,
+        ),
         // ExecuteMsg::SetLBPairIgnored {
         //     token_x,
         //     token_y,
@@ -113,32 +145,32 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             try_set_preset_open_state(deps, env, info, bin_step, is_open)
         }
         ExecuteMsg::RemovePreset { bin_step } => try_remove_preset(deps, env, info, bin_step),
-        // ExecuteMsg::SetFeeParametersOnPair {
-        //     token_x,
-        //     token_y,
-        //     bin_step,
-        //     base_factor,
-        //     filter_period,
-        //     decay_period,
-        //     reduction_factor,
-        //     variable_fee_control,
-        //     protocol_share,
-        //     max_volatility_accumulator,
-        // } => try_set_fee_parameters_on_pair(
-        //     deps,
-        //     env,
-        //     info,
-        //     token_x,
-        //     token_y,
-        //     bin_step,
-        //     base_factor,
-        //     filter_period,
-        //     decay_period,
-        //     reduction_factor,
-        //     variable_fee_control,
-        //     protocol_share,
-        //     max_volatility_accumulator,
-        // ),
+        ExecuteMsg::SetFeeParametersOnPair {
+            token_x,
+            token_y,
+            bin_step,
+            base_factor,
+            filter_period,
+            decay_period,
+            reduction_factor,
+            variable_fee_control,
+            protocol_share,
+            max_volatility_accumulator,
+        } => try_set_fee_parameters_on_pair(
+            deps,
+            env,
+            info,
+            token_x,
+            token_y,
+            bin_step,
+            base_factor,
+            filter_period,
+            decay_period,
+            reduction_factor,
+            variable_fee_control,
+            protocol_share,
+            max_volatility_accumulator,
+        ),
         ExecuteMsg::SetFeeRecipient { fee_recipient } => {
             try_set_fee_recipient(deps, env, info, fee_recipient)
         }
@@ -239,6 +271,7 @@ fn try_create_lb_pair(
     token_y: TokenType,
     active_id: u32,
     bin_step: u16,
+    viewing_key: String,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
 
@@ -251,7 +284,7 @@ fn try_create_lb_pair(
         .map_err(|_| Error::BinStepHasNoPreset { bin_step })?;
     let is_owner = info.sender == state.owner;
 
-    if !_is_preset_open(preset.0 .0) && !is_owner {
+    if !_is_preset_open(preset.0.0) && !is_owner {
         return Err(Error::PresetIsLockedForUsers {
             user: info.sender,
             bin_step,
@@ -279,7 +312,6 @@ fn try_create_lb_pair(
     // safety check, making sure that the price can be calculated
     PriceHelper::get_price_from_id(active_id, bin_step);
 
-    // We sort token for storage efficiency, only one input needs to be stored because they are sorted
     let (token_a, token_b) = _sort_tokens(token_x.clone(), token_y.clone());
 
     // TODO: error if address doesn't exist on chain
@@ -337,10 +369,11 @@ fn try_create_lb_pair(
                 active_id,
                 lb_token_implementation: state.lb_token_implementation,
                 //TODO add viewing key
-                viewing_key: String::new(),
+                viewing_key,
                 //TODO add pair_name
                 pair_name: String::new(),
                 entropy: String::new(),
+                protocol_fee_recipient: state.fee_recipient,
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -353,6 +386,7 @@ fn try_create_lb_pair(
         token_b: token_b.clone(),
         bin_step,
         code_hash: state.lb_pair_implementation.code_hash,
+        is_open: is_owner,
     })?;
 
     Ok(Response::new().add_submessages(messages))
@@ -480,18 +514,6 @@ fn try_set_pair_preset(
 
     PRESETS.save(deps.storage, bin_step, &preset)?;
 
-    // TODO: add all this to the response
-    // emit PresetSet(
-    //     binStep,
-    //     baseFactor,
-    //     filterPeriod,
-    //     decayPeriod,
-    //     reductionFactor,
-    //     variableFeeControl,
-    //     protocolShare,
-    //     maxVolatilityAccumulator
-    //     );
-
     Ok(Response::default().add_attribute_plaintext("set preset", bin_step.to_string()))
 }
 
@@ -556,70 +578,75 @@ fn try_remove_preset(
     Ok(Response::default().add_attribute_plaintext("preset removed", bin_step.to_string()))
 }
 
-// /// Function to set the fee parameters of a LBPair
-// ///
-// /// # Arguments
-// ///
-// /// * `token_x` - The address of the first token
-// /// * `token_y` - The address of the second token
-// /// * `bin_step` - The bin step in basis point, used to calculate the price
-// /// * `base_factor` - The base factor, used to calculate the base fee, baseFee = baseFactor * binStep
-// /// * `filter_period` - The period where the accumulator value is untouched, prevent spam
-// /// * `decay_period` - The period where the accumulator value is decayed, by the reduction factor
-// /// * `reduction_factor` - The reduction factor, used to calculate the reduction of the accumulator
-// /// * `variable_fee_control` - The variable fee control, used to control the variable fee, can be 0 to disable it
-// /// * `protocol_share` - The share of the fees received by the protocol
-// /// * `max_volatility_accumulator` - The max value of volatility accumulator
-// fn try_set_fee_parameters_on_pair(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     token_x: TokenType,
-//     token_y: TokenType,
-//     bin_step: u16,
-//     base_factor: u16,
-//     filter_period: u16,
-//     decay_period: u16,
-//     reduction_factor: u16,
-//     variable_fee_control: u32,
-//     protocol_share: u16,
-//     max_volatility_accumulator: u32,
-// ) -> Result<Response> {
-//     let state = CONFIG.load(deps.storage)?;
-//     only_owner(&info.sender, &state.owner)?;
+/// Function to set the fee parameters of a LBPair
+///
+/// # Arguments
+///
+/// * `token_x` - The address of the first token
+/// * `token_y` - The address of the second token
+/// * `bin_step` - The bin step in basis point, used to calculate the price
+/// * `base_factor` - The base factor, used to calculate the base fee, baseFee = baseFactor * binStep
+/// * `filter_period` - The period where the accumulator value is untouched, prevent spam
+/// * `decay_period` - The period where the accumulator value is decayed, by the reduction factor
+/// * `reduction_factor` - The reduction factor, used to calculate the reduction of the accumulator
+/// * `variable_fee_control` - The variable fee control, used to control the variable fee, can be 0 to disable it
+/// * `protocol_share` - The share of the fees received by the protocol
+/// * `max_volatility_accumulator` - The max value of volatility accumulator
+fn try_set_fee_parameters_on_pair(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    token_x: TokenType,
+    token_y: TokenType,
+    bin_step: u16,
+    base_factor: u16,
+    filter_period: u16,
+    decay_period: u16,
+    reduction_factor: u16,
+    variable_fee_control: u32,
+    protocol_share: u16,
+    max_volatility_accumulator: u32,
+) -> Result<Response> {
+    let state = CONFIG.load(deps.storage)?;
+    only_owner(&info.sender, &state.owner)?;
 
-//     let (token_a, token_b) = _sort_tokens(token_x, token_y);
-//     let mut lb_pair = LB_PAIRS_INFO
-//         .load(
-//             deps.storage,
-//             (
-//                 token_a.unique_key().clone(),
-//                 token_b.unique_key().clone(),
-//                 bin_step,
-//             ),
-//         )
-//         .map_err(|_| Error::LBPairNotCreated {
-//             token_x: token_a.unique_key(),
-//             token_y: token_b.unique_key(),
-//             bin_step,
-//         })?
-//         .lb_pair;
+    let (token_a, token_b) = _sort_tokens(token_x, token_y);
+    let mut lb_pair = LB_PAIRS_INFO
+        .load(
+            deps.storage,
+            (
+                token_a.unique_key().clone(),
+                token_b.unique_key().clone(),
+                bin_step,
+            ),
+        )
+        .map_err(|_| Error::LBPairNotCreated {
+            token_x: token_a.unique_key(),
+            token_y: token_b.unique_key(),
+            bin_step,
+        })?
+        .lb_pair;
 
-//     // TODO: this needs to actually send a message to the LBPair contract to change those parameters
-//     // lb_pair.setStaticFeeParameters(
-//     //     base_factor,
-//     //     filter_period,
-//     //     decay_period,
-//     //     reduction_factor,
-//     //     variable_fee_control,
-//     //     protocol_share,
-//     //     max_volatility_accumulator
-//     // );
+    let mut response = Response::new();
 
-//     todo!();
+    let msg: CosmosMsg = SetStaticFeeParameters {
+        base_factor,
+        filter_period,
+        decay_period,
+        reduction_factor,
+        variable_fee_control,
+        protocol_share,
+        max_volatility_accumulator,
+    }
+    .to_cosmos_msg(
+        lb_pair.contract.code_hash,
+        lb_pair.contract.address.to_string(),
+        None,
+    )?;
 
-//     Ok(Response::default().add_attribute_plaintext("status", "ok"))
-// }
+    response = response.add_message(msg);
+    Ok(response)
+}
 
 /// Function to set the recipient of the fees. This address needs to be able to receive SNIP20s.
 ///
@@ -770,8 +797,33 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> 
 
     // TODO: I think this needs to send a message to the LBPair contract to execute the force decay.
     // pair.forceDecay();
+    let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);
+    let mut lb_pair = LB_PAIRS_INFO
+        .load(
+            deps.storage,
+            (
+                token_a.unique_key().clone(),
+                token_b.unique_key().clone(),
+                pair.bin_step,
+            ),
+        )
+        .map_err(|_| Error::LBPairNotCreated {
+            token_x: token_a.unique_key(),
+            token_y: token_b.unique_key(),
+            bin_step: pair.bin_step,
+        })?
+        .lb_pair;
 
-    todo!()
+    let mut response = Response::new();
+
+    response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: lb_pair.contract.address.to_string(),
+        code_hash: lb_pair.contract.code_hash,
+        msg: to_binary(&LbPairForceDecay {})?,
+        funds: vec![],
+    }));
+
+    Ok(response)
 }
 
 fn only_owner(sender: &Addr, owner: &Addr) -> Result<()> {
@@ -796,10 +848,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetQuoteAssetAtIndex { index } => query_quote_asset_at_index(deps, index),
         QueryMsg::IsQuoteAsset { token } => query_is_quote_asset(deps, token),
         QueryMsg::GetLBPairInformation {
-            token_a,
-            token_b,
+            token_x,
+            token_y,
             bin_step,
-        } => query_lb_pair_information(deps, token_a, token_b, bin_step),
+        } => query_lb_pair_information(deps, token_x, token_y, bin_step),
         QueryMsg::GetPreset { bin_step } => query_preset(deps, bin_step),
         QueryMsg::GetAllBinSteps {} => query_all_bin_steps(deps),
         QueryMsg::GetOpenBinSteps {} => query_open_bin_steps(deps),
@@ -937,7 +989,7 @@ fn query_number_of_quote_assets(deps: Deps) -> Result<Binary> {
 /// * `asset` - The address of the quote asset at index `index`.
 // TODO: Unsure if this function is necessary. Not sure how to index the Keyset.
 fn query_quote_asset_at_index(deps: Deps, index: u32) -> Result<Binary> {
-    let asset = todo!();
+    let asset = QUOTE_ASSET_WHITELIST.get_at(deps.storage, index)?;
 
     let response = QuoteAssetAtIndexResponse { asset };
     to_binary(&response).map_err(Error::CwErr)
@@ -1138,7 +1190,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
 
     for result in iterator {
         let (bin_step, preset) = result.map_err(Error::CwErr)?;
-        if _is_preset_open(preset.0 .0) {
+        if _is_preset_open(preset.0.0) {
             open_bin_steps.push(bin_step)
         }
     }
@@ -1233,7 +1285,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                         bin_step: lb_pair_key.bin_step,
                         lb_pair: lb_pair.clone(),
                         // TODO: get 'is_owner' from the create_lb_pair function
-                        created_by_owner: true,
+                        created_by_owner: lb_pair_key.is_open,
                         ignored_for_routing: false,
                     },
                 )?;

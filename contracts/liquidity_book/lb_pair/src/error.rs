@@ -107,6 +107,18 @@ pub enum LBPairError {
     #[error("Wrong Pair")]
     WrongPair,
 
+    #[error("Use the receive interface")]
+    UseReceiveInterface,
+
+    #[error("Receiver callback \"msg\" parameter cannot be empty.")]
+    ReceiverMsgEmpty,
+
+    #[error("Not enough funds")]
+    NotEnoughFunds,
+
+    #[error("No matching token in pair")]
+    NoMatchingTokenInPair,
+
     #[error("Deadline exceeded. Deadline: {deadline}, Current timestamp: {current_timestamp}")]
     DeadlineExceeded {
         deadline: u64,
@@ -116,8 +128,14 @@ pub enum LBPairError {
     #[error("Lengths mismatch")]
     LengthsMismatch,
 
+    #[error("time_of_last_update was later than look_up_timestamp")]
+    LastUpdateTimestampGreaterThanLookupTimestamp,
+
     #[error("Id desired overflows. Id desired: {id_desired}, Id slippage: {id_slippage}")]
     IdDesiredOverflows { id_desired: u32, id_slippage: u32 },
+
+    #[error("could not get bin reserves for active id: {active_id}")]
+    ZeroBinReserve { active_id: u32 },
 
     #[error("Delta id overflows. Delta Id: {delta_id}")]
     DeltaIdOverflows { delta_id: i64 },
@@ -127,6 +145,13 @@ pub enum LBPairError {
 
     #[error("Id overflows. Id: {id}")]
     IdOverflows { id: u32 },
+
+    #[error("Amount left unswapped. : Amount Left In: {amount_left_in}, Total Amount: {total_amount}, swapped_amount: {swapped_amount}")]
+    AmountInLeft {
+        amount_left_in: Uint128,
+        total_amount: Uint128,
+        swapped_amount: Uint128,
+    },
 
     #[error("Id slippage caught. Active id desired: {active_id_desired}, Id slippage: {id_slippage}, Active id: {active_id}")]
     IdSlippageCaught {

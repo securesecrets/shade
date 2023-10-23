@@ -45,6 +45,8 @@ const MASK_STATIC_PARAMETER: u128 = 0xffffffffffffffffffffffffffffu128;
 pub enum PairParametersError {
     #[error("Pair Parameters Error: Invalid Parameter")]
     InvalidParameter,
+    #[error("Max total fee exceeded!")]
+    MaxTotalFeeExceeded,
 }
 
 #[cw_serde]
@@ -232,6 +234,11 @@ impl PairParameters {
     pub fn get_base_fee(&self, bin_step: u16) -> u128 {
         let base_factor = Self::get_base_factor(&self) as u128;
         base_factor * (bin_step as u128) * 10_000_000_000
+    }
+
+    pub fn get_base_fee_u64(&self, bin_step: u16) -> u64 {
+        let base_factor = Self::get_base_factor(&self) as u64;
+        base_factor * (bin_step as u64) * 10_000_000_000
     }
 
     /// Calculates the variable fee.

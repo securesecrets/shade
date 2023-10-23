@@ -1,22 +1,35 @@
-use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut,
-    Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128,
-};
-use shade_protocol::Contract;
-use shadeswap_shared::admin::helpers::{validate_admin, AdminPermissions};
-use shadeswap_shared::router::{InitMsg, QueryMsgResponse};
-use shadeswap_shared::snip20::helpers::send_msg;
-use shadeswap_shared::utils::{pad_handle_result, pad_query_result};
-use shadeswap_shared::{
-    amm_pair::QueryMsgResponse as AMMPairQueryReponse,
-    core::{TokenAmount, TokenType},
-    router::{ExecuteMsg, InvokeMsg, QueryMsg},
-};
-
 use crate::{
     operations::{next_swap, refresh_tokens, swap_tokens_for_exact_tokens},
     query,
     state::{config_r, config_w, registered_tokens_list_r, registered_tokens_list_w, Config},
+};
+use cosmwasm_std::{
+    entry_point,
+    from_binary,
+    to_binary,
+    Addr,
+    BankMsg,
+    Binary,
+    Coin,
+    CosmosMsg,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Reply,
+    Response,
+    StdError,
+    StdResult,
+    Uint128,
+};
+use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
+use shadeswap_shared::{
+    admin::helpers::{validate_admin, AdminPermissions},
+    amm_pair::QueryMsgResponse as AMMPairQueryReponse,
+    core::TokenAmount,
+    router::{ExecuteMsg, InitMsg, InvokeMsg, QueryMsg, QueryMsgResponse},
+    snip20::helpers::send_msg,
+    utils::{pad_handle_result, pad_query_result},
 };
 
 /// Pad handle responses and log attributes to blocks
@@ -164,13 +177,11 @@ fn receiver_callback(
                     path,
                     recipient,
                 } => {
-                    let pair_contract_config = query::pair_contract_config(
-                        &deps.querier,
-                        Contract {
+                    let pair_contract_config =
+                        query::pair_contract_config(&deps.querier, Contract {
                             address: deps.api.addr_validate(&path[0].addr.to_string())?,
                             code_hash: path[0].code_hash.clone(),
-                        },
-                    )?;
+                        })?;
 
                     match pair_contract_config {
                         AMMPairQueryReponse::GetPairInfo {
@@ -220,7 +231,7 @@ fn receiver_callback(
                             return Err(StdError::generic_err(format!(
                                 "Could not retrieve PairInfo from {}",
                                 &path[0].addr
-                            )))
+                            )));
                         }
                     }
                 }
