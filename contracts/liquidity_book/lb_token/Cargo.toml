@@ -43,7 +43,7 @@ cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.1.10"  , 
   #"crypto", "utils", 
 ] }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
-  "liquidity_book","lb-libraries",
+  "liquidity_book","lb-libraries", "snip20"
 ] }
 
 #base64 = "0.21.2"
