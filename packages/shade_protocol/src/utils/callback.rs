@@ -49,6 +49,7 @@ pub trait InstantiateCallback: Serialize {
         code_id: u64,
         code_hash: String,
         funds: Vec<Coin>,
+        admin: Option<String>,
     ) -> StdResult<CosmosMsg> {
         let mut msg = to_binary(self)?;
         // can not have 0 block size
@@ -64,6 +65,7 @@ pub trait InstantiateCallback: Serialize {
             msg,
             label,
             funds,
+            admin,
         };
         Ok(init.into())
     }
@@ -321,6 +323,7 @@ mod tests {
                 code_hash,
                 funds,
                 label,
+                admin: None,
             }) => {
                 assert_eq!(code_id, id);
                 let mut expected_msg = r#"{"f1":1,"f2":2}"#.as_bytes().to_vec();
