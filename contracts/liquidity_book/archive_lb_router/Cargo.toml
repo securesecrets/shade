@@ -27,7 +27,7 @@ cosmwasm-schema = { version = "1.2" }
 serde = { version = "1" }
 serde-json-wasm = { version = "0.5"}
 thiserror = { version = "1" }
-secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", tag = "v0.8.1", default-features = false, features = ["storage"] }
+secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", tag = "v0.10.0", default-features = false, features = ["storage"] }
 # cw-storage-plus = { version = "1", default-features = false, features = ["macro"] }
 ethnum = { version = "1" }
 
