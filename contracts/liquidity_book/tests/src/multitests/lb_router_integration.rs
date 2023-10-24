@@ -36,7 +36,9 @@ use shade_multi_test::interfaces::{
     router::{self},
     utils::SupportedContracts,
 };
+
 const SWAP_AMOUNT: u128 = 1000;
+
 #[test]
 pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();

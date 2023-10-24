@@ -2167,7 +2167,6 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-
 pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
 

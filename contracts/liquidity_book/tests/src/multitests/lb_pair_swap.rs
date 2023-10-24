@@ -189,7 +189,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
 
     let (amount_in, amount_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, false)?;
-    assert_eq!(amount_out_left, Uint128::MIN);
+    assert_eq!(amount_out_left, Uint128::zero());
 
     let tokens_to_mint = vec![(SILK, amount_in)];
 
