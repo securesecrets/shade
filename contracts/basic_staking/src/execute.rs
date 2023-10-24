@@ -151,11 +151,11 @@ pub fn receive(
                         if compound && reward_pool.token == stake_token {
                             // Compound stake_token rewards
                             compound_amount += reward_claimed;
-                        } else {
+                        } else if !reward_claimed.is_zero() {
                             // Claim if not compound or not stake token rewards
                             response = response
                                 .add_message(send_msg(
-                                    info.sender.clone(),
+                                    from.clone(),
                                     reward_claimed,
                                     None,
                                     None,
@@ -393,16 +393,18 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> 
 
         reward_pool.claimed += reward_claimed;
 
-        response = response
-            .add_message(send_msg(
-                info.sender.clone(),
-                reward_claimed,
-                None,
-                None,
-                None,
-                &reward_pool.token,
-            )?)
-            .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
+        if !reward_claimed.is_zero() {
+            response = response
+                .add_message(send_msg(
+                    info.sender.clone(),
+                    reward_claimed,
+                    None,
+                    None,
+                    None,
+                    &reward_pool.token,
+                )?)
+                .add_attribute(reward_pool.token.address.to_string(), reward_claimed);
+        }
     }
 
     REWARD_POOLS.save(deps.storage, &reward_pools)?;
