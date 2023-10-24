@@ -14,6 +14,9 @@ mod lb_pair_fees;
 mod lb_pair_swap;
 
 #[cfg(test)]
+pub mod lb_token;
+
+#[cfg(test)]
 mod lb_router_register_tokens;
 
 #[cfg(test)]
