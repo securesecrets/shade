@@ -377,6 +377,7 @@ fn try_create_lb_pair(
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
+            admin: None,
         }),
         INSTANTIATE_REPLY_ID,
     ));
