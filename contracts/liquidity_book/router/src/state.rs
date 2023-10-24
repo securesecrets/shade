@@ -1,21 +1,19 @@
-use cosmwasm_std::Addr;
-use cosmwasm_std::Storage;
-use cosmwasm_std::Uint128;
-use cosmwasm_storage::bucket;
-use cosmwasm_storage::bucket_read;
-use cosmwasm_storage::singleton;
-use cosmwasm_storage::singleton_read;
-use cosmwasm_storage::Bucket;
-use cosmwasm_storage::ReadonlyBucket;
-use cosmwasm_storage::ReadonlySingleton;
-use cosmwasm_storage::Singleton;
+use cosmwasm_std::{Addr, Storage, Uint128};
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use shade_protocol::utils::liquidity_book::tokens::TokenType;
-use shade_protocol::Contract;
-use shadeswap_shared::core::TokenAmount;
-use shadeswap_shared::router::Hop;
+use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
+use shadeswap_shared::{core::TokenAmount, router::Hop};
 
 pub static CONFIG: &[u8] = b"config";
 pub static REGISTERED_TOKENS: &[u8] = b"registered_tokens";

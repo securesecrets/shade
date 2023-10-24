@@ -80,6 +80,7 @@ impl EncodedSample {
     pub fn decode_uint24(&self, offset: u8) -> u32 {
         Self::decode(self, MASK_UINT24, offset).as_u32()
     }
+
     /// Internal function to decode a bytes32 sample into a uint40 using an offset
     /// The decoded value as a uint64, since uint40 is not supported    
     pub fn decode_uint40(&self, offset: u8) -> u64 {

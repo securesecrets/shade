@@ -24,8 +24,6 @@ use ethnum::U256;
 
 use crate::utils::liquidity_book::{constants::*, math::encoded_sample::*};
 
-use super::math::u24::U24;
-
 const OFFSET_BASE_FACTOR: u8 = 0;
 const OFFSET_FILTER_PERIOD: u8 = 16;
 const OFFSET_DECAY_PERIOD: u8 = 28;

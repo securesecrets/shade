@@ -2,9 +2,11 @@
 //! Author: Haseeb
 //!
 
-use std::cmp::{Ord, Ordering, PartialEq, PartialOrd};
-use std::fmt;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    cmp::{Ord, Ordering, PartialEq, PartialOrd},
+    fmt,
+    ops::{Add, Div, Mul, Sub},
+};
 
 pub struct U24(u32);
 

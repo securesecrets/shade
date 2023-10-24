@@ -20,6 +20,7 @@ impl Permission {
     pub fn check_view_balance_perm(&self, blockinfo: &BlockInfo) -> bool {
         self.view_balance_perm && !self.view_balance_exp.is_expired(blockinfo)
     }
+
     pub fn check_view_pr_metadata_perm(&self, blockinfo: &BlockInfo) -> bool {
         self.view_pr_metadata_perm && !self.view_pr_metadata_exp.is_expired(blockinfo)
     }

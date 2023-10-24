@@ -1,12 +1,24 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, DepsMut, Env, Response, StdError, StdResult, Storage, SubMsg,
-    Uint128, WasmMsg,
+    to_binary,
+    Addr,
+    Coin,
+    CosmosMsg,
+    DepsMut,
+    Env,
+    Response,
+    StdError,
+    StdResult,
+    Storage,
+    SubMsg,
+    Uint128,
+    WasmMsg,
 };
 use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
 use shadeswap_shared::{
     core::TokenAmount,
     msg::amm_pair::{
-        ExecuteMsg as AMMPairExecuteMsg, InvokeMsg as AMMPairInvokeMsg,
+        ExecuteMsg as AMMPairExecuteMsg,
+        InvokeMsg as AMMPairInvokeMsg,
         QueryMsgResponse as AMMPairQueryReponse,
     },
     router::{ExecuteMsgResponse, Hop},
@@ -20,8 +32,15 @@ use crate::{
     contract::{SHADE_ROUTER_KEY, SWAP_REPLY_ID},
     query,
     state::{
-        config_r, config_w, epheral_storage_r, epheral_storage_w, registered_tokens_list_r,
-        registered_tokens_list_w, registered_tokens_r, registered_tokens_w, CurrentSwapInfo,
+        config_r,
+        config_w,
+        epheral_storage_r,
+        epheral_storage_w,
+        registered_tokens_list_r,
+        registered_tokens_list_w,
+        registered_tokens_r,
+        registered_tokens_w,
+        CurrentSwapInfo,
     },
 };
 
@@ -64,15 +83,12 @@ pub fn next_swap(deps: DepsMut, env: Env, mut response: Response) -> StdResult<R
         };
 
         if info.path.len() > (info.current_index + 1) as usize {
-            let next_pair_contract = query::pair_contract_config(
-                &deps.querier,
-                Contract {
-                    address: deps
-                        .api
-                        .addr_validate(&info.path[info.current_index as usize + 1].addr.clone())?,
-                    code_hash: info.path[info.current_index as usize + 1].code_hash.clone(),
-                },
-            )?;
+            let next_pair_contract = query::pair_contract_config(&deps.querier, Contract {
+                address: deps
+                    .api
+                    .addr_validate(&info.path[info.current_index as usize + 1].addr.clone())?,
+                code_hash: info.path[info.current_index as usize + 1].code_hash.clone(),
+            })?;
 
             match next_pair_contract {
                 AMMPairQueryReponse::GetPairInfo {
@@ -97,7 +113,10 @@ pub fn next_swap(deps: DepsMut, env: Env, mut response: Response) -> StdResult<R
                                     .may_load(contract_addr.to_string().as_bytes())?
                                 {
                                     if code_hash != token_code_hash {
-                                        return Err(StdError::generic_err(format!("Registered code hash for {} does not match pair. Pair: {} Stored: {}", contract_addr, token_code_hash, code_hash)));
+                                        return Err(StdError::generic_err(format!(
+                                            "Registered code hash for {} does not match pair. Pair: {} Stored: {}",
+                                            contract_addr, token_code_hash, code_hash
+                                        )));
                                     }
                                 } else {
                                     return Err(StdError::generic_err(format!(
@@ -141,9 +160,11 @@ pub fn next_swap(deps: DepsMut, env: Env, mut response: Response) -> StdResult<R
 
             epheral_storage_w(deps.storage).remove();
             response = response
-                .add_messages(vec![token_in
-                    .token
-                    .create_send_msg(info.recipient.to_string(), token_in.amount)?])
+                .add_messages(vec![
+                    token_in
+                        .token
+                        .create_send_msg(info.recipient.to_string(), token_in.amount)?,
+                ])
                 .set_data(to_binary(&ExecuteMsgResponse::SwapResult {
                     amount_in: info.amount.amount,
                     amount_out: token_in.amount,
@@ -171,13 +192,10 @@ pub fn swap_tokens_for_exact_tokens(
 ) -> StdResult<Response> {
     //Validates whether the amount received is greater then the amount_out_min
 
-    let next_pair_contract = query::pair_contract_config(
-        &deps.querier,
-        Contract {
-            address: deps.api.addr_validate(&path[0].addr.clone())?,
-            code_hash: path[0].code_hash.clone(),
-        },
-    )?;
+    let next_pair_contract = query::pair_contract_config(&deps.querier, Contract {
+        address: deps.api.addr_validate(&path[0].addr.clone())?,
+        code_hash: path[0].code_hash.clone(),
+    })?;
 
     match next_pair_contract {
         AMMPairQueryReponse::GetPairInfo {
@@ -202,7 +220,10 @@ pub fn swap_tokens_for_exact_tokens(
                             .may_load(contract_addr.to_string().as_bytes())?
                         {
                             if code_hash != token_code_hash {
-                                return Err(StdError::generic_err(format!("Registered code hash for {} does not match pair. Pair: {} Stored: {}", contract_addr, token_code_hash, code_hash)));
+                                return Err(StdError::generic_err(format!(
+                                    "Registered code hash for {} does not match pair. Pair: {} Stored: {}",
+                                    contract_addr, token_code_hash, code_hash
+                                )));
                             }
                         } else {
                             return Err(StdError::generic_err(format!(
@@ -323,14 +344,10 @@ fn register_pair_token(
         let mut tokens = registered_tokens_list_r(deps.storage).load()?;
         tokens.push(contract_addr.clone());
         registered_tokens_list_w(deps.storage).save(&tokens)?;
-        messages.push(set_viewing_key_msg(
-            viewing_key.clone(),
-            None,
-            &Contract {
-                address: contract_addr.clone(),
-                code_hash: token_code_hash.clone(),
-            },
-        )?);
+        messages.push(set_viewing_key_msg(viewing_key.clone(), None, &Contract {
+            address: contract_addr.clone(),
+            code_hash: token_code_hash.clone(),
+        })?);
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,

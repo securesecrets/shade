@@ -4,14 +4,27 @@ use serde::de::DeserializeOwned;
 use shade_protocol::lb_libraries::lb_token::metadata::{Extension, Metadata};
 use std::any::Any;
 
-use crate::contract::{execute, instantiate, query};
-use crate::state::balances_r;
-use cosmwasm_std::{
-    from_binary, testing::*, to_binary, Addr, CosmosMsg, Env, MessageInfo, OwnedDeps, Response,
-    StdError, StdResult, Storage, Uint256, WasmMsg,
+use crate::{
+    contract::{execute, instantiate, query},
+    state::balances_r,
 };
-use shade_protocol::lb_libraries::lb_token::state_structs::*;
-use shade_protocol::liquidity_book::lb_token::*;
+use cosmwasm_std::{
+    from_binary,
+    testing::*,
+    to_binary,
+    Addr,
+    CosmosMsg,
+    Env,
+    MessageInfo,
+    OwnedDeps,
+    Response,
+    StdError,
+    StdResult,
+    Storage,
+    Uint256,
+    WasmMsg,
+};
+use shade_protocol::{lb_libraries::lb_token::state_structs::*, liquidity_book::lb_token::*};
 
 pub fn default_curate_value() -> CurateTokenId {
     CurateTokenId {
@@ -70,27 +83,35 @@ impl Addrs {
     pub fn a(&self) -> Addr {
         self.addrs[0].clone()
     }
+
     pub fn b(&self) -> Addr {
         self.addrs[1].clone()
     }
+
     pub fn c(&self) -> Addr {
         self.addrs[2].clone()
     }
+
     pub fn d(&self) -> Addr {
         self.addrs[3].clone()
     }
+
     pub fn all(&self) -> Vec<Addr> {
         self.addrs.clone()
     }
+
     pub fn a_hash(&self) -> String {
         self.hashes[0].clone()
     }
+
     pub fn b_hash(&self) -> String {
         self.hashes[1].clone()
     }
+
     pub fn c_hash(&self) -> String {
         self.hashes[2].clone()
     }
+
     pub fn _d_hash(&self) -> String {
         self.hashes[3].clone()
     }
@@ -256,13 +277,13 @@ pub fn extract_cosmos_msg<U: DeserializeOwned>(
             _ => {
                 return Err(StdError::generic_err(
                     "unable to extract msg from CosmosMsg",
-                ))
+                ));
             }
         },
         _ => {
             return Err(StdError::generic_err(
                 "unable to extract msg from CosmosMsg",
-            ))
+            ));
         }
     };
     let decoded_msg: U = from_binary(msg).unwrap();
@@ -325,9 +346,11 @@ impl Vks {
     pub fn a(&self) -> String {
         self.vks[0].clone()
     }
+
     pub fn b(&self) -> String {
         self.vks[1].clone()
     }
+
     pub fn c(&self) -> String {
         self.vks[2].clone()
     }

@@ -1,7 +1,15 @@
 use std::str::FromStr;
 
 use cosmwasm_std::{
-    to_binary, Binary, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128, Uint256,
+    to_binary,
+    Binary,
+    Deps,
+    QuerierWrapper,
+    QueryRequest,
+    StdError,
+    StdResult,
+    Uint128,
+    Uint256,
     WasmQuery,
 };
 use shade_protocol::{liquidity_book::lb_pair::SwapResult, Contract};

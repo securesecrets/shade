@@ -7,9 +7,11 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::ContractInfo;
 use ethnum::U256;
 
-pub use crate::utils::liquidity_book::math::liquidity_configurations::LiquidityConfigurations;
-pub use crate::utils::liquidity_book::math::packed_u128_math::PackedU128;
-pub use crate::utils::liquidity_book::math::tree_math::TreeUint24;
+pub use crate::utils::liquidity_book::math::{
+    liquidity_configurations::LiquidityConfigurations,
+    packed_u128_math::PackedU128,
+    tree_math::TreeUint24,
+};
 use crate::utils::liquidity_book::tokens::TokenType;
 
 // TODO (maybe): Implement bit math for this type to avoid converting U256 back and forth

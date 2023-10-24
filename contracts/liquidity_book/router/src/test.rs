@@ -1,56 +1,53 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::contract::execute;
-    use crate::contract::instantiate;
-    use crate::contract::SWAP_REPLY_ID;
-    use crate::state::config_r;
-    use crate::state::epheral_storage_r;
-    use crate::state::epheral_storage_w;
-    use crate::state::Config;
-    use crate::state::CurrentSwapInfo;
-    use cosmwasm_std::from_slice;
-    use cosmwasm_std::testing::mock_env;
-    use cosmwasm_std::testing::mock_info;
-    use cosmwasm_std::testing::MockApi;
-    use cosmwasm_std::testing::MockStorage;
-    use cosmwasm_std::to_binary;
-    use cosmwasm_std::Addr;
-    use cosmwasm_std::OwnedDeps;
-    use cosmwasm_std::Response;
-    use cosmwasm_std::StdResult;
-    use cosmwasm_std::SubMsg;
+    use crate::{
+        contract::{execute, instantiate, SWAP_REPLY_ID},
+        state::{config_r, epheral_storage_r, epheral_storage_w, Config, CurrentSwapInfo},
+    };
+    use cosmwasm_std::{
+        from_slice,
+        testing::{mock_env, mock_info, MockApi, MockStorage},
+        to_binary,
+        Addr,
+        OwnedDeps,
+        Response,
+        StdResult,
+        SubMsg,
+    };
 
-    use cosmwasm_std::Api;
-    use cosmwasm_std::Coin;
-    use serde::Deserialize;
-    use serde::Serialize;
-    use shade_protocol::snip20::Snip20ReceiveMsg;
-    use shade_protocol::utils::liquidity_book::tokens::TokenType;
-    use shadeswap_shared::admin::ValidateAdminPermissionResponse;
-    use shadeswap_shared::amm_pair::FeeInfo;
-    use shadeswap_shared::core::TokenPair;
-    use shadeswap_shared::msg::amm_pair::ExecuteMsg as AMMPairExecuteMsg;
-    use shadeswap_shared::msg::amm_pair::QueryMsgResponse as AMMPairQueryMsgResponse;
-    use shadeswap_shared::msg::factory::QueryResponse as FactoryQueryResponse;
+    use cosmwasm_std::{Api, Coin};
+    use serde::{Deserialize, Serialize};
+    use shade_protocol::{snip20::Snip20ReceiveMsg, utils::liquidity_book::tokens::TokenType};
+    use shadeswap_shared::{
+        admin::ValidateAdminPermissionResponse,
+        amm_pair::FeeInfo,
+        core::TokenPair,
+        msg::{
+            amm_pair::{
+                ExecuteMsg as AMMPairExecuteMsg,
+                QueryMsgResponse as AMMPairQueryMsgResponse,
+            },
+            factory::QueryResponse as FactoryQueryResponse,
+        },
+    };
 
-    use cosmwasm_std::Empty;
-    use cosmwasm_std::Env;
-    use cosmwasm_std::Querier;
-    use cosmwasm_std::QuerierResult;
-    use cosmwasm_std::QueryRequest;
-    use cosmwasm_std::StdError;
-    use cosmwasm_std::Storage;
-    use cosmwasm_std::Uint128;
-    use cosmwasm_std::WasmMsg;
-    use cosmwasm_std::WasmQuery;
+    use cosmwasm_std::{
+        Empty,
+        Env,
+        Querier,
+        QuerierResult,
+        QueryRequest,
+        StdError,
+        Storage,
+        Uint128,
+        WasmMsg,
+        WasmQuery,
+    };
     use shade_protocol::Contract;
-    use shadeswap_shared::core::ContractInstantiationInfo;
-    use shadeswap_shared::core::Fee;
-    use shadeswap_shared::core::TokenAmount;
-    use shadeswap_shared::router::ExecuteMsg;
-    use shadeswap_shared::router::Hop;
-    use shadeswap_shared::router::InitMsg;
-    use shadeswap_shared::router::InvokeMsg;
+    use shadeswap_shared::{
+        core::{ContractInstantiationInfo, Fee, TokenAmount},
+        router::{ExecuteMsg, Hop, InitMsg, InvokeMsg},
+    };
 
     use shadeswap_shared::snip20::manager::Balance;
 
@@ -82,13 +79,10 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info(
-                "admin",
-                &[Coin {
-                    denom: "uscrt".to_string(),
-                    amount: Uint128::new(10u128),
-                }],
-            ),
+            mock_info("admin", &[Coin {
+                denom: "uscrt".to_string(),
+                amount: Uint128::new(10u128),
+            }]),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
@@ -111,23 +105,17 @@ pub mod tests {
         let result = epheral_storage_r(&deps.storage).load();
         match result {
             Ok(info) => {
-                assert_eq!(
-                    info.amount,
-                    TokenAmount {
-                        token: TokenType::NativeToken {
-                            denom: "uscrt".to_string(),
-                        },
-                        amount: Uint128::new(10u128),
-                    }
-                );
+                assert_eq!(info.amount, TokenAmount {
+                    token: TokenType::NativeToken {
+                        denom: "uscrt".to_string(),
+                    },
+                    amount: Uint128::new(10u128),
+                });
 
-                assert_eq!(
-                    info.path,
-                    vec![Hop {
-                        addr: PAIR_CONTRACT_1.to_string(),
-                        code_hash: "".to_string()
-                    }]
-                );
+                assert_eq!(info.path, vec![Hop {
+                    addr: PAIR_CONTRACT_1.to_string(),
+                    code_hash: "".to_string()
+                }]);
             }
             Err(_) => panic!("Ephemeral storage should not be empty!"),
         }
@@ -139,13 +127,10 @@ pub mod tests {
     fn swap_snip20_native_for_tokens_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
-        let mock_info = mock_info(
-            "admin",
-            &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(10u128),
-            }],
-        );
+        let mock_info = mock_info("admin", &[Coin {
+            denom: "uscrt".to_string(),
+            amount: Uint128::new(10u128),
+        }]);
 
         assert!(
             init_result.is_ok(),
@@ -179,22 +164,16 @@ pub mod tests {
         let result = epheral_storage_r(&deps.storage).load();
         match result {
             Ok(info) => {
-                assert_eq!(
-                    info.amount,
-                    TokenAmount {
-                        token: TokenType::NativeToken {
-                            denom: "uscrt".to_string(),
-                        },
-                        amount: Uint128::new(10u128),
-                    }
-                );
-                assert_eq!(
-                    info.path,
-                    vec![Hop {
-                        addr: PAIR_CONTRACT_1.to_string(),
-                        code_hash: "".to_string()
-                    }]
-                );
+                assert_eq!(info.amount, TokenAmount {
+                    token: TokenType::NativeToken {
+                        denom: "uscrt".to_string(),
+                    },
+                    amount: Uint128::new(10u128),
+                });
+                assert_eq!(info.path, vec![Hop {
+                    addr: PAIR_CONTRACT_1.to_string(),
+                    code_hash: "".to_string()
+                }]);
             }
             Err(_) => panic!("Ephemeral storage should not be empty!"),
         }
@@ -204,13 +183,10 @@ pub mod tests {
 
     #[test]
     fn snip20_swap() -> StdResult<()> {
-        let mock_info = mock_info(
-            "admin",
-            &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(1000000000000000u128),
-            }],
-        );
+        let mock_info = mock_info("admin", &[Coin {
+            denom: "uscrt".to_string(),
+            amount: Uint128::new(1000000000000000u128),
+        }]);
         let (init_result, mut deps) = init_helper();
         assert!(
             init_result.is_ok(),
@@ -319,13 +295,10 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             env,
-            mock_info(
-                "admin",
-                &[Coin {
-                    denom: "uscrt".to_string(),
-                    amount: Uint128::new(10u128),
-                }],
-            ),
+            mock_info("admin", &[Coin {
+                denom: "uscrt".to_string(),
+                amount: Uint128::new(10u128),
+            }]),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
@@ -408,13 +381,10 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             env.clone(),
-            mock_info(
-                "admin",
-                &[Coin {
-                    denom: "uscrt".to_string(),
-                    amount: Uint128::new(10u128),
-                }],
-            ),
+            mock_info("admin", &[Coin {
+                denom: "uscrt".to_string(),
+                amount: Uint128::new(10u128),
+            }]),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
