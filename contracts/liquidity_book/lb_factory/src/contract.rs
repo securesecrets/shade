@@ -7,6 +7,7 @@ use cosmwasm_std::{
 };
 use ethnum::U256;
 use shade_protocol::{
+    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
     lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types, viewing_keys},
     liquidity_book::{
         lb_factory::*,

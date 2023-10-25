@@ -29,6 +29,7 @@ fn multi_staker_single_pool(
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -252,6 +253,7 @@ fn multi_staker_single_pool(
         height: 1,
         time: Timestamp::from_seconds(reward_start.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     for user in staking_users.iter() {
@@ -287,6 +289,7 @@ fn multi_staker_single_pool(
         height: 2,
         time: Timestamp::from_seconds((reward_start.u128() + reward_duration.u128() / 2) as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     for (user, reward) in staking_users
@@ -326,6 +329,7 @@ fn multi_staker_single_pool(
         height: 3,
         time: Timestamp::from_seconds(reward_end.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     for ((user, amount), reward) in staking_users
@@ -424,6 +428,7 @@ fn multi_staker_single_pool(
         height: 10,
         time: Timestamp::from_seconds((reward_end + unbond_period).u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     for ((user, stake_amount), reward) in staking_users
