@@ -45,7 +45,7 @@ use shade_protocol::{
         math::{
             encoded_sample::EncodedSample,
             liquidity_configurations::LiquidityConfigurations,
-            packed_u128_math::{Decode, Encode, PackedMath},
+            packed_u128_math::PackedUint128Math,
             sample_math::OracleSample,
             tree_math::TreeUint24,
             u24::U24,
@@ -99,7 +99,7 @@ pub fn instantiate(
         TokenType::NativeToken { denom } => denom,
     };
 
-    let instantiate_token_msg = LBTokenInstantiateMsg {
+    let instantiate_token_msg = lb_token::InstantiateMsg {
         has_admin: false,
         admin: None,
         curators: [env.contract.address.clone()].to_vec(),
@@ -134,37 +134,34 @@ pub fn instantiate(
     ));
 
     //Initializing PairParameters
-    let pair_parameters = PairParameters(EncodedSample([0u8; 32]));
-    let pair_parameters = pair_parameters
-        .set_static_fee_parameters(
-            msg.pair_parameters.base_factor,
-            msg.pair_parameters.filter_period,
-            msg.pair_parameters.decay_period,
-            msg.pair_parameters.reduction_factor,
-            msg.pair_parameters.variable_fee_control,
-            msg.pair_parameters.protocol_share,
-            msg.pair_parameters.max_volatility_accumulator,
-        )
-        .unwrap();
-    let pair_parameters = pair_parameters
-        .set_active_id(msg.active_id)?
-        .update_id_reference();
+    let mut pair_parameters = PairParameters::default();
+    pair_parameters.set_static_fee_parameters(
+        msg.pair_parameters.base_factor,
+        msg.pair_parameters.filter_period,
+        msg.pair_parameters.decay_period,
+        msg.pair_parameters.reduction_factor,
+        msg.pair_parameters.variable_fee_control,
+        msg.pair_parameters.protocol_share,
+        msg.pair_parameters.max_volatility_accumulator,
+    )?;
+    pair_parameters.set_active_id(msg.active_id)?;
+    pair_parameters.update_id_reference();
 
     //RegisterReceiving Token
     let mut messages = vec![];
     let viewing_key = ViewingKey::from(msg.viewing_key.as_str());
     for token in [&msg.token_x, &msg.token_y] {
         if let TokenType::CustomToken {
-            contract_addr,
-            token_code_hash,
+            contract_addr: _,
+            token_code_hash: _,
         } = token
         {
-            register_pair_token(&env, &mut messages, &token, &viewing_key);
+            register_pair_token(&env, &mut messages, token, &viewing_key)?;
         }
     }
 
     let state = State {
-        creator: info.sender.clone(),
+        creator: info.sender,
         factory: msg.factory,
         token_x: msg.token_x,
         token_y: msg.token_y,
@@ -180,9 +177,6 @@ pub fn instantiate(
         protocol_fees_recipient: msg.protocol_fee_recipient,
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
     };
-
-    // deps.api
-    //     .debug(format!("Contract was initialized by {}", info.sender).as_str());
 
     let tree = TreeUint24::new();
     let oracle = Oracle {
@@ -253,12 +247,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
                 info.sender.clone()
             };
 
-            let swap_for_y: bool;
-            if offer.token.unique_key() == config.token_x.unique_key() {
-                swap_for_y = true;
-            } else {
-                swap_for_y = false;
-            }
+            let swap_for_y: bool = offer.token.unique_key() == config.token_x.unique_key();
 
             try_swap(deps, env, info, swap_for_y, checked_to, offer.amount)
         }
@@ -387,7 +376,7 @@ fn try_swap(
 
     let mut active_id = params.get_active_id();
 
-    params = params.update_references(&env.block.time)?;
+    params.update_references(&env.block.time)?;
 
     loop {
         let bin_reserves = BIN_MAP
@@ -395,7 +384,7 @@ fn try_swap(
             .map_err(|_| Error::ZeroBinReserve { active_id })?;
 
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
-            params = params.update_volatility_accumulator(active_id)?;
+            params.update_volatility_accumulator(active_id)?;
 
             let (mut amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
                 bin_reserves,
@@ -450,17 +439,18 @@ fn try_swap(
     reserves = reserves.sub(amounts_out);
 
     let mut oracle = ORACLE.load(deps.storage)?;
-    params = oracle.update(&env.block.time, params, active_id)?;
+    oracle.update(&env.block.time, params, active_id)?;
 
-    CONFIG.update(deps.storage, |mut state| -> Result<_> {
+    CONFIG.update(deps.storage, |mut state| {
         state.protocol_fees = protocol_fees;
-        state.pair_parameters = PairParameters::set_active_id(params, active_id)?;
+        // TODO - map the error to a StdError
+        state.pair_parameters.set_active_id(active_id);
         state.reserves = reserves;
-        Ok(state)
+        Ok::<State, StdError>(state)
     })?;
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
-    let amount_out;
+    let amount_out: u128;
 
     if swap_for_y {
         amount_out = amounts_out.decode_y();
@@ -572,11 +562,13 @@ pub fn add_liquidity_internal(
     liquidity_parameters: &LiquidityParameters,
     mut response: Response,
 ) -> Result<Response> {
-    match_lengths(&liquidity_parameters)?;
-    check_ids_bounds(&liquidity_parameters)?;
+    match_lengths(liquidity_parameters)?;
+    check_ids_bounds(liquidity_parameters)?;
 
     let state = CONFIG.load(deps.storage)?;
 
+    // TODO - we are initializing the vector of empty values, and populating them in a
+    //        loop later. I think this could be refactored.
     let mut liquidity_configs = vec![
         LiquidityConfigurations {
             distribution_x: 0,
@@ -588,11 +580,12 @@ pub fn add_liquidity_internal(
     let mut deposit_ids = Vec::with_capacity(liquidity_parameters.delta_ids.len());
 
     let active_id = state.pair_parameters.get_active_id();
-    check_active_id_slippage(&liquidity_parameters, active_id)?;
+    check_active_id_slippage(liquidity_parameters, active_id)?;
 
     for i in 0..liquidity_configs.len() {
-        let id = calculate_id(&liquidity_parameters, active_id, i)?;
+        let id = calculate_id(liquidity_parameters, active_id, i)?;
         deposit_ids.push(id);
+        // TODO - add checks that neither distribution is > PRECISION
         liquidity_configs[i] = LiquidityConfigurations {
             distribution_x: liquidity_parameters.distribution_x[i],
             distribution_y: liquidity_parameters.distribution_y[i],
@@ -604,7 +597,7 @@ pub fn add_liquidity_internal(
         deps,
         env,
         info.clone(),
-        &config,
+        config,
         info.sender.clone(),
         liquidity_configs,
         info.sender,
@@ -646,7 +639,7 @@ pub fn add_liquidity_internal(
     //     .add_attribute("liquidity_minted", liquidity_minted_string)
     //     .add_attribute("deposit_ids", deposit_ids_string);
 
-    Ok((response))
+    Ok(response)
 }
 
 fn match_lengths(liquidity_parameters: &LiquidityParameters) -> Result<()> {
@@ -696,7 +689,7 @@ fn calculate_id(
 
     let id: i64 = active_id as i64 + liquidity_parameters.delta_ids[i];
 
-    if (id < 0 || id as u32 > U24::MAX) {
+    if id < 0 || id as u32 > U24::MAX {
         return Err(Error::DeltaIdOverflows {
             delta_id: liquidity_parameters.delta_ids[i],
         });
@@ -755,18 +748,19 @@ fn mint(
         liquidity_minted: (vec![U256::MIN; liquidity_configs.len()]),
     };
 
-    //TODO: make things more efficient maybe avoid this encoding
+    //TODO - revisit this process. This helper function is supposed to involve a query of the
+    //       contract's token balances, and the "reserves" (not sure what that means right now).
     let amounts_received = BinHelper::received(amount_received_x, amount_received_y);
     let mut messages: Vec<CosmosMsg> = Vec::new();
 
-    let (amounts_left) = _mint_bins(
+    let amounts_left = _mint_bins(
         &mut deps,
         &env.block.time,
         state.bin_step,
         state.pair_parameters,
         liquidity_configs,
         amounts_received,
-        to.clone(),
+        to,
         &mut mint_arrays,
         &mut messages,
     )?;
@@ -783,11 +777,11 @@ fn mint(
     for (token, amount) in [
         (
             config.token_x.clone(),
-            amount_received_x.sub(Uint128::from(amount_left_x)),
+            amount_received_x - Uint128::from(amount_left_x),
         ),
         (
             config.token_y.clone(),
-            amount_received_y.sub(Uint128::from(amount_left_y)),
+            amount_received_y - Uint128::from(amount_left_y),
         ),
     ]
     .iter()
@@ -921,7 +915,7 @@ fn _update_bin(
     active_id: u32,
     id: u32,
     max_amounts_in_to_bin: Bytes32,
-    parameters: PairParameters,
+    mut parameters: PairParameters,
 ) -> Result<(U256, Bytes32, Bytes32)> {
     let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
     let config = CONFIG.load(deps.storage)?;
@@ -944,7 +938,7 @@ fn _update_bin(
     let amounts_in_to_bin = amounts_in;
 
     if id == active_id {
-        let mut parameters = parameters.update_volatility_parameters(id, time)?;
+        parameters.update_volatility_parameters(id, time)?;
 
         // Helps calculate fee if there's an implict swap.
         let fees = BinHelper::get_composition_fees(
@@ -1006,12 +1000,12 @@ fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) ->
     let res = deps.querier.query_wasm_smart::<lb_token::QueryAnswer>(
         code_hash,
         address.to_string(),
-        &(&msg),
+        &msg,
     )?;
-    let mut total_supply_uint256 = Uint256::zero();
-    match res {
-        lb_token::QueryAnswer::IdTotalBalance { amount } => total_supply_uint256 = amount,
-        _ => (),
+
+    let total_supply_uint256 = match res {
+        lb_token::QueryAnswer::IdTotalBalance { amount } => amount,
+        _ => todo!(),
     };
 
     Ok(total_supply_uint256.uint256_to_u256())
@@ -1027,12 +1021,7 @@ fn query_token_symbol(deps: Deps, code_hash: String, address: Addr) -> Result<St
     )?;
 
     let symbol = match res {
-        snip20::QueryAnswer::TokenInfo {
-            name,
-            symbol,
-            decimals,
-            total_supply,
-        } => (symbol),
+        snip20::QueryAnswer::TokenInfo { symbol, .. } => symbol,
         _ => panic!("{}", format!("Token {} not valid", address)),
     };
 
@@ -1075,9 +1064,9 @@ pub fn try_remove_liquidity(
 
     let (amount_x, amount_y, mut response) = remove_liquidity(
         deps,
-        env.clone(),
+        env,
         info.clone(),
-        info.sender.clone(),
+        info.sender,
         amount_x_min,
         amount_y_min,
         remove_liquidity_params.ids,
@@ -1186,7 +1175,7 @@ fn burn(
         let amounts_out_from_bin_vals =
             BinHelper::get_amount_out_of_bin(bin_reserves, amount_to_burn_u256, total_supply)?;
         let amounts_out_from_bin: Bytes32 =
-            Encode::encode(amounts_out_from_bin_vals.0, amounts_out_from_bin_vals.1);
+            Bytes32::encode(amounts_out_from_bin_vals.0, amounts_out_from_bin_vals.1);
 
         if amounts_out_from_bin.iter().all(|&x| x == 0) {
             return Err(Error::ZeroAmountsOut {
@@ -1229,7 +1218,7 @@ fn burn(
 
     config.reserves = config.reserves.sub(amounts_out);
 
-    let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender.clone());
+    let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender);
 
     CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
         state.reserves = state.reserves.sub(amounts_out);
@@ -1323,13 +1312,14 @@ fn try_increase_oracle_length(
     // activate the oracle if it is not active yet
     if oracle_id == 0 {
         oracle_id = 1;
-        params = PairParameters::set_oracle_id(params, oracle_id);
+        params.set_oracle_id(oracle_id);
     }
 
     ORACLE.update(deps.storage, |mut oracle| {
         oracle
             .increase_length(oracle_id, new_length)
-            .map_err(|err| StdError::generic_err(err.to_string()))
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        Ok::<Oracle, StdError>(oracle)
     })?;
 
     Ok(Response::default().add_attribute("Oracle Length Increased to", new_length.to_string()))
@@ -1365,8 +1355,7 @@ fn try_set_static_fee_parameters(
 
     let mut params = state.pair_parameters;
 
-    params = PairParameters::set_static_fee_parameters(
-        params,
+    params.set_static_fee_parameters(
         base_factor,
         filter_period,
         decay_period,
@@ -1376,12 +1365,9 @@ fn try_set_static_fee_parameters(
         max_volatility_accumulator,
     )?;
 
-    {
-        let total_fee =
-            params.get_base_fee(state.bin_step) + params.get_variable_fee(state.bin_step);
-        if total_fee > MAX_FEE {
-            return Err(Error::MaxTotalFeeExceeded {});
-        }
+    let total_fee = params.get_base_fee(state.bin_step) + params.get_variable_fee(state.bin_step);
+    if total_fee > MAX_FEE {
+        return Err(Error::MaxTotalFeeExceeded {});
     }
 
     CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
@@ -1400,8 +1386,8 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
     only_factory(&info.sender, &state.factory.address)?;
 
     let mut params = state.pair_parameters;
-    params = PairParameters::update_id_reference(params);
-    params = PairParameters::update_volatility_reference(params)?;
+    params.update_id_reference();
+    params.update_volatility_reference()?;
 
     CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
@@ -1435,7 +1421,7 @@ fn receiver_callback(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> Result<Response> {
-    let msg = msg.ok_or_else(|| Error::ReceiverMsgEmpty)?;
+    let msg = msg.ok_or(Error::ReceiverMsgEmpty)?;
 
     let config = CONFIG.load(deps.storage)?;
 
@@ -1465,12 +1451,8 @@ fn receiver_callback(
             {
                 return Err(Error::NoMatchingTokenInPair);
             }
-            let swap_for_y: bool;
-            if info.sender == config.token_x.unique_key() {
-                swap_for_y = true;
-            } else {
-                swap_for_y = false;
-            }
+
+            let swap_for_y: bool = info.sender == config.token_x.unique_key();
 
             response = try_swap(deps, env, info, swap_for_y, checked_to, amount)?;
         }
@@ -1483,170 +1465,154 @@ fn receiver_callback(
 #[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
-        QueryMsg::GetPairInfo {} => to_binary(&query_pair_info(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetFactory {} => to_binary(&query_factory(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetTokenX {} => to_binary(&query_token_x(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetTokenY {} => to_binary(&query_token_y(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetBinStep {} => to_binary(&query_bin_step(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetReserves {} => to_binary(&query_reserves(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetActiveId {} => to_binary(&query_active_id(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetBin { id } => to_binary(&query_bin(deps, id)?).map_err(Error::CwErr),
+        // QueryMsg::GetPairInfo {} => query_pair_info(deps),
+        QueryMsg::GetFactory {} => query_factory(deps),
+        QueryMsg::GetTokenX {} => query_token_x(deps),
+        QueryMsg::GetTokenY {} => query_token_y(deps),
+        QueryMsg::GetBinStep {} => query_bin_step(deps),
+        QueryMsg::GetReserves {} => query_reserves(deps),
+        QueryMsg::GetActiveId {} => query_active_id(deps),
+        QueryMsg::GetBin { id } => query_bin(deps, id),
         QueryMsg::GetNextNonEmptyBin { swap_for_y, id } => {
-            to_binary(&query_next_non_empty_bin(deps, swap_for_y, id)?).map_err(Error::CwErr)
+            query_next_non_empty_bin(deps, swap_for_y, id)
         }
-        QueryMsg::GetProtocolFees {} => {
-            to_binary(&query_protocol_fees(deps)?).map_err(Error::CwErr)
-        }
-        QueryMsg::GetStaticFeeParameters {} => {
-            to_binary(&query_static_fee_params(deps)?).map_err(Error::CwErr)
-        }
-        QueryMsg::GetVariableFeeParameters {} => {
-            to_binary(&query_variable_fee_params(deps)?).map_err(Error::CwErr)
-        }
-        QueryMsg::GetOracleParameters {} => {
-            to_binary(&query_oracle_params(deps)?).map_err(Error::CwErr)
-        }
+        QueryMsg::GetProtocolFees {} => query_protocol_fees(deps),
+        QueryMsg::GetStaticFeeParameters {} => query_static_fee_params(deps),
+        QueryMsg::GetVariableFeeParameters {} => query_variable_fee_params(deps),
+        QueryMsg::GetOracleParameters {} => query_oracle_params(deps),
         QueryMsg::GetOracleSampleAt { look_up_timestamp } => {
-            to_binary(&query_oracle_sample_at(deps, env, look_up_timestamp)?).map_err(Error::CwErr)
+            query_oracle_sample_at(deps, env, look_up_timestamp)
         }
-        QueryMsg::GetPriceFromId { id } => {
-            to_binary(&query_price_from_id(deps, id)?).map_err(Error::CwErr)
-        }
-        QueryMsg::GetIdFromPrice { price } => {
-            to_binary(&query_id_from_price(deps, price)?).map_err(Error::CwErr)
-        }
+        QueryMsg::GetPriceFromId { id } => query_price_from_id(deps, id),
+        QueryMsg::GetIdFromPrice { price } => query_id_from_price(deps, price),
         QueryMsg::GetSwapIn {
             amount_out,
             swap_for_y,
-        } => to_binary(&query_swap_in(deps, env, amount_out.u128(), swap_for_y)?)
-            .map_err(Error::CwErr),
+        } => query_swap_in(deps, env, amount_out.u128(), swap_for_y),
         QueryMsg::GetSwapOut {
             amount_in,
             swap_for_y,
-        } => to_binary(&query_swap_out(deps, env, amount_in.u128(), swap_for_y)?)
-            .map_err(Error::CwErr),
-        QueryMsg::TotalSupply { id } => {
-            to_binary(&query_total_supply(deps, id)?).map_err(Error::CwErr)
-        }
-        QueryMsg::GetLbToken {} => to_binary(&query_lb_token(deps)?).map_err(Error::CwErr),
-        QueryMsg::GetTokens {} => to_binary(&query_tokens(deps)?).map_err(Error::CwErr),
-        GetPairInfo {} => todo!(),
-        QueryMsg::SwapSimulation { offer, exclude_fee } => {
-            to_binary(&query_swap_simulation(deps, env, offer, exclude_fee)?).map_err(Error::CwErr)
-        }
+        } => query_swap_out(deps, env, amount_in.u128(), swap_for_y),
+        QueryMsg::TotalSupply { id } => query_total_supply(deps, id),
+        QueryMsg::GetLbToken {} => query_lb_token(deps),
+        QueryMsg::GetTokens {} => query_tokens(deps),
+        // QueryMsg::SwapSimulation { offer, exclude_fee } => {
+        //     query_swap_simulation(deps, env, offer, exclude_fee)
+        // }
+        _ => todo!()
     }
 }
+
+// TODO - Revisit if this function is necessary. It seems like something that might belong in the
+//        lb-factory contract. It should at least have it's own interface and not use amm_pair's.
+// fn query_pair_info(deps: Deps) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
+//     let state = CONFIG.load(deps.storage)?;
+//
+//     let (mut reserve_x, mut reserve_y) = state.reserves.decode();
+//     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
+//
+//     Ok(
+//         shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
+//             liquidity_token: shade_protocol::Contract {
+//                 address: state.lb_token.address,
+//                 code_hash: state.lb_token.code_hash,
+//             },
+//             factory: Some(shade_protocol::Contract {
+//                 address: state.factory.address,
+//                 code_hash: state.factory.code_hash,
+//             }),
+//             pair: shadeswap_shared::core::TokenPair {
+//                 0: state.token_x,
+//                 1: state.token_y,
+//                 2: false,
+//             },
+//             amount_0: Uint128::from(reserve_x),
+//             amount_1: Uint128::from(reserve_y),
+//             total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
+//             contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
+//             fee_info: shadeswap_shared::amm_pair::FeeInfo {
+//                 shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
+//                 lp_fee: shadeswap_shared::core::Fee {
+//                     // TODO set this
+//                     nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+//                     denom: 1_000_000_000_000_000_000,
+//                 },
+//                 shade_dao_fee: shadeswap_shared::core::Fee {
+//                     // TODO set this
+//                     nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+//                     denom: 1_000_000_000_000_000_000,
+//                 },
+//                 stable_lp_fee: shadeswap_shared::core::Fee {
+//                     // TODO set this
+//                     nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+//                     denom: 1_000_000_000_000_000_000,
+//                 },
+//                 stable_shade_dao_fee: shadeswap_shared::core::Fee {
+//                     // TODO set this
+//                     nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+//                     denom: 1_000_000_000_000_000_000,
+//                 },
+//             },
+//             stable_info: None,
+//         },
+//     )
+// }
+
+// TODO - Revisit if this function is necessary. It seems like something that might belong in the
+//        lb-router contract. It should at least have it's own interface and not use amm_pair's.
+// fn query_swap_simulation(
+//     deps: Deps,
+//     env: Env,
+//     offer: shade_protocol::lb_libraries::tokens::TokenAmount,
+//     exclude_fee: Option<bool>,
+// ) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
+//     let state = CONFIG.load(deps.storage)?;
+//
+//     let (mut reserve_x, mut reserve_y) = state.reserves.decode();
+//     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
+//     let mut swap_for_y = false;
+//     match offer.token {
+//         token if token == state.token_x => swap_for_y = true,
+//         token if token == state.token_y => {}
+//         _ => panic!("No such token"),
+//     };
+//
+//     let res = query_swap_out(deps, env, offer.amount.into(), swap_for_y)?;
+//
+//     if (res.amount_in_left.u128() > 0u128) {
+//         return Err(Error::AmountInLeft {
+//             amount_left_in: res.amount_in_left,
+//             total_amount: offer.amount,
+//             swapped_amount: res.amount_out,
+//         });
+//     }
+//
+//     let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
+//
+//     Ok(
+//         shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
+//             total_fee_amount: res.fee,
+//             lp_fee_amount: res.fee,        //TODO lpfee
+//             shade_dao_fee_amount: res.fee, // dao fee
+//             result: SwapResult {
+//                 return_amount: res.amount_out,
+//             },
+//             price,
+//         },
+//     )
+// }
 
 /// Returns the Liquidity Book Factory.
 ///
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-fn query_pair_info(deps: Deps) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
-    let state = CONFIG.load(deps.storage)?;
-
-    let (mut reserve_x, mut reserve_y) = state.reserves.decode();
-    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
-
-    Ok(
-        shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
-            liquidity_token: shade_protocol::Contract {
-                address: state.lb_token.address,
-                code_hash: state.lb_token.code_hash,
-            },
-            factory: Some(shade_protocol::Contract {
-                address: state.factory.address,
-                code_hash: state.factory.code_hash,
-            }),
-            pair: shadeswap_shared::core::TokenPair {
-                0: state.token_x,
-                1: state.token_y,
-                2: false,
-            },
-            amount_0: Uint128::from(reserve_x),
-            amount_1: Uint128::from(reserve_y),
-            total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
-            contract_version: LB_PAIR_CONTRACT_VERSION,
-            fee_info: shadeswap_shared::amm_pair::FeeInfo {
-                shade_dao_address: state.protocol_fees_recipient,
-                lp_fee: shadeswap_shared::core::Fee {
-                    nom: 0,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                shade_dao_fee: shadeswap_shared::core::Fee {
-                    nom: 0,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                stable_lp_fee: shadeswap_shared::core::Fee {
-                    nom: 0,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                stable_shade_dao_fee: shadeswap_shared::core::Fee {
-                    nom: 0,
-                    denom: 1_000_000_000_000_000_000,
-                },
-            },
-            stable_info: None,
-        },
-    )
-}
-
-// / Returns the Liquidity Book Factory.
-// /
-// / # Returns
-// /
-// / * `factory` - The Liquidity Book Factory
-fn query_swap_simulation(
-    deps: Deps,
-    env: Env,
-    offer: shade_protocol::lb_libraries::tokens::TokenAmount,
-    exclude_fee: Option<bool>,
-) -> Result<shadeswap_shared::msg::amm_pair::QueryMsgResponse> {
-    let state = CONFIG.load(deps.storage)?;
-
-    let (mut reserve_x, mut reserve_y) = state.reserves.decode();
-    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
-    let mut swap_for_y = false;
-    match offer.token {
-        token if token == state.token_x => swap_for_y = true,
-        token if token == state.token_y => {}
-        _ => panic!("No such token"),
-    };
-
-    let res = query_swap_out(deps, env, offer.amount.into(), swap_for_y)?;
-
-    if (res.amount_in_left.u128() > 0u128) {
-        return Err(Error::AmountInLeft {
-            amount_left_in: res.amount_in_left,
-            total_amount: offer.amount,
-            swapped_amount: res.amount_out,
-        });
-    }
-
-    let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
-
-    Ok(
-        shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
-            total_fee_amount: res.total_fees,
-            lp_fee_amount: res.lp_fees,
-            shade_dao_fee_amount: res.shade_dao_fees,
-            result: SwapResult {
-                return_amount: res.amount_out,
-            },
-            price,
-        },
-    )
-}
-
-/// Returns the Liquidity Book Factory.
-///
-/// # Returns
-///
-/// * `factory` - The Liquidity Book Factory
-fn query_factory(deps: Deps) -> Result<FactoryResponse> {
+fn query_factory(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let factory = state.factory.address;
-    Ok(FactoryResponse { factory })
+
+    let response = FactoryResponse { factory };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the Liquidity Book Factory.
@@ -1654,10 +1620,12 @@ fn query_factory(deps: Deps) -> Result<FactoryResponse> {
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-fn query_lb_token(deps: Deps) -> Result<LbTokenResponse> {
+fn query_lb_token(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let lb_token = state.lb_token;
-    Ok(LbTokenResponse { lb_token })
+
+    let response = LbTokenResponse { lb_token };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the token X and Y of the Liquidity Book Pair.
@@ -1665,12 +1633,14 @@ fn query_lb_token(deps: Deps) -> Result<LbTokenResponse> {
 /// # Returns
 ///
 /// * `token_x` - The address of the token X
-fn query_tokens(deps: Deps) -> Result<TokensResponse> {
+fn query_tokens(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
-    Ok(TokensResponse {
+
+    let response = TokensResponse {
         token_x: state.token_x,
         token_y: state.token_y,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the token X of the Liquidity Book Pair.
@@ -1678,10 +1648,12 @@ fn query_tokens(deps: Deps) -> Result<TokensResponse> {
 /// # Returns
 ///
 /// * `token_x` - The address of the token X
-fn query_token_x(deps: Deps) -> Result<TokenXResponse> {
+fn query_token_x(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let token_x = state.token_x;
-    Ok(TokenXResponse { token_x })
+
+    let response = TokenXResponse { token_x };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the token Y of the Liquidity Book Pair.
@@ -1689,10 +1661,12 @@ fn query_token_x(deps: Deps) -> Result<TokenXResponse> {
 /// # Returns
 ///
 /// * `token_y` - The address of the token Y
-fn query_token_y(deps: Deps) -> Result<TokenYResponse> {
+fn query_token_y(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let token_y = state.token_y;
-    Ok(TokenYResponse { token_y })
+
+    let response = TokenYResponse { token_y };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the bin_step of the Liquidity Book Pair.
@@ -1703,10 +1677,12 @@ fn query_token_y(deps: Deps) -> Result<TokenYResponse> {
 /// # Returns
 ///
 /// * `bin_step` - The bin step of the Liquidity Book Pair, in 10_000th
-fn query_bin_step(deps: Deps) -> Result<BinStepResponse> {
+fn query_bin_step(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let bin_step = state.bin_step;
-    Ok(BinStepResponse { bin_step })
+
+    let response = BinStepResponse { bin_step };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the reserves of the Liquidity Book Pair.
@@ -1717,7 +1693,7 @@ fn query_bin_step(deps: Deps) -> Result<BinStepResponse> {
 ///
 /// * `reserve_x` - The reserve of token X
 /// * `reserve_y` - The reserve of token Y
-fn query_reserves(deps: Deps) -> Result<ReservesResponse> {
+fn query_reserves(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let (mut reserve_x, mut reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
@@ -1725,10 +1701,11 @@ fn query_reserves(deps: Deps) -> Result<ReservesResponse> {
     reserve_x -= protocol_fee_x;
     reserve_y -= protocol_fee_y;
 
-    Ok(ReservesResponse {
+    let response = ReservesResponse {
         reserve_x,
         reserve_y,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the active id of the Liquidity Book Pair.
@@ -1740,11 +1717,12 @@ fn query_reserves(deps: Deps) -> Result<ReservesResponse> {
 /// # Returns
 ///
 /// * `active_id` - The active id of the Liquidity Book Pair
-fn query_active_id(deps: Deps) -> Result<ActiveIdResponse> {
+fn query_active_id(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let active_id = state.pair_parameters.get_active_id();
 
-    Ok(ActiveIdResponse { active_id })
+    let response = ActiveIdResponse { active_id };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the reserves of a bin.
@@ -1757,14 +1735,15 @@ fn query_active_id(deps: Deps) -> Result<ActiveIdResponse> {
 ///
 /// * `bin_reserve_x` - The reserve of token X in the bin
 /// * `bin_reserve_y` - The reserve of token Y in the bin
-fn query_bin(deps: Deps, id: u32) -> Result<BinResponse> {
+fn query_bin(deps: Deps, id: u32) -> Result<Binary> {
     let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
-
     let (bin_reserve_x, bin_reserve_y) = bin.decode();
-    Ok(BinResponse {
+
+    let response = BinResponse {
         bin_reserve_x,
         bin_reserve_y,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the next non-empty bin.
@@ -1780,15 +1759,12 @@ fn query_bin(deps: Deps, id: u32) -> Result<BinResponse> {
 /// # Returns
 ///
 /// * `next_id` - The id of the next non-empty bin
-fn query_next_non_empty_bin(
-    deps: Deps,
-    swap_for_y: bool,
-    id: u32,
-) -> Result<NextNonEmptyBinResponse> {
+fn query_next_non_empty_bin(deps: Deps, swap_for_y: bool, id: u32) -> Result<Binary> {
     let tree = BIN_TREE.load(deps.storage)?;
     let next_id = _get_next_non_empty_bin(&tree, swap_for_y, id);
 
-    Ok(NextNonEmptyBinResponse { next_id })
+    let response = NextNonEmptyBinResponse { next_id };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns id of the next non-empty bin.
@@ -1810,14 +1786,15 @@ fn _get_next_non_empty_bin(tree: &TreeUint24, swap_for_y: bool, id: u32) -> u32 
 ///
 /// * `protocol_fee_x` - The protocol fees of token X
 /// * `protocol_fee_y` - The protocol fees of token Y
-fn query_protocol_fees(deps: Deps) -> Result<ProtocolFeesResponse> {
+fn query_protocol_fees(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
-    Ok(ProtocolFeesResponse {
+    let response = ProtocolFeesResponse {
         protocol_fee_x,
         protocol_fee_y,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the static fee parameters of the Liquidity Book Pair.
@@ -1831,7 +1808,7 @@ fn query_protocol_fees(deps: Deps) -> Result<ProtocolFeesResponse> {
 /// * `variable_fee_control` - The variable fee control for the static fee
 /// * `protocol_share` - The protocol share for the static fee
 /// * `max_volatility_accumulator` - The maximum volatility accumulator for the static fee
-fn query_static_fee_params(deps: Deps) -> Result<StaticFeeParametersResponse> {
+fn query_static_fee_params(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -1843,7 +1820,7 @@ fn query_static_fee_params(deps: Deps) -> Result<StaticFeeParametersResponse> {
     let protocol_share = params.get_protocol_share();
     let max_volatility_accumulator = params.get_max_volatility_accumulator();
 
-    Ok(StaticFeeParametersResponse {
+    let response = StaticFeeParametersResponse {
         base_factor,
         filter_period,
         decay_period,
@@ -1851,7 +1828,8 @@ fn query_static_fee_params(deps: Deps) -> Result<StaticFeeParametersResponse> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the variable fee parameters of the Liquidity Book Pair.
@@ -1862,7 +1840,7 @@ fn query_static_fee_params(deps: Deps) -> Result<StaticFeeParametersResponse> {
 /// * `volatility_reference` - The volatility reference for the variable fee
 /// * `id_reference` - The id reference for the variable fee
 /// * `time_of_last_update` - The time of last update for the variable fee
-fn query_variable_fee_params(deps: Deps) -> Result<VariableFeeParametersResponse> {
+fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -1871,12 +1849,13 @@ fn query_variable_fee_params(deps: Deps) -> Result<VariableFeeParametersResponse
     let id_reference = params.get_id_reference();
     let time_of_last_update = params.get_time_of_last_update();
 
-    Ok(VariableFeeParametersResponse {
+    let response = VariableFeeParametersResponse {
         volatility_accumulator,
         volatility_reference,
         id_reference,
         time_of_last_update,
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the oracle parameters of the Liquidity Book Pair.
@@ -1888,7 +1867,7 @@ fn query_variable_fee_params(deps: Deps) -> Result<VariableFeeParametersResponse
 /// * `active_size` - The active size of the oracle
 /// * `last_updated` - The last updated timestamp of the oracle
 /// * `first_timestamp` - The first timestamp of the oracle, i.e. the timestamp of the oldest sample
-fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
+fn query_oracle_params(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let oracle = ORACLE.load(deps.storage)?;
     let params = state.pair_parameters;
@@ -1910,22 +1889,24 @@ fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
         }
         let first_timestamp = sample.get_sample_last_update();
 
-        Ok(OracleParametersResponse {
+        let response = OracleParametersResponse {
             sample_lifetime,
             size,
             active_size,
             last_updated,
             first_timestamp,
-        })
+        };
+        to_binary(&response).map_err(Error::CwErr)
     } else {
         // This happens if the oracle hasn't been used yet.
-        Ok(OracleParametersResponse {
+        let response = OracleParametersResponse {
             sample_lifetime,
             size: 0,
             active_size: 0,
             last_updated: 0,
             first_timestamp: 0,
-        })
+        };
+        to_binary(&response).map_err(Error::CwErr)
     }
 }
 
@@ -1940,42 +1921,40 @@ fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
 /// * `cumulative_id` - The cumulative id of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_volatility` - The cumulative volatility of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_bin_crossed` - The cumulative bin crossed of the Liquidity Book Pair at the given timestamp
-fn query_oracle_sample_at(
-    deps: Deps,
-    env: Env,
-    look_up_timestamp: u64,
-) -> Result<OracleSampleAtResponse> {
+fn query_oracle_sample_at(deps: Deps, env: Env, look_up_timestamp: u64) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let oracle = ORACLE.load(deps.storage)?;
-    let params = state.pair_parameters;
+    let mut params = state.pair_parameters;
 
     let sample_lifetime = MAX_SAMPLE_LIFETIME;
     let oracle_id = params.get_oracle_id();
 
     if oracle_id == 0 || look_up_timestamp > env.block.time.seconds() {
-        return Ok(OracleSampleAtResponse {
+        let response = OracleSampleAtResponse {
             cumulative_id: 0,
             cumulative_volatility: 0,
             cumulative_bin_crossed: 0,
-        });
+        };
+        return to_binary(&response).map_err(Error::CwErr);
     }
 
     let (time_of_last_update, cumulative_id, cumulative_volatility, cumulative_bin_crossed) =
         oracle.get_sample_at(oracle_id, look_up_timestamp)?;
 
     if time_of_last_update < look_up_timestamp {
-        params.update_volatility_parameters(params.get_active_id(), &env.block.time);
+        params.update_volatility_parameters(params.get_active_id(), &env.block.time)?;
 
         let delta_time = look_up_timestamp - time_of_last_update;
 
         let cumulative_id = params.get_active_id() as u64 * delta_time;
         let cumulative_volatility = params.get_volatility_accumulator() as u64 * delta_time;
 
-        Ok(OracleSampleAtResponse {
+        let response = OracleSampleAtResponse {
             cumulative_id,
             cumulative_volatility,
             cumulative_bin_crossed,
-        })
+        };
+        to_binary(&response).map_err(Error::CwErr)
     } else {
         Err(Error::LastUpdateTimestampGreaterThanLookupTimestamp)
     }
@@ -1992,11 +1971,12 @@ fn query_oracle_sample_at(
 /// # Returns
 ///
 /// * `price` - The price corresponding to this id
-fn query_price_from_id(deps: Deps, id: u32) -> Result<PriceFromIdResponse> {
+fn query_price_from_id(deps: Deps, id: u32) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, state.bin_step)?.u256_to_uint256();
 
-    Ok(PriceFromIdResponse { price })
+    let response = PriceFromIdResponse { price };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the id corresponding to the given price.
@@ -2010,12 +1990,13 @@ fn query_price_from_id(deps: Deps, id: u32) -> Result<PriceFromIdResponse> {
 /// # Returns
 ///
 /// * `id` - The id of the bin corresponding to this price
-fn query_id_from_price(deps: Deps, price: Uint256) -> Result<IdFromPriceResponse> {
+fn query_id_from_price(deps: Deps, price: Uint256) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let price = price.uint256_to_u256();
     let id = PriceHelper::get_id_from_price(price, state.bin_step)?;
 
-    Ok(IdFromPriceResponse { id })
+    let response = IdFromPriceResponse { id };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Simulates a swap in.
@@ -2034,12 +2015,7 @@ fn query_id_from_price(deps: Deps, price: Uint256) -> Result<IdFromPriceResponse
 /// * `amount_in` - The amount of token X or Y that can be swapped in, including the fee
 /// * `amount_out_left` - The amount of token Y or X that cannot be swapped out
 /// * `fee` - The fee of the swap
-fn query_swap_in(
-    deps: Deps,
-    env: Env,
-    amount_out: u128,
-    swap_for_y: bool,
-) -> Result<SwapInResponse> {
+fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
@@ -2052,7 +2028,7 @@ fn query_swap_in(
 
     let mut id = params.get_active_id();
 
-    params = params.update_references(&env.block.time)?;
+    params.update_references(&env.block.time)?;
 
     loop {
         let bin_reserves = BIN_MAP
@@ -2069,7 +2045,7 @@ fn query_swap_in(
                 bin_reserves
             };
 
-            params = PairParameters::update_volatility_accumulator(params, id)?;
+            params.update_volatility_accumulator(id)?;
 
             let amount_in_without_fee = if swap_for_y {
                 U256x256Math::shift_div_round_up(amount_out_of_bin.into(), SCALE_OFFSET, price)?
@@ -2099,11 +2075,12 @@ fn query_swap_in(
         }
     }
 
-    Ok(SwapInResponse {
+    let response = SwapInResponse {
         amount_in: Uint128::from(amount_in),
         amount_out_left: Uint128::from(amount_out_left),
         fee: Uint128::from(fee),
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Simulates a swap out.
@@ -2122,12 +2099,7 @@ fn query_swap_in(
 /// * `amount_in_left` - The amount of token X or Y that cannot be swapped in
 /// * `amount_out` - The amount of token Y or X that can be swapped out
 /// * `fee` - The fee of the swap
-fn query_swap_out(
-    deps: Deps,
-    env: Env,
-    amount_in: u128,
-    swap_for_y: bool,
-) -> Result<SwapOutResponse> {
+fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
@@ -2143,12 +2115,12 @@ fn query_swap_out(
 
     let mut id = params.get_active_id();
 
-    params = params.update_references(&env.block.time)?;
+    params.update_references(&env.block.time)?;
 
     loop {
         let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or_default();
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
-            params = params.update_volatility_accumulator(id)?;
+            params.update_volatility_accumulator(id)?;
 
             let (amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
                 bin_reserves,
@@ -2186,7 +2158,7 @@ fn query_swap_out(
 
     let amount_in_left = Bytes32::decode_alt(&amounts_in_left, swap_for_y);
 
-    Ok(SwapOutResponse {
+    let response = SwapOutResponse {
         amount_in_left: Uint128::from(amount_in_left),
         amount_out: Uint128::from(amounts_out.decode_alt(!swap_for_y)),
         total_fees: Uint128::from(total_fees.decode_alt(swap_for_y)),
@@ -2200,14 +2172,15 @@ fn query_swap_out(
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-fn query_total_supply(deps: Deps, id: u32) -> Result<TotalSupplyResponse> {
+fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let factory = state.factory.address;
 
     let total_supply =
         _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
             .u256_to_uint256();
-    Ok(TotalSupplyResponse { total_supply })
+    let response = TotalSupplyResponse { total_supply };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 #[shd_entry_point]
@@ -2233,8 +2206,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
                 Ok(response)
             }
-            None => Err(StdError::generic_err(format!("Unknown reply id"))),
+            None => Err(StdError::generic_err("Unknown reply id")),
         },
-        _ => Err(StdError::generic_err(format!("Unknown reply id"))),
+        _ => Err(StdError::generic_err("Unknown reply id")),
     }
 }
