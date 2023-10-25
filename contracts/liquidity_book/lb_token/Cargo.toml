@@ -36,14 +36,15 @@ backtraces = ["cosmwasm-std/backtraces"]
 #snafu = { version = "0.6.3" }
 serde = { version = "1.0.158", default-features = false, features = ["derive"] }
 schemars = "0.8.12"
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.10" }
-cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.1.10"  , features=["iterator"]}
- secret-toolkit = { version = "0.10.0", default-features = false, features = [
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "=1.1.11", features = ["iterator"] }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "=1.1.11", features = ["iterator"] }
+# TODO - (possibly) change from secret-toolkit storage, etc to shade's version?
+secret-toolkit = { version = "0.10.0", default-features = false, features = [
   "storage", "viewing-key", "permit", "serialization", 
   #"crypto", "utils", 
 ] }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
-  "liquidity_book","lb-libraries",
+  "liquidity_book","lb-libraries", "snip20"
 ] }
 
 #base64 = "0.21.2"

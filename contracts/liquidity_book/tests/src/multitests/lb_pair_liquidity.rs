@@ -3,13 +3,22 @@ use std::ops::Add;
 use crate::multitests::test_helper::*;
 
 use super::test_helper::{
-    assert_approx_eq_rel, increase_allowance_helper, init_addrs, liquidity_parameters_generator,
-    mint_token_helper, setup, ID_ONE,
+    assert_approx_eq_rel,
+    increase_allowance_helper,
+    init_addrs,
+    liquidity_parameters_generator,
+    mint_token_helper,
+    setup,
+    ID_ONE,
 };
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
 use shade_multi_test::interfaces::{
-    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
+    lb_factory,
+    lb_pair,
+    lb_token,
+    snip20,
+    utils::DeployedContracts,
 };
 use shade_protocol::{
     lb_libraries::{math::u24::U24, types::LBPairInformation},
@@ -49,12 +58,8 @@ pub fn lb_pair_setup() -> Result<
         token_y.clone(),
         "viewing_key".to_string(),
     )?;
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
     let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
@@ -688,7 +693,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
             id.to_string(),
         )?;
         half_balances[i as usize] = balance / Uint256::from(2u128);
-        balances[i as usize] = balance - balance / Uint256::from(2u128);
+        balances[i as usize] = balance - half_balances[i as usize];
     }
 
     let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;

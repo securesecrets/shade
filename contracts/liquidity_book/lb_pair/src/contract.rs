@@ -137,6 +137,7 @@ pub fn instantiate(
                 token_x_symbol, token_y_symbol, msg.bin_step
             ),
             funds: vec![],
+            admin: None,
         }),
         INSTANTIATE_LP_TOKEN_REPLY_ID,
     ));

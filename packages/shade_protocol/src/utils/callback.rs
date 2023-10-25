@@ -55,6 +55,7 @@ pub trait InstantiateCallback: Serialize {
             msg,
             label,
             funds,
+            admin: None,
         };
         Ok(init.into())
     }
@@ -312,6 +313,7 @@ mod tests {
                 code_hash,
                 funds,
                 label,
+                admin: None,
             }) => {
                 assert_eq!(code_id, id);
                 let mut expected_msg = r#"{"f1":1,"f2":2}"#.as_bytes().to_vec();

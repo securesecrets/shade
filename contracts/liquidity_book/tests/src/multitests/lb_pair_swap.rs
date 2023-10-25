@@ -1,18 +1,23 @@
 use crate::multitests::test_helper::*;
 
 use super::test_helper::{
-    increase_allowance_helper, init_addrs, liquidity_parameters_generator, mint_token_helper,
-    setup, ID_ONE,
+    increase_allowance_helper,
+    init_addrs,
+    liquidity_parameters_generator,
+    mint_token_helper,
+    setup,
+    ID_ONE,
 };
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError, Uint128};
 use shade_multi_test::interfaces::{
-    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
+    lb_factory,
+    lb_pair,
+    lb_token,
+    snip20,
+    utils::DeployedContracts,
 };
-use shade_protocol::{
-    lb_libraries::{types::LBPairInformation},
-    multi_test::App,
-};
+use shade_protocol::{lb_libraries::types::LBPairInformation, multi_test::App};
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000_u128;
 
@@ -46,12 +51,8 @@ pub fn lb_pair_setup() -> Result<
         token_y.clone(),
         "viewing_key".to_string(),
     )?;
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
     let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
@@ -188,7 +189,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
 
     let (amount_in, amount_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, false)?;
-    assert_eq!(amount_out_left, Uint128::MIN);
+    assert_eq!(amount_out_left, Uint128::zero());
 
     let tokens_to_mint = vec![(SILK, amount_in)];
 

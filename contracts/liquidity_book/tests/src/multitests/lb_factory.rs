@@ -1,8 +1,21 @@
 use crate::multitests::test_helper::{
-    extract_contract_info, generate_random, token_type_snip20_generator, DEFAULT_BASE_FACTOR,
-    DEFAULT_BIN_STEP, DEFAULT_DECAY_PERIOD, DEFAULT_FILTER_PERIOD,
-    DEFAULT_MAX_VOLATILITY_ACCUMULATOR, DEFAULT_OPEN_STATE, DEFAULT_PROTOCOL_SHARE,
-    DEFAULT_REDUCTION_FACTOR, DEFAULT_VARIABLE_FEE_CONTROL, SBTC, SHADE, SILK, SSCRT, USDC,
+    extract_contract_info,
+    generate_random,
+    token_type_snip20_generator,
+    DEFAULT_BASE_FACTOR,
+    DEFAULT_BIN_STEP,
+    DEFAULT_DECAY_PERIOD,
+    DEFAULT_FILTER_PERIOD,
+    DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
+    DEFAULT_OPEN_STATE,
+    DEFAULT_PROTOCOL_SHARE,
+    DEFAULT_REDUCTION_FACTOR,
+    DEFAULT_VARIABLE_FEE_CONTROL,
+    SBTC,
+    SHADE,
+    SILK,
+    SSCRT,
+    USDC,
 };
 
 use super::test_helper::{bound, init_addrs, setup, ID_ONE};
@@ -31,7 +44,7 @@ pub fn test_setup() -> Result<(), anyhow::Error> {
     //query fee recipient
     let fee_recipient = lb_factory::query_fee_recipient(&mut app, &lb_factory.clone().into())?;
 
-    assert_eq!(fee_recipient.as_str(), addrs.altaf_bhai().as_str());
+    assert_eq!(fee_recipient.as_str(), addrs.joker().as_str());
     //query flashloanfee
     let flash_loan_fee = lb_factory::query_flash_loan_fee(&mut app, &lb_factory.clone().into())?;
 
@@ -41,8 +54,7 @@ pub fn test_setup() -> Result<(), anyhow::Error> {
     assert_eq!(min_bin_step, 1u8); // fixed in contract
 
     //query getMaxFlashLoanFee
-    let max_flash_loan_fee =
-        lb_factory::query_max_flash_loan_fee(&mut app, &lb_factory.into())?;
+    let max_flash_loan_fee = lb_factory::query_max_flash_loan_fee(&mut app, &lb_factory.into())?;
     assert_eq!(max_flash_loan_fee, 10 ^ 17);
     Ok(())
 }
@@ -60,8 +72,7 @@ pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
         lb_pair_stored_code.code_id,
         lb_pair_stored_code.code_hash,
     )?;
-    let lb_pair_code_info =
-        lb_factory::query_lb_pair_implementation(&mut app, &lb_factory.into())?;
+    let lb_pair_code_info = lb_factory::query_lb_pair_implementation(&mut app, &lb_factory.into())?;
     assert_eq!(lb_pair_stored_code.code_id, lb_pair_code_info.id);
 
     Ok(())
@@ -1123,12 +1134,8 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
         "viewing_key".to_string(),
     )?;
 
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        sscrt,
-        shd,
-    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), sscrt, shd)?;
 
     let lb_pair = all_pairs[0].clone().lb_pair;
 
@@ -1219,12 +1226,7 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         "viewing_key".to_string(),
     )?;
 
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.into(),
-        token_x,
-        token_y,
-    )?;
+    let all_pairs = lb_factory::query_all_lb_pairs(&mut app, &lb_factory.into(), token_x, token_y)?;
 
     assert_eq!(all_pairs.len(), 2);
 
