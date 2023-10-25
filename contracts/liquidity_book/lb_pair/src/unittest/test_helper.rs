@@ -18,7 +18,7 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::lb_token::LbToken,
+    multi::{admin::init_admin_auth, lb_token::LbToken},
 };
 use shade_protocol::{
     lb_libraries::{
@@ -142,6 +142,7 @@ pub fn init_lb_pair() -> Result<(App, Contract, DeployedContracts), anyhow::Erro
     .unwrap();
     let second_contract = deployed_contracts.iter().next().unwrap().1.clone();
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
+    let admin_contract = init_admin_auth(&mut app, &addrs.admin());
 
     let lb_pair = lb_pair::init(
         &mut app,
@@ -177,6 +178,7 @@ pub fn init_lb_pair() -> Result<(App, Contract, DeployedContracts), anyhow::Erro
         String::new(),
         String::new(),
         addrs.admin(),
+        admin_contract.into(),
     )?;
 
     Ok((app, lb_pair, deployed_contracts))

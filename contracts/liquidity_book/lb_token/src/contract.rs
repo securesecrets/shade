@@ -30,17 +30,34 @@ use secret_toolkit::{
 use crate::{
     receiver::Snip1155ReceiveMsg,
     state::{
-        balances_r, balances_w, blockinfo_r, blockinfo_w, contr_conf_r, contr_conf_w,
+        balances_r,
+        balances_w,
+        blockinfo_r,
+        blockinfo_w,
+        contr_conf_r,
+        contr_conf_w,
         get_receiver_hash,
         permissions::{
-            list_owner_permission_keys, may_load_any_permission, new_permission, update_permission,
+            list_owner_permission_keys,
+            may_load_any_permission,
+            new_permission,
+            update_permission,
         },
-        set_receiver_hash, tkn_info_r, tkn_info_w, tkn_tot_supply_r, tkn_tot_supply_w,
+        set_receiver_hash,
+        tkn_info_r,
+        tkn_info_w,
+        tkn_tot_supply_r,
+        tkn_tot_supply_w,
         txhistory::{
-            append_new_owner, get_txs, may_get_current_owner, store_burn, store_mint,
+            append_new_owner,
+            get_txs,
+            may_get_current_owner,
+            store_burn,
+            store_mint,
             store_transfer,
         },
-        PREFIX_REVOKED_PERMITS, RESPONSE_BLOCK_SIZE,
+        PREFIX_REVOKED_PERMITS,
+        RESPONSE_BLOCK_SIZE,
     },
 };
 
@@ -51,12 +68,21 @@ use shade_protocol::{
         metadata::Metadata,
         permissions::{Permission, PermissionKey},
         state_structs::{
-            ContractConfig, CurateTokenId, OwnerBalance, StoredTokenInfo, TknConfig, TokenAmount,
+            ContractConfig,
+            CurateTokenId,
+            OwnerBalance,
+            StoredTokenInfo,
+            TknConfig,
+            TokenAmount,
             TokenInfoMsg,
         },
     },
     liquidity_book::lb_token::{
-        ExecuteAnswer, ExecuteMsg, InstantiateMsg, ResponseStatus::Success, SendAction,
+        ExecuteAnswer,
+        ExecuteMsg,
+        InstantiateMsg,
+        ResponseStatus::Success,
+        SendAction,
         TransferAction,
     },
 };
@@ -181,20 +207,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             msg,
             memo,
             padding: _,
-        } => try_send(
-            deps,
-            env,
-            info,
-            SendAction {
-                token_id,
-                from,
-                recipient,
-                recipient_code_hash,
-                amount,
-                msg,
-                memo,
-            },
-        ),
+        } => try_send(deps, env, info, SendAction {
+            token_id,
+            from,
+            recipient,
+            recipient_code_hash,
+            amount,
+            msg,
+            memo,
+        }),
         ExecuteMsg::BatchSend {
             actions,
             padding: _,
@@ -237,14 +258,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             permit_name,
             padding: _,
         } => try_revoke_permit(deps, env, info, permit_name),
-        ExecuteMsg::AddCurators {
-            add_curators,
-            padding: _,
-        } => try_add_curators(deps, env, info, add_curators),
-        ExecuteMsg::RemoveCurators {
-            remove_curators,
-            padding: _,
-        } => try_remove_curators(deps, env, info, remove_curators),
+        // ExecuteMsg::AddCurators {
+        //     add_curators,
+        //     padding: _,
+        // } => try_add_curators(deps, env, info, add_curators),
+        // ExecuteMsg::RemoveCurators {
+        //     remove_curators,
+        //     padding: _,
+        // } => try_remove_curators(deps, env, info, remove_curators),
         // ExecuteMsg::AddMinters {
         //     token_id,
         //     add_minters,
@@ -255,15 +276,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         //     remove_minters,
         //     padding: _,
         // } => try_remove_minters(deps, env, info, token_id, remove_minters),
-        ExecuteMsg::ChangeAdmin {
-            new_admin,
-            padding: _,
-        } => try_change_admin(deps, env, info, new_admin),
-        ExecuteMsg::RemoveAdmin {
-            current_admin,
-            contract_address,
-            padding: _,
-        } => try_remove_admin(deps, env, info, current_admin, contract_address),
+        // ExecuteMsg::ChangeAdmin {
+        //     new_admin,
+        //     padding: _,
+        // } => try_change_admin(deps, env, info, new_admin),
+        // ExecuteMsg::RemoveAdmin {
+        //     current_admin,
+        //     contract_address,
+        //     padding: _,
+        // } => try_remove_admin(deps, env, info, current_admin, contract_address),
         ExecuteMsg::RegisterReceive {
             code_hash,
             padding: _,
@@ -787,49 +808,49 @@ fn try_revoke_permit(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RevokePermit { status: Success })?))
 }
 
-fn try_add_curators(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    add_curators: Vec<Addr>,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+// fn try_add_curators(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     add_curators: Vec<Addr>,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // verify admin
-    verify_admin(&config, &info)?;
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    // add curators
-    for curator in add_curators {
-        config.curators.push(curator);
-    }
-    contr_conf_w(deps.storage).save(&config)?;
+//     // add curators
+//     for curator in add_curators {
+//         config.curators.push(curator);
+//     }
+//     contr_conf_w(deps.storage).save(&config)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddCurators { status: Success })?))
-}
+//     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddCurators { status: Success })?))
+// }
 
-fn try_remove_curators(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    remove_curators: Vec<Addr>,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+// fn try_remove_curators(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     remove_curators: Vec<Addr>,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // verify admin
-    verify_admin(&config, &info)?;
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    // remove curators
-    for curator in remove_curators {
-        config.curators.retain(|x| x != &curator);
-    }
-    contr_conf_w(deps.storage).save(&config)?;
+//     // remove curators
+//     for curator in remove_curators {
+//         config.curators.retain(|x| x != &curator);
+//     }
+//     contr_conf_w(deps.storage).save(&config)?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCurators {
-            status: Success,
-        })?),
-    )
-}
+//     Ok(
+//         Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCurators {
+//             status: Success,
+//         })?),
+//     )
+// }
 
 // fn try_add_minters(
 //     deps: DepsMut,
@@ -917,50 +938,52 @@ fn try_remove_curators(
 //     )
 // }
 
-fn try_change_admin(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    new_admin: Addr,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+//No need to change admin cause we're using admin_auth
 
-    // verify admin
-    verify_admin(&config, &info)?;
+// fn try_change_admin(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     new_admin: Addr,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // change admin
-    config.admin = Some(new_admin);
-    contr_conf_w(deps.storage).save(&config)?;
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::ChangeAdmin { status: Success })?))
-}
+//     // change admin
+//     config.admin = Some(new_admin);
+//     contr_conf_w(deps.storage).save(&config)?;
 
-fn try_remove_admin(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    current_admin: Addr,
-    contract_address: Addr,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+//     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::ChangeAdmin { status: Success })?))
+// }
 
-    // verify admin
-    verify_admin(&config, &info)?;
+// fn try_remove_admin(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     current_admin: Addr,
+//     contract_address: Addr,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // checks on redundancy inputs, designed to reduce chances of accidentally
-    // calling this function
-    if current_admin != config.admin.unwrap() || contract_address != config.contract_address {
-        return Err(StdError::generic_err(
-            "your inputs are incorrect to perform this function",
-        ));
-    }
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    // remove admin
-    config.admin = None;
-    contr_conf_w(deps.storage).save(&config)?;
+//     // checks on redundancy inputs, designed to reduce chances of accidentally
+//     // calling this function
+//     if current_admin != config.admin.unwrap() || contract_address != config.contract_address {
+//         return Err(StdError::generic_err(
+//             "your inputs are incorrect to perform this function",
+//         ));
+//     }
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveAdmin { status: Success })?))
-}
+//     // remove admin
+//     config.admin = None;
+//     contr_conf_w(deps.storage).save(&config)?;
+
+//     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveAdmin { status: Success })?))
+// }
 
 fn try_register_receive(
     deps: DepsMut,
