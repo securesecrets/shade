@@ -88,31 +88,31 @@ pub enum ExecuteMsg {
     ForceDecay {},
 }
 
-impl ExecuteMsg {
-    pub fn to_cosmos_msg(
-        &self,
-        code_hash: String,
-        contract_addr: String,
-        send_amount: Option<Uint128>,
-    ) -> StdResult<CosmosMsg> {
-        let mut msg = to_binary(self)?;
-        space_pad(&mut msg.0, 256);
-        let mut funds = Vec::new();
-        if let Some(amount) = send_amount {
-            funds.push(Coin {
-                amount,
-                denom: String::from("uscrt"),
-            });
-        }
-        let execute = WasmMsg::Execute {
-            contract_addr,
-            code_hash,
-            msg,
-            funds,
-        };
-        Ok(execute.into())
-    }
-}
+// impl ExecuteMsg {
+//     pub fn to_cosmos_msg(
+//         &self,
+//         code_hash: String,
+//         contract_addr: String,
+//         send_amount: Option<Uint128>,
+//     ) -> StdResult<CosmosMsg> {
+//         let mut msg = to_binary(self)?;
+//         space_pad(&mut msg.0, 256);
+//         let mut funds = Vec::new();
+//         if let Some(amount) = send_amount {
+//             funds.push(Coin {
+//                 amount,
+//                 denom: String::from("uscrt"),
+//             });
+//         }
+//         let execute = WasmMsg::Execute {
+//             contract_addr,
+//             code_hash,
+//             msg,
+//             funds,
+//         };
+//         Ok(execute.into())
+//     }
+// }
 
 impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;

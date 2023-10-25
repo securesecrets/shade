@@ -3,15 +3,14 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, ContractInfo, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use pair_parameter_helper::PairParameters;
 use shade_protocol::{
+    lb_libraries::{
+        pair_parameter_helper::PairParameters,
+        tokens::TokenType,
+        types::{Bytes32, ContractInstantiationInfo},
+    },
     secret_storage_plus::{AppendStore, Item, Map},
-    Contract,
 };
-use tokens::TokenType;
-
-use shade_protocol::lb_libraries::{pair_parameter_helper, tokens, types};
-use types::{Bytes32, ContractInstantiationInfo};
 
 use crate::{
     prelude::*,
@@ -52,7 +51,7 @@ pub enum ContractStatus {
 }
 
 #[cw_serde]
-pub struct State {
+pub struct Config {
     pub contract_info: ContractInfo,
     pub owner: Addr,
     pub fee_recipient: Addr,
