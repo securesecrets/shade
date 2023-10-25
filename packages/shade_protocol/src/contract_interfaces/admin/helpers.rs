@@ -53,7 +53,7 @@ pub enum AdminPermissions {
     StakingAdmin,
     DerivativeAdmin,
     Snip20MigrationAdmin,
-    LbAdmin,
+    LiquidityBookAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -75,7 +75,7 @@ impl AdminPermissions {
             AdminPermissions::StakingAdmin => "SHADE_STAKING_ADMIN",
             AdminPermissions::DerivativeAdmin => "SHADE_DERIVATIVE_ADMIN",
             AdminPermissions::Snip20MigrationAdmin => "SNIP20_MIGRATION_ADMIN",
-            AdminPermissions::LbAdmin => "LB_ADMIN",
+            AdminPermissions::LiquidityBookAdmin => "LIQUIDITY_BOOK_ADMIN",
         }
         .to_string()
     }
