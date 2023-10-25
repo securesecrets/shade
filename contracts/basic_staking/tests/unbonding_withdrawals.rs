@@ -27,6 +27,7 @@ fn unbonding_withdrawals(
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -147,6 +148,7 @@ fn unbonding_withdrawals(
         height: 1,
         time: Timestamp::from_seconds(now),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Perform each unbonding
@@ -198,6 +200,7 @@ fn unbonding_withdrawals(
         height: 10,
         time: Timestamp::from_seconds(now + unbond_period.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let mut withdrawn_ids = vec![];
