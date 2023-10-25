@@ -8,13 +8,10 @@ use cosmwasm_std::ContractInfo;
 use ethnum::U256;
 
 pub use crate::utils::liquidity_book::math::{
-    liquidity_configurations::LiquidityConfigurations,
-    packed_u128_math::PackedU128,
-    tree_math::TreeUint24,
+    liquidity_configurations::LiquidityConfigurations, tree_math::TreeUint24,
 };
-use crate::utils::liquidity_book::tokens::TokenType;
+pub use crate::utils::liquidity_book::tokens::TokenType;
 
-// TODO (maybe): Implement bit math for this type to avoid converting U256 back and forth
 pub type Bytes32 = [u8; 32];
 
 /// Info needed to instantiate a contract.

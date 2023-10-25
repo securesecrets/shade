@@ -167,6 +167,7 @@ mod tests2 {
             );
         }
     }
+
     #[test]
     fn test_most_significant_bit() {
         for i in 0..256u32 {

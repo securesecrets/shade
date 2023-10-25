@@ -18,9 +18,12 @@ pub enum U128x128MathError {
     PowUnderflow(U256, I256),
 }
 
+// This is 127
 const LOG_SCALE_OFFSET: U256 = U256::new(127u128);
-const LOG_SCALE: U256 = U256::new(1u128 << 127u128);
-const LOG_SCALE_SQUARED: U256 = U256::from_words(1u128 << 127u128 - 1, 0);
+// This is 2^127 = 170141183460469231731687303715884105728
+const LOG_SCALE: U256 = U256::new(1u128 << LOG_SCALE_OFFSET.as_u128());
+// This is 2^254 = 28948022309329048855892746252171976963317496166410141009864396001978282409984
+const LOG_SCALE_SQUARED: U256 = U256::from_words(1u128 << (LOG_SCALE_OFFSET.as_u128() - 1), 0);
 
 pub struct U128x128Math;
 
@@ -74,7 +77,6 @@ impl U128x128Math {
         }
 
         // Calculate the integer part of the logarithm and add it to the result and finally calculate y = x * 2^(-n).
-
         let n = BitMath::most_significant_bit(x >> LOG_SCALE_OFFSET);
 
         // The integer part of the logarithm as a signed 129.127-binary fixed-point number. The operation can't overflow
@@ -119,25 +121,23 @@ impl U128x128Math {
     ///
     /// * `x` - The unsigned 128.128-binary fixed-point number for which to calculate the power
     /// * `y` - A relative number without any decimals, needs to be between ]2^21; 2^21[
-    pub fn pow(base: U256, power: I256) -> Result<U256, U128x128MathError> {
+    pub fn pow(x: U256, y: I256) -> Result<U256, U128x128MathError> {
         let mut invert = false;
-        let abs_y = power.abs().as_u128();
+        let abs_y = y.abs().as_u128();
 
-        if power == 0 {
-            return Ok(SCALE); // means Base^0 =1
+        if y == 0 {
+            return Ok(SCALE);
         }
 
-        if power < 0 {
+        if y < 0 {
             invert = !invert;
         }
 
         let mut result = SCALE;
 
-        //This uses an optimization for small powers (less than 0x100000), where it computes the power through bit manipulation and loop unrolling.
         if abs_y < 0x100000 {
-            let mut squared = base;
-            //Before entering the loop, the function checks if the base is greater than 2^128 and adjusts it if so. Flipping the invert flag again if needed.
-            if base > U256::from(0xffffffffffffffffffffffffffffffffu128) {
+            let mut squared = x;
+            if x > U256::from(0xffffffffffffffffffffffffffffffffu128) {
                 squared = U256::MAX / squared;
                 invert = !invert;
             }
@@ -152,7 +152,7 @@ impl U128x128Math {
 
         // revert if y is too big or if x^y underflowed
         if result == 0 {
-            return Err(U128x128MathError::PowUnderflow(base, power));
+            return Err(U128x128MathError::PowUnderflow(x, y));
         }
 
         if invert {
@@ -162,6 +162,7 @@ impl U128x128Math {
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -171,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_pow() {
-        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION;
         let y = 100_000;
         let res = U128x128Math::pow(x, y.into()).unwrap();
         // let expected = U256::from(7491471493045233295460405875225305845649644);
@@ -187,7 +188,9 @@ mod tests {
 
     #[test]
     fn test_pow_and_log() {
-        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION as u128;
+        println!("{}", LOG_SCALE);
+        println!("{}", LOG_SCALE_SQUARED);
+        let x = (U256::from((1.0001 * PRECISION as f64) as u128) << 128) / PRECISION;
         let y = 100_000;
         let res = U128x128Math::pow(x, y.into()).unwrap();
         // let expected = U256::from(7491471493045233295460405875225305845649644);

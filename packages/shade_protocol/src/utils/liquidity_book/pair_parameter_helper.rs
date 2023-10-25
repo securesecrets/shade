@@ -44,12 +44,10 @@ const MASK_STATIC_PARAMETER: u128 = 0xffffffffffffffffffffffffffffu128;
 pub enum PairParametersError {
     #[error("Pair Parameters Error: Invalid Parameter")]
     InvalidParameter,
-    #[error("Max total fee exceeded!")]
-    MaxTotalFeeExceeded,
 }
 
 #[cw_serde]
-#[derive(Copy)]
+#[derive(Copy, Default)]
 pub struct PairParameters(pub EncodedSample);
 
 impl PairParameters {
@@ -231,13 +229,8 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `bin_step` - The bin step (in basis points)
     pub fn get_base_fee(&self, bin_step: u16) -> u128 {
-        let base_factor = Self::get_base_factor(&self) as u128;
+        let base_factor = Self::get_base_factor(self) as u128;
         base_factor * (bin_step as u128) * 10_000_000_000
-    }
-
-    pub fn get_base_fee_u64(&self, bin_step: u16) -> u64 {
-        let base_factor = Self::get_base_factor(&self) as u64;
-        base_factor * (bin_step as u64) * 10_000_000_000
     }
 
     /// Calculates the variable fee.
@@ -247,10 +240,10 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `bin_step` - The bin step (in basis points)
     pub fn get_variable_fee(&self, bin_step: u16) -> u128 {
-        let variable_fee_control = Self::get_variable_fee_control(&self) as u128;
+        let variable_fee_control = Self::get_variable_fee_control(self) as u128;
 
         if variable_fee_control != 0 {
-            let vol_accumulator = Self::get_volatility_accumulator(&self) as u128;
+            let vol_accumulator = Self::get_volatility_accumulator(self) as u128;
             let prod = vol_accumulator * (bin_step as u128);
             (prod * prod * variable_fee_control + 99) / 100
         } else {
@@ -265,9 +258,8 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `bin_step` - The bin step (in basis points)
     pub fn get_total_fee(&self, bin_step: u16) -> u128 {
-        let base_fee = Self::get_base_fee(&self, bin_step);
-        let variable_fee = Self::get_variable_fee(&self, bin_step);
-
+        let base_fee = Self::get_base_fee(self, bin_step);
+        let variable_fee = Self::get_variable_fee(self, bin_step);
         base_fee + variable_fee
     }
 
@@ -277,9 +269,9 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `oracle_id` - The oracle id
-    pub fn set_oracle_id(self, oracle_id: u16) -> PairParameters {
-        //No need to add a check oracle_id == u16
-        PairParameters(self.0.set(oracle_id.into(), MASK_UINT16, OFFSET_ORACLE_ID))
+    pub fn set_oracle_id(&mut self, oracle_id: u16) -> &mut Self {
+        self.0.set(oracle_id.into(), MASK_UINT16, OFFSET_ORACLE_ID);
+        self
     }
 
     /// Set the volatility reference in the encoded pair parameters.
@@ -289,17 +281,14 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `vol_ref` - The volatility reference
     pub fn set_volatility_reference(
-        self,
+        &mut self,
         vol_ref: u32,
-    ) -> Result<PairParameters, PairParametersError> {
+    ) -> Result<&mut Self, PairParametersError> {
         if vol_ref > MASK_UINT20.as_u32() {
             Err(PairParametersError::InvalidParameter)
         } else {
-            Ok(PairParameters(self.0.set(
-                vol_ref.into(),
-                MASK_UINT20,
-                OFFSET_VOL_REF,
-            )))
+            self.0.set(vol_ref.into(), MASK_UINT20, OFFSET_VOL_REF);
+            Ok(self)
         }
     }
 
@@ -310,17 +299,14 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `vol_acc` - The volatility accumulator
     pub fn set_volatility_accumulator(
-        self,
+        &mut self,
         vol_acc: u32,
-    ) -> Result<PairParameters, PairParametersError> {
+    ) -> Result<&mut Self, PairParametersError> {
         if vol_acc > MASK_UINT20.as_u32() {
             Err(PairParametersError::InvalidParameter)
         } else {
-            Ok(PairParameters(self.0.set(
-                vol_acc.into(),
-                MASK_UINT20,
-                OFFSET_VOL_ACC,
-            )))
+            self.0.set(vol_acc.into(), MASK_UINT20, OFFSET_VOL_ACC);
+            Ok(self)
         }
     }
 
@@ -330,16 +316,12 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `active_id` - The active id
-    pub fn set_active_id(self, active_id: u32) -> Result<PairParameters, PairParametersError> {
+    pub fn set_active_id(&mut self, active_id: u32) -> Result<&mut Self, PairParametersError> {
         if active_id > MASK_UINT24.as_u32() {
-            Err(PairParametersError::InvalidParameter)
-        } else {
-            Ok(PairParameters(self.0.set(
-                active_id.into(),
-                MASK_UINT24,
-                OFFSET_ACTIVE_ID,
-            )))
+            return Err(PairParametersError::InvalidParameter);
         }
+        self.0.set(active_id.into(), MASK_UINT24, OFFSET_ACTIVE_ID);
+        Ok(self)
     }
 
     /// Sets the static fee parameters in the encoded pair parameters.
@@ -353,54 +335,54 @@ impl PairParameters {
     /// * `variable_fee_control` - The variable fee control
     /// * `protocol_share` - The protocol share
     /// * `max_volatility_accumulator` - The max volatility accumulator
+    #[allow(clippy::too_many_arguments)]
     pub fn set_static_fee_parameters(
-        self,
-        base_factor: u16,                //u16
-        filter_period: u16,              //u12
-        decay_period: u16,               //u12
-        reduction_factor: u16,           //u14
-        variable_fee_control: u32,       //u24
-        protocol_share: u16,             //u14
-        max_volatility_accumulator: u32, //u20
-    ) -> Result<PairParameters, PairParametersError> {
+        &mut self,
+        base_factor: u16,
+        filter_period: u16,
+        decay_period: u16,
+        reduction_factor: u16,
+        variable_fee_control: u32,
+        protocol_share: u16,
+        max_volatility_accumulator: u32,
+    ) -> Result<&mut Self, PairParametersError> {
         if (filter_period > decay_period) | (decay_period > MASK_UINT12.as_u16())
-            || reduction_factor > BASIS_POINT_MAX as u16
-            || protocol_share > MAX_PROTOCOL_SHARE as u16
-            || variable_fee_control > MASK_UINT24.as_u32()
+            || reduction_factor > BASIS_POINT_MAX
+            || protocol_share > MAX_PROTOCOL_SHARE
             || max_volatility_accumulator > MASK_UINT20.as_u32()
         {
             return Err(PairParametersError::InvalidParameter);
         }
 
         let mut new_parameters = EncodedSample([0u8; 32]);
+
         // TODO: all of these needing to be turned into U256 seems like a waste
-        new_parameters = new_parameters.set(base_factor.into(), MASK_UINT16, OFFSET_BASE_FACTOR);
-        new_parameters =
-            new_parameters.set(filter_period.into(), MASK_UINT12, OFFSET_FILTER_PERIOD);
-        new_parameters = new_parameters.set(decay_period.into(), MASK_UINT12, OFFSET_DECAY_PERIOD);
-        new_parameters = new_parameters.set(
+        new_parameters.set(base_factor.into(), MASK_UINT16, OFFSET_BASE_FACTOR);
+        new_parameters.set(filter_period.into(), MASK_UINT12, OFFSET_FILTER_PERIOD);
+        new_parameters.set(decay_period.into(), MASK_UINT12, OFFSET_DECAY_PERIOD);
+        new_parameters.set(
             reduction_factor.into(),
             MASK_UINT14,
             OFFSET_REDUCTION_FACTOR,
         );
-        new_parameters = new_parameters.set(
+        new_parameters.set(
             variable_fee_control.into(),
             MASK_UINT24,
             OFFSET_VAR_FEE_CONTROL,
         );
-        new_parameters =
-            new_parameters.set(protocol_share.into(), MASK_UINT14, OFFSET_PROTOCOL_SHARE);
-        new_parameters = new_parameters.set(
+        new_parameters.set(protocol_share.into(), MASK_UINT14, OFFSET_PROTOCOL_SHARE);
+        new_parameters.set(
             max_volatility_accumulator.into(),
             MASK_UINT20,
             OFFSET_MAX_VOL_ACC,
         );
 
-        Ok(PairParameters(self.0.set(
+        self.0.set(
             U256::from_le_bytes(new_parameters.0),
             MASK_STATIC_PARAMETER.into(),
             0,
-        )))
+        );
+        Ok(self)
     }
 
     /// Updates the index reference in the encoded pair parameters.
@@ -408,10 +390,10 @@ impl PairParameters {
     /// # Arguments
     ///
     /// * `parameters` - The encoded pair parameters
-    pub fn update_id_reference(self) -> PairParameters {
-        //No need to add check because we already have a check on setting active id
-        let active_id = Self::get_active_id(&self);
-        PairParameters(self.0.set(active_id.into(), MASK_UINT24, OFFSET_ID_REF))
+    pub fn update_id_reference(&mut self) -> &mut Self {
+        let active_id = self.get_active_id();
+        self.0.set(active_id.into(), MASK_UINT24, OFFSET_ID_REF);
+        self
     }
 
     /// Updates the time of last update in the encoded pair parameters.
@@ -421,19 +403,17 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `current_time` - The current timestamp
     pub fn update_time_of_last_update(
-        self,
+        &mut self,
         time: &Timestamp,
-    ) -> Result<PairParameters, PairParametersError> {
+    ) -> Result<&mut Self, PairParametersError> {
         let current_time = time.seconds();
+
         if current_time > MASK_UINT40.as_u64() {
-            // If not, return an error (you can define a custom error type for this)
-            return Err(PairParametersError::InvalidParameter);
+            Err(PairParametersError::InvalidParameter)
         } else {
-            Ok(PairParameters(self.0.set(
-                current_time.into(),
-                MASK_UINT40,
-                OFFSET_TIME_LAST_UPDATE,
-            )))
+            self.0
+                .set(current_time.into(), MASK_UINT40, OFFSET_TIME_LAST_UPDATE);
+            Ok(self)
         }
     }
 
@@ -442,17 +422,13 @@ impl PairParameters {
     /// # Arguments
     ///
     /// * `parameters` - The encoded pair parameters
-    pub fn update_volatility_reference(self) -> Result<PairParameters, PairParametersError> {
+    pub fn update_volatility_reference(&mut self) -> Result<&mut Self, PairParametersError> {
         let vol_acc = self.get_volatility_accumulator();
         let reduction_factor = self.get_reduction_factor();
+        let vol_ref = vol_acc * reduction_factor as u32 / BASIS_POINT_MAX as u32;
 
-        let vol_ref = vol_acc * reduction_factor as u32 / BASIS_POINT_MAX;
-
-        if vol_ref > U24::MAX {
-            panic!("Volatility reference greater than U24: {}", vol_ref);
-        }
-
-        self.set_volatility_reference(vol_ref)
+        self.set_volatility_reference(vol_ref)?;
+        Ok(self)
     }
 
     /// Updates the volatility accumulator in the encoded pair parameters.
@@ -462,27 +438,20 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `active_id` - The active id
     pub fn update_volatility_accumulator(
-        self,
+        &mut self,
         active_id: u32,
-    ) -> Result<PairParameters, PairParametersError> {
+    ) -> Result<&mut Self, PairParametersError> {
         let id_reference = self.get_id_reference();
-
-        let delta_id = if active_id > id_reference {
-            active_id - id_reference
-        } else {
-            id_reference - active_id
+        let delta_id = match active_id > id_reference {
+            true => active_id - id_reference,
+            false => id_reference - active_id,
         };
-        let vol_acc = self.get_volatility_reference() + delta_id * BASIS_POINT_MAX;
-
+        let vol_acc = self.get_volatility_reference() + delta_id * BASIS_POINT_MAX as u32;
         let max_vol_acc = self.get_max_volatility_accumulator();
+        let vol_acc = std::cmp::min(vol_acc, max_vol_acc);
 
-        let vol_acc = if vol_acc > max_vol_acc {
-            max_vol_acc
-        } else {
-            vol_acc
-        };
-        //Check done in volatility accumulator
-        self.set_volatility_accumulator(vol_acc)
+        self.set_volatility_accumulator(vol_acc)?;
+        Ok(self)
     }
 
     /// Updates the volatility reference and the volatility accumulator in the encoded pair parameters.
@@ -491,25 +460,22 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     pub fn update_references(
-        mut self,
+        &mut self,
         time: &Timestamp,
-    ) -> Result<PairParameters, PairParametersError> {
-        let delta_time = time.seconds() - self.get_time_of_last_update();
+    ) -> Result<&mut Self, PairParametersError> {
+        let dt = time.seconds() - self.get_time_of_last_update();
 
-        if delta_time > MASK_UINT40.as_u64() {
-            // If not, return an error (you can define a custom error type for this)
-            return Err(PairParametersError::InvalidParameter);
-        } else {
-            if delta_time >= self.get_filter_period().into() {
-                self = self.update_id_reference();
-                self = if delta_time < self.get_decay_period().into() {
-                    self.update_volatility_reference()?
-                } else {
-                    self.set_volatility_reference(0)?
-                };
-            }
-            self.update_time_of_last_update(time)
+        if dt >= self.get_filter_period().into() {
+            self.update_id_reference();
+            if dt < self.get_decay_period().into() {
+                self.update_volatility_reference()?
+            } else {
+                self.set_volatility_reference(0)?
+            };
         }
+
+        self.update_time_of_last_update(time)?;
+        Ok(self)
     }
 
     /// Updates the volatility reference and the volatility accumulator in the encoded pair parameters.
@@ -519,10 +485,10 @@ impl PairParameters {
     /// * `parameters` - The encoded pair parameters
     /// * `active_id` - The active id
     pub fn update_volatility_parameters(
-        self,
+        &mut self,
         active_id: u32,
         time: &Timestamp,
-    ) -> Result<PairParameters, PairParametersError> {
+    ) -> Result<&mut Self, PairParametersError> {
         self.update_references(time)?
             .update_volatility_accumulator(active_id)
     }
@@ -530,24 +496,23 @@ impl PairParameters {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-    use crate::utils::liquidity_book::types::{Bytes32, StaticFeeParameters};
+    use crate::lb_libraries::types::StaticFeeParameters;
     use cosmwasm_std::testing::mock_env;
 
     static MAX_STATIC_FEE_PARAMETER: StaticFeeParameters = StaticFeeParameters {
         base_factor: MASK_UINT16.as_u16(),
         filter_period: MASK_UINT12.as_u16(),
         decay_period: MASK_UINT12.as_u16(),
-        reduction_factor: (BASIS_POINT_MAX as u16),
+        reduction_factor: BASIS_POINT_MAX,
         variable_fee_control: MASK_UINT24.as_u32(),
-        protocol_share: MAX_PROTOCOL_SHARE as u16,
+        protocol_share: MAX_PROTOCOL_SHARE,
         max_volatility_accumulator: MASK_UINT20.as_u32(),
     };
 
     #[test]
     fn test_static_fee_parameters() {
-        let params = PairParameters(EncodedSample(Bytes32::from([0x00; 32])));
+        let mut params = PairParameters::default();
 
         //Error because values over the limit are used.
         let raw_new_param = params.set_static_fee_parameters(
@@ -618,37 +583,30 @@ mod tests {
     #[test]
     fn test_set_oracle_id() {
         // Initialize the PairParameters object with some encoded sample.
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         // Set the Oracle ID
         let oracle_id: u16 = 42;
-        let new_params = pair_params.set_oracle_id(oracle_id);
+        pair_params.set_oracle_id(oracle_id);
 
         // Test the Oracle ID to make sure it was set correctly
-        match new_params {
-            updated_params => {
-                pair_params = updated_params;
-                assert_eq!(pair_params.get_oracle_id(), oracle_id);
+        assert_eq!(pair_params.get_oracle_id(), oracle_id);
 
-                // For the second assertion, we'll mimic the bitwise operations
-                // You'd replace `MASK_UINT16` and `OFFSET_ORACLE_ID` with your actual values.
-                let mask_not_uint16 = !MASK_UINT16;
-                let shifted_mask = mask_not_uint16 << OFFSET_ORACLE_ID;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
-                let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
+        // For the second assertion, we'll mimic the bitwise operations
+        let shifted_mask = MASK_UINT16 << OFFSET_ORACLE_ID;
+        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
+        let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
-                assert_eq!(
-                    new_params_bits & shifted_mask,
-                    original_params_bits & shifted_mask
-                );
-            }
-        }
+        assert_eq!(
+            new_params_bits & !shifted_mask,
+            original_params_bits & !shifted_mask
+        );
     }
 
     #[test]
     fn test_set_volatility_reference() {
         // Initialize the PairParameters object with some encoded sample.
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let mut volatility_reference: u32 = MASK_UINT20.as_u32() + 1;
         let err_result = pair_params.set_volatility_reference(volatility_reference);
@@ -661,20 +619,17 @@ mod tests {
             let result = pair_params.set_volatility_reference(volatility_reference);
 
             match result {
-                Ok(new_params) => {
-                    pair_params = new_params;
-
+                Ok(pair_params) => {
                     // Test the Volatility Reference to make sure it was set correctly
                     assert_eq!(pair_params.get_volatility_reference(), volatility_reference);
 
-                    let mask_not_uint20 = !MASK_UINT20;
-                    let shifted_mask = mask_not_uint20 << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let shifted_mask = MASK_UINT20 << OFFSET_VOL_REF;
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
-                        new_params_bits & shifted_mask,
-                        original_params_bits & shifted_mask
+                        new_params_bits & !shifted_mask,
+                        original_params_bits & !shifted_mask
                     );
                 }
                 Err(_) => panic!("Setting Volatility Reference failed"),
@@ -687,7 +642,7 @@ mod tests {
     #[test]
     fn test_set_volatility_accumulator() {
         // Initialize the PairParameters object with some encoded sample.
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let mut volatility_accumulator: u32 = MASK_UINT20.as_u32() + 1;
         let err_result = pair_params.set_volatility_accumulator(volatility_accumulator);
@@ -700,9 +655,7 @@ mod tests {
             let result = pair_params.set_volatility_accumulator(volatility_accumulator);
 
             match result {
-                Ok(new_params) => {
-                    pair_params = new_params;
-
+                Ok(pair_params) => {
                     assert_eq!(
                         pair_params.get_volatility_accumulator(),
                         volatility_accumulator
@@ -710,7 +663,7 @@ mod tests {
 
                     let mask_not_uint20 = !mask_uint20;
                     let shifted_mask = mask_not_uint20 << OFFSET_VOL_ACC;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -728,7 +681,7 @@ mod tests {
     #[test]
     fn test_set_active_id() {
         // Initialize the PairParameters object with some encoded sample.
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         // Test the max limit
         let mut active_id: u32 = MASK_UINT24.as_u32() + 1;
@@ -750,9 +703,7 @@ mod tests {
         let result = pair_params.set_active_id(active_id);
 
         match result {
-            Ok(new_params) => {
-                pair_params = new_params;
-
+            Ok(pair_params) => {
                 assert_eq!(pair_params.get_active_id(), active_id);
                 assert_eq!(pair_params.get_delta_id(active_id), 0);
                 assert_eq!(pair_params.get_delta_id(previous_active_id), delta_id);
@@ -760,7 +711,7 @@ mod tests {
                 // For the final assertion, we'll mimic the bitwise operations
                 let mask_not_uint24 = !MASK_UINT24;
                 let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -774,8 +725,8 @@ mod tests {
 
     #[test]
     fn test_get_base_and_variable_fees() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
-        pair_params = pair_params
+        let mut pair_params = PairParameters::default();
+        pair_params
             .set_static_fee_parameters(
                 MAX_STATIC_FEE_PARAMETER.base_factor,
                 MAX_STATIC_FEE_PARAMETER.filter_period,
@@ -812,47 +763,38 @@ mod tests {
 
     #[test]
     fn test_update_id_reference() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
-        pair_params = pair_params.set_active_id(1024).unwrap();
+        pair_params.set_active_id(1024).unwrap();
 
         let active_id: u32 = pair_params.get_active_id();
 
-        let result = pair_params.update_id_reference();
+        pair_params.update_id_reference();
 
-        match result {
-            new_params => {
-                pair_params = new_params;
+        assert_eq!(pair_params.get_id_reference(), active_id);
 
-                assert_eq!(pair_params.get_id_reference(), active_id);
+        let mask_not_uint24 = !MASK_UINT24;
+        let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
 
-                let mask_not_uint24 = !MASK_UINT24;
-                let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
+        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
+        let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
-                let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
-
-                assert_eq!(
-                    new_params_bits & shifted_mask,
-                    original_params_bits & shifted_mask
-                );
-            }
-        }
+        assert_eq!(
+            new_params_bits & shifted_mask,
+            original_params_bits & shifted_mask
+        );
     }
 
     #[test]
     fn test_update_time_of_last_update() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
         let env = mock_env();
 
         let current_timestamp = env.block.time;
         let result = pair_params.update_time_of_last_update(&current_timestamp);
 
         match result {
-            Ok(new_params) => {
-                pair_params = new_params;
-
-                // Assuming you've got a way to get the current block timestamp
+            Ok(pair_params) => {
                 assert_eq!(
                     pair_params.get_time_of_last_update(),
                     current_timestamp.seconds()
@@ -860,7 +802,7 @@ mod tests {
 
                 let mask_not_uint40 = !MASK_UINT40;
                 let shifted_mask = mask_not_uint40 << OFFSET_TIME_LAST_UPDATE;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -874,11 +816,12 @@ mod tests {
 
     #[test]
     fn test_update_volatility_reference() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let vol_accumulator = pair_params.get_volatility_accumulator();
         let reduction_factor = pair_params.get_reduction_factor();
-        let new_vol_accumulator = (vol_accumulator * reduction_factor as u32) / BASIS_POINT_MAX;
+        let new_vol_accumulator =
+            (vol_accumulator * reduction_factor as u32) / BASIS_POINT_MAX as u32;
 
         if new_vol_accumulator > MASK_UINT20.as_u32() {
             let result = pair_params.update_volatility_reference();
@@ -889,13 +832,12 @@ mod tests {
         } else {
             let result = pair_params.update_volatility_reference();
             match result {
-                Ok(new_params) => {
-                    pair_params = new_params;
+                Ok(pair_params) => {
                     assert_eq!(pair_params.get_volatility_reference(), new_vol_accumulator);
 
                     let mask_not_uint20 = !MASK_UINT20;
                     let shifted_mask = mask_not_uint20 << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -909,7 +851,7 @@ mod tests {
     }
     #[test]
     fn test_update_volatility_accumulator() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let active_id: u32 = 1500; // Replace this with your own value
         let id_reference = pair_params.get_id_reference();
@@ -920,7 +862,7 @@ mod tests {
         };
 
         let mut vol_accumulator =
-            pair_params.get_volatility_reference() + delta_id * BASIS_POINT_MAX;
+            pair_params.get_volatility_reference() + delta_id * BASIS_POINT_MAX as u32;
         let max_vol_accumulator = pair_params.get_max_volatility_accumulator();
         vol_accumulator = if vol_accumulator > max_vol_accumulator {
             max_vol_accumulator
@@ -930,14 +872,12 @@ mod tests {
 
         let result = pair_params.update_volatility_accumulator(active_id);
         match result {
-            Ok(new_params) => {
-                pair_params = new_params;
-
+            Ok(pair_params) => {
                 assert_eq!(pair_params.get_volatility_accumulator(), vol_accumulator);
 
                 let mask_not_uint20 = !MASK_UINT20;
                 let shifted_mask = mask_not_uint20 << OFFSET_VOL_ACC;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -951,7 +891,7 @@ mod tests {
 
     #[test]
     fn test_update_references() {
-        let mut pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let previous_time: u64 = 1000; // Replace with your value
         let time: u64 = 2000; // Replace with your value
@@ -998,9 +938,7 @@ mod tests {
 
             let result = pair_params.update_references(&current_timestamp);
             match result {
-                Ok(new_params) => {
-                    pair_params = new_params;
-
+                Ok(pair_params) => {
                     assert_eq!(pair_params.get_id_reference(), id_reference);
                     assert_eq!(pair_params.get_volatility_reference(), vol_reference);
                     assert_eq!(
@@ -1009,7 +947,7 @@ mod tests {
                     );
 
                     let mask = !(U256::from(1u128 << 84u128) - 1u128) << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(new_params_bits & mask, original_params_bits & mask);
@@ -1023,7 +961,7 @@ mod tests {
 
     #[test]
     fn test_update_volatility_parameters() {
-        let pair_params = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_params = PairParameters::default();
 
         let previous_time: u64 = 1000;
         let time: u64 = 2000;
@@ -1048,13 +986,13 @@ mod tests {
                 .update_time_of_last_update(&current_timestamp)
                 .unwrap();
 
-            let trusted_params = pair_params
+            let trusted_params = *pair_params
                 .update_references(&current_timestamp)
                 .unwrap()
                 .update_volatility_accumulator(active_id)
                 .unwrap();
 
-            let new_params = pair_params
+            let new_params = *pair_params
                 .update_volatility_parameters(active_id, &current_timestamp)
                 .unwrap();
 
@@ -1076,8 +1014,8 @@ mod tests {
             );
 
             let mask = !(U256::from(1u128 << 104u128) - 1u128) << OFFSET_VOL_ACC;
-            let new_params_bits = U256::from_le_bytes(new_params.0.0);
-            let original_params_bits = U256::from_le_bytes(pair_params.0.0);
+            let new_params_bits = U256::from_le_bytes(new_params.0 .0);
+            let original_params_bits = U256::from_le_bytes(pair_params.0 .0);
 
             assert_eq!(new_params_bits & mask, original_params_bits & mask);
         } else {

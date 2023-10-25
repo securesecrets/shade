@@ -118,6 +118,7 @@ cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "=1.1.11", f
 cosmwasm-schema = "1.1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
 ethnum = { version = "1" }
+primitive-types = { version = "0.12", default-features = false }
 secret-toolkit = { version = "0.10.0", default-features = false, features = [
   "storage", "viewing-key", "permit", "serialization", 
   #"crypto", "utils", 

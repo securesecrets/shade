@@ -19,27 +19,26 @@ pub const MASK_UINT64: U256 = U256::new(0xffffffffffffffffu128);
 pub const MASK_UINT128: U256 = U256::new(0xffffffffffffffffffffffffffffffffu128);
 
 #[cw_serde]
-#[derive(Copy)]
+#[derive(Copy, Default)]
 pub struct EncodedSample(pub Bytes32);
 
 impl EncodedSample {
     /// Internal function to set a value in an encoded bytes32 using a mask and offset
-    pub fn set(self, value: U256, mask: U256, offset: u8) -> Self {
+    pub fn set(&mut self, value: U256, mask: U256, offset: u8) -> &mut Self {
         let mask_shifted = mask << offset;
         let value_shifted = (value & mask) << offset;
-        let new_encoded = (U256::from_le_bytes(self.0) & !mask_shifted) | value_shifted;
-        Self(new_encoded.to_le_bytes())
+        self.0 = ((U256::from_le_bytes(self.0) & !mask_shifted) | value_shifted).to_le_bytes();
+        self
     }
 
     /// Internal function to set a bool in an encoded bytes32 using an offset
-    pub fn set_bool(self, boolean: bool, offset: u8) -> Self {
+    pub fn set_bool(&mut self, boolean: bool, offset: u8) -> &mut Self {
         Self::set(self, U256::from(boolean as u8), MASK_UINT1, offset)
     }
 
     /// Internal function to decode a bytes32 sample using a mask and offset
     pub fn decode(&self, mask: U256, offset: u8) -> U256 {
-        let value = (U256::from_le_bytes(self.0) >> offset) & mask;
-        value
+        (U256::from_le_bytes(self.0) >> offset) & mask
     }
 
     /// Internal function to decode a bytes32 sample into a bool using an offset
@@ -53,7 +52,7 @@ impl EncodedSample {
     }
 
     /// Internal function to decode a bytes32 sample into a uint12 using an offset
-    /// The decoded value as a uint16, since uint12 is not supported    
+    /// The decoded value as a uint16, since uint12 is not supported
     pub fn decode_uint12(&self, offset: u8) -> u16 {
         Self::decode(self, MASK_UINT12, offset).as_u16()
     }
@@ -64,25 +63,25 @@ impl EncodedSample {
         Self::decode(self, MASK_UINT14, offset).as_u16()
     }
 
-    /// Internal function to decode a bytes32 sample into a uint16 using an offset     
+    /// Internal function to decode a bytes32 sample into a uint16 using an offset
     pub fn decode_uint16(&self, offset: u8) -> u16 {
         Self::decode(self, MASK_UINT16, offset).as_u16()
     }
 
-    /// Internal function to decode a bytes32 sample into a uint20 using an offset  
-    /// The decoded value as a uint32, since uint20 is not supported    
+    /// Internal function to decode a bytes32 sample into a uint20 using an offset
+    /// The decoded value as a uint32, since uint20 is not supported
     pub fn decode_uint20(&self, offset: u8) -> u32 {
         Self::decode(self, MASK_UINT20, offset).as_u32()
     }
 
     /// Internal function to decode a bytes32 sample into a uint24 using an offset
-    /// The decoded value as a uint32, since uint24 is not supported    
+    /// The decoded value as a uint32, since uint24 is not supported
     pub fn decode_uint24(&self, offset: u8) -> u32 {
         Self::decode(self, MASK_UINT24, offset).as_u32()
     }
 
     /// Internal function to decode a bytes32 sample into a uint40 using an offset
-    /// The decoded value as a uint64, since uint40 is not supported    
+    /// The decoded value as a uint64, since uint40 is not supported
     pub fn decode_uint40(&self, offset: u8) -> u64 {
         Self::decode(self, MASK_UINT40, offset).as_u64()
     }
@@ -123,7 +122,7 @@ mod tests {
             },
             // Maximum values
             TestCase {
-                original_value: Bytes32::from([0xff; 32]),
+                original_value: [0xff; 32],
                 value: U256::MAX,
                 mask: U256::MAX,
                 offset: 255,
@@ -131,12 +130,10 @@ mod tests {
             },
             // Custom test case
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
+                )
+                .to_le_bytes(),
                 value: 0x0Fu64.into(),
                 mask: 0xFFu64.into(),
                 offset: 8u8,
@@ -146,7 +143,7 @@ mod tests {
         ];
 
         for test_case in test_cases {
-            let encoded = EncodedSample(test_case.original_value).set(
+            let encoded = *EncodedSample(test_case.original_value).set(
                 test_case.value,
                 test_case.mask,
                 test_case.offset,
@@ -164,24 +161,23 @@ mod tests {
 
     #[test]
     fn test_set_bool() {
-        let original_value = Bytes32::from(
+        let original_value =
             U256::from(0x0000000000000000000000000000000000000000000000000000abcd12345678u64)
-                .to_le_bytes(),
-        );
+                .to_le_bytes();
 
-        let bytes_32 = EncodedSample(Bytes32::from(original_value));
+        let mut bytes_32 = EncodedSample(original_value);
         let boolean = false;
         let offset: u8 = 5;
 
         let result = bytes_32.set_bool(boolean, offset);
 
-        let expected_result = EncodedSample(Bytes32::from(
+        let expected_result = EncodedSample(
             U256::from(0x0000000000000000000000000000000000000000000000000000abcd12345658u64)
                 .to_le_bytes(),
-        ));
+        );
 
         assert_eq!(
-            result, expected_result,
+            *result, expected_result,
             "The result of set_bool did not match the expected value."
         );
     }
@@ -197,22 +193,18 @@ mod tests {
         let test_cases = vec![
             // Example test case
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000000000000020u64,
-                    )
-                    .to_le_bytes(),
-                ), // Example value with bit at offset 5 set to true
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000000000000020u64,
+                )
+                .to_le_bytes(), // Example value with bit at offset 5 set to true
                 offset: 8,
                 expected_value: false,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000000000000020u64,
-                    )
-                    .to_le_bytes(),
-                ), // Example value with bit at offset 5 set to true
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000000000000020u64,
+                )
+                .to_le_bytes(), // Example value with bit at offset 5 set to true
                 offset: 5,
                 expected_value: true,
             },
@@ -258,12 +250,10 @@ mod tests {
             },
             // Failing test case
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
+                )
+                .to_le_bytes(),
                 offset: 4,
                 expected_value: 103, // 67 -> 0110 0111 -> 103
             },
@@ -299,12 +289,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000000000000fffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000000000000fffu64,
+                )
+                .to_le_bytes(),
                 offset: 0,
                 expected_value: 0x0fff,
             },
@@ -333,12 +321,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000000000003fffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000000000003fffu64,
+                )
+                .to_le_bytes(),
 
                 offset: 0,
                 expected_value: 0x3fff,
@@ -376,12 +362,10 @@ mod tests {
             },
             // Custom test case
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000abcd12345678u64,
+                )
+                .to_le_bytes(),
                 offset: 4,
                 expected_value: 0x4567, // Decoded from the least significant 16 bits
             },
@@ -420,12 +404,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x00000000000000000000000000000000000000000000000000000000000fffffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x00000000000000000000000000000000000000000000000000000000000fffffu64,
+                )
+                .to_le_bytes(),
 
                 offset: 0,
                 expected_value: 0xfffff,
@@ -455,12 +437,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x0000000000000000000000000000000000000000000000000000000000ffffffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x0000000000000000000000000000000000000000000000000000000000ffffffu64,
+                )
+                .to_le_bytes(),
                 offset: 0,
                 expected_value: 0xffffff,
             },
@@ -489,12 +469,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x000000000000000000000000000000000000000000000000000000ffffffffffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x000000000000000000000000000000000000000000000000000000ffffffffffu64,
+                )
+                .to_le_bytes(),
                 offset: 0,
                 expected_value: 0xffffffffff,
             },
@@ -523,12 +501,10 @@ mod tests {
                 expected_value: 0,
             },
             TestCase {
-                original_value: Bytes32::from(
-                    U256::from(
-                        0x000000000000000000000000000000000000000000000000ffffffffffffffffu64,
-                    )
-                    .to_le_bytes(),
-                ),
+                original_value: U256::from(
+                    0x000000000000000000000000000000000000000000000000ffffffffffffffffu64,
+                )
+                .to_le_bytes(),
 
                 offset: 0,
                 expected_value: 0xffffffffffffffff,

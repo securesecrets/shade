@@ -1,5 +1,5 @@
 //! ### Liquidity Book Bin Helper Library
-//! Author: Kent
+//! Author: Kent and Haseeb
 //!
 //! This library contains functions to help interaction with bins.
 
@@ -8,23 +8,16 @@
 use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Uint128, WasmMsg};
 use ethnum::U256;
 
-use crate::utils::liquidity_book::{
-    math::{packed_u128_math::PackedMath, u128x128_math::U128x128MathError},
-    tokens::TokenType,
-    transfer::HandleMsg,
-};
-
-use super::{
-    constants::{SCALE, SCALE_OFFSET},
-    fee_helper::{FeeError, FeeHelper},
-    math::{
-        packed_u128_math::{Decode, Encode},
-        u256x256_math::{U256x256Math, U256x256MathError},
-    },
-    pair_parameter_helper::{PairParameters, PairParametersError},
-    price_helper::PriceHelper,
-    types::Bytes32,
-};
+use super::constants::{SCALE, SCALE_OFFSET};
+use super::fee_helper::{FeeError, FeeHelper};
+use super::math::packed_u128_math::PackedUint128Math;
+use super::math::u128x128_math::U128x128MathError;
+use super::math::u256x256_math::{U256x256Math, U256x256MathError};
+use super::pair_parameter_helper::{PairParameters, PairParametersError};
+use super::price_helper::PriceHelper;
+use super::tokens::TokenType;
+use super::transfer::HandleMsg;
+use super::types::Bytes32;
 
 // NOTE: not sure if it's worth having a unique type for this
 
@@ -72,7 +65,7 @@ impl BinHelper {
     ///
     /// # Returns
     ///
-    /// * `amounts_out` - The encoded amount of tokens that will be received
+    /// * `amounts_out` - The amounts of tokens that will be received
     pub fn get_amount_out_of_bin(
         bin_reserves: Bytes32,
         amount_to_burn: U256,
@@ -80,26 +73,19 @@ impl BinHelper {
     ) -> Result<(u128, u128), BinError> {
         let (bin_reserve_x, bin_reserve_y) = bin_reserves.decode();
 
-        let mut amount_x_out_from_bin = U256::ZERO;
-        let mut amount_y_out_from_bin = U256::ZERO;
+        let amount_x_out_from_bin = if bin_reserve_x > 0 {
+            U256x256Math::mul_div_round_down(amount_to_burn, bin_reserve_x.into(), total_supply)?
+                .min(U256::from(u128::MAX))
+        } else {
+            U256::ZERO
+        };
 
-        if bin_reserve_x > 0 {
-            amount_x_out_from_bin = U256x256Math::mul_div_round_down(
-                amount_to_burn,
-                bin_reserve_x.into(),
-                total_supply,
-            )?
-            .min(U256::from(u128::MAX));
-        }
-
-        if bin_reserve_y > 0 {
-            amount_y_out_from_bin = U256x256Math::mul_div_round_down(
-                amount_to_burn,
-                bin_reserve_y.into(),
-                total_supply,
-            )?
-            .min(U256::from(u128::MAX));
-        }
+        let amount_y_out_from_bin = if bin_reserve_y > 0 {
+            U256x256Math::mul_div_round_down(amount_to_burn, bin_reserve_y.into(), total_supply)?
+                .min(U256::from(u128::MAX))
+        } else {
+            U256::ZERO
+        };
 
         Ok((
             amount_x_out_from_bin.as_u128(),
@@ -187,7 +173,7 @@ impl BinHelper {
         let mut liquidity = U256::ZERO;
 
         if x > U256::ZERO {
-            liquidity = price.checked_mul(x).unwrap();
+            liquidity = price.wrapping_mul(x);
 
             if (liquidity / x != price) {
                 return Err(BinError::LiquidityOverflow);
@@ -196,7 +182,11 @@ impl BinHelper {
 
         if y > U256::ZERO {
             let shifted_y = y << SCALE_OFFSET;
-            liquidity = liquidity.checked_add(shifted_y).unwrap();
+            liquidity = liquidity.wrapping_add(shifted_y);
+
+            if (liquidity < y) {
+                return Err(BinError::LiquidityOverflow);
+            }
         }
 
         Ok(liquidity)
@@ -250,7 +240,7 @@ impl BinHelper {
 
         let (amount_x, amount_y) = amounts_in.decode();
 
-        let (bin_reserves_x, bin_reserves_y) = bin_reserves.decode();
+        // let (bin_reserves_x, bin_reserves_y) = bin_reserves.decode();
 
         let (received_amount_x, received_amount_y) = Self::get_amount_out_of_bin(
             bin_reserves.add(amounts_in),
@@ -292,9 +282,9 @@ impl BinHelper {
     /// * `is_x` - Whether the reserve to check is the X reserve (true) or the Y reserve (false)
     pub fn is_empty(bin_reserves: Bytes32, is_x: bool) -> bool {
         if is_x {
-            return bin_reserves.decode_x() == 0;
+            bin_reserves.decode_x() == 0
         } else {
-            return bin_reserves.decode_y() == 0;
+            bin_reserves.decode_y() == 1
         }
     }
 
@@ -330,24 +320,26 @@ impl BinHelper {
         let max_amount_in = if swap_for_y {
             U256x256Math::shift_div_round_up(U256::from(bin_reserve_out), SCALE_OFFSET, price)?
                 .min(U256::from(u128::MAX))
+                .as_u128()
         } else {
             U256x256Math::mul_shift_round_up(U256::from(bin_reserve_out), price, SCALE_OFFSET)?
                 .min(U256::from(u128::MAX))
+                .as_u128()
         };
 
         let total_fee = parameters.get_total_fee(bin_step);
-        let max_fee = FeeHelper::get_fee_amount(max_amount_in.as_u128(), total_fee)?;
+        let max_fee = FeeHelper::get_fee_amount(max_amount_in, total_fee)?;
 
         let max_amount_in = max_amount_in + max_fee;
 
         let mut amount_in128 = amounts_in_left.decode_alt(swap_for_y);
-
-        let mut feeu128;
+        let mut fee128;
         let mut amount_out128;
 
         if amount_in128 >= max_amount_in {
-            feeu128 = max_fee;
-            amount_in128 = max_amount_in.as_u128();
+            fee128 = max_fee;
+
+            amount_in128 = max_amount_in;
             amount_out128 = bin_reserve_out;
         } else {
             feeu128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
@@ -386,6 +378,10 @@ impl BinHelper {
         Ok((amounts_in_with_fees, amounts_out_of_bin, total_fees))
     }
 
+    // TODO - these next three functions are supposed to query the balance of the contract itself,
+    // then subtract the reserves from that balance to determine the exact amounts of tokens
+    // received
+
     /// Returns the encoded amounts that were transferred to the contract for both tokens.
     ///
     /// # Arguments
@@ -403,9 +399,7 @@ impl BinHelper {
         let balance_x = amount_received_x.u128();
         let balance_y = amount_received_y.u128();
 
-        let encoded_balances = Bytes32::encode(balance_x, balance_y);
-
-        encoded_balances
+        Bytes32::encode(balance_x, balance_y)
     }
 
     /// Returns the encoded amounts that were transferred to the contract, only for token X.
@@ -421,7 +415,7 @@ impl BinHelper {
     ///     * [0 - 128[: amount_x
     ///     * [128 - 256[: empty
     pub fn received_x(amount_received: Uint128) -> Bytes32 {
-        return Bytes32::encode_first((amount_received.u128()));
+        Bytes32::encode_first(amount_received.u128())
     }
 
     /// Returns the encoded amounts that were transferred to the contract, only for token Y.
@@ -437,7 +431,7 @@ impl BinHelper {
     ///     * [0 - 128[: empty
     ///     * [128 - 256[: amount_y
     pub fn received_y(amount_received: Uint128) -> Bytes32 {
-        return Bytes32::encode_second((amount_received.u128()));
+        Bytes32::encode_second(amount_received.u128())
     }
 
     /// Transfers the encoded amounts to the recipient for both tokens.
@@ -470,7 +464,7 @@ impl BinHelper {
             messages.push(msgs);
         }
 
-        if messages.len() > 0 {
+        if !messages.is_empty() {
             Some(messages)
         } else {
             None
@@ -510,17 +504,13 @@ impl BinHelper {
 
                 TokenType::NativeToken { denom } => Some(CosmosMsg::Bank(BankMsg::Send {
                     to_address: recipient.to_string(),
-                    amount: vec![Coin {
-                        denom: denom.clone(),
-                        amount,
-                    }],
+                    amount: vec![Coin { denom, amount }],
                 })),
             }
         } else {
             None
         }
     }
-
     /// Transfers the encoded amounts to the recipient, only for token Y.
     ///
     /// # Arguments
@@ -539,12 +529,10 @@ impl BinHelper {
                     contract_addr,
                     token_code_hash,
                 } => {
-                    let msg = HandleMsg::Send {
+                    let msg = HandleMsg::Transfer {
                         recipient: recipient.to_string(),
                         amount,
                         padding: None,
-                        msg: None,
-                        recipient_code_hash: None,
                         memo: None,
                     };
                     let cosmos_msg = msg
@@ -556,37 +544,29 @@ impl BinHelper {
 
                 TokenType::NativeToken { denom } => Some(CosmosMsg::Bank(BankMsg::Send {
                     to_address: recipient.to_string(),
-                    amount: vec![Coin {
-                        denom: denom.clone(),
-                        amount,
-                    }],
+                    amount: vec![Coin { denom, amount }],
                 })),
             }
         } else {
             None
         }
     }
+
+    // TODO - we're missing this function:
+    // function _balanceOf(IERC20 token) private view returns (uint128) {
+    //     return token.balanceOf(address(this)).safe128();
+    // }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{ops::Add, str::FromStr};
-
-    use crate::utils::liquidity_book::{
-        constants::*,
-        math::encoded_sample::EncodedSample,
-        pair_parameter_helper::PairParameters,
-        types::StaticFeeParameters,
-    };
+    use crate::utils::liquidity_book::math::encoded_sample::EncodedSample;
+    use crate::utils::liquidity_book::types::StaticFeeParameters;
     use cosmwasm_std::StdResult;
     use ethnum::U256;
+    use std::str::FromStr;
 
-    use crate::utils::liquidity_book::math::{
-        packed_u128_math::{Decode, Encode},
-        u256x256_math::U256x256Math,
-    };
-
-    use crate::utils::liquidity_book::bin_helper::{BinError, BinHelper};
+    use super::*;
 
     fn assert_approxeq_abs(a: U256, b: U256, max_diff: U256, msg: &str) {
         let diff = if a > b { a - b } else { b - a };
@@ -595,7 +575,7 @@ mod tests {
 
     #[test]
     fn test_get_amount_out_of_bin_zero_bin_reserves() -> StdResult<()> {
-        let bin_reserves = Encode::encode(0, 0);
+        let bin_reserves = Bytes32::encode(0, 0);
         let amount_to_burn = U256::from(1000u128);
         let total_supply = U256::from(10000u128);
 
@@ -611,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_get_amount_out_of_bin_zero_amount_to_burn() -> Result<(), BinError> {
-        let bin_reserves = Encode::encode(1000, 1000);
+        let bin_reserves = Bytes32::encode(1000, 1000);
         let amount_to_burn = U256::from(0u128);
         let total_supply = U256::from(10000u128);
 
@@ -627,8 +607,8 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_get_amount_out_of_bin_zero_total_supply() -> () {
-        let bin_reserves = Encode::encode(1000, 1000);
+    fn test_get_amount_out_of_bin_zero_total_supply() {
+        let bin_reserves = Bytes32::encode(1000, 1000);
         let amount_to_burn = U256::from(1000u128);
         let total_supply = U256::from(0u128);
 
@@ -637,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_get_amount_out_of_bin_amount_to_burn_gt_total_supply() -> Result<(), BinError> {
-        let bin_reserves = Encode::encode(1000, 1000);
+        let bin_reserves = Bytes32::encode(1000, 1000);
         let amount_to_burn = U256::from(20000u128); // Greater than total_supply
         let total_supply = U256::from(10000u128);
 
@@ -655,7 +635,7 @@ mod tests {
 
     #[test]
     fn test_get_amount_out_of_bin_max_u128_constraint() -> Result<(), BinError> {
-        let bin_reserves = Encode::encode(u128::MAX, u128::MAX);
+        let bin_reserves = Bytes32::encode(u128::MAX, u128::MAX);
         let amount_to_burn = U256::from(u128::MAX);
         let total_supply = U256::from(1u128); // To make sure the raw output is > u128::MAX
 
@@ -675,7 +655,7 @@ mod tests {
         let bin_reserves_x = 1000;
         let bin_reserves_y = 1000;
 
-        let bin_reserves = Encode::encode(bin_reserves_x, bin_reserves_y);
+        let bin_reserves = Bytes32::encode(bin_reserves_x, bin_reserves_y);
         let amount_to_burn = U256::from(1000u128);
         let total_supply = U256::from(10000u128);
 
@@ -710,17 +690,17 @@ mod tests {
     fn test_get_shares_and_effective_amounts_in() -> StdResult<()> {
         let mut total_supply = U256::from_str("0").unwrap();
         let max_u256 = U256::MAX;
-        let mut bin_reserves = Encode::encode(1000, 1000);
-        let amount_in = Encode::encode(1000, 1000);
+        let mut bin_reserves = Bytes32::encode(1000, 1000);
+        let amount_in = Bytes32::encode(1000, 1000);
         let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
         for i in 0..10 {
             // Assume conditions similar to the Solidity test
             if price > U256::MIN
                 && (bin_reserves == [0u8; 32]
-                    || (price <= max_u256 / 1000 && price * 1000 <= max_u256 - 1000 << 128))
+                    || (price <= max_u256 / 1000 && price * 1000 <= (max_u256 - 1000) << 128))
                 && (amount_in == [0u8; 32]
-                    || (price <= max_u256 / 1000 && price * 1000 <= max_u256 - 1000 << 128))
+                    || (price <= max_u256 / 1000 && price * 1000 <= (max_u256 - 1000) << 128))
             {
                 let user_liquidity = BinHelper::get_liquidity(amount_in, price).unwrap();
                 let bin_liquidity = BinHelper::get_liquidity(bin_reserves, price).unwrap();
@@ -736,7 +716,7 @@ mod tests {
                 total_supply += shares;
                 let (x, y) = effective_amounts_in.decode();
                 bin_reserves =
-                    Encode::encode(bin_reserves.decode_x() + x, bin_reserves.decode_y() + y);
+                    Bytes32::encode(bin_reserves.decode_x() + x, bin_reserves.decode_y() + y);
             }
         }
         assert_eq!(
@@ -763,20 +743,20 @@ mod tests {
 
         // Simulate exploiter front-running the transaction
         let mut total_supply = U256::from(1u128) << 128;
-        let mut bin_reserves = Encode::encode(amount_x1, amount_y1);
+        let mut bin_reserves = Bytes32::encode(amount_x1, amount_y1);
 
         // Get shares and effective amounts in
         let (shares, effective_amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
             bin_reserves,
-            Encode::encode(amount_x2, amount_y2),
+            Bytes32::encode(amount_x2, amount_y2),
             price,
             total_supply,
         )?;
 
         // Update bin reserves and total supply
-        bin_reserves = Encode::encode(
-            bin_reserves.decode_x().add(effective_amounts_in.decode_x()),
-            bin_reserves.decode_y().add(effective_amounts_in.decode_y()),
+        bin_reserves = Bytes32::encode(
+            bin_reserves.decode_x() + effective_amounts_in.decode_x(),
+            bin_reserves.decode_y() + effective_amounts_in.decode_y(),
         );
 
         total_supply += shares;
@@ -815,8 +795,8 @@ mod tests {
     #[test]
     fn test_zero_total_supply_and_zero_bin_liquidity() -> Result<(), BinError> {
         let total_supply = U256::ZERO;
-        let bin_reserves = Encode::encode(0, 0);
-        let amount_in = Encode::encode(1000, 1000);
+        let bin_reserves = Bytes32::encode(0, 0);
+        let amount_in = Bytes32::encode(1000, 1000);
         let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
         let (shares, effective_amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
@@ -838,8 +818,8 @@ mod tests {
     #[test]
     fn test_zero_amount_in() -> Result<(), BinError> {
         let total_supply = U256::from(10000u128);
-        let bin_reserves = Encode::encode(1000, 1000);
-        let amount_in = Encode::encode(0, 0);
+        let bin_reserves = Bytes32::encode(1000, 1000);
+        let amount_in = Bytes32::encode(0, 0);
         let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
         let (shares, effective_amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
@@ -858,8 +838,8 @@ mod tests {
     #[test]
     fn test_zero_price() -> Result<(), BinError> {
         let total_supply = U256::from(10000u128);
-        let bin_reserves = Encode::encode(1000, 1000);
-        let amount_in = Encode::encode(1000, 1000);
+        let bin_reserves = Bytes32::encode(1000, 1000);
+        let amount_in = Bytes32::encode(1000, 1000);
         let price = U256::ZERO;
 
         let (shares, effective_amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
@@ -879,7 +859,7 @@ mod tests {
     fn test_liquidity() -> StdResult<()> {
         let mut total_supply = U256::from_str("0").unwrap();
         let max_u256 = U256::MAX;
-        let amount_in = Encode::encode(1000, 1000);
+        let amount_in = Bytes32::encode(1000, 1000);
         let price = U256::from_str("42008768657166552252904831246223292524636112144").unwrap();
 
         let liquidity = BinHelper::get_liquidity(amount_in, price).unwrap();
@@ -906,8 +886,8 @@ mod tests {
         // Perform the same assumptions as in the Solidity test.
         // ... (omitted for brevity)
 
-        let bin_reserves = Encode::encode(reserve_x, reserve_y);
-        let amounts_in = Encode::encode(amount_x_in, amount_y_in);
+        let bin_reserves = Bytes32::encode(reserve_x, reserve_y);
+        let amounts_in = Bytes32::encode(amount_x_in, amount_y_in);
 
         let (shares, effective_amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
             bin_reserves,
@@ -927,8 +907,8 @@ mod tests {
         };
 
         // Set the parameters (assuming PairParameters and DEFAULT_* constants are defined)
-        let pair_parameters = PairParameters(EncodedSample([0u8; 32]));
-        let pair_parameters = pair_parameters
+        let mut pair_parameters = PairParameters(EncodedSample([0u8; 32]));
+        pair_parameters
             .set_static_fee_parameters(
                 msg.base_factor,
                 msg.filter_period,
@@ -955,13 +935,13 @@ mod tests {
         let bin_c = if reserve_x | reserve_y == 0 {
             U256::MIN
         } else {
-            U256::from(reserve_y) << 128 / (U256::from(reserve_x) + U256::from(reserve_y))
+            U256::from(reserve_y) << (128 / (U256::from(reserve_x) + U256::from(reserve_y)))
         };
 
         let user_c = if amount_x_in | amount_y_in == 0 {
             U256::MIN
         } else {
-            U256::from(amount_y_in) << 128 / (U256::from(amount_x_in) + U256::from(amount_y_in))
+            U256::from(amount_y_in) << (128 / (U256::from(amount_x_in) + U256::from(amount_y_in)))
         };
 
         // Perform assertions (assuming assert_ge is defined)

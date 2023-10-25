@@ -8,16 +8,13 @@ use ethnum::U256;
 
 use crate::utils::liquidity_book::types::Bytes32;
 
-use super::packed_u128_math::{Decode, Encode};
-use crate::utils::liquidity_book::constants::*;
+use super::packed_u128_math::PackedUint128Math;
 
-pub const OFFSET_ID: u8 = 0;
-pub const OFFSET_DISTRIBUTION_Y: u8 = 24;
-pub const OFFSET_DISTRIBUTION_X: u8 = 88;
+pub const PRECISION: u64 = 1_000_000_000_000_000_000; // 1e18
 
 #[derive(thiserror::Error, Debug)]
 pub enum LiquidityConfigurationsError {
-    #[error("Liquidity Configurations Error: Invalid Config")]
+    #[error("Liquidity Configurations Error: Distribution must be less than PRECISION")]
     InvalidConfig,
 }
 
@@ -29,10 +26,49 @@ pub struct LiquidityConfigurations {
 }
 
 impl LiquidityConfigurations {
-    /// Get the amounts and id from a config and amounts_in
+    pub fn new(
+        distribution_x: u64,
+        distribution_y: u64,
+        id: u32,
+    ) -> Result<Self, LiquidityConfigurationsError> {
+        if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
+            Err(LiquidityConfigurationsError::InvalidConfig)
+        } else {
+            Ok(LiquidityConfigurations {
+                distribution_x,
+                distribution_y,
+                id,
+            })
+        }
+    }
+
+    pub fn update_distribution(
+        &mut self,
+        distribution_x: u64,
+        distribution_y: u64,
+    ) -> Result<(), LiquidityConfigurationsError> {
+        if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
+            Err(LiquidityConfigurationsError::InvalidConfig)
+        } else {
+            self.distribution_x = distribution_x;
+            self.distribution_y = distribution_y;
+            Ok(())
+        }
+    }
+
+    /// Get the amounts and id from a config and amounts_in.
+    ///
+    /// # Arguments
+    ///
+    /// * `amounts_in` - The amounts to distribute as follows:
+    ///     * [0 - 128[: x1
+    ///     * [128 - 256[: x2
+    ///
     /// # Returns
     ///
     /// * `amounts` - The distributed amounts as follows:
+    ///     * [0 - 128[: x1
+    ///     * [128 - 256[: x2
     /// * `id` - The id of the bin to add the liquidity to
     /// * `LiquidityConfigurationsError` - An error type for invalid config
     pub fn get_amounts_and_id(
@@ -65,7 +101,7 @@ mod tests {
             id: 1,
         };
 
-        let amounts_in = Bytes32::encode(1000, 2000); // Assuming you have such a method
+        let amounts_in = Bytes32::encode(1000, 2000);
 
         let result = lc.get_amounts_and_id(amounts_in).unwrap();
 
@@ -89,7 +125,7 @@ mod tests {
             distribution_y: 0,
             id: 0,
         };
-        let amounts_in = Bytes32::encode(0, 0); // Assuming you have such a method
+        let amounts_in = Bytes32::encode(0, 0);
         let result = lc.get_amounts_and_id(amounts_in).unwrap();
 
         let expected_amounts = Bytes32::encode(0, 0);

@@ -12,7 +12,7 @@
 //! * 208 - 216: sample lifetime (8 bits)
 //! * 216 - 256: sample creation timestamp (40 bits)
 
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 
 use cosmwasm_std::Timestamp;
 use ethnum::U256;
@@ -20,8 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use super::pair_parameter_helper::PairParameters;
 use crate::utils::liquidity_book::math::{
-    encoded_sample::EncodedSample,
-    sample_math::OracleSample,
+    encoded_sample::EncodedSample, sample_math::OracleSample, u256x256_math::addmod,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -57,11 +56,11 @@ impl Oracle {
     pub fn get_sample(&self, oracle_id: u16) -> Result<OracleSample, OracleError> {
         Self::check_oracle_id(oracle_id)?;
 
-        if let Some(sample) = self.samples.get(&(oracle_id - 1)) {
-            return Ok(*sample);
-        } else {
-            return Ok(OracleSample(EncodedSample([0u8; 32])));
-        };
+        // TODO - Should this return a default sample if there is None? or an Error?
+        match self.samples.get(&(oracle_id - 1)) {
+            Some(sample) => Ok(*sample),
+            None => Ok(OracleSample::default()),
+        }
     }
 
     /// Returns the active sample (Bytes32) and the active size (u16) of the oracle.
@@ -159,29 +158,29 @@ impl Oracle {
         let mut oracle_id = oracle_id;
         let mut low = 0;
         let mut high = length - 1;
-        let mut sample = OracleSample(EncodedSample([0u8; 32]));
+
+        // TODO: not sure if it's ok to initialize these at 0
+        let mut sample = OracleSample::default();
         let mut sample_last_update = 0u64;
 
         let start_id = oracle_id; // oracleId is 1-based
+
         while low <= high {
             let mid = ((low as u32 + high as u32) >> 1) as u16;
 
-            println!("{:?}", mid);
-
             oracle_id = ((start_id as u32 + mid as u32) % (length as u32)) as u16;
 
-            if self.samples.contains_key(&oracle_id) {
-                sample = self.samples[&oracle_id];
-            }
+            sample = *self
+                .samples
+                .get(&oracle_id)
+                .unwrap_or(&OracleSample::default());
 
             sample_last_update = sample.get_sample_last_update();
 
-            if sample_last_update > look_up_timestamp {
-                high = mid - 1;
-            } else if sample_last_update < look_up_timestamp {
-                low = mid + 1;
-            } else {
-                return Ok((sample, sample));
+            match sample_last_update.cmp(&look_up_timestamp) {
+                Ordering::Greater => high = mid - 1,
+                Ordering::Less => low = mid + 1,
+                Ordering::Equal => return Ok((sample, sample)),
             }
         }
 
@@ -190,19 +189,21 @@ impl Oracle {
                 oracle_id = length;
             }
 
-            Ok((self.samples[&(oracle_id - 1)], sample))
-        } else {
-            oracle_id = (oracle_id as u32)
-                .wrapping_add(1)
-                .wrapping_rem(length as u32) as u16;
-            let sample_second;
-            if self.samples.contains_key(&oracle_id) {
-                sample_second = self.samples[&oracle_id];
-            } else {
-                sample_second = OracleSample(EncodedSample([0u8; 32]));
-            }
+            let prev_sample = *self
+                .samples
+                .get(&(oracle_id - 1))
+                .unwrap_or(&OracleSample::default());
 
-            Ok((sample, sample_second))
+            Ok((prev_sample, sample))
+        } else {
+            oracle_id = addmod(oracle_id.into(), U256::ONE, length.into()).as_u16();
+
+            let next_sample = *self
+                .samples
+                .get(&oracle_id)
+                .unwrap_or(&OracleSample::default());
+
+            Ok((sample, next_sample))
         }
     }
 
@@ -219,7 +220,7 @@ impl Oracle {
     pub fn update(
         &mut self,
         time: &Timestamp,
-        parameters: PairParameters,
+        mut parameters: PairParameters,
         active_id: u32,
     ) -> Result<PairParameters, OracleError> {
         let oracle_id = parameters.get_oracle_id();
@@ -268,16 +269,20 @@ impl Oracle {
 
             self.set_sample(oracle_id, new_sample)?;
 
-            let new_parameters = parameters.set_oracle_id(oracle_id);
+            parameters.set_oracle_id(oracle_id);
 
-            return Ok(new_parameters);
+            return Ok(parameters);
         }
 
         Ok(parameters)
     }
 
     /// Increases the oracle length.
-    pub fn increase_length(mut self, oracle_id: u16, new_length: u16) -> Result<Self, OracleError> {
+    pub fn increase_length(
+        &mut self,
+        oracle_id: u16,
+        new_length: u16,
+    ) -> Result<&mut Self, OracleError> {
         let sample = self.get_sample(oracle_id)?;
         let length = sample.get_oracle_length();
 
@@ -313,7 +318,7 @@ impl Oracle {
         // It's confusing looking because we don't have methods for pow or bitOR for bytes32,
         // so we have to convert to U256 and back.
         let new_sample =
-            (U256::from_le_bytes(sample.0.0) ^ U256::from(length)) | U256::from(new_length);
+            (U256::from_le_bytes(sample.0 .0) ^ U256::from(length)) | U256::from(new_length);
 
         self.set_sample(
             oracle_id,
@@ -327,8 +332,9 @@ impl Oracle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::liquidity_book::math::encoded_sample::MASK_UINT20;
+    use crate::lb_libraries::math::encoded_sample::MASK_UINT20;
     use std::collections::HashMap;
+
     // Helper function to bound a value within a range
     fn bound<T: Ord>(value: T, min: T, max: T) -> T {
         if value < min {
@@ -350,7 +356,7 @@ mod tests {
         let oracle_id: u16 = 1;
         let sample = OracleSample(EncodedSample([0u8; 32]));
 
-        oracle.set_sample(oracle_id, sample.clone()).unwrap();
+        oracle.set_sample(oracle_id, sample).unwrap();
 
         let retrieved_sample = oracle.get_sample(oracle_id).unwrap();
         assert_eq!(retrieved_sample, sample, "test_SetSample::1");
@@ -368,7 +374,7 @@ mod tests {
         let oracle_id: u16 = 0;
         let sample = OracleSample(EncodedSample([0u8; 32]));
 
-        match oracle.set_sample(oracle_id, sample.clone()) {
+        match oracle.set_sample(oracle_id, sample) {
             Err(OracleError::InvalidOracleId) => {} // Expected error
             _ => panic!("test_revert_SetSample failed"),
         }
@@ -390,7 +396,7 @@ mod tests {
         let sample = OracleSample(EncodedSample([1u8; 32]));
 
         // Set sample with maximum oracle_id
-        oracle.set_sample(max_oracle_id, sample.clone()).unwrap();
+        oracle.set_sample(max_oracle_id, sample).unwrap();
 
         // Retrieve and validate
         let retrieved_sample = oracle.get_sample(max_oracle_id).unwrap();
@@ -401,9 +407,7 @@ mod tests {
 
         // Test with minimum valid oracle_id (1, since 0 is considered invalid)
         let min_valid_oracle_id: u16 = 1;
-        oracle
-            .set_sample(min_valid_oracle_id, sample.clone())
-            .unwrap();
+        oracle.set_sample(min_valid_oracle_id, sample).unwrap();
 
         // Retrieve and validate
         let retrieved_sample = oracle.get_sample(min_valid_oracle_id).unwrap();
@@ -415,7 +419,7 @@ mod tests {
         // Test with an empty sample ([0u8; 32])
         let empty_sample = OracleSample(EncodedSample([0u8; 32]));
         oracle
-            .set_sample(min_valid_oracle_id, empty_sample.clone())
+            .set_sample(min_valid_oracle_id, empty_sample)
             .unwrap();
 
         // Retrieve and validate
@@ -436,9 +440,9 @@ mod tests {
         let sample2 = OracleSample::encode(3, 2, 3, 4, 0, 10);
         let sample3 = OracleSample::encode(3, 3, 4, 5, 0, 20);
 
-        oracle.set_sample(1, sample1.clone()).unwrap();
-        oracle.set_sample(2, sample2.clone()).unwrap();
-        oracle.set_sample(3, sample3.clone()).unwrap();
+        oracle.set_sample(1, sample1).unwrap();
+        oracle.set_sample(2, sample2).unwrap();
+        oracle.set_sample(3, sample3).unwrap();
 
         let (previous, next) = oracle.binary_search(3, 0, 3).unwrap();
         assert_eq!(previous, sample1, "test_binarySearch::1");
@@ -475,9 +479,9 @@ mod tests {
         let sample2 = OracleSample::encode(3, 2, 3, 4, 9, 10);
         let sample3 = OracleSample::encode(3, 3, 4, 5, 9, 20);
 
-        oracle.set_sample(1, sample1.clone()).unwrap();
-        oracle.set_sample(2, sample2.clone()).unwrap();
-        oracle.set_sample(3, sample3.clone()).unwrap();
+        oracle.set_sample(1, sample1).unwrap();
+        oracle.set_sample(2, sample2).unwrap();
+        oracle.set_sample(3, sample3).unwrap();
 
         let (previous, next) = oracle.binary_search(1, 19, 3).unwrap();
         assert_eq!(previous, sample2, "test_binarySearch::1");
@@ -558,7 +562,7 @@ mod tests {
 
         // 1. Minimum Length
         let sample_min = OracleSample::encode(1, 1, 2, 3, 0, 0);
-        oracle.set_sample(1, sample_min.clone()).unwrap();
+        oracle.set_sample(1, sample_min).unwrap();
 
         let (previous, next) = oracle.binary_search(1, 0, 1).unwrap();
         assert_eq!(
@@ -576,9 +580,9 @@ mod tests {
         };
         let max_timestamp: u64 = u64::MAX;
         let sample_max = OracleSample::encode(u16::MAX, 1, 2, 3, 0, 0);
-        oracle.set_sample(u16::MAX - 2, sample_max.clone()).unwrap();
-        oracle.set_sample(u16::MAX - 1, sample_max.clone()).unwrap();
-        oracle.set_sample(u16::MAX, sample_max.clone()).unwrap();
+        oracle.set_sample(u16::MAX - 2, sample_max).unwrap();
+        oracle.set_sample(u16::MAX - 1, sample_max).unwrap();
+        oracle.set_sample(u16::MAX, sample_max).unwrap();
 
         let (previous, next) = oracle
             .binary_search(u16::MAX - 1, max_timestamp, u16::MAX)
@@ -595,8 +599,8 @@ mod tests {
         // 3. Minimum Timestamp
         let min_timestamp: u64 = 0;
         let sample_min_ts = OracleSample::encode(2, 1, 2, 3, 0, 0);
-        oracle.set_sample(1, sample_min_ts.clone()).unwrap();
-        oracle.set_sample(2, sample_min_ts.clone()).unwrap();
+        oracle.set_sample(1, sample_min_ts).unwrap();
+        oracle.set_sample(2, sample_min_ts).unwrap();
 
         let (previous, next) = oracle.binary_search(1, min_timestamp, 2).unwrap();
         assert_eq!(
@@ -711,20 +715,20 @@ mod tests {
 
         let sample = OracleSample::encode(
             inputs.oracle_length,
-            inputs.previous_active_id as u64 * inputs.created_at as u64,
-            inputs.previous_volatility as u64 * inputs.created_at as u64,
-            inputs.previous_bin_crossed as u64 * inputs.created_at as u64,
+            inputs.previous_active_id as u64 * inputs.created_at,
+            inputs.previous_volatility as u64 * inputs.created_at,
+            inputs.previous_bin_crossed as u64 * inputs.created_at,
             0,
             inputs.created_at,
         );
 
         oracle.set_sample(inputs.oracle_id, sample).unwrap();
 
-        let mut parameters =
-            PairParameters(EncodedSample([0u8; 32])).set_oracle_id(inputs.oracle_id);
+        let mut parameters = PairParameters(EncodedSample([0u8; 32]));
 
-        parameters = parameters.set_active_id(inputs.previous_active_id).unwrap();
-        parameters = parameters
+        parameters.set_oracle_id(inputs.oracle_id);
+        parameters.set_active_id(inputs.previous_active_id).unwrap();
+        parameters
             .set_volatility_accumulator(inputs.volatility)
             .unwrap();
 
@@ -740,7 +744,7 @@ mod tests {
 
         let sample = oracle.get_sample(inputs.oracle_id).unwrap();
 
-        let dt = (inputs.timestamp - inputs.created_at) as u64;
+        let dt = inputs.timestamp - inputs.created_at;
 
         let d_id = if inputs.active_id > inputs.previous_active_id {
             inputs.active_id - inputs.previous_active_id
@@ -748,12 +752,12 @@ mod tests {
             inputs.previous_active_id - inputs.active_id
         } as u64;
 
-        let cumulative_id = (inputs.previous_active_id as u64 * inputs.created_at as u64)
-            + (inputs.active_id as u64 * dt);
-        let cumulative_volatility = (inputs.previous_volatility as u64 * inputs.created_at as u64)
+        let cumulative_id =
+            (inputs.previous_active_id as u64 * inputs.created_at) + (inputs.active_id as u64 * dt);
+        let cumulative_volatility = (inputs.previous_volatility as u64 * inputs.created_at)
             + (inputs.volatility as u64 * dt);
         let cumulative_bin_crossed =
-            (inputs.previous_bin_crossed as u64 * inputs.created_at as u64) + (d_id * dt);
+            (inputs.previous_bin_crossed as u64 * inputs.created_at) + (d_id * dt);
 
         assert_eq!(
             sample.get_oracle_length(),
@@ -806,26 +810,26 @@ mod tests {
 
         let sample = OracleSample::encode(
             inputs.oracle_length,
-            inputs.previous_active_id as u64 * inputs.created_at as u64,
-            inputs.previous_volatility as u64 * inputs.created_at as u64,
-            inputs.previous_bin_crossed as u64 * inputs.created_at as u64,
+            inputs.previous_active_id as u64 * inputs.created_at,
+            inputs.previous_volatility as u64 * inputs.created_at,
+            inputs.previous_bin_crossed as u64 * inputs.created_at,
             0,
             inputs.created_at,
         );
 
         oracle.set_sample(inputs.oracle_id, sample).unwrap();
 
-        let mut parameters =
-            PairParameters(EncodedSample([0u8; 32])).set_oracle_id(inputs.oracle_id);
+        let mut parameters = PairParameters(EncodedSample([0u8; 32]));
 
-        parameters = parameters.set_active_id(inputs.previous_active_id).unwrap();
-        parameters = parameters
+        parameters.set_oracle_id(inputs.oracle_id);
+        parameters.set_active_id(inputs.previous_active_id).unwrap();
+        parameters
             .set_volatility_accumulator(inputs.volatility)
             .unwrap();
 
         // Your "vm.warp" logic should be implemented if needed
 
-        let new_params = oracle
+        let mut new_params = oracle
             .update(
                 &Timestamp::from_seconds(inputs.timestamp),
                 parameters,
@@ -836,7 +840,7 @@ mod tests {
         let next_id = ((inputs.oracle_id as usize % inputs.oracle_length as usize) + 1) as u16;
 
         assert_eq!(
-            new_params.set_oracle_id(next_id),
+            new_params.set_oracle_id(next_id).clone(),
             new_params,
             "test_Update::1"
         );
@@ -851,7 +855,7 @@ mod tests {
 
         let sample = oracle.get_sample(next_id).unwrap();
 
-        let dt = (inputs.timestamp - inputs.created_at) as u64;
+        let dt = inputs.timestamp - inputs.created_at;
 
         let d_id = if inputs.active_id > inputs.previous_active_id {
             inputs.active_id - inputs.previous_active_id
@@ -859,12 +863,12 @@ mod tests {
             inputs.previous_active_id - inputs.active_id
         } as u64;
 
-        let cumulative_id = (inputs.previous_active_id as u64 * inputs.created_at as u64)
-            + (inputs.active_id as u64 * dt);
-        let cumulative_volatility = (inputs.previous_volatility as u64 * inputs.created_at as u64)
+        let cumulative_id =
+            (inputs.previous_active_id as u64 * inputs.created_at) + (inputs.active_id as u64 * dt);
+        let cumulative_volatility = (inputs.previous_volatility as u64 * inputs.created_at)
             + (inputs.volatility as u64 * dt);
         let cumulative_bin_crossed =
-            (inputs.previous_bin_crossed as u64 * inputs.created_at as u64) + (d_id * dt);
+            (inputs.previous_bin_crossed as u64 * inputs.created_at) + (d_id * dt);
 
         assert_eq!(
             sample.get_oracle_length(),
@@ -896,8 +900,24 @@ mod tests {
 
         let oracle_id = 1;
 
-        oracle = oracle.increase_length(oracle_id, length).unwrap();
-        oracle = oracle.increase_length(oracle_id, new_length).unwrap();
+        println!(
+            "{:#?}",
+            oracle.get_sample(oracle_id).unwrap().get_oracle_length()
+        );
+
+        oracle.increase_length(oracle_id, length).unwrap();
+
+        println!(
+            "{:#?}",
+            oracle.get_sample(oracle_id).unwrap().get_oracle_length()
+        );
+
+        oracle.increase_length(oracle_id, new_length).unwrap();
+
+        println!(
+            "{:#?}",
+            oracle.get_sample(oracle_id).unwrap().get_oracle_length()
+        );
 
         assert_eq!(
             oracle.get_sample(oracle_id).unwrap().get_oracle_length(),
@@ -915,8 +935,8 @@ mod tests {
 
         let oracle_id = 1;
 
-        oracle = oracle.increase_length(oracle_id, length).unwrap();
-        oracle = oracle.increase_length(oracle_id, new_length).unwrap();
+        oracle.increase_length(oracle_id, length).unwrap();
+        oracle.increase_length(oracle_id, new_length).unwrap();
 
         assert_eq!(
             oracle.get_sample(oracle_id).unwrap().get_oracle_length(),
@@ -940,7 +960,7 @@ mod tests {
 
         let oracle_id = 1;
 
-        oracle = oracle.increase_length(oracle_id, length).unwrap();
+        oracle.increase_length(oracle_id, length).unwrap();
 
         // Equivalent to vm.expectRevert in Solidity.
         // Replace with your own logic.

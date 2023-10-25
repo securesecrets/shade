@@ -1,3 +1,5 @@
+// TODO - do we need this file at all?
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{ContractInfo, CosmosMsg, StdResult};
 

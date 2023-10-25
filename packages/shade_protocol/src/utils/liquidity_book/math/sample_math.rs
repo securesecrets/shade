@@ -24,7 +24,7 @@ pub const OFFSET_SAMPLE_LIFETIME: u8 = 208;
 pub const OFFSET_SAMPLE_CREATION: u8 = 216;
 
 #[cw_serde]
-#[derive(Copy)]
+#[derive(Copy, Default)]
 pub struct OracleSample(pub EncodedSample);
 
 impl OracleSample {
@@ -44,24 +44,25 @@ impl OracleSample {
         cumulative_volatility: u64,
         cumulative_bin_crossed: u64,
         sample_lifetime: u8,
+        // TODO - check that this value fits it a uint40
         created_at: u64,
     ) -> OracleSample {
-        let mut sample = EncodedSample([0u8; 32]);
+        let mut sample = EncodedSample::default();
 
-        sample = sample.set(oracle_length.into(), MASK_UINT16, OFFSET_ORACLE_LENGTH);
-        sample = sample.set(cumulative_id.into(), MASK_UINT64, OFFSET_CUMULATIVE_ID);
-        sample = sample.set(
+        sample.set(oracle_length.into(), MASK_UINT16, OFFSET_ORACLE_LENGTH);
+        sample.set(cumulative_id.into(), MASK_UINT64, OFFSET_CUMULATIVE_ID);
+        sample.set(
             cumulative_volatility.into(),
             MASK_UINT64,
             OFFSET_CUMULATIVE_VOLATILITY,
         );
-        sample = sample.set(
+        sample.set(
             cumulative_bin_crossed.into(),
             MASK_UINT64,
             OFFSET_CUMULATIVE_BIN_CROSSED,
         );
-        sample = sample.set(sample_lifetime.into(), MASK_UINT8, OFFSET_SAMPLE_LIFETIME);
-        sample = sample.set(created_at.into(), MASK_UINT40, OFFSET_SAMPLE_CREATION);
+        sample.set(sample_lifetime.into(), MASK_UINT8, OFFSET_SAMPLE_LIFETIME);
+        sample.set(created_at.into(), MASK_UINT40, OFFSET_SAMPLE_CREATION);
 
         OracleSample(sample)
     }

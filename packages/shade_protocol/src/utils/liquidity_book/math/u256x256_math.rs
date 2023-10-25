@@ -1,13 +1,62 @@
 //! ### Liquidity Book U256x256 Math Library
-//! Author: Kent
+//! Author: Kent and Haseeb
 //!
 //! Helper library used for full precision calculations.
-use std::{ops::Add, str::FromStr};
 
-use cosmwasm_std::Uint512;
+use std::ops::BitXor;
+
 use ethnum::U256;
+use primitive_types::{U128, U512};
 
-use super::uint256_to_u256::ConvertU256;
+pub fn u256_to_u512(u: &U256) -> U512 {
+    U512::from_little_endian(&u.to_le_bytes())
+}
+
+pub fn u512_to_u256(r: U512) -> U256 {
+    if r <= U512::zero() {
+        U256::ZERO
+    } else if r > U512::from_little_endian(&U256::MAX.to_le_bytes()) {
+        U256::MAX
+    } else {
+        let lo = U128([r.0[0], r.0[1]]).as_u128();
+        let hi = U128([r.0[2], r.0[3]]).as_u128();
+        U256::from_words(hi, lo)
+    }
+}
+
+/// Computes (x * y) % k where the addition is performed with arbitrary precision and does not wrap around at 2^256.
+pub fn mulmod(x: U256, y: U256, k: U256) -> U256 {
+    if k == U256::ZERO {
+        return U256::ZERO;
+    }
+
+    if let Some(z) = x.checked_mul(y) {
+        return z % k;
+    }
+
+    let x = u256_to_u512(&x);
+    let y = u256_to_u512(&y);
+    let k = u256_to_u512(&k);
+    let z = (x * y) % k;
+    u512_to_u256(z)
+}
+
+/// Computes (x + y) % k where the addition is performed with arbitrary precision and does not wrap around at 2^256.
+pub fn addmod(x: U256, y: U256, k: U256) -> U256 {
+    if k == U256::ZERO {
+        return U256::ZERO;
+    }
+
+    if let Some(z) = x.checked_add(y) {
+        return z % k;
+    }
+
+    let x = u256_to_u512(&x);
+    let y = u256_to_u512(&y);
+    let k = u256_to_u512(&k);
+    let z = (x + y) % k;
+    u512_to_u256(z)
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum U256x256MathError {
@@ -52,9 +101,16 @@ impl U256x256Math {
         y: U256,
         denominator: U256,
     ) -> Result<U256, U256x256MathError> {
+        // Edge case where all three values are equal (not sure why this would ever happen)
+        if x == y && y == denominator {
+            return Ok(x);
+        }
+
         let (prod0, prod1) = Self::_get_mul_prods(x, y)?;
 
         let result = Self::_get_end_of_div_round_down(x, y, denominator, prod0, prod1)?;
+        println!("result: {:#?}", result);
+
         Ok(result)
     }
 
@@ -88,7 +144,7 @@ impl U256x256Math {
     ) -> Result<U256, U256x256MathError> {
         let mut result = Self::mul_div_round_down(x, y, denominator)?;
 
-        if Self::mulmod(x, y, denominator) != 0 {
+        if x.wrapping_mul(y) % denominator != 0 {
             result += 1;
         }
 
@@ -261,44 +317,21 @@ impl U256x256Math {
     /// * A tuple containing:
     ///   * `prod0` - The least significant 256 bits of the product
     ///   * `prod1` - The most significant 256 bits of the product
+    fn _get_mul_prods(x: U256, y: U256) -> Result<(U256, U256), U256x256MathError> {
+        // 512-bit multiply [prod1 prod0] = x * y. Compute the product mod 2^256 and mod 2^256 - 1, then use
+        // use the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
+        // variables such that product = prod1 * 2^256 + prod0.
 
-    pub fn _get_mul_prods(x: U256, y: U256) -> Result<(U256, U256), U256x256MathError> {
-        let k: U256 = U256::MAX;
+        let mm = mulmod(x, y, U256::MAX);
+        println!("mm: {:#?}", mm);
+        let prod0 = x.wrapping_mul(y);
+        println!("prod0: {:#?}", prod0);
+        let prod1 =
+            mm.wrapping_sub(prod0)
+                .wrapping_sub(if mm < prod0 { U256::ONE } else { U256::ZERO });
+        println!("prod1: {:#?}", prod1);
 
-        // Calculate (x * y) % k
-        let mm = Self::mulmod(x, y, k);
-        // Calculate x * y
-        let prod0 = x.overflowing_mul(y).0;
-        // Calculate prod1
-        let prod1 = mm.overflowing_sub(prod0).0.overflowing_sub(if mm < prod0 {
-            U256::ONE
-        } else {
-            U256::ZERO
-        });
-
-        Ok((prod0, prod1.0))
-    }
-
-    pub fn mulmod(a: U256, b: U256, modulo: U256) -> U256 {
-        // Convert to U512 for internal calculations
-        let mut res = Uint512::zero();
-        let mut a = Uint512::from(a.u256_to_uint256()) % Uint512::from(modulo.u256_to_uint256());
-        let mut b = Uint512::from(b.u256_to_uint256());
-
-        while b > Uint512::zero() {
-            if b % Uint512::from(2u128) == Uint512::from(1u128) {
-                res = (res + a) % Uint512::from(modulo.u256_to_uint256());
-            }
-
-            a = (a * Uint512::from(2u128)) % Uint512::from(modulo.u256_to_uint256());
-            b /= Uint512::from(2u128);
-        }
-        let ret =
-            U256::from_str_prefixed(&(res % Uint512::from(modulo.u256_to_uint256())).to_string())
-                .unwrap();
-
-        // Convert the result back to U256 before returning
-        U256::from(ret)
+        Ok((prod0, prod1))
     }
 
     /// Helper function to return the result of `x * y / denominator` with full precision
@@ -318,7 +351,7 @@ impl U256x256Math {
     pub fn _get_end_of_div_round_down(
         x: U256,
         y: U256,
-        mut denominator: U256,
+        denominator: U256,
         mut prod0: U256,
         mut prod1: U256,
     ) -> Result<U256, U256x256MathError> {
@@ -337,87 +370,108 @@ impl U256x256Math {
             // Make division exact by subtracting the remainder from [prod1 prod0].
 
             // Compute remainder using mulmod.
-            let remainder = Self::mulmod(x, y, denominator);
+            let remainder = mulmod(x, y, denominator);
+            println!("remainder: {:#?}", remainder);
 
             // Subtract 256 bit number from 512 bit number.
             if remainder > prod0 {
-                prod1 -= U256::ONE;
+                prod1 = prod1.wrapping_sub(U256::ONE)
             }
-            prod0 = prod0.overflowing_sub(remainder).0;
+            prod0 = prod0.wrapping_sub(remainder);
+            println!("prod0 - remainder: {:#?}", prod0);
 
             // Factor powers of two out of denominator and compute largest power of two divisor of denominator. Always >= 1
             // See https://cs.stackexchange.com/q/138556/92363
 
             // Does not overflow because the denominator cannot be zero at this stage in the function
-            let mut lpotdod: U256 = denominator & (!denominator + U256::ONE);
+            let mut lpotdod = denominator & (!denominator + U256::ONE);
+            println!("lpotdod: {:#?}", lpotdod);
+
             // Divide denominator by lpotdod.
-            denominator = denominator.overflowing_div(lpotdod).0;
+            let denominator = denominator / lpotdod;
+            println!("denominator / lpotdod: {:#?}", denominator);
 
             // Divide [prod1 prod0] by lpotdod.
-            let prod0: U256 = prod0.overflowing_div(lpotdod).0;
+            let prod0 = prod0 / lpotdod;
+            println!("prod0 / lpotdod: {:#?}", prod0);
 
             // Flip lpotdod such that it is 2^256 / lpotdod. If lpotdod is zero, then it becomes one
-            if lpotdod != U256::MIN {
-                let two_pow_256: Uint512 =
-                    Uint512::from(U256::MAX.u256_to_uint256()).add(Uint512::one());
-                let mut temp: Uint512 = two_pow_256 / Uint512::from(lpotdod.u256_to_uint256());
-                if temp >= two_pow_256 {
-                    // temp = (temp >> 256) - Uint512::one();
-                    temp >>= 256;
-                    lpotdod = U256::MAX
-                        .overflowing_add(U256::from_str(&temp.to_string()).unwrap())
-                        .0;
-                } else {
-                    lpotdod = U256::from_str(&temp.to_string()).unwrap()
-                }
-            } else {
-                lpotdod = U256::ONE;
+            match lpotdod {
+                U256::ONE => lpotdod = U256::ONE,
+                _ => lpotdod = (U256::ZERO.wrapping_sub(lpotdod) / lpotdod).wrapping_add(U256::ONE),
             }
-            let prod0 = prod0 | prod1.overflowing_mul(lpotdod).0;
+            println!("lpotdod: {:#?}", lpotdod);
 
-            let mut inverse = U256::from(3u128).overflowing_mul(denominator).0 ^ 2;
+            // Shift in bits from prod1 into prod0
+            let prod0 = prod0 | (prod1.wrapping_mul(lpotdod));
+            println!("prod0 bit-shifted: {:#?}", prod0);
 
-            for _ in 0..7 {
-                // inverse mod 2^8 to 2^256
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^8
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^16
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^32
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^64
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^128
-                // inverse *= 2 - denominator * inverse; // inverse mod 2^256
-                let denom_times_inverse = denominator.overflowing_mul(inverse).0;
-                let subtraction_result = U256::from(2u128).overflowing_sub(denom_times_inverse).0;
-                inverse = inverse.overflowing_mul(subtraction_result).0;
-            }
+            // Invert denominator mod 2^256. Now that denominator is an odd number, it has an inverse modulo 2^256 such
+            // that denominator * inv = 1 mod 2^256. Compute the inverse by starting with a seed that is correct for
+            // four bits. That is, denominator * inv = 1 mod 2^4
+            let mut inverse = U256::from(3u8).wrapping_mul(denominator).bitxor(2);
+            println!("inverse: {:#?}", inverse);
+
+            // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also works
+            // in modular arithmetic, doubling the correct bits in each step
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^8
+            println!("inverse: {:#?}", inverse);
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^16
+            println!("inverse: {:#?}", inverse);
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^32
+            println!("inverse: {:#?}", inverse);
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^64
+            println!("inverse: {:#?}", inverse);
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^128
+            println!("inverse: {:#?}", inverse);
+            inverse = inverse
+                .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^256
+            println!("inverse: {:#?}", inverse);
 
             // Because the division is now exact we can divide by multiplying with the modular inverse of denominator.
             // This will give us the correct result modulo 2^256. Since the preconditions guarantee that the outcome is
             // less than 2^256, this is the final result. We don't need to compute the high bits of the result and prod1
             // is no longer required.
-            result = prod0.overflowing_mul(inverse).0;
+            result = prod0.wrapping_mul(inverse);
+            println!("result: {:#?}", result);
 
             Ok(result)
         }
     }
 }
 
+// TODO - use test values that would be different when rounded up vs rounded down
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
 
     use ethnum::U256;
 
-    use crate::utils::liquidity_book::{
-        constants::{PRECISION, SCALE_OFFSET},
-        math::u256x256_math::U256x256Math,
-    };
+    use super::U256x256Math;
+    use crate::lb_libraries::constants::{PRECISION, SCALE_OFFSET};
 
     #[test]
-    fn test_get_mul_product() {
+    fn test_get_mul_prods() {
         let x =
             U256::from_str_prefixed("42008768997448919173843294709597899956404323600000").unwrap();
         let y =
             U256::from_str_prefixed("42008768997448919173843294709597899956404323600000").unwrap();
-        let _z = U256x256Math::_get_mul_prods(x, y);
+        let mul_prods = U256x256Math::_get_mul_prods(x, y).unwrap();
+
+        let expected = (
+            U256::from_str(
+                "106836064098642271423399912068207628716993854336347640715097787605024273743872",
+            )
+            .unwrap(),
+            U256::from_str("15240563360629869600998").unwrap(),
+        );
+
+        assert_eq!(mul_prods, expected)
     }
 
     #[test]
@@ -428,6 +482,7 @@ mod tests {
         let denominator = U256::MIN; // Zero
         let _ = U256x256Math::mul_div_round_down(x, y, denominator).unwrap();
     }
+
     #[test]
     fn test_mul_div_round_down_min() {
         let x = U256::MIN;
@@ -437,6 +492,7 @@ mod tests {
         let res = U256x256Math::mul_div_round_down(x, y, denominator).unwrap();
         assert_eq!(res, U256::MIN);
     }
+
     #[test]
     fn test_mul_div_round_down_max() {
         let x = U256::MAX;
@@ -484,18 +540,8 @@ mod tests {
         let y = U256::from(1000u128);
         let denominator = U256::from(100u128);
 
-        let res = U256x256Math::mul_div_round_down(x, y, denominator).unwrap();
-        assert_eq!(res, U256::from(10000u128)); // Replace with expected result
-    }
-
-    #[test]
-    fn test_mul_shift_div_round_down() {
-        let x = U256::from_words(1000u128, 1000u128);
-        let y = U256::from(PRECISION);
-        let shift = SCALE_OFFSET;
-
-        let res = U256x256Math::mul_shift_round_down(x, y, shift).unwrap();
-        assert_eq!(res, U256::from(1000000000000000000000u128)); // Replace with expected result
+        let res = U256x256Math::mul_div_round_up(x, y, denominator).unwrap();
+        assert_eq!(res, U256::from(10000u128));
     }
 
     #[test]
@@ -550,13 +596,23 @@ mod tests {
     }
 
     #[test]
-    fn test_mul_shift_div_round_up() {
+    fn test_mul_shift_round_down() {
+        let x = U256::from_words(1000u128, 1000u128);
+        let y = U256::from(PRECISION);
+        let shift = SCALE_OFFSET;
+
+        let res = U256x256Math::mul_shift_round_down(x, y, shift).unwrap();
+        assert_eq!(res, U256::from(1000000000000000000000u128));
+    }
+
+    #[test]
+    fn test_mul_shift_round_up() {
         let x = U256::from_words(1000u128, 1000u128);
         let y = U256::from(PRECISION);
         let shift = SCALE_OFFSET;
 
         let res = U256x256Math::mul_shift_round_up(x, y, shift).unwrap();
-        assert_eq!(res, U256::from(1000000000000000000001u128)); // Replace with expected result
+        assert_eq!(res, U256::from(1000000000000000000001u128));
     }
 
     #[test]
@@ -568,8 +624,8 @@ mod tests {
         let shifted = x << shift;
         let (prod0, prod1) = U256x256Math::_get_mul_prods(shifted, U256::ONE).unwrap();
 
-        assert_eq!(prod0, U256::from(1024000u128)); // Replace with expected result
-        assert_eq!(prod1, U256::from(0u128)); // Replace with expected result
+        assert_eq!(prod0, U256::from(1024000u128));
+        assert_eq!(prod1, U256::from(0u128));
 
         if denominator != U256::ZERO {
             if prod1 != U256::ZERO && denominator <= prod1 {
@@ -592,15 +648,15 @@ mod tests {
         let shifted = x << shift;
         let (prod0, prod1) = U256x256Math::_get_mul_prods(shifted, U256::ONE).unwrap();
 
-        assert_eq!(prod0, U256::from(1024000u128)); // Replace with expected result
-        assert_eq!(prod1, U256::from(0u128)); // Replace with expected result
+        assert_eq!(prod0, U256::from(1024000u128));
+        assert_eq!(prod1, U256::from(0u128));
 
         if denominator != U256::ZERO {
             if prod1 != U256::ZERO && denominator <= prod1 {
                 panic!("Overflow error!");
             } else {
-                let res = U256x256Math::shift_div_round_down(x, shift, denominator).unwrap();
-                assert_eq!(res, 10240); // Replace with expected result
+                let res = U256x256Math::shift_div_round_up(x, shift, denominator).unwrap();
+                assert_eq!(res, 10240);
             }
         } else {
             panic!("Denominator is zero!");
