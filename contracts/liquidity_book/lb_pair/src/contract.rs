@@ -30,6 +30,7 @@ use cosmwasm_std::{
 use ethnum::U256;
 use serde::Serialize;
 use shade_protocol::{
+    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
     c_std::{shd_entry_point, Reply, SubMsg},
     contract_interfaces::liquidity_book::{
         lb_pair::*,
@@ -187,6 +188,7 @@ pub fn instantiate(
         }, // intentionally keeping this empty will be filled in reply
         viewing_key,
         protocol_fees_recipient: msg.protocol_fee_recipient,
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
     };
 
     // deps.api
@@ -1295,6 +1297,13 @@ fn try_increase_oracle_length(
     new_length: u16,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
+
     let mut params = state.pair_parameters;
 
     let mut oracle_id = params.get_oracle_id();

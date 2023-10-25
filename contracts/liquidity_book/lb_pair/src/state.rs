@@ -2,7 +2,10 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, ContractInfo, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use pair_parameter_helper::PairParameters; //?
-use shade_protocol::secret_storage_plus::{Bincode2, Item, Map};
+use shade_protocol::{
+    secret_storage_plus::{Bincode2, Item, Map},
+    Contract,
+};
 
 use math::tree_math::TreeUint24; //?
 use oracle_helper::Oracle; //?
@@ -37,6 +40,7 @@ pub struct State {
     pub protocol_fees: Bytes32,
     pub lb_token: ContractInfo,
     pub protocol_fees_recipient: Addr,
+    pub admin_auth: Contract,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextTokenKey> {

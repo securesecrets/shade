@@ -74,9 +74,9 @@ pub fn instantiate(
         owner: msg.owner.unwrap_or_else(|| info.sender.clone()),
         fee_recipient: msg.fee_recipient,
         flash_loan_fee: msg.flash_loan_fee,
-        // The factory needs to be instantiated first, then the pair and token contracts can be set later.
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
     };
 
     CONFIG.save(deps.storage, &state)?;
@@ -196,12 +196,18 @@ fn try_set_lb_pair_implementation(
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
 
     // TODO: query the LBPair contract to check that the factory address is correct
     // if ILBPair(new_lb_pair_implementation).getFactory() != env.contract.address {
     //     return Err(Error::LBPairSafetyCheckFailed(new_lb_pair_implementation.address))
     // }
+
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
 
     let old_lb_pair_implementation = state.lb_pair_implementation;
     if (old_lb_pair_implementation == new_lb_pair_implementation) {
@@ -230,8 +236,12 @@ fn try_set_lb_token_implementation(
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     // TODO: query the LBToken contract to check that the factory address is correct
     // if ILBToken(new_lb_token_implementation).getFactory() != env.contract.address {
     //     return Err(Error::LBTokenSafetyCheckFailed(new_lb_token_implementation.address))
@@ -375,6 +385,7 @@ fn try_create_lb_pair(
                 pair_name: String::new(),
                 entropy: String::new(),
                 protocol_fee_recipient: state.fee_recipient,
+                admin_auth: state.admin_auth.into(),
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -494,8 +505,12 @@ fn try_set_pair_preset(
     is_open: bool,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     if bin_step < _MIN_BIN_STEP as u16 {
         return Err(Error::BinStepTooLow { bin_step });
     }
@@ -533,8 +548,12 @@ fn try_set_preset_open_state(
     is_open: bool,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     if !PRESETS.has(deps.storage, bin_step) {
         return Err(Error::BinStepHasNoPreset { bin_step });
     }
@@ -569,8 +588,12 @@ fn try_remove_preset(
     bin_step: u16,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     if !PRESETS.has(deps.storage, bin_step) {
         return Err(Error::BinStepHasNoPreset { bin_step });
     }
@@ -610,8 +633,12 @@ fn try_set_fee_parameters_on_pair(
     max_volatility_accumulator: u32,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     let (token_a, token_b) = _sort_tokens(token_x, token_y);
     let mut lb_pair = LB_PAIRS_INFO
         .load(
@@ -662,8 +689,12 @@ fn try_set_fee_recipient(
     fee_recipient: Addr,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     // TODO: Is there way to check that the address exists / is not zero?
 
     let old_fee_recipient = state.fee_recipient;
@@ -695,8 +726,12 @@ fn try_set_flash_loan_fee(
     flash_loan_fee: u8,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     let old_flash_loan_fee = state.flash_loan_fee;
 
     if old_flash_loan_fee == flash_loan_fee {
@@ -733,8 +768,12 @@ fn try_add_quote_asset(
     quote_asset: TokenType,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     if QUOTE_ASSET_WHITELIST
         .iter(deps.storage)?
         .any(|result| match result {
@@ -765,8 +804,12 @@ fn try_remove_quote_asset(
     asset: TokenType,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     // Enumerate the iterator and use `find` to locate the asset
     let found_asset = QUOTE_ASSET_WHITELIST
         .iter(deps.storage)?
@@ -795,8 +838,12 @@ fn try_remove_quote_asset(
 
 fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &state.owner)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
     // TODO: I think this needs to send a message to the LBPair contract to execute the force decay.
     // pair.forceDecay();
     let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);

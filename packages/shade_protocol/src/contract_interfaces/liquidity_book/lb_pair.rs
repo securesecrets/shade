@@ -1,6 +1,7 @@
 use crate::{
     snip20::Snip20ReceiveMsg,
     utils::{
+        asset::RawContract,
         liquidity_book::{
             tokens::{SwapTokenAmount, TokenAmount, TokenType},
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
@@ -40,6 +41,7 @@ pub struct InstantiateMsg {
     pub pair_name: String,
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
+    pub admin_auth: RawContract,
 }
 
 impl InstantiateCallback for InstantiateMsg {

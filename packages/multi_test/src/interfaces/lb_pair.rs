@@ -1,15 +1,20 @@
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
-    contract_interfaces::liquidity_book::lb_pair,
-    contract_interfaces::snip20,
+    contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
     liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{
+        asset::{Contract, RawContract},
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
+    },
 };
 
 pub fn init(
@@ -26,6 +31,7 @@ pub fn init(
     pair_name: String,
     entropy: String,
     protocol_fee_recipient: Addr,
+    admin_auth: RawContract,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -40,6 +46,7 @@ pub fn init(
             pair_name,
             entropy,
             protocol_fee_recipient,
+            admin_auth,
         }
         .test_init(
             LbPair::default(),

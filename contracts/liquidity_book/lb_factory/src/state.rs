@@ -4,14 +4,19 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, ContractInfo, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use pair_parameter_helper::PairParameters;
-use shade_protocol::secret_storage_plus::{AppendStore, Item, Map};
+use shade_protocol::{
+    secret_storage_plus::{AppendStore, Item, Map},
+    Contract,
+};
 use tokens::TokenType;
 
 use shade_protocol::lb_libraries::{pair_parameter_helper, tokens, types};
 use types::{Bytes32, ContractInstantiationInfo};
 
-use crate::prelude::*;
-use crate::types::{LBPair, LBPairInformation, NextPairKey};
+use crate::{
+    prelude::*,
+    types::{LBPair, LBPairInformation, NextPairKey},
+};
 
 pub const CONFIG: Item<State> = Item::new("config");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
@@ -51,6 +56,7 @@ pub struct State {
     pub flash_loan_fee: u8,
     pub lb_pair_implementation: ContractInstantiationInfo,
     pub lb_token_implementation: ContractInstantiationInfo,
+    pub admin_auth: Contract,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextPairKey> {
