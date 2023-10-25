@@ -88,6 +88,7 @@ admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
 liquidity_book = ["interface"]
+swap = ["snip20"]
 
 chrono = ["dep:chrono"]
 

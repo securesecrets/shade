@@ -1,12 +1,13 @@
+use crate::swap::core::{time, ContractInstantiationInfo, BLOCK_SIZE};
 use crate::{
     c_std::{
-        Addr, Addr, Binary, CosmosMsg, Decimal256, OverflowError, QuerierWrapper, StdError,
-        StdResult, Storage, Uint128, Uint128, Uint256, Uint256,
+        Addr, Binary, CosmosMsg, Decimal256, OverflowError, QuerierWrapper, StdError, StdResult,
+        Storage, Uint128, Uint256,
     },
-    contract_interfaces::snip20::ExecuteMsg as Snip20ExecuteMsg,
     cosmwasm_schema::{cw_serde, QueryResponses},
     query_auth::QueryPermit,
     secret_storage_plus::{Bincode2, Item, ItemStorage, Map},
+    snip20::ExecuteMsg as Snip20ExecuteMsg,
     snip20::Snip20ReceiveMsg,
     utils::{
         asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
@@ -14,13 +15,14 @@ use crate::{
     },
     Contract,
 };
-use core::{time, ContractInstantiationInfo, BLOCK_SIZE};
 use std::{cmp::min, collections::HashMap};
 
-use super::{
+/*
+use crate::swap::core::{
     ClaimRewardResponse, ClaimableRewardsResponse, ConfigResponse, PermitQueryResponse,
     RewardTokenInfo,
 };
+*/
 
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = BLOCK_SIZE;

@@ -1,9 +1,10 @@
-use cosmwasm_std::{Deps, StdResult, Uint128};
+use crate::{
+    c_std::{Deps, StdResult, Uint128},
+    swap::core::{TokenPairAmount, TokenType},
+    Contract,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
-
-use super::TokenPairAmount;
 
 #[derive(Clone, Debug, JsonSchema)]
 pub struct TokenPair(pub TokenType, pub TokenType, pub bool);

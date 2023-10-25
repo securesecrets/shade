@@ -1,6 +1,6 @@
+use crate::utils::liquidity_book::tokens::TokenType;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StableTokenData {

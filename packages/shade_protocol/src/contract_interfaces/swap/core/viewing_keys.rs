@@ -1,10 +1,10 @@
-use cosmwasm_std::{Binary, Env, MessageInfo};
+use crate::c_std::{Binary, Env, MessageInfo};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use subtle::ConstantTimeEq;
 
-use shade_protocol::utils::crypto::{sha_256, Prng};
+use crate::utils::crypto::{sha_256, Prng};
 
 pub const VIEWING_KEY_SIZE: usize = 32;
 const VIEWING_KEY_PREFIX: &str = "api_key_";

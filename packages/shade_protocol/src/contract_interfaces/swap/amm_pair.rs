@@ -1,26 +1,22 @@
 use crate::{
-    c_std::{
-        utils::{ExecuteCallback, InstantiateCallback, Query},
-        Addr, Binary, Uint128, BLOCK_SIZE,
-    },
+    c_std::{Addr, Binary, Decimal256, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
-    liquidity_book::lb_pair::SwapResult,
+    lb_pair::SwapResult,
     snip20::Snip20ReceiveMsg,
-    utils::asset::RawContract,
-    utils::liquidity_book::tokens::TokenType,
-    Contract,
+    swap::core::{
+        ContractInstantiationInfo, CustomFee, Fee, StableTokenData, TokenAmount, TokenPair,
+        TokenPairAmount,
+    },
+    utils::{
+        asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
+        InstantiateCallback, Query,
+    },
+    Contract, BLOCK_SIZE,
 };
 
 use std::fmt::{Debug, Display};
 
-use super::*;
-use core::{
-    ContractInstantiationInfo, ContractInstantiationInfo, CustomFee, Fee, StableTokenData,
-    TokenAmount, TokenPair, TokenPairAmount,
-};
-use staking::StakingContractInstantiateInfo;
-
-use cosmwasm_std::{Addr, Decimal256, Uint256};
+use crate::swap::staking::StakingContractInstantiateInfo;
 
 /// Represents the address of an exchange and the pair that it manages
 #[cw_serde]

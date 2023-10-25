@@ -66,7 +66,7 @@ mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../..
 mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
 snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
-shadeswap-shared = {  version = "0.1.0", path = "../../packages/shadeswap_shared", features = []  }
+# shadeswap-shared = {  version = "0.1.0", path = "../../packages/shadeswap_shared", features = []  }
 anyhow = "1"
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]

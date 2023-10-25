@@ -1,4 +1,4 @@
-mod admin;
+// mod admin;
 mod callback;
 mod custom_fee;
 mod display;
@@ -8,7 +8,7 @@ mod token_pair;
 mod token_pair_amount;
 mod token_type;
 mod viewing_keys;
-pub use admin::*;
+// pub use admin::*;
 pub use callback::*;
 pub use custom_fee::*;
 pub use display::*;

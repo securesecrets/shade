@@ -1,4 +1,4 @@
-use cosmwasm_std::{Event, StdError, StdResult};
+use crate::c_std::{Event, StdError, StdResult};
 
 pub struct EventsParser;
 

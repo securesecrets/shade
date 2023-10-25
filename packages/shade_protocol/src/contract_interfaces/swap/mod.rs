@@ -1,4 +1,4 @@
-use core;
+pub mod core;
 
-use amm_pair;
-use staking;
+pub mod amm_pair;
+pub mod staking;

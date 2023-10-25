@@ -1,10 +1,11 @@
 #[warn(unused_imports)]
-use cosmwasm_std::{MessageInfo, StdError, StdResult, Uint128};
+use crate::c_std::{MessageInfo, StdError, StdResult, Uint128};
+use crate::utils::liquidity_book::tokens::TokenType;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::utils::liquidity_book::tokens::TokenType;
 
-use super::TokenPair;
+use crate::swap::core::TokenPair;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenPairAmount {
     pub pair: TokenPair,
@@ -84,10 +85,10 @@ impl<'a> Iterator for TokenPairAmountIterator<'a> {
 }
 
 pub mod tests {
-    use cosmwasm_std::{Addr, Uint128};
-    use shade_protocol::utils::liquidity_book::tokens::TokenType;
+    use crate::c_std::{Addr, Uint128};
+    use crate::utils::liquidity_book::tokens::TokenType;
 
-    use crate::core::TokenPair;
+    use crate::swap::core::TokenPair;
 
     use super::TokenPairAmount;
 
@@ -148,10 +149,8 @@ pub mod tests {
             },
             false,
         );
-        assert!(
-            reverse_amount
-                .create_new_pair_amount_to_match_order_of(&broken_pair)
-                .is_err()
-        );
+        assert!(reverse_amount
+            .create_new_pair_amount_to_match_order_of(&broken_pair)
+            .is_err());
     }
 }

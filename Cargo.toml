@@ -3,7 +3,7 @@ resolver = "2"
 members = [
   # Packages
   "packages/shade_protocol",
-  "packages/shadeswap_shared",
+  #"packages/shadeswap_shared",
   # "packages/secretcli",
   "packages/multi_test",
   "packages/multi_derive",
