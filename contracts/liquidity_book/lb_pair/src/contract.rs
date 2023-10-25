@@ -1299,7 +1299,7 @@ fn try_increase_oracle_length(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;

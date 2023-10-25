@@ -204,7 +204,7 @@ fn try_set_lb_pair_implementation(
 
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -238,7 +238,7 @@ fn try_set_lb_token_implementation(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -507,7 +507,7 @@ fn try_set_pair_preset(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -550,7 +550,7 @@ fn try_set_preset_open_state(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -590,7 +590,7 @@ fn try_remove_preset(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -635,7 +635,7 @@ fn try_set_fee_parameters_on_pair(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -691,7 +691,7 @@ fn try_set_fee_recipient(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -728,7 +728,7 @@ fn try_set_flash_loan_fee(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -770,7 +770,7 @@ fn try_add_quote_asset(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -806,7 +806,7 @@ fn try_remove_quote_asset(
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
@@ -840,7 +840,7 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> 
     let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        AdminPermissions::StakingAdmin,
+        AdminPermissions::LbAdmin,
         info.sender.to_string(),
         &state.admin_auth,
     )?;
