@@ -301,7 +301,6 @@ impl U256x256Math {
         U256::from(ret)
     }
 
-    // # TODO: double check this
     /// Helper function to return the result of `x * y / denominator` with full precision
     ///
     ///

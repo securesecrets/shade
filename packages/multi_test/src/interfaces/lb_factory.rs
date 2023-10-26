@@ -174,6 +174,7 @@ pub fn create_lb_pair(
     token_x: TokenType,
     token_y: TokenType,
     viewing_key: String,
+    entropy: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::CreateLBPair {
         token_x,
@@ -181,6 +182,7 @@ pub fn create_lb_pair(
         active_id,
         bin_step,
         viewing_key,
+        entropy,
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {

@@ -4,8 +4,6 @@ use shade_protocol::lb_libraries::{tokens, types};
 use tokens::TokenType;
 pub use types::{LBPair, LBPairInformation};
 
-// TODO: maybe we don't need this file at all?
-
 #[cw_serde]
 pub struct NextPairKey {
     pub token_a: TokenType,

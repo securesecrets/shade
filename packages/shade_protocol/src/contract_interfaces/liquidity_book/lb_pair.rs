@@ -38,7 +38,6 @@ pub struct InstantiateMsg {
     pub active_id: u32,
     pub lb_token_implementation: ContractInstantiationInfo,
     pub viewing_key: String,
-    pub pair_name: String,
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
     pub admin_auth: RawContract,
@@ -47,14 +46,6 @@ pub struct InstantiateMsg {
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
-
-// TODO: should do something like this to help with code duplication
-// pub struct ILBPair;
-// impl ILBPair {
-//     pub fn get_factory() {
-//         todo!()
-//     }
-// }
 
 #[cw_serde]
 pub enum ExecuteMsg {
@@ -343,7 +334,9 @@ pub struct SwapInResponse {
 pub struct SwapOutResponse {
     pub amount_in_left: Uint128,
     pub amount_out: Uint128,
-    pub fee: Uint128,
+    pub total_fees: Uint128,
+    pub shade_dao_fees: Uint128,
+    pub lp_fees: Uint128,
 }
 
 #[cw_serde]
@@ -368,8 +361,8 @@ pub struct LiquidityParameters {
     pub amount_x_min: Uint128,
     pub amount_y_min: Uint128,
     pub active_id_desired: u32,
-    pub id_slippage: u32,    //TODO figure this out
-    pub delta_ids: Vec<i64>, //TODO this as well
+    pub id_slippage: u32,
+    pub delta_ids: Vec<i64>,
     pub distribution_x: Vec<u64>,
     pub distribution_y: Vec<u64>,
     pub deadline: u64,

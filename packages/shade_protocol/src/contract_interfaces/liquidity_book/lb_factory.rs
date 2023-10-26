@@ -41,6 +41,7 @@ pub enum ExecuteMsg {
         active_id: u32,
         bin_step: u16,
         viewing_key: String,
+        entropy: String,
     },
     // #[serde(rename = "set_lb_pair_ignored")]
     // SetLBPairIgnored {

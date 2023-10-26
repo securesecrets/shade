@@ -11,7 +11,10 @@ use shade_protocol::{
     lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types, viewing_keys},
     liquidity_book::{
         lb_factory::*,
-        lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+        lb_pair::{
+            self,
+            ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+        },
     },
 };
 
@@ -22,6 +25,7 @@ use tokens::TokenType;
 use types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters};
 
 use crate::{
+    error,
     prelude::*,
     state::*,
     types::{LBPair, LBPairInformation, NextPairKey},
@@ -63,8 +67,8 @@ pub fn instantiate(
     };
 
     CONFIG.save(deps.storage, &state)?;
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
 
-    // TODO: decide on response output and format
     Ok(Response::default())
 }
 
@@ -72,6 +76,17 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
+    let contract_status = CONTRACT_STATUS.load(deps.storage)?;
+    match contract_status {
+        ContractStatus::FreezeAll => match msg {
+            ExecuteMsg::SetLBPairImplementation { .. }
+            | ExecuteMsg::SetLBTokenImplementation { .. } => {
+                return Err(error::LBFactoryError::TransactionBlock());
+            }
+            _ => {}
+        },
+        ContractStatus::Active => {}
+    }
     match msg {
         ExecuteMsg::SetLBPairImplementation {
             lb_pair_implementation,
@@ -85,6 +100,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             active_id,
             bin_step,
             viewing_key,
+            entropy,
         } => try_create_lb_pair(
             deps,
             env,
@@ -94,6 +110,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             active_id,
             bin_step,
             viewing_key,
+            entropy,
         ),
         // ExecuteMsg::SetLBPairIgnored {
         //     token_x,
@@ -180,11 +197,6 @@ fn try_set_lb_pair_implementation(
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
 
-    // TODO: query the LBPair contract to check that the factory address is correct
-    // if ILBPair(new_lb_pair_implementation).getFactory() != env.contract.address {
-    //     return Err(Error::LBPairSafetyCheckFailed(new_lb_pair_implementation.address))
-    // }
-
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -225,10 +237,6 @@ fn try_set_lb_token_implementation(
         info.sender.to_string(),
         &state.admin_auth,
     )?;
-    // TODO: query the LBToken contract to check that the factory address is correct
-    // if ILBToken(new_lb_token_implementation).getFactory() != env.contract.address {
-    //     return Err(Error::LBTokenSafetyCheckFailed(new_lb_token_implementation.address))
-    // }
 
     let old_lb_token_implementation = state.lb_token_implementation;
     if (old_lb_token_implementation == new_lb_token_implementation) {
@@ -266,6 +274,7 @@ fn try_create_lb_pair(
     active_id: u32,
     bin_step: u16,
     viewing_key: String,
+    entropy: String,
 ) -> Result<Response> {
     let state = CONFIG.load(deps.storage)?;
 
@@ -307,9 +316,6 @@ fn try_create_lb_pair(
     PriceHelper::get_price_from_id(active_id, bin_step);
 
     let (token_a, token_b) = _sort_tokens(token_x.clone(), token_y.clone());
-
-    // TODO: error if address doesn't exist on chain
-    // if (address(tokenA) == address(0)) revert LBFactory__AddressZero();
 
     if LB_PAIRS_INFO
         .load(
@@ -362,11 +368,8 @@ fn try_create_lb_pair(
                 },
                 active_id,
                 lb_token_implementation: state.lb_token_implementation,
-                //TODO add viewing key
                 viewing_key,
-                //TODO add pair_name
-                pair_name: String::new(),
-                entropy: String::new(),
+                entropy,
                 protocol_fee_recipient: state.fee_recipient,
                 admin_auth: state.admin_auth.into(),
             })?,
@@ -386,79 +389,7 @@ fn try_create_lb_pair(
     })?;
 
     Ok(Response::new().add_submessages(messages))
-
-    // emit LBPairCreated(tokenX, tokenY, binStep, pair, _allLBPairs.length - 1);
 }
-
-// /// Sets whether the pair is ignored or not for routing, it will make the pair unusable by the router.
-// ///
-// /// # Arguments
-// ///
-// /// * `token_x` - The address of the first token of the pair.
-// /// * `token_y` - The address of the second token of the pair.
-// /// * `bin_step` - The bin step in basis point of the pair.
-// /// * `ignored` - Whether to ignore (true) or not (false) the pair for routing.
-// fn try_set_lb_pair_ignored(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     token_a: TokenType,
-//     token_b: TokenType,
-//     bin_step: u16,
-//     ignored: bool,
-// ) -> Result<Response> {
-//     let state = CONFIG.load(deps.storage)?;
-//     only_owner(&info.sender, &state.owner)?;
-
-//     let (token_a, token_b) = _sort_tokens(token_a, token_b);
-
-//     let mut pair_information = LB_PAIRS_INFO
-//         .load(
-//             deps.storage,
-//             (
-//                 token_a.unique_key().clone(),
-//                 token_b.unique_key().clone(),
-//                 bin_step,
-//             ),
-//         )
-//         .unwrap();
-
-//     if pair_information
-//         .lb_pair
-//         .contract
-//         .address
-//         .as_str()
-//         .is_empty()
-//     {
-//         return Err(Error::LBPairDoesNotExist {
-//             token_x: token_a.unique_key().clone(),
-//             token_y: token_b.unique_key().clone(),
-//             bin_step,
-//         });
-//     }
-
-//     if pair_information.ignored_for_routing == ignored {
-//         return Err(Error::LBPairIgnoredIsAlreadyInTheSameState);
-//     }
-
-//     pair_information.ignored_for_routing = ignored;
-
-//     LB_PAIRS_INFO.save(
-//         deps.storage,
-//         (
-//             token_a.unique_key().clone(),
-//             token_b.unique_key().clone(),
-//             bin_step,
-//         ),
-//         &pair_information,
-//     )?;
-
-//     // emit LBPairIgnoredStateChanged(pairInformation.LBPair, ignored);
-
-//     // TODO: be more specific about which pair changed
-//     Ok(Response::default()
-//         .add_attribute_plaintext("LBPair ignored state changed", format!("{}", ignored)))
-// }
 
 /// Sets the preset parameters of a bin step
 ///
@@ -678,7 +609,6 @@ fn try_set_fee_recipient(
         info.sender.to_string(),
         &state.admin_auth,
     )?;
-    // TODO: Is there way to check that the address exists / is not zero?
 
     let old_fee_recipient = state.fee_recipient;
     if old_fee_recipient == fee_recipient {
@@ -827,8 +757,7 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> 
         info.sender.to_string(),
         &state.admin_auth,
     )?;
-    // TODO: I think this needs to send a message to the LBPair contract to execute the force decay.
-    // pair.forceDecay();
+
     let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);
     let mut lb_pair = LB_PAIRS_INFO
         .load(
@@ -988,7 +917,7 @@ fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * lb_pair - The address of the LBPair at index `index`.
-// TODO: Unsure if this function is necessary. Not sure how to index the Keyset.
+// TODO: Unsure if this function is necessary. Not sure how to index the Keyset. WAITING: For Front-end to make some decisions about this
 fn query_lb_pair_at_index(deps: Deps, index: u32) -> Result<Binary> {
     let lb_pair = todo!();
 
@@ -1019,7 +948,7 @@ fn query_number_of_quote_assets(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `asset` - The address of the quote asset at index `index`.
-// TODO: Unsure if this function is necessary. Not sure how to index the Keyset.
+// TODO: Unsure if this function is necessary. Not sure how to index the Keyset. WAITING: For Front-end to make some decisions about this
 fn query_quote_asset_at_index(deps: Deps, index: u32) -> Result<Binary> {
     let asset = QUOTE_ASSET_WHITELIST.get_at(deps.storage, index)?;
 
@@ -1316,7 +1245,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                     &LBPairInformation {
                         bin_step: lb_pair_key.bin_step,
                         lb_pair: lb_pair.clone(),
-                        // TODO: get 'is_owner' from the create_lb_pair function
                         created_by_owner: lb_pair_key.is_open,
                         ignored_for_routing: false,
                     },
@@ -1339,7 +1267,9 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 )?;
 
                 ephemeral_storage_w(deps.storage).remove();
-                Ok(Response::default())
+                Ok(Response::default()
+                    .add_attribute("lb_pair_address", lb_pair.contract.address.to_string())
+                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash.to_string()))
             }
             None => Err(StdError::generic_err(format!("Expecting contract id"))),
         },

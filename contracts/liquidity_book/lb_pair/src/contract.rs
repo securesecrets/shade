@@ -1,6 +1,6 @@
 #![allow(unused)] // For beginning only.
 
-use crate::{prelude::*, state::*};
+use crate::{error, prelude::*, state::*};
 use core::panic;
 use cosmwasm_std::{
     from_binary,
@@ -71,7 +71,7 @@ use types::{Bytes32, LBPairInformation, MintArrays};
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
-
+const LB_PAIR_CONTRACT_VERSION: u32 = 1;
 /////////////// INSTANTIATE ///////////////
 
 #[shd_entry_point]
@@ -82,16 +82,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response> {
     //Initializing the Token Contract
-
-    // TODO: Only the factory should be allowed to instantiate this contract
-    // I think you can restrict that on code upload
-    // Proposed solution -> Haseeb, literally hardcore the factory_address
-    // let factory_address = Addr::unchecked("factory_contract_address");
-    // And factory is only used at the time of instantiation.
-
-    // if info.sender != factory_address {
-    //     return Err(Error::OnlyFactory);
-    // }
 
     let token_x_symbol = match msg.token_x.clone() {
         TokenType::CustomToken {
@@ -201,7 +191,7 @@ pub fn instantiate(
 
     CONFIG.save(deps.storage, &state)?;
     ORACLE.save(deps.storage, &oracle)?;
-
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
     BIN_TREE.save(deps.storage, &tree)?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
@@ -216,9 +206,27 @@ pub fn instantiate(
 }
 
 /////////////// EXECUTE ///////////////
-//TODO: add contract status
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
+    let contract_status = CONTRACT_STATUS.load(deps.storage)?;
+    match contract_status {
+        ContractStatus::FreezeAll => match msg {
+            ExecuteMsg::AddLiquidity { .. }
+            | ExecuteMsg::SwapTokens { .. }
+            | ExecuteMsg::Receive(..) => {
+                return Err(error::LBPairError::TransactionBlock());
+            }
+            _ => {}
+        },
+        ContractStatus::LpWithdrawOnly => match msg {
+            ExecuteMsg::AddLiquidity { .. } | ExecuteMsg::SwapTokens { .. } => {
+                return Err(error::LBPairError::TransactionBlock());
+            }
+            _ => {}
+        },
+        ContractStatus::Active => {}
+    }
+
     match msg {
         ExecuteMsg::Receive(msg) => {
             let checked_addr = deps.api.addr_validate(&msg.from)?;
@@ -358,6 +366,9 @@ fn try_swap(
 
     let reserves = state.reserves;
     let mut protocol_fees = state.protocol_fees;
+    let mut total_fees: [u8; 32] = [0; 32];
+    let mut lp_fees: [u8; 32] = [0; 32];
+    let mut shade_dao_fees: [u8; 32] = [0; 32];
 
     let mut amounts_out = [0u8; 32];
     let mut amounts_left = if swap_for_y {
@@ -386,22 +397,24 @@ fn try_swap(
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(active_id)?;
 
-            let (mut amounts_in_with_fees, amounts_out_of_bin, total_fees) =
-                BinHelper::get_amounts(
-                    bin_reserves,
-                    params,
-                    bin_step,
-                    swap_for_y,
-                    active_id,
-                    amounts_left,
-                )?;
+            let (mut amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
+                bin_reserves,
+                params,
+                bin_step,
+                swap_for_y,
+                active_id,
+                amounts_left,
+            )?;
 
             if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
                 amounts_left = amounts_left.sub(amounts_in_with_fees);
                 amounts_out = amounts_out.add(amounts_out_of_bin);
 
-                let p_fees = total_fees
-                    .scalar_mul_div_basis_point_round_down(params.get_protocol_share().into())?;
+                let p_fees =
+                    fees.scalar_mul_div_basis_point_round_down(params.get_protocol_share().into())?;
+                total_fees = total_fees.add(fees);
+                lp_fees = lp_fees.add(fees.sub(p_fees));
+                shade_dao_fees = shade_dao_fees.add(p_fees);
 
                 if U256::from_le_bytes(p_fees) > U256::ZERO {
                     protocol_fees = protocol_fees.add(p_fees);
@@ -412,7 +425,7 @@ fn try_swap(
                     deps.storage,
                     active_id,
                     &bin_reserves
-                        .add(amounts_in_with_fees)
+                        .add(amounts_in_with_fees) // actually amount in wihtout fees
                         .sub(amounts_out_of_bin),
                 )?;
             }
@@ -448,6 +461,7 @@ fn try_swap(
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
     let amount_out;
+
     if swap_for_y {
         amount_out = amounts_out.decode_y();
         let msg = BinHelper::transfer_y(amounts_out, token_y.clone(), to);
@@ -469,9 +483,15 @@ fn try_swap(
         .add_attributes(vec![
             Attribute::new("amount_in", amounts_received),
             Attribute::new("amount_out", amount_out.to_string()),
-            Attribute::new("lp_fee_amount", "0".to_string()), // TODO FILL with correct parameters
-            Attribute::new("total_fee_amount", "0".to_string()), // TODO FILL with correct parameters
-            Attribute::new("shade_dao_fee_amount", "0".to_string()), // TODO FILL with correct parameters
+            Attribute::new("lp_fee_amount", lp_fees.decode_alt(swap_for_y).to_string()),
+            Attribute::new(
+                "total_fee_amount",
+                total_fees.decode_alt(swap_for_y).to_string(),
+            ),
+            Attribute::new(
+                "shade_dao_fee_amount",
+                shade_dao_fees.decode_alt(swap_for_y).to_string(),
+            ),
             Attribute::new("token_in_key", token_x.unique_key()),
             Attribute::new("token_out_key", token_y.unique_key()),
         ])
@@ -725,9 +745,6 @@ fn mint(
     let token_x = state.token_x;
     let token_y = state.token_y;
 
-    // TODO: add a check that the "to" address is not zero or this contract's address
-    // equivalent to notAddressZeroOrThis(to)
-
     if liquidity_configs.is_empty() {
         return Err(Error::EmptyMarketConfigs);
     }
@@ -758,11 +775,6 @@ fn mint(
         state.reserves = state.reserves.add(amounts_received.sub(amounts_left)); //Total liquidity of pool
         Ok(state)
     })?;
-    // if amounts_left.iter().any(|&x| x != 0) {
-    //     if let Some(msgs) = BinHelper::transfer(amounts_left, token_x, token_y, refund_to) {
-    //         messages.extend(msgs);
-    //     };
-    // }
 
     let (amount_left_x, amount_left_y) = amounts_left.decode();
 
@@ -1436,12 +1448,10 @@ fn receiver_callback(
         } => {
             // this check needs to be here instead of in execute() because it is impossible to (cleanly) distinguish between swaps and lp withdraws until this point
             // if contract_status is FreezeAll, this fn will never be called, so only need to check LpWithdrawOnly here
-            //TODO: add status: check
-            // if contract_status == ContractStatus::LpWithdrawOnly {
-            //     return Err(StdError::generic_err(
-            //         "Transaction is blocked by contract status",
-            //     ));
-            // }
+            let contract_status = CONTRACT_STATUS.load(deps.storage)?;
+            if contract_status == ContractStatus::LpWithdrawOnly {
+                return Err(error::LBPairError::TransactionBlock());
+            }
 
             //validate recipient address
             let checked_to = if let Some(to) = to {
@@ -1556,27 +1566,23 @@ fn query_pair_info(deps: Deps) -> Result<shadeswap_shared::msg::amm_pair::QueryM
             amount_0: Uint128::from(reserve_x),
             amount_1: Uint128::from(reserve_y),
             total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
-            contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
+            contract_version: LB_PAIR_CONTRACT_VERSION,
             fee_info: shadeswap_shared::amm_pair::FeeInfo {
-                shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
+                shade_dao_address: state.protocol_fees_recipient,
                 lp_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    nom: 0,
                     denom: 1_000_000_000_000_000_000,
                 },
                 shade_dao_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    nom: 0,
                     denom: 1_000_000_000_000_000_000,
                 },
                 stable_lp_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    nom: 0,
                     denom: 1_000_000_000_000_000_000,
                 },
                 stable_shade_dao_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee_u64(state.bin_step),
+                    nom: 0,
                     denom: 1_000_000_000_000_000_000,
                 },
             },
@@ -1621,9 +1627,9 @@ fn query_swap_simulation(
 
     Ok(
         shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
-            total_fee_amount: res.fee,
-            lp_fee_amount: res.fee,        //TODO lpfee
-            shade_dao_fee_amount: res.fee, // dao fee
+            total_fee_amount: res.total_fees,
+            lp_fee_amount: res.lp_fees,
+            shade_dao_fee_amount: res.shade_dao_fees,
             result: SwapResult {
                 return_amount: res.amount_out,
             },
@@ -2126,8 +2132,11 @@ fn query_swap_out(
     let tree = BIN_TREE.load(deps.storage)?;
 
     let mut amounts_in_left = Bytes32::encode_alt(amount_in, swap_for_y);
-    let mut amount_out = 0u128;
+    let mut amounts_out = [0u8; 32];
     let mut fee = 0u128;
+    let mut total_fees: [u8; 32] = [0; 32];
+    let mut lp_fees: [u8; 32] = [0; 32];
+    let mut shade_dao_fees: [u8; 32] = [0; 32];
 
     let mut params = state.pair_parameters;
     let bin_step = state.bin_step;
@@ -2141,7 +2150,7 @@ fn query_swap_out(
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             params = params.update_volatility_accumulator(id)?;
 
-            let (amounts_in_with_fees, amounts_out_of_bin, total_fees) = BinHelper::get_amounts(
+            let (amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
                 bin_reserves,
                 params,
                 bin_step,
@@ -2152,10 +2161,13 @@ fn query_swap_out(
 
             if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
                 amounts_in_left = amounts_in_left.sub(amounts_in_with_fees);
+                amounts_out = amounts_out.add(amounts_out_of_bin);
 
-                amount_out += Bytes32::decode_alt(&amounts_out_of_bin, !swap_for_y);
-
-                fee += Bytes32::decode_alt(&total_fees, swap_for_y);
+                let p_fees =
+                    fees.scalar_mul_div_basis_point_round_down(params.get_protocol_share().into())?;
+                total_fees = total_fees.add(fees);
+                lp_fees = lp_fees.add(fees.sub(p_fees));
+                shade_dao_fees = shade_dao_fees.add(p_fees);
             }
         }
 
@@ -2176,8 +2188,10 @@ fn query_swap_out(
 
     Ok(SwapOutResponse {
         amount_in_left: Uint128::from(amount_in_left),
-        amount_out: Uint128::from(amount_out),
-        fee: Uint128::from(fee),
+        amount_out: Uint128::from(amounts_out.decode_alt(!swap_for_y)),
+        total_fees: Uint128::from(total_fees.decode_alt(swap_for_y)),
+        shade_dao_fees: Uint128::from(shade_dao_fees.decode_alt(swap_for_y)),
+        lp_fees: Uint128::from(lp_fees.decode_alt(swap_for_y)),
     })
 }
 
