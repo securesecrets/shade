@@ -22,10 +22,18 @@ use shade_protocol::lb_libraries::{
 use tokens::TokenType; //?
 
 pub const CONFIG: Item<State, Bincode2> = Item::new("config");
+pub const CONTRACT_STATUS: Item<ContractStatus, Bincode2> = Item::new("contract_status");
 pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins"); //?
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
 pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
+
+#[cw_serde]
+pub enum ContractStatus {
+    Active,         // allows all operations
+    FreezeAll,      // blocks everything except admin-protected config changes
+    LpWithdrawOnly, // blocks everything except LP withdraws and admin-protected config changes
+}
 
 #[cw_serde]
 pub struct State {

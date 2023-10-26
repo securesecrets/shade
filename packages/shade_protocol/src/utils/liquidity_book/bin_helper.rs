@@ -8,18 +8,23 @@
 use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Uint128, WasmMsg};
 use ethnum::U256;
 
-use crate::utils::liquidity_book::math::packed_u128_math::PackedMath;
-use crate::utils::liquidity_book::math::u128x128_math::U128x128MathError;
-use crate::utils::liquidity_book::tokens::TokenType;
-use crate::utils::liquidity_book::transfer::HandleMsg;
+use crate::utils::liquidity_book::{
+    math::{packed_u128_math::PackedMath, u128x128_math::U128x128MathError},
+    tokens::TokenType,
+    transfer::HandleMsg,
+};
 
-use super::constants::{SCALE, SCALE_OFFSET};
-use super::fee_helper::{FeeError, FeeHelper};
-use super::math::packed_u128_math::{Decode, Encode};
-use super::math::u256x256_math::{U256x256Math, U256x256MathError};
-use super::pair_parameter_helper::{PairParameters, PairParametersError};
-use super::price_helper::PriceHelper;
-use super::types::Bytes32;
+use super::{
+    constants::{SCALE, SCALE_OFFSET},
+    fee_helper::{FeeError, FeeHelper},
+    math::{
+        packed_u128_math::{Decode, Encode},
+        u256x256_math::{U256x256Math, U256x256MathError},
+    },
+    pair_parameter_helper::{PairParameters, PairParametersError},
+    price_helper::PriceHelper,
+    types::Bytes32,
+};
 
 // NOTE: not sure if it's worth having a unique type for this
 
@@ -337,17 +342,17 @@ impl BinHelper {
 
         let mut amount_in128 = amounts_in_left.decode_alt(swap_for_y);
 
-        let mut fee128;
+        let mut feeu128;
         let mut amount_out128;
 
         if amount_in128 >= max_amount_in {
-            fee128 = max_fee;
+            feeu128 = max_fee;
             amount_in128 = max_amount_in.as_u128();
             amount_out128 = bin_reserve_out;
         } else {
-            fee128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
+            feeu128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
 
-            let amount_in = amount_in128 - fee128;
+            let amount_in = amount_in128 - feeu128;
 
             amount_out128 = if swap_for_y {
                 U256x256Math::mul_shift_round_down(U256::from(amount_in), price, SCALE_OFFSET)?
@@ -368,13 +373,13 @@ impl BinHelper {
             (
                 Bytes32::encode_first(amount_in128),
                 Bytes32::encode_second(amount_out128),
-                Bytes32::encode_first(fee128),
+                Bytes32::encode_first(feeu128),
             )
         } else {
             (
                 Bytes32::encode_second(amount_in128),
                 Bytes32::encode_first(amount_out128),
-                Bytes32::encode_second(fee128),
+                Bytes32::encode_second(feeu128),
             )
         };
 
@@ -496,7 +501,6 @@ impl BinHelper {
                         padding: None,
                         memo: None,
                     };
-                    // //TODO add token hash
                     let cosmos_msg = msg
                         .to_cosmos_msg(token_code_hash, contract_addr.to_string(), None)
                         .unwrap();
@@ -516,6 +520,7 @@ impl BinHelper {
             None
         }
     }
+
     /// Transfers the encoded amounts to the recipient, only for token Y.
     ///
     /// # Arguments
@@ -542,7 +547,6 @@ impl BinHelper {
                         recipient_code_hash: None,
                         memo: None,
                     };
-                    // //TODO add token hash
                     let cosmos_msg = msg
                         .to_cosmos_msg(token_code_hash, contract_addr.to_string(), None)
                         .unwrap();
@@ -568,12 +572,11 @@ impl BinHelper {
 mod tests {
     use std::{ops::Add, str::FromStr};
 
-    use crate::{
-        utils::liquidity_book::constants::*,
-        utils::liquidity_book::types::StaticFeeParameters,
-        utils::liquidity_book::{
-            math::encoded_sample::EncodedSample, pair_parameter_helper::PairParameters,
-        },
+    use crate::utils::liquidity_book::{
+        constants::*,
+        math::encoded_sample::EncodedSample,
+        pair_parameter_helper::PairParameters,
+        types::StaticFeeParameters,
     };
     use cosmwasm_std::StdResult;
     use ethnum::U256;

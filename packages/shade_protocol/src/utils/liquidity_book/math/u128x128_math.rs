@@ -14,14 +14,12 @@ use super::bit_math::BitMath;
 pub enum U128x128MathError {
     #[error("U128x128 Math Error: LogUnderflow")]
     LogUnderflow,
-    // TODO: format this error better
     #[error("U128x128 Math Error: PowUnderflow {0} {1}")]
     PowUnderflow(U256, I256),
 }
 
 const LOG_SCALE_OFFSET: U256 = U256::new(127u128);
 const LOG_SCALE: U256 = U256::new(1u128 << 127u128);
-// TODO: verify this works out to 2^256, 2^127 * 2^127
 const LOG_SCALE_SQUARED: U256 = U256::from_words(1u128 << 127u128 - 1, 0);
 
 pub struct U128x128Math;

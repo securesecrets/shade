@@ -51,7 +51,6 @@ impl TreeUint24 {
     ///
     /// Returns `true` if the `id` was not already in the tree.
     /// If the `id` was already in the tree, no changes are made and `false` is returned.
-    // TODO: introduce u24
     pub fn add(&mut self, id: u32) -> bool {
         let key2 = U256::from(id) >> 8u8;
 
@@ -130,7 +129,6 @@ impl TreeUint24 {
         let mut bit = (id & u32::from(u8::MAX)) as u8;
 
         if bit != 0 {
-            // TODO: for all of the unwraps in this module, what should we do if it's None?
             leaves =
                 U256::from_le_bytes(*self.level2.get(&key2.to_le_bytes()).unwrap_or(&[0u8; 32]));
             let closest_bit = Self::_closest_bit_right(leaves, bit);

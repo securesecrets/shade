@@ -24,7 +24,6 @@ use crate::utils::liquidity_book::math::{
     sample_math::OracleSample,
 };
 
-// TODO: consider creating a different type of storage for this.
 #[derive(Serialize, Deserialize)]
 pub struct Oracle {
     /// This array represents a fixed-size storage for 65535 samples,
@@ -151,7 +150,6 @@ impl Oracle {
     ///
     /// * `prev_sample` - The previous sample
     /// * `next_sample` - The next sample
-    // TODO: make lookUpTimestamp a u40? what if cosmos block time doesn't fit in u40?
     pub fn binary_search(
         &self,
         oracle_id: u16,
@@ -161,7 +159,6 @@ impl Oracle {
         let mut oracle_id = oracle_id;
         let mut low = 0;
         let mut high = length - 1;
-        // TODO: not sure if it's ok to initialize these at 0
         let mut sample = OracleSample(EncodedSample([0u8; 32]));
         let mut sample_last_update = 0u64;
 

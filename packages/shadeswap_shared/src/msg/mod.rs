@@ -1,7 +1,5 @@
 use crate::core::ContractInstantiationInfo;
-use cosmwasm_std::Addr;
-use cosmwasm_std::Binary;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Binary, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
@@ -16,8 +14,10 @@ pub mod router {
     use super::*;
     use crate::core::TokenAmount;
     use shade_protocol::{
-        liquidity_book::lb_pair::SwapResult, snip20::Snip20ReceiveMsg,
-        utils::liquidity_book::tokens::TokenType, Contract,
+        liquidity_book::lb_pair::SwapResult,
+        snip20::Snip20ReceiveMsg,
+        utils::liquidity_book::tokens::TokenType,
+        Contract,
     };
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -135,7 +135,12 @@ pub mod amm_pair {
     use super::*;
     use crate::{
         core::{
-            ContractInstantiationInfo, CustomFee, Fee, StableTokenData, TokenAmount, TokenPair,
+            ContractInstantiationInfo,
+            CustomFee,
+            Fee,
+            StableTokenData,
+            TokenAmount,
+            TokenPair,
             TokenPairAmount,
         },
         staking::StakingContractInstantiateInfo,
@@ -144,8 +149,10 @@ pub mod amm_pair {
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
     use shade_protocol::{
-        liquidity_book::lb_pair::SwapResult, snip20::Snip20ReceiveMsg, utils::asset::RawContract,
-        utils::liquidity_book::tokens::TokenType, Contract,
+        liquidity_book::lb_pair::SwapResult,
+        snip20::Snip20ReceiveMsg,
+        utils::{asset::RawContract, liquidity_book::tokens::TokenType},
+        Contract,
     };
 
     /// Represents the address of an exchange and the pair that it manages
@@ -449,10 +456,12 @@ pub mod amm_pair {
 
 pub mod factory {
     use super::*;
-    use crate::amm_pair::{AMMPair, StableParams};
-    use crate::core::TokenPair;
-    use crate::staking::StakingContractInstantiateInfo;
-    use crate::{amm_pair::AMMSettings, Pagination};
+    use crate::{
+        amm_pair::{AMMPair, AMMSettings, StableParams},
+        core::TokenPair,
+        staking::StakingContractInstantiateInfo,
+        Pagination,
+    };
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
     use shade_protocol::Contract;

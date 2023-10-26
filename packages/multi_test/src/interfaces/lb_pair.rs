@@ -43,7 +43,6 @@ pub fn init(
             active_id,
             lb_token_implementation,
             viewing_key,
-            pair_name,
             entropy,
             protocol_fee_recipient,
             admin_auth,
@@ -228,9 +227,11 @@ pub fn swap_out_query(
     let lb_pair::SwapOutResponse {
         amount_out,
         amount_in_left,
-        fee,
+        total_fees,
+        shade_dao_fees: _,
+        lp_fees: _,
     } = res;
-    Ok((amount_out, amount_in_left, fee))
+    Ok((amount_out, amount_in_left, total_fees))
 }
 
 pub fn query_static_fee_params(
@@ -407,9 +408,11 @@ pub fn query_swap_out(
     let lb_pair::SwapOutResponse {
         amount_out,
         amount_in_left,
-        fee,
+        total_fees,
+        shade_dao_fees: _,
+        lp_fees: _,
     } = res;
-    Ok((amount_out, amount_in_left, fee))
+    Ok((amount_out, amount_in_left, total_fees))
 }
 
 pub fn query_swap_in(

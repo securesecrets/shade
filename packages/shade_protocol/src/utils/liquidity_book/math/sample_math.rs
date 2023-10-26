@@ -44,12 +44,10 @@ impl OracleSample {
         cumulative_volatility: u64,
         cumulative_bin_crossed: u64,
         sample_lifetime: u8,
-        // TODOL create a uint40 type?
         created_at: u64,
     ) -> OracleSample {
         let mut sample = EncodedSample([0u8; 32]);
 
-        // TODO: are all these .into() really necessary?
         sample = sample.set(oracle_length.into(), MASK_UINT16, OFFSET_ORACLE_LENGTH);
         sample = sample.set(cumulative_id.into(), MASK_UINT64, OFFSET_CUMULATIVE_ID);
         sample = sample.set(

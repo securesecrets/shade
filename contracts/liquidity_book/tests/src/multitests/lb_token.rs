@@ -55,6 +55,7 @@ pub fn init_setup() -> Result<
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
     let all_pairs =
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
