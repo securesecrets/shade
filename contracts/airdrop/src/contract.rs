@@ -1,44 +1,47 @@
 use crate::{
     handle::{
-        try_account,
-        try_add_tasks,
-        try_claim,
-        try_claim_decay,
-        try_complete_task,
-        try_disable_permit_key,
-        try_set_viewing_key,
-        try_update_config,
+        recover, try_account, try_add_tasks, try_claim, try_claim_decay, try_complete_task,
+        try_disable_permit_key, try_set_viewing_key, try_update_config,
     },
     query,
-    state::{config_w, decay_claimed_w, total_claimed_w},
+    state::{config_r, config_w, decay_claimed_w, total_claimed_w, VK},
 };
 use shade_protocol::{
     airdrop::{
         claim_info::RequiredTask,
         errors::{invalid_dates, invalid_task_percentage},
-        Config,
-        ExecuteMsg,
-        InstantiateMsg,
-        QueryMsg,
+        Config, ExecuteMsg, InstantiateMsg, MigrateAnswer, MigrateMsg, QueryMsg,
     },
     c_std::{
-        shd_entry_point,
-        to_binary,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
+        shd_entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Uint128,
     },
-    utils::{pad_handle_result, pad_query_result},
+    snip20::helpers::set_viewing_key_msg,
+    utils::{generic_response::ResponseStatus, pad_handle_result, pad_query_result},
 };
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
+
+#[shd_entry_point]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response> {
+    match msg {
+        MigrateMsg::Migrate {} => {
+            let config = config_r(deps.storage).load()?;
+
+            // Set viewing key for shd
+            Ok(Response::new()
+                .add_message(set_viewing_key_msg(
+                    VK.to_string(),
+                    None,
+                    &config.airdrop_snip20,
+                )?)
+                .set_data(to_binary(&MigrateAnswer::Migrate {
+                    status: ResponseStatus::Success,
+                })?))
+        }
+    }
+}
 
 #[shd_entry_point]
 pub fn instantiate(
@@ -138,6 +141,8 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
+            ExecuteMsg::Recover { padding: _ } => recover(deps, &env, &info),
+
             ExecuteMsg::UpdateConfig {
                 admin,
                 dump_address,

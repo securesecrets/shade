@@ -77,6 +77,16 @@ impl InstantiateCallback for InstantiateMsg {
 }
 
 #[cw_serde]
+pub enum MigrateMsg {
+    Migrate {},
+}
+
+#[cw_serde]
+pub enum MigrateAnswer {
+    Migrate { status: ResponseStatus },
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<Addr>,
@@ -112,6 +122,9 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     ClaimDecay {
+        padding: Option<String>,
+    },
+    Recover {
         padding: Option<String>,
     },
 }
@@ -158,6 +171,10 @@ pub enum ExecuteAnswer {
         addresses: Vec<Addr>,
     },
     ClaimDecay {
+        status: ResponseStatus,
+    },
+    Recover {
+        amount: Uint128,
         status: ResponseStatus,
     },
 }

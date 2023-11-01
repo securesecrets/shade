@@ -1,19 +1,7 @@
 use crate::state::{
-    account_r,
-    account_total_claimed_r,
-    account_total_claimed_w,
-    account_viewkey_w,
-    account_w,
-    address_in_account_w,
-    claim_status_r,
-    claim_status_w,
-    config_r,
-    config_w,
-    decay_claimed_w,
-    revoke_permit,
-    total_claimed_r,
-    total_claimed_w,
-    validate_address_permit,
+    account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w,
+    address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w,
+    revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit, VK,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use shade_protocol::{
@@ -21,41 +9,19 @@ use shade_protocol::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
         claim_info::RequiredTask,
         errors::{
-            account_does_not_exist,
-            address_already_in_account,
-            airdrop_ended,
-            airdrop_not_started,
-            claim_too_high,
-            decay_claimed,
-            decay_not_set,
-            expected_memo,
-            invalid_dates,
-            invalid_partial_tree,
-            invalid_task_percentage,
-            not_admin,
-            nothing_to_claim,
+            account_does_not_exist, address_already_in_account, airdrop_ended, airdrop_not_started,
+            claim_too_high, decay_claimed, decay_not_set, expected_memo, invalid_dates,
+            invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim,
             unexpected_error,
         },
-        Config,
-        ExecuteAnswer,
+        Config, ExecuteAnswer,
     },
     c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Api,
-        Binary,
-        Decimal,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdResult,
-        Storage,
-        Uint128,
+        from_binary, to_binary, Addr, Api, Binary, Decimal, DepsMut, Env, MessageInfo, Response,
+        StdError, StdResult, Storage, Uint128,
     },
     query_authentication::viewing_keys::ViewingKey,
-    snip20::helpers::send_msg,
+    snip20::helpers::{balance_query, send_msg},
     utils::generic_response::{ResponseStatus, ResponseStatus::Success},
 };
 
@@ -471,9 +437,57 @@ pub fn try_claim_decay(deps: DepsMut, env: &Env, _info: &MessageInfo) -> StdResu
                 )?];
 
                 return Ok(Response::new()
+                    .add_messages(messages)
                     .set_data(to_binary(&ExecuteAnswer::ClaimDecay { status: Success })?));
             }
         }
+    }
+
+    Err(decay_not_set())
+}
+
+pub fn recover(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
+    let config = config_r(deps.storage).load()?;
+
+    // Check if admin
+    if info.sender != config.admin {
+        return Err(not_admin(config.admin.as_str()));
+    }
+
+    // Check if airdrop ended
+    if let Some(end_date) = config.end_date {
+        if let Some(dump_address) = config.dump_address {
+            if env.block.time.seconds() > end_date {
+                let balance = balance_query(
+                    &deps.querier,
+                    env.contract.address.clone(),
+                    VK.to_string(),
+                    &config.airdrop_snip20,
+                )?;
+
+                let messages = vec![send_msg(
+                    dump_address.clone(),
+                    balance.into(),
+                    None,
+                    None,
+                    None,
+                    &config.airdrop_snip20,
+                )?];
+
+                return Ok(Response::new().add_messages(messages).set_data(to_binary(
+                    &ExecuteAnswer::Recover {
+                        amount: balance.into(),
+                        status: Success,
+                    },
+                )?));
+            } else {
+                return Err(StdError::generic_err("Decay end date has not passed"));
+            }
+        } else {
+            return Err(StdError::generic_err("Dump address not set"));
+        }
+    } else {
+        return Err(StdError::generic_err("End date not set"));
     }
 
     Err(decay_not_set())
