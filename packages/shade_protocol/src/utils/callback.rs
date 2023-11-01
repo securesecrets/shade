@@ -7,17 +7,8 @@ use crate::multi_test::{App, AppResponse, Contract as MultiContract, Executor};
 use crate::AnyResult;
 use crate::{
     c_std::{
-        to_binary,
-        Addr,
-        Coin,
-        ContractInfo,
-        CosmosMsg,
-        Empty,
-        QuerierWrapper,
-        QueryRequest,
-        StdResult,
-        WasmMsg,
-        WasmQuery,
+        to_binary, Addr, Coin, ContractInfo, CosmosMsg, Empty, QuerierWrapper, QueryRequest,
+        StdResult, WasmMsg, WasmQuery,
     },
     serde::{de::DeserializeOwned, Serialize},
     Contract,
@@ -64,6 +55,7 @@ pub trait InstantiateCallback: Serialize {
             msg,
             label,
             funds,
+            admin: None,
         };
         Ok(init.into())
     }
@@ -321,6 +313,7 @@ mod tests {
                 code_hash,
                 funds,
                 label,
+                admin: None,
             }) => {
                 assert_eq!(code_id, id);
                 let mut expected_msg = r#"{"f1":1,"f2":2}"#.as_bytes().to_vec();
