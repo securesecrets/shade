@@ -28,6 +28,7 @@ fn single_staker_compounding(
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -241,6 +242,7 @@ fn single_staker_compounding(
         height: 1,
         time: Timestamp::from_seconds(reward_start.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // No rewards should be pending
@@ -274,6 +276,7 @@ fn single_staker_compounding(
         height: 2,
         time: Timestamp::from_seconds((reward_start.u128() + reward_duration.u128() / 2) as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let expected_mid_rewards = reward_amount / Uint128::new(2);
@@ -379,6 +382,7 @@ fn single_staker_compounding(
         height: 3,
         time: Timestamp::from_seconds(reward_end.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let current_rewards: Uint128;
@@ -486,6 +490,7 @@ fn single_staker_compounding(
         height: 10,
         time: Timestamp::from_seconds((reward_end + unbond_period).u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     basic_staking::ExecuteMsg::Withdraw {

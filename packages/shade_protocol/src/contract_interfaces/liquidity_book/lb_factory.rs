@@ -1,6 +1,11 @@
 use super::lb_pair;
-use crate::utils::liquidity_book::types::{LBPair, LBPairInformation};
-use crate::utils::liquidity_book::{tokens::TokenType, types::ContractInstantiationInfo};
+use crate::utils::{
+    asset::RawContract,
+    liquidity_book::{
+        tokens::TokenType,
+        types::{ContractInstantiationInfo, LBPair, LBPairInformation},
+    },
+};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde, QueryResponses};
@@ -9,6 +14,7 @@ pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub admin_auth: RawContract,
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
     pub flash_loan_fee: u8,
@@ -35,6 +41,7 @@ pub enum ExecuteMsg {
         active_id: u32,
         bin_step: u16,
         viewing_key: String,
+        entropy: String,
     },
     // #[serde(rename = "set_lb_pair_ignored")]
     // SetLBPairIgnored {

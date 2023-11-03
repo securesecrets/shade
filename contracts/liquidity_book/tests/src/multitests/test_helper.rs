@@ -7,7 +7,7 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{lb_pair::LbPair, lb_token::LbToken},
+    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
     lb_libraries::{constants::PRECISION, math::u24::U24, tokens::TokenType},
@@ -231,7 +231,15 @@ pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts)
     .unwrap();
 
     //2. init factory
-    let lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.joker(), 0)?;
+    let admin_contract = init_admin_auth(&mut app, &addrs.admin());
+
+    let lb_factory = lb_factory::init(
+        &mut app,
+        addrs.admin().as_str(),
+        addrs.joker(),
+        0,
+        admin_contract.into(),
+    )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
 

@@ -28,6 +28,7 @@ fn non_stake_rewards(
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -290,6 +291,7 @@ fn non_stake_rewards(
         height: 1,
         time: Timestamp::from_seconds(reward_start.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // No rewards should be pending
@@ -323,6 +325,7 @@ fn non_stake_rewards(
         height: 2,
         time: Timestamp::from_seconds((reward_start.u128() + reward_duration.u128() / 2) as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Half-ish rewards should be pending
@@ -362,6 +365,7 @@ fn non_stake_rewards(
         height: 3,
         time: Timestamp::from_seconds(reward_end.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // All rewards should be pending
@@ -464,6 +468,7 @@ fn non_stake_rewards(
         height: 10,
         time: Timestamp::from_seconds((reward_end + unbond_period).u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     basic_staking::ExecuteMsg::Withdraw {

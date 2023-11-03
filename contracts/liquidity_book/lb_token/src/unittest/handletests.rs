@@ -2008,174 +2008,226 @@ fn test_revoke_permit_sanity() -> StdResult<()> {
 //     Ok(())
 // }
 
-#[test]
-fn test_change_admin() -> StdResult<()> {
-    // init addresses
-    let addr = init_addrs();
+// #[test]
+// fn test_change_admin() -> StdResult<()> {
+//     // init addresses
+//     let addr = init_addrs();
 
-    // instantiate
-    let (_init_result, mut deps) = init_helper_default();
+//     // instantiate
+//     let (_init_result, mut deps) = init_helper_default();
 
-    // check current admin
-    let contract_info = contr_conf_r(&deps.storage).load()?;
-    assert_eq!(contract_info.admin, Some(addr.a()));
+//     // check current admin
+//     let contract_info = contr_conf_r(&deps.storage).load()?;
+//     assert_eq!(contract_info.admin, Some(addr.a()));
 
-    // error: non-admin cannot call this function
-    let msg_change_admin = ExecuteMsg::ChangeAdmin {
-        new_admin: addr.b(),
-        padding: None,
-    };
-    let mut info = mock_info(addr.b().as_str(), &[]);
-    let result = execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        msg_change_admin.clone(),
-    );
-    assert!(extract_error_msg(&result).contains("This is an admin function"));
+//     // error: non-admin cannot call this function
+//     let msg_change_admin = ExecuteMsg::ChangeAdmin {
+//         new_admin: addr.b(),
+//         padding: None,
+//     };
+//     let mut info = mock_info(addr.b().as_str(), &[]);
+//     let result = execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         msg_change_admin.clone(),
+//     );
+//     assert!(extract_error_msg(&result).contains("This is an admin function"));
 
-    // success: admin can change admin
-    info.sender = addr.a();
-    execute(deps.as_mut(), mock_env(), info.clone(), msg_change_admin)?;
-    let contract_info = contr_conf_r(&deps.storage).load()?;
-    assert_eq!(contract_info.admin, Some(addr.b()));
+//     // success: admin can change admin
+//     info.sender = addr.a();
+//     execute(deps.as_mut(), mock_env(), info.clone(), msg_change_admin)?;
+//     let contract_info = contr_conf_r(&deps.storage).load()?;
+//     assert_eq!(contract_info.admin, Some(addr.b()));
 
-    // old admin cannot call admin function (choice of function is arbitrary)
-    let msg_add_curators = ExecuteMsg::AddCurators {
-        add_curators: vec![addr.b()],
-        padding: None,
-    };
-    let result = execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        msg_add_curators.clone(),
-    );
-    assert!(extract_error_msg(&result).contains("This is an admin function"));
+//     // // old admin cannot call admin function (choice of function is arbitrary)
+//     // let msg_add_curators = ExecuteMsg::AddCurators {
+//     //     add_curators: vec![addr.b()],
+//     //     padding: None,
+//     // };
+//     // let result = execute(
+//     //     deps.as_mut(),
+//     //     mock_env(),
+//     //     info.clone(),
+//     //     msg_add_curators.clone(),
+//     // );
+//     // assert!(extract_error_msg(&result).contains("This is an admin function"));
 
-    // success: new admin can call admin function
-    info.sender = addr.b();
-    execute(deps.as_mut(), mock_env(), info, msg_add_curators)?;
+//     // // success: new admin can call admin function
+//     // info.sender = addr.b();
+//     // execute(deps.as_mut(), mock_env(), info, msg_add_curators)?;
 
-    Ok(())
-}
+//     Ok(())
+// }
 
-#[test]
-fn test_remove_admin() -> StdResult<()> {
-    // init addresses
-    let addr = init_addrs();
+// #[test]
+// fn test_change_admin() -> StdResult<()> {
+//     // init addresses
+//     let addr = init_addrs();
 
-    // instantiate
-    let (_init_result, mut deps) = init_helper_default();
+//     // instantiate
+//     let (_init_result, mut deps) = init_helper_default();
 
-    // check admin from contract_info
-    let q_answer = from_binary::<QueryAnswer>(&query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::TokenContractInfo {},
-    )?)?;
-    match q_answer {
-        QueryAnswer::TokenContractInfo {
-            admin,
-            curators,
-            all_token_ids,
-        } => {
-            assert_eq!(admin, Some(addr.a()));
-            assert_eq!(curators, vec![addr.a()]);
-            assert_eq!(all_token_ids, vec!["0".to_string()]);
-        }
-        _ => panic!("query error"),
-    }
+//     // check current admin
+//     let contract_info = contr_conf_r(&deps.storage).load()?;
+//     assert_eq!(contract_info.admin, Some(addr.a()));
 
-    // test admin can perform an admin function (choice of function is arbitrary)
-    let msg_add_curators = ExecuteMsg::AddCurators {
-        add_curators: vec![addr.b()],
-        padding: None,
-    };
-    let mut info = mock_info(addr.a().as_str(), &[]);
-    execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        msg_add_curators.clone(),
-    )?;
+//     // error: non-admin cannot call this function
+//     let msg_change_admin = ExecuteMsg::ChangeAdmin {
+//         new_admin: addr.b(),
+//         padding: None,
+//     };
+//     let mut info = mock_info(addr.b().as_str(), &[]);
+//     let result = execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         msg_change_admin.clone(),
+//     );
+//     assert!(extract_error_msg(&result).contains("This is an admin function"));
 
-    // admin tries to remove admin: fail due to wrong current admin input
-    info.sender = addr.a();
-    let mut result = execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        ExecuteMsg::RemoveAdmin {
-            current_admin: addr.b(),
-            contract_address: Addr::unchecked("cosmos2contract".to_string()),
-            padding: None,
-        },
-    );
-    assert!(
-        extract_error_msg(&result).contains("your inputs are incorrect to perform this function")
-    );
+//     // success: admin can change admin
+//     info.sender = addr.a();
+//     execute(deps.as_mut(), mock_env(), info.clone(), msg_change_admin)?;
+//     let contract_info = contr_conf_r(&deps.storage).load()?;
+//     assert_eq!(contract_info.admin, Some(addr.b()));
 
-    // error: admin tries to remove admin: fail due to wrong contract address
-    info.sender = addr.a();
-    result = execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        ExecuteMsg::RemoveAdmin {
-            current_admin: addr.a(),
-            contract_address: Addr::unchecked("wronginput".to_string()),
-            padding: None,
-        },
-    );
-    assert!(
-        extract_error_msg(&result).contains("your inputs are incorrect to perform this function")
-    );
+//     // // old admin cannot call admin function (choice of function is arbitrary)
+//     // let msg_add_curators = ExecuteMsg::AddCurators {
+//     //     add_curators: vec![addr.b()],
+//     //     padding: None,
+//     // };
+//     // let result = execute(
+//     //     deps.as_mut(),
+//     //     mock_env(),
+//     //     info.clone(),
+//     //     msg_add_curators.clone(),
+//     // );
+//     // assert!(extract_error_msg(&result).contains("This is an admin function"));
 
-    // error: non-admin cannot remove admin
-    let msg_remove_admin = ExecuteMsg::RemoveAdmin {
-        current_admin: addr.a(),
-        contract_address: Addr::unchecked("cosmos2contract".to_string()),
-        padding: None,
-    };
-    info.sender = addr.b();
-    result = execute(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        msg_remove_admin.clone(),
-    );
-    assert!(extract_error_msg(&result).contains("This is an admin function"));
+//     // // success: new admin can call admin function
+//     // info.sender = addr.b();
+//     // execute(deps.as_mut(), mock_env(), info, msg_add_curators)?;
 
-    // success: admin removes admin
-    info.sender = addr.a();
-    execute(deps.as_mut(), mock_env(), info.clone(), msg_remove_admin)?;
+//     Ok(())
+// }
 
-    // check that admin can no longer perform admin function
-    result = execute(deps.as_mut(), mock_env(), info, msg_add_curators);
-    assert!(extract_error_msg(&result).contains("This contract has no admin"));
+// #[test]
+// fn test_remove_admin() -> StdResult<()> {
+//     // init addresses
+//     let addr = init_addrs();
 
-    // check that contract_info shows no admin
-    let q_answer = from_binary::<QueryAnswer>(&query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::TokenContractInfo {},
-    )?)?;
-    match q_answer {
-        QueryAnswer::TokenContractInfo {
-            admin,
-            curators,
-            all_token_ids,
-        } => {
-            assert_eq!(admin, None);
-            assert_eq!(curators, vec![addr.a(), addr.b()]);
-            assert_eq!(all_token_ids, vec!["0".to_string()]);
-        }
-        _ => panic!("query error"),
-    }
+//     // instantiate
+//     let (_init_result, mut deps) = init_helper_default();
 
-    Ok(())
-}
+//     // check admin from contract_info
+//     let q_answer = from_binary::<QueryAnswer>(&query(
+//         deps.as_ref(),
+//         mock_env(),
+//         QueryMsg::TokenContractInfo {},
+//     )?)?;
+//     match q_answer {
+//         QueryAnswer::TokenContractInfo {
+//             admin,
+//             curators,
+//             all_token_ids,
+//         } => {
+//             assert_eq!(admin, Some(addr.a()));
+//             assert_eq!(curators, vec![addr.a()]);
+//             assert_eq!(all_token_ids, vec!["0".to_string()]);
+//         }
+//         _ => panic!("query error"),
+//     }
+
+//     // test admin can perform an admin function (choice of function is arbitrary)
+//     let msg_add_curators = ExecuteMsg::AddCurators {
+//         add_curators: vec![addr.b()],
+//         padding: None,
+//     };
+//     let mut info = mock_info(addr.a().as_str(), &[]);
+//     execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         msg_add_curators.clone(),
+//     )?;
+
+//     // admin tries to remove admin: fail due to wrong current admin input
+//     info.sender = addr.a();
+//     let mut result = execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         ExecuteMsg::RemoveAdmin {
+//             current_admin: addr.b(),
+//             contract_address: Addr::unchecked("cosmos2contract".to_string()),
+//             padding: None,
+//         },
+//     );
+//     assert!(
+//         extract_error_msg(&result).contains("your inputs are incorrect to perform this function")
+//     );
+
+//     // error: admin tries to remove admin: fail due to wrong contract address
+//     info.sender = addr.a();
+//     result = execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         ExecuteMsg::RemoveAdmin {
+//             current_admin: addr.a(),
+//             contract_address: Addr::unchecked("wronginput".to_string()),
+//             padding: None,
+//         },
+//     );
+//     assert!(
+//         extract_error_msg(&result).contains("your inputs are incorrect to perform this function")
+//     );
+
+//     // error: non-admin cannot remove admin
+//     let msg_remove_admin = ExecuteMsg::RemoveAdmin {
+//         current_admin: addr.a(),
+//         contract_address: Addr::unchecked("cosmos2contract".to_string()),
+//         padding: None,
+//     };
+//     info.sender = addr.b();
+//     result = execute(
+//         deps.as_mut(),
+//         mock_env(),
+//         info.clone(),
+//         msg_remove_admin.clone(),
+//     );
+//     assert!(extract_error_msg(&result).contains("This is an admin function"));
+
+//     // success: admin removes admin
+//     info.sender = addr.a();
+//     execute(deps.as_mut(), mock_env(), info.clone(), msg_remove_admin)?;
+
+//     // check that admin can no longer perform admin function
+//     result = execute(deps.as_mut(), mock_env(), info, msg_add_curators);
+//     assert!(extract_error_msg(&result).contains("This contract has no admin"));
+
+//     // check that contract_info shows no admin
+//     let q_answer = from_binary::<QueryAnswer>(&query(
+//         deps.as_ref(),
+//         mock_env(),
+//         QueryMsg::TokenContractInfo {},
+//     )?)?;
+//     match q_answer {
+//         QueryAnswer::TokenContractInfo {
+//             admin,
+//             curators,
+//             all_token_ids,
+//         } => {
+//             assert_eq!(admin, None);
+//             assert_eq!(curators, vec![addr.a(), addr.b()]);
+//             assert_eq!(all_token_ids, vec!["0".to_string()]);
+//         }
+//         _ => panic!("query error"),
+//     }
+
+//     Ok(())
+// }
 
 #[test]
 fn test_instantiate_admin_inputs() -> StdResult<()> {

@@ -1,5 +1,13 @@
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg,
+    to_binary,
+    Addr,
+    Binary,
+    Coin,
+    CosmosMsg,
+    StdResult,
+    Uint128,
+    Uint256,
+    WasmMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,7 +20,9 @@ use crate::utils::{
         state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
         txhistory::Tx,
     },
-    ExecuteCallback, InstantiateCallback, Query,
+    ExecuteCallback,
+    InstantiateCallback,
+    Query,
 };
 
 use secret_toolkit::permit::Permit;
@@ -176,14 +186,14 @@ pub enum ExecuteMsg {
         permit_name: String,
         padding: Option<String>,
     },
-    AddCurators {
-        add_curators: Vec<Addr>,
-        padding: Option<String>,
-    },
-    RemoveCurators {
-        remove_curators: Vec<Addr>,
-        padding: Option<String>,
-    },
+    // AddCurators {
+    //     add_curators: Vec<Addr>,
+    //     padding: Option<String>,
+    // },
+    // RemoveCurators {
+    //     remove_curators: Vec<Addr>,
+    //     padding: Option<String>,
+    // },
     // AddMinters {
     //     token_id: String,
     //     add_minters: Vec<Addr>,
@@ -194,21 +204,21 @@ pub enum ExecuteMsg {
     //     remove_minters: Vec<Addr>,
     //     padding: Option<String>,
     // },
-    ChangeAdmin {
-        new_admin: Addr,
-        padding: Option<String>,
-    },
-    /// Permanently breaks admin keys for this contract. No admin function can be called after this
-    /// action. Any existing curators or minters will remain as curators or minters; no new curators can be
-    /// added and no current curator can be removed.
-    ///
-    /// Requires caller to input current admin address and contract address. These inputs are not strictly
-    /// necessary, but as a safety precaution to reduce the chances of accidentally calling this function.
-    RemoveAdmin {
-        current_admin: Addr,
-        contract_address: Addr,
-        padding: Option<String>,
-    },
+    // ChangeAdmin {
+    //     new_admin: Addr,
+    //     padding: Option<String>,
+    // },
+    // /// Permanently breaks admin keys for this contract. No admin function can be called after this
+    // /// action. Any existing curators or minters will remain as curators or minters; no new curators can be
+    // /// added and no current curator can be removed.
+    // ///
+    // /// Requires caller to input current admin address and contract address. These inputs are not strictly
+    // /// necessary, but as a safety precaution to reduce the chances of accidentally calling this function.
+    // RemoveAdmin {
+    //     current_admin: Addr,
+    //     contract_address: Addr,
+    //     padding: Option<String>,
+    // },
     RegisterReceive {
         code_hash: String,
         padding: Option<String>,

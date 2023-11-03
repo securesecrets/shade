@@ -46,7 +46,6 @@ impl PriceHelper {
         U128x128Math::pow(base, exponent)
     }
 
-    // TODO: make unique type for fixed-point numbers?
     /// Calculates the id from the price and the bin step.
     ///
     /// # Arguments

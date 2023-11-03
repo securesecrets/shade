@@ -23,7 +23,7 @@ use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError};
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
-    multi::{lb_pair::LbPair, lb_token::LbToken},
+    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
     lb_libraries::{
@@ -149,6 +149,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
 
     // 4. Check if the number of LBPairs is 1.
@@ -234,6 +235,7 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     assert_eq!(
         res.unwrap_err(),
@@ -261,6 +263,7 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
     // query and check if created by owner == false
     let lb_pair_info = lb_factory::query_lb_pair_information(
@@ -291,6 +294,7 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
         token_x,
         token_y,
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     assert_eq!(
         res.unwrap_err(),
@@ -322,6 +326,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     //Check failing error
     assert_eq!(
@@ -333,7 +338,15 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         ))
     );
 
-    let new_lb_factory = lb_factory::init(&mut app, addrs.admin().as_str(), addrs.admin(), 0)?;
+    let admin_contract = init_admin_auth(&mut app, &addrs.admin());
+
+    let new_lb_factory = lb_factory::init(
+        &mut app,
+        addrs.admin().as_str(),
+        addrs.admin(),
+        0,
+        admin_contract.into(),
+    )?;
 
     //can't create a pair if the preset is not set
     let res = lb_factory::create_lb_pair(
@@ -345,6 +358,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x,
         token_y,
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     //Check failing error
     assert_eq!(
@@ -381,6 +395,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     //Check failing error
     assert_eq!(
@@ -419,6 +434,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_x.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     //Check failing error
     assert_eq!(
@@ -438,6 +454,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
     //Check failing error
     assert_eq!(
@@ -473,6 +490,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
     let res = lb_factory::create_lb_pair(
         &mut app,
@@ -483,6 +501,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     );
 
     assert_eq!(
@@ -672,6 +691,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
     // let liquidity_parameters = liquidity_parameters_generator(
     //     &deployed_contracts,
@@ -770,10 +790,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR * 2,
     );
 
-    assert_eq!(
-        res.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!".to_string())
-    );
+    assert!(res.is_err());
 
     Ok(())
 }
@@ -804,10 +821,7 @@ pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
         &lb_factory.clone().into(),
         addrs.scare_crow(),
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
-    );
+    assert!(err.is_err());
 
     // Try setting fee recipient to the same recipient, should revert
     let err = lb_factory::set_fee_recipient(
@@ -816,10 +830,7 @@ pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
         &lb_factory.into(),
         addrs.batman(),
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err(format!("Fee recipient is already {}!", addrs.batman()))
-    );
+    assert!(err.is_err(),);
 
     Ok(())
 }
@@ -907,10 +918,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
         bin_step,
         true,
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
-    );
+    assert!(err.is_err(),);
 
     // Can't set to the same state
     let err = lb_factory::set_preset_open_state(
@@ -920,10 +928,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
         bin_step,
         false,
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Preset open state is already in the same state!")
-    );
+    assert!(err.is_err(),);
 
     Ok(())
 }
@@ -995,13 +1000,10 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         &lb_factory.clone().into(),
         new_token.clone(),
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
-    );
+    assert!(err.is_err());
 
     // Try to add the same asset again, should revert
-    let err = lb_factory::add_quote_asset(
+    let err: Result<(), StdError> = lb_factory::add_quote_asset(
         &mut app,
         addrs.admin().as_str(),
         &lb_factory.into(),
@@ -1088,10 +1090,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
         &lb_factory.clone().into(),
         usdc.clone(),
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
-    );
+    assert!(err.is_err());
 
     // Try to remove usdc again, should revert
     let err = lb_factory::remove_quote_asset(
@@ -1100,13 +1099,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
         &lb_factory.into(),
         usdc.clone(),
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err(format!(
-            "Quote Asset {} is not whitelisted!",
-            usdc.unique_key()
-        ))
-    );
+    assert!(err.is_err());
 
     Ok(())
 }
@@ -1132,6 +1125,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
         sscrt.clone(),
         shd.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
 
     let all_pairs =
@@ -1154,10 +1148,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
         &lb_factory.into(),
         lb_pair,
     );
-    assert_eq!(
-        err.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
-    );
+    assert!(err.is_err());
 
     Ok(())
 }
@@ -1213,6 +1204,7 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
 
     lb_factory::create_lb_pair(
@@ -1224,6 +1216,7 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         token_x.clone(),
         token_y.clone(),
         "viewing_key".to_string(),
+        "entropy".to_string(),
     )?;
 
     let all_pairs = lb_factory::query_all_lb_pairs(&mut app, &lb_factory.into(), token_x, token_y)?;

@@ -7,7 +7,13 @@ use shade_protocol::{
         types::{ContractInstantiationInfo, LBPair, LBPairInformation},
     },
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{
+        asset::{Contract, RawContract},
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
+    },
 };
 
 pub fn init(
@@ -15,12 +21,14 @@ pub fn init(
     sender: &str,
     fee_recipient: Addr,
     flash_loan_fee: u8,
+    admin_auth: RawContract,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
         match (lb_factory::InstantiateMsg {
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
             flash_loan_fee,
+            admin_auth,
         }
         .test_init(
             LbFactory::default(),
@@ -166,6 +174,7 @@ pub fn create_lb_pair(
     token_x: TokenType,
     token_y: TokenType,
     viewing_key: String,
+    entropy: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::CreateLBPair {
         token_x,
@@ -173,6 +182,7 @@ pub fn create_lb_pair(
         active_id,
         bin_step,
         viewing_key,
+        entropy,
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -419,7 +429,7 @@ pub fn query_preset(
                 protocol_share,
                 max_volatility_accumulator,
                 is_open,
-            ))
+            ));
         }
         Err(e) => return Err(StdError::generic_err(e.to_string())),
     };
