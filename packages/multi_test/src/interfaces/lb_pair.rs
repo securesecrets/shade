@@ -6,7 +6,7 @@ use shade_protocol::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
-    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
+    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution},
     multi_test::App,
     utils::{
         asset::{Contract, RawContract},
@@ -32,6 +32,7 @@ pub fn init(
     entropy: String,
     protocol_fee_recipient: Addr,
     admin_auth: RawContract,
+    total_reward_bins: u32,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -46,6 +47,7 @@ pub fn init(
             entropy,
             protocol_fee_recipient,
             admin_auth,
+            total_reward_bins,
         }
         .test_init(
             LbPair::default(),
@@ -141,6 +143,18 @@ pub fn swap_snip_20(
 
 pub fn collect_protocol_fees(app: &mut App, sender: &str, lb_pair: &ContractInfo) -> StdResult<()> {
     match (lb_pair::ExecuteMsg::CollectProtocolFees {}.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn calculate_rewards(app: &mut App, sender: &str, lb_pair: &ContractInfo) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::CalculateRewards {}.test_exec(
         lb_pair,
         app,
         Addr::unchecked(sender),
@@ -315,6 +329,16 @@ pub fn query_active_id(app: &App, lb_pair: &ContractInfo) -> StdResult<u32> {
     let res = lb_pair::QueryMsg::GetActiveId {}.test_query(lb_pair, app)?;
     let lb_pair::ActiveIdResponse { active_id } = res;
     Ok(active_id)
+}
+
+pub fn query_rewards_distribution(
+    app: &App,
+    lb_pair: &ContractInfo,
+    epoch_id: Option<u64>,
+) -> StdResult<RewardsDistribution> {
+    let res = lb_pair::QueryMsg::GetRewardsDistribution { epoch_id }.test_query(lb_pair, app)?;
+    let lb_pair::RewardsDistributionResponse { distribution } = res;
+    Ok(distribution)
 }
 
 pub fn query_bin(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {

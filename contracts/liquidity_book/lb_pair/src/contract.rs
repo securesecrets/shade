@@ -24,6 +24,7 @@ use cosmwasm_std::{
     Timestamp,
     Uint128,
     Uint256,
+    Uint512,
     WasmMsg,
 };
 
@@ -39,13 +40,14 @@ use shade_protocol::{
     },
     lb_libraries::{
         bin_helper::{self, BinHelper},
+        ceil_div,
         constants::{self, MAX_FEE, PRECISION, SCALE_OFFSET},
         fee_helper::{self, FeeHelper},
         lb_token::state_structs::{LbPair, TokenAmount, TokenIdBalance},
         math::{
             encoded_sample::EncodedSample,
             liquidity_configurations::LiquidityConfigurations,
-            packed_u128_math::{Decode, Encode, PackedMath},
+            packed_u128_math::{Decode, Encode, PackedMath, BASIS_POINT_MAX},
             sample_math::OracleSample,
             tree_math::TreeUint24,
             u24::U24,
@@ -65,7 +67,10 @@ use shade_protocol::{
     BLOCK_SIZE,
 };
 use shadeswap_shared::router::ExecuteMsgResponse;
-use std::{collections::HashMap, ops::Sub};
+use std::{
+    collections::HashMap,
+    ops::{Mul, Sub},
+};
 use tokens::TokenType;
 use types::{Bytes32, LBPairInformation, MintArrays};
 
@@ -163,6 +168,9 @@ pub fn instantiate(
         }
     }
 
+    if msg.total_reward_bins > U24::MAX {
+        return Err(Error::InvalidInput {});
+    }
     let state = State {
         creator: info.sender.clone(),
         factory: msg.factory,
@@ -179,12 +187,17 @@ pub fn instantiate(
         viewing_key,
         protocol_fees_recipient: msg.protocol_fee_recipient,
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        last_rewards_epoch: env.block.time,
+        rewards_epoch_id: 0,
+        total_rewards_bin: msg.total_reward_bins,
+        //TODO: set using the setter function and instantiate msg
+        rewards_distribution_algorithm: RewardsDistributionAlgorithm::VolumeBasedRewards,
     };
 
     // deps.api
     //     .debug(format!("Contract was initialized by {}", info.sender).as_str());
 
-    let tree = TreeUint24::new();
+    let tree: TreeUint24 = TreeUint24::new();
     let oracle = Oracle {
         samples: HashMap::<u16, OracleSample>::new(),
     };
@@ -193,6 +206,7 @@ pub fn instantiate(
     ORACLE.save(deps.storage, &oracle)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
     BIN_TREE.save(deps.storage, &tree)?;
+    FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
         code_hash: msg.lb_token_implementation.code_hash,
@@ -295,6 +309,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             max_volatility_accumulator,
         ),
         ExecuteMsg::ForceDecay {} => try_force_decay(deps, env, info),
+        ExecuteMsg::CalculateRewards {} => try_calculate_rewards(deps, env, info),
+        ExecuteMsg::ResetRewardsEpoch { distribution } => {
+            try_reset_rewards_epoch(deps, env, info, distribution)
+        }
     }
 }
 
@@ -384,6 +402,11 @@ fn try_swap(
 
     let mut params = state.pair_parameters;
     let bin_step = state.bin_step;
+    let reward_stats = REWARDS_STATS_STORE
+        .load(deps.storage, state.rewards_epoch_id)
+        .unwrap_or_default();
+    let mut cum_fee_bin = reward_stats.cumm_fee_x_bin;
+    let mut cum_fee = reward_stats.cumm_fee;
 
     let mut active_id = params.get_active_id();
 
@@ -395,6 +418,8 @@ fn try_swap(
             .map_err(|_| Error::ZeroBinReserve { active_id })?;
 
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
+            let price = PriceHelper::get_price_from_id(active_id, bin_step)?;
+
             params = params.update_volatility_accumulator(active_id)?;
 
             let (mut amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
@@ -404,9 +429,92 @@ fn try_swap(
                 swap_for_y,
                 active_id,
                 amounts_left,
+                price,
             )?;
 
             if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
+                let fee_obj = FeeLog {
+                    is_token_x: swap_for_y,
+                    fee: Uint128::from(fees.decode_alt(swap_for_y)),
+                    bin_id: active_id,
+                    timestamp: env.block.time,
+                    last_rewards_epoch_id: state.rewards_epoch_id,
+                };
+                //TODO: check if appending is needed
+                FEE_APPEND_STORE.push(deps.storage, &fee_obj)?;
+
+                if fee_obj.is_token_x {
+                    let divisor: Uint512 = Uint512::from(2u32).pow(SCALE_OFFSET.into());
+
+                    let fee_temp: Uint512 =
+                        Uint512::from((fee_obj.fee.u128().rotate_left(SCALE_OFFSET.into())));
+                    let prod = (fee_temp * Uint512::from(price.u256_to_uint256()))
+                        .checked_div(divisor)
+                        .unwrap();
+                    let prod_fee_price = U256::from_str_prefixed(&(prod).to_string())
+                        .unwrap()
+                        .u256_to_uint256();
+
+                    cum_fee += prod_fee_price;
+                    cum_fee_bin += prod_fee_price * (Uint256::from(fee_obj.bin_id));
+
+                    if state.rewards_distribution_algorithm
+                        == RewardsDistributionAlgorithm::VolumeBasedRewards
+                    {
+                        let mut fee_map_tree = FEE_MAP_TREE.update(
+                            deps.storage,
+                            state.rewards_epoch_id,
+                            |mut fee_tree| -> Result<_> {
+                                Ok(match fee_tree {
+                                    Some(mut t) => {
+                                        t.add(active_id);
+                                        t
+                                    }
+                                    None => panic!("Fee tree not initialized"),
+                                })
+                            },
+                        );
+
+                        FEE_MAP.update(deps.storage, active_id, |mut cumm_fee| -> Result<_> {
+                            let updated_cumm_fee = match cumm_fee {
+                                Some(f) => f + prod_fee_price,
+                                None => prod_fee_price,
+                            };
+                            Ok(updated_cumm_fee)
+                        })?;
+                    }
+                } else {
+                    let fee = Uint256::from(fee_obj.fee.u128());
+                    cum_fee += fee;
+                    cum_fee_bin += fee * (Uint256::from(fee_obj.bin_id));
+
+                    if state.rewards_distribution_algorithm
+                        == RewardsDistributionAlgorithm::VolumeBasedRewards
+                    {
+                        let mut fee_map_tree = FEE_MAP_TREE.update(
+                            deps.storage,
+                            state.rewards_epoch_id,
+                            |mut fee_tree| -> Result<_> {
+                                Ok(match fee_tree {
+                                    Some(mut t) => {
+                                        t.add(active_id);
+                                        t
+                                    }
+                                    None => panic!("Fee tree not initialized"),
+                                })
+                            },
+                        );
+
+                        FEE_MAP.update(deps.storage, active_id, |mut cumm_fee| -> Result<_> {
+                            let updated_cumm_fee = match cumm_fee {
+                                Some(f) => f + fee,
+                                None => fee,
+                            };
+                            Ok(updated_cumm_fee)
+                        })?;
+                    }
+                }
+
                 amounts_left = amounts_left.sub(amounts_in_with_fees);
                 amounts_out = amounts_out.add(amounts_out_of_bin);
 
@@ -420,6 +528,8 @@ fn try_swap(
                     protocol_fees = protocol_fees.add(p_fees);
                     amounts_in_with_fees = amounts_in_with_fees.sub(p_fees);
                 }
+
+                // println!("SWAP MADE {:?}", active_id);
 
                 BIN_MAP.save(
                     deps.storage,
@@ -442,6 +552,11 @@ fn try_swap(
             active_id = next_id;
         }
     }
+
+    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &RewardStats {
+        cumm_fee: cum_fee,
+        cumm_fee_x_bin: cum_fee_bin,
+    })?;
 
     if amounts_out == [0u8; 32] {
         return Err(Error::InsufficientAmountOut);
@@ -926,7 +1041,6 @@ fn _update_bin(
     let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
     let config = CONFIG.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
-
     let total_supply = _query_total_supply(
         deps.as_ref(),
         id,
@@ -1416,6 +1530,131 @@ fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respons
         ))
 }
 
+fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response> {
+    let mut state = CONFIG.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::LiquidityBookAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
+
+    // loop through the fee_logs uptil a maximum iterations
+    // save the results in temporary storage
+
+    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
+
+    let distribution = match state.rewards_distribution_algorithm {
+        RewardsDistributionAlgorithm::BaseRewards => {
+            calculate_base_rewards_distribution(&state, reward_stats)?
+        }
+        RewardsDistributionAlgorithm::VolumeBasedRewards => {
+            calculate_volume_based_rewards_distribution(deps.as_ref(), &state, reward_stats)?
+        }
+    };
+
+    REWARDS_DISTRIBUTION.save(deps.storage, state.rewards_epoch_id, &distribution)?;
+
+    state.rewards_epoch_id += state.rewards_epoch_id + 1;
+    CONFIG.save(deps.storage, &state)?;
+
+    let tree: TreeUint24 = TreeUint24::new();
+    FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_id, &tree)?;
+
+    Ok(Response::default())
+}
+
+fn calculate_base_rewards_distribution(
+    state: &State,
+    reward_stats: RewardStats,
+) -> Result<RewardsDistribution> {
+    let mut cum_fee_bin = reward_stats.cumm_fee_x_bin;
+    let mut cum_fee = reward_stats.cumm_fee;
+    let avg_bin = ceil_div(cum_fee_bin, cum_fee).uint256_to_u256().as_u32();
+
+    //TODO: make it variable and also make a setter function
+    let half_total = state.total_rewards_bin / 2;
+    let min_bin = avg_bin.saturating_sub(half_total) + 1;
+    let max_bin = avg_bin.saturating_add(half_total);
+
+    let difference = max_bin - min_bin + 1;
+
+    //TODO: unit test edge cases for different bin_ids and lengths
+    let ids: Vec<u32> = (min_bin..=max_bin).collect();
+    let weightages = vec![BASIS_POINT_MAX as u16 / difference as u16; difference as usize];
+
+    let distribution = RewardsDistribution {
+        ids,
+        weightages,
+        denominator: BASIS_POINT_MAX as u16,
+    };
+
+    Ok(distribution)
+}
+
+fn calculate_volume_based_rewards_distribution(
+    deps: Deps,
+    state: &State,
+    reward_stats: RewardStats,
+) -> Result<RewardsDistribution> {
+    let mut cum_fee = reward_stats.cumm_fee;
+    //TODO: unit test edge cases for different bin_ids and lengths
+    let mut ids: Vec<u32> = Vec::new();
+    let mut weightages: Vec<u16> = Vec::new();
+
+    let fee_tree: TreeUint24 = FEE_MAP_TREE.load(deps.storage, state.rewards_epoch_id)?;
+    let mut id: u32 = 0;
+    let basis_point_max: Uint256 = Uint256::from(BASIS_POINT_MAX);
+
+    loop {
+        id = fee_tree.find_first_left(id);
+        if id == U24::MAX || id == 0 {
+            break;
+        }
+
+        let fee: Uint256 = FEE_MAP.load(deps.storage, id)?;
+        ids.push(id);
+        let weightage: u16 = fee
+            .multiply_ratio(basis_point_max, cum_fee)
+            .uint256_to_u256()
+            .as_u16();
+        weightages.push(weightage);
+    }
+
+    let distribution = RewardsDistribution {
+        ids,
+        weightages,
+        denominator: BASIS_POINT_MAX as u16,
+    };
+
+    Ok(distribution)
+}
+
+//Can only change the distribution algorithm at the start of next epoch
+fn try_reset_rewards_epoch(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+) -> Result<Response> {
+    let mut state = CONFIG.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::LiquidityBookAdmin,
+        info.sender.to_string(),
+        &state.admin_auth,
+    )?;
+
+    match rewards_distribution_algorithm {
+        Some(distribution) => state.rewards_distribution_algorithm = distribution,
+        None => {}
+    }
+
+    CONFIG.save(deps.storage, &state)?;
+
+    Ok(Response::default())
+}
+
 fn only_factory(sender: &Addr, factory: &Addr) -> Result<()> {
     if sender != factory {
         return Err(Error::OnlyFactory);
@@ -1533,6 +1772,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         GetPairInfo {} => todo!(),
         QueryMsg::SwapSimulation { offer, exclude_fee } => {
             to_binary(&query_swap_simulation(deps, env, offer, exclude_fee)?).map_err(Error::CwErr)
+        }
+        QueryMsg::GetRewardsDistribution { epoch_id } => {
+            to_binary(&query_rewards_distribution(deps, epoch_id)?).map_err(Error::CwErr)
         }
     }
 }
@@ -2148,6 +2390,8 @@ fn query_swap_out(
     loop {
         let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or_default();
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
+            let price = PriceHelper::get_price_from_id(id, bin_step)?;
+
             params = params.update_volatility_accumulator(id)?;
 
             let (amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
@@ -2157,6 +2401,7 @@ fn query_swap_out(
                 swap_for_y,
                 id,
                 amounts_in_left,
+                price,
             )?;
 
             if U256::from_le_bytes(amounts_in_with_fees) > U256::ZERO {
@@ -2208,6 +2453,20 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<TotalSupplyResponse> {
         _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
             .u256_to_uint256();
     Ok(TotalSupplyResponse { total_supply })
+}
+
+fn query_rewards_distribution(
+    deps: Deps,
+    epoch_id: Option<u64>,
+) -> Result<RewardsDistributionResponse> {
+    let (epoch_id) = match epoch_id {
+        Some(id) => id,
+        None => CONFIG.load(deps.storage)?.rewards_epoch_id - 1,
+    };
+
+    Ok(RewardsDistributionResponse {
+        distribution: REWARDS_DISTRIBUTION.load(deps.storage, epoch_id)?,
+    })
 }
 
 #[shd_entry_point]

@@ -60,6 +60,7 @@ pub struct State {
     pub lb_pair_implementation: ContractInstantiationInfo,
     pub lb_token_implementation: ContractInstantiationInfo,
     pub admin_auth: Contract,
+    pub total_reward_bins: u32,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextPairKey> {

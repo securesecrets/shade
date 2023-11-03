@@ -322,9 +322,8 @@ impl BinHelper {
         swap_for_y: bool,
         active_id: u32,
         amounts_in_left: Bytes32,
+        price: U256,
     ) -> Result<(Bytes32, Bytes32, Bytes32), BinError> {
-        let price = PriceHelper::get_price_from_id(active_id, bin_step)?;
-
         let bin_reserve_out = bin_reserves.decode_alt(!swap_for_y);
 
         let max_amount_in = if swap_for_y {

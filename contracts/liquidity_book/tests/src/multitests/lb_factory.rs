@@ -346,6 +346,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         addrs.admin(),
         0,
         admin_contract.into(),
+        100,
     )?;
 
     //can't create a pair if the preset is not set

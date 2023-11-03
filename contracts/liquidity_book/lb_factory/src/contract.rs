@@ -81,6 +81,7 @@ pub fn instantiate(
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        total_reward_bins: msg.total_reward_bins,
     };
 
     CONFIG.save(deps.storage, &state)?;
@@ -389,6 +390,7 @@ fn try_create_lb_pair(
                 entropy,
                 protocol_fee_recipient: state.fee_recipient,
                 admin_auth: state.admin_auth.into(),
+                total_reward_bins: state.total_reward_bins,
             })?,
             code_hash: state.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

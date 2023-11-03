@@ -18,6 +18,7 @@ pub struct InstantiateMsg {
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
     pub flash_loan_fee: u8,
+    pub total_reward_bins: u32,
 }
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;

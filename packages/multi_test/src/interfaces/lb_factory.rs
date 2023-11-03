@@ -22,6 +22,7 @@ pub fn init(
     fee_recipient: Addr,
     flash_loan_fee: u8,
     admin_auth: RawContract,
+    total_reward_bins: u32,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
         match (lb_factory::InstantiateMsg {
@@ -29,6 +30,7 @@ pub fn init(
             fee_recipient,
             flash_loan_fee,
             admin_auth,
+            total_reward_bins,
         }
         .test_init(
             LbFactory::default(),

@@ -179,6 +179,7 @@ pub fn init_lb_pair() -> Result<(App, Contract, DeployedContracts), anyhow::Erro
         String::new(),
         addrs.admin(),
         admin_contract.into(),
+        100,
     )?;
 
     Ok((app, lb_pair, deployed_contracts))

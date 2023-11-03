@@ -1,4 +1,6 @@
-use crate::multitests::test_helper::*;
+use std::ops::Sub;
+
+use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
 
 use super::test_helper::{
     increase_allowance_helper,
@@ -2223,223 +2225,375 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-// #[test]
-// pub fn test_fuzz_user_fee_swap_in_x() -> Result<(), anyhow::Error> {
-//     let addrs = init_addrs();
-//     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
-//     let amount_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+#[test]
+pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
 
-//     let (amount_in, amount_out_left, _fee) =
-//         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, true)?;
-//     assert_eq!(amount_out_left, Uint128::zero());
+    let btc = extract_contract_info(&deployed_contracts, SBTC)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&btc)?;
+    let token_y = token_type_snip20_generator(&silk)?;
 
-//     let tokens_to_mint = vec![(SHADE, amount_in)];
+    //assuming the ratio of btc to silk 1:40000
+    //Hence 1 usilk = 400 satoishi
+    // (1+DEFAULT_BIN_STEP/BASIS_POINT)^x = 400
+    // x = 5994
 
-//     mint_token_helper(
-//         &mut app,
-//         &deployed_contracts,
-//         &addrs,
-//         addrs.joker().into_string(),
-//         tokens_to_mint.clone(),
-//     )?;
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID + 5994,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
 
-//     let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
 
-//     lb_pair::swap_snip_20(
-//         &mut app,
-//         addrs.joker().as_str(),
-//         &lb_pair.lb_pair.contract,
-//         Some(addrs.joker().to_string()),
-//         token_x,
-//         amount_in,
-//     )?;
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
 
-//     let shd_balance = snip20::balance_query(
-//         &mut app,
-//         addrs.joker().as_str(),
-//         &deployed_contracts,
-//         SHADE,
-//         "viewing_key".to_owned(),
-//     )?;
-//     assert_eq!(shd_balance, Uint128::zero());
+    let amount_x = Uint128::from(((10000u128) * 10000_0000) / 40000); // 25_000_000 satoshi
+    let amount_y = Uint128::from((10000u128) * 1000_000); // 10_000 silk
 
-//     let silk_balance = snip20::balance_query(
-//         &mut app,
-//         addrs.joker().as_str(),
-//         &deployed_contracts,
-//         SILK,
-//         "viewing_key".to_owned(),
-//     )?;
-//     assert_eq!(silk_balance, amount_out);
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
 
-//     //REMOVE LIQUIDITY
+    let token_x = extract_contract_info(&deployed_contracts, SBTC)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
 
-//     let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
-//     let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+    let tokens_to_mint = vec![(SBTC, amount_x), (SILK, amount_y)];
 
-//     let total_bins = get_total_bins(10, 10) as u32;
-//     let mut balances = vec![Uint256::zero(); total_bins as usize];
-//     let mut ids = vec![0u32; total_bins as usize];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
 
-//     for i in 0..total_bins {
-//         let id = get_id(ACTIVE_ID, i, 10);
-//         ids[i as usize] = id;
-//         balances[i as usize] = lb_token::query_balance(
-//             &app,
-//             &lb_token,
-//             addrs.batman(),
-//             addrs.batman(),
-//             String::from("viewing_key"),
-//             id.to_string(),
-//         )?;
-//     }
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.scare_crow().as_str(),
+        &deployed_contracts,
+        SBTC,
+        "viewing_key".to_owned(),
+    )?;
 
-//     let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
-//     lb_pair::remove_liquidity(
-//         &mut app,
-//         addrs.batman().as_str(),
-//         &lb_pair.lb_pair.contract,
-//         RemoveLiquidity {
-//             token_x: token_type_snip20_generator(&token_x)?,
-//             token_y: token_type_snip20_generator(&token_y)?,
-//             bin_step: lb_pair.bin_step,
-//             amount_x_min: Uint128::from(reserves_x),
-//             amount_y_min: Uint128::from(reserves_y),
-//             ids: ids.clone(),
-//             amounts: balances.clone(),
-//             deadline: 99999999999,
-//         },
-//     )?;
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.scare_crow().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_owned(),
+    )?;
 
-//     let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.joker().as_str(),
+        &deployed_contracts,
+        SBTC,
+        "viewing_key".to_string(),
+    )?;
 
-//     let balance_x = snip20::balance_query(
-//         &mut app,
-//         addrs.batman().as_str(),
-//         &deployed_contracts,
-//         SHADE,
-//         "viewing_key".to_owned(),
-//     )?;
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.joker().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_string(),
+    )?;
 
-//     let balance_y = snip20::balance_query(
-//         &mut app,
-//         addrs.batman().as_str(),
-//         &deployed_contracts,
-//         SILK,
-//         "viewing_key".to_owned(),
-//     )?;
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
 
-//     assert_eq!(
-//         balance_x.u128(),
-//         DEPOSIT_AMOUNT + amount_in.u128() - protocol_fee_x
-//     );
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID + 5994,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
 
-//     assert_eq!(balance_y.u128(), reserves_y);
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
 
-//     let amount_x = Uint128::from(DEPOSIT_AMOUNT);
-//     let amount_y = Uint128::from(DEPOSIT_AMOUNT);
-//     let nb_bins_x = 10;
-//     let nb_bins_y = 10;
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_y_out = Uint128::from(1 * 1000_000u128); //1000 silk
+    // get swap_in for y
+    let (amount_x_in, amount_y_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+    assert_eq!(amount_y_out_left, Uint128::zero());
 
-//     let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
-//     let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+    // mint the tokens
+    let tokens_to_mint = vec![(SBTC, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SBTC)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
 
-//     let tokens_to_mint = vec![(SHADE, amount_x), (SILK, amount_y)];
+    // check the balance of silk if it's equal to the amount_y_out
 
-//     mint_token_helper(
-//         &mut app,
-//         &deployed_contracts,
-//         &addrs,
-//         addrs.scare_crow().into_string(),
-//         tokens_to_mint.clone(),
-//     )?;
+    let btc_balance = snip20::balance_query(
+        &mut app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SBTC,
+        "viewing_key".to_owned(),
+    )?;
+    assert_eq!(btc_balance, Uint128::zero());
+    let silk_balance = snip20::balance_query(
+        &mut app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_owned(),
+    )?;
+    assert_approx_eq_rel(
+        Uint256::from(silk_balance),
+        Uint256::from(amount_y_out),
+        Uint256::from(1u128).checked_mul(Uint256::from(PRECISION))?,
+        "Error greater than 1%",
+    );
 
-//     increase_allowance_helper(
-//         &mut app,
-//         &deployed_contracts,
-//         addrs.scare_crow().into_string(),
-//         lb_pair.lb_pair.contract.address.to_string(),
-//         tokens_to_mint,
-//     )?;
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_x_out = Uint128::from(2 * 1000_000u128); //5_000_000 satoshi
+    // get swap_in for y
+    let (amount_y_in, amount_x_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+    assert_eq!(amount_x_out_left, Uint128::zero());
 
-//     //Adding liquidity
-//     let liquidity_parameters = liquidity_parameters_generator(
-//         &deployed_contracts,
-//         ACTIVE_ID,
-//         token_x.clone(),
-//         token_y.clone(),
-//         amount_x,
-//         amount_y,
-//         nb_bins_x,
-//         nb_bins_y,
-//     )?;
+    // mint the tokens
+    let tokens_to_mint = vec![(SILK, amount_y_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SILK)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_y_in,
+    )?;
 
-//     lb_pair::add_liquidity(
-//         &mut app,
-//         addrs.scare_crow().as_str(),
-//         &lb_pair.lb_pair.contract,
-//         liquidity_parameters,
-//     )?;
+    // check the balance of silk if it's equal to the amount_y_out
+    let silk_balance = snip20::balance_query(
+        &mut app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_owned(),
+    )?;
+    assert_approx_eq_rel(
+        Uint256::from(silk_balance),
+        Uint256::from(amount_y_out),
+        Uint256::from(1u128).checked_mul(Uint256::from(PRECISION))?,
+        "Error greater than 1%",
+    );
+    let btc_balance = snip20::balance_query(
+        &mut app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SBTC,
+        "viewing_key".to_owned(),
+    )?;
+    assert_eq!(btc_balance, amount_x_out);
 
-//     let total_bins = get_total_bins(10, 10) as u32;
-//     let mut balances = vec![Uint256::zero(); total_bins as usize];
-//     let mut ids = vec![0u32; total_bins as usize];
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
 
-//     lb_token::set_viewing_key(
-//         &mut app,
-//         addrs.scare_crow().as_str(),
-//         &lb_token,
-//         "viewing_key".to_owned(),
-//     )?;
-//     for i in 0..total_bins {
-//         let id = get_id(ACTIVE_ID, i, 10);
-//         ids[i as usize] = id;
-//         balances[i as usize] = lb_token::query_balance(
-//             &app,
-//             &lb_token,
-//             addrs.scare_crow(),
-//             addrs.scare_crow(),
-//             String::from("viewing_key"),
-//             id.to_string(),
-//         )?;
-//     }
+    Ok(())
+}
 
-//     let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
-//     lb_pair::remove_liquidity(
-//         &mut app,
-//         addrs.scare_crow().as_str(),
-//         &lb_pair.lb_pair.contract,
-//         RemoveLiquidity {
-//             token_x: token_type_snip20_generator(&token_x)?,
-//             token_y: token_type_snip20_generator(&token_y)?,
-//             bin_step: lb_pair.bin_step,
-//             amount_x_min: Uint128::from(reserves_x),
-//             amount_y_min: Uint128::from(reserves_y),
-//             ids,
-//             amounts: balances,
-//             deadline: 99999999999,
-//         },
-//     )?;
+#[test]
+pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
 
-//     // let balance_x = snip20::balance_query(
-//     //     &mut app,
-//     //     addrs.scare_crow().as_str(),
-//     //     &deployed_contracts,
-//     //     SHADE,
-//     //     "viewing_key".to_owned(),
-//     // )?;
+    let btc = extract_contract_info(&deployed_contracts, SBTC)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&btc)?;
+    let token_y = token_type_snip20_generator(&silk)?;
 
-//     // let balance_y = snip20::balance_query(
-//     //     &mut app,
-//     //     addrs.scare_crow().as_str(),
-//     //     &deployed_contracts,
-//     //     SILK,
-//     //     "viewing_key".to_owned(),
-//     // )?;
+    //assuming the ratio of btc to silk 1:40000
+    //Hence 1 usilk = 400 satoishi
+    // (1+DEFAULT_BIN_STEP/BASIS_POINT)^x = 400
+    // x = 5994
 
-//     // assert_eq!(balance_x.u128(), DEPOSIT_AMOUNT);
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID + 5994,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
 
-//     // assert_eq!(balance_y.u128(), DEPOSIT_AMOUNT);
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
 
-//     Ok(())
-// }
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
+
+    let amount_x = Uint128::from(((10000u128) * 10000_0000) / 40000); // 25_000_000 satoshi
+    let amount_y = Uint128::from((10000u128) * 1000_000); // 10_000 silk
+
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
+
+    let token_x = extract_contract_info(&deployed_contracts, SBTC)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let tokens_to_mint = vec![(SBTC, amount_x), (SILK, amount_y)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
+
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID + 5994,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
+
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
+
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_y_out = Uint128::from(10000 * 1000_000u128); //1000 silk
+    // get swap_in for y
+    let (amount_x_in, _amount_y_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SBTC, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SBTC)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_x_out = Uint128::from(5 * 1000_000u128); //5_000_000 satoshi
+    // get swap_in for y
+    let (amount_y_in, _amount_x_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SILK, amount_y_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SILK)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_y_in,
+    )?;
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+
+    println!("distribution: {:?}", distribution);
+
+    Ok(())
+}

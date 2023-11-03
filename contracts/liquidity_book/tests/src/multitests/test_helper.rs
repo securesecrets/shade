@@ -239,6 +239,7 @@ pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts)
         addrs.joker(),
         0,
         admin_contract.into(),
+        100,
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
@@ -435,6 +436,34 @@ pub fn liquidity_parameters_generator(
     nb_bins_x: u8,
     nb_bins_y: u8,
 ) -> StdResult<LiquidityParameters> {
+    liquidity_parameters_generator_custom(
+        // Assuming lbPair has methods to get tokenX and tokenY
+        // lbPair: &LBPair,
+        _deployed_contracts,
+        active_id,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+        DEFAULT_BIN_STEP,
+    )
+}
+
+pub fn liquidity_parameters_generator_custom(
+    // Assuming lbPair has methods to get tokenX and tokenY
+    // lbPair: &LBPair,
+    _deployed_contracts: &DeployedContracts,
+    active_id: u32,
+    token_x: ContractInfo,
+    token_y: ContractInfo,
+    amount_x: Uint128,
+    amount_y: Uint128,
+    nb_bins_x: u8,
+    nb_bins_y: u8,
+    bin_step: u16,
+) -> StdResult<LiquidityParameters> {
     let total = get_total_bins(nb_bins_x, nb_bins_y);
 
     if active_id > U24::MAX {
@@ -478,7 +507,7 @@ pub fn liquidity_parameters_generator(
             contract_addr: token_y.address,
             token_code_hash: token_y.code_hash,
         },
-        bin_step: DEFAULT_BIN_STEP,
+        bin_step,
         amount_x,
         amount_y,
         amount_x_min: amount_x.multiply_ratio(90u128, 100u128),
