@@ -23,6 +23,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         height: 1,
         time: Timestamp::from_seconds(now),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -131,6 +132,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         height: 10,
         time: Timestamp::from_seconds(now),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let reward_end = now + 100000000;
@@ -190,6 +192,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         height: 10,
         time: Timestamp::from_seconds(now),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Post-staking user balance
@@ -265,6 +268,7 @@ fn unstake_softlock_bug(stake_amount: Uint128, unbond_period: Uint128, reward_am
         height: 10,
         time: Timestamp::from_seconds(now),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Restake

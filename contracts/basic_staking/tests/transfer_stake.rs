@@ -21,6 +21,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // init block time for predictable behavior
@@ -28,6 +29,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -202,6 +204,7 @@ fn transfer_stake(stake_amount: Uint128, transfer_amount: Uint128) {
         height: 1,
         time: Timestamp::from_seconds(reward_end.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Transfer should fail, not on whitelist

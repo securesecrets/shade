@@ -22,6 +22,7 @@ fn end_reward_pool_before_end_claimed() {
         height: 1,
         time: Timestamp::from_seconds(0),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     let viewing_key = "unguessable".to_string();
@@ -240,6 +241,7 @@ fn end_reward_pool_before_end_claimed() {
         height: 1,
         time: Timestamp::from_seconds(mid_period.u128() as u64),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
 
     // Claim rewards

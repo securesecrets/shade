@@ -1,15 +1,20 @@
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
-    contract_interfaces::liquidity_book::lb_pair,
-    contract_interfaces::snip20,
+    contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
     liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{
+        asset::{Contract, RawContract},
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
+    },
 };
 
 pub fn init(
@@ -26,6 +31,7 @@ pub fn init(
     pair_name: String,
     entropy: String,
     protocol_fee_recipient: Addr,
+    admin_auth: RawContract,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -37,9 +43,9 @@ pub fn init(
             active_id,
             lb_token_implementation,
             viewing_key,
-            pair_name,
             entropy,
             protocol_fee_recipient,
+            admin_auth,
         }
         .test_init(
             LbPair::default(),
@@ -221,9 +227,11 @@ pub fn swap_out_query(
     let lb_pair::SwapOutResponse {
         amount_out,
         amount_in_left,
-        fee,
+        total_fees,
+        shade_dao_fees: _,
+        lp_fees: _,
     } = res;
-    Ok((amount_out, amount_in_left, fee))
+    Ok((amount_out, amount_in_left, total_fees))
 }
 
 pub fn query_static_fee_params(
@@ -400,9 +408,11 @@ pub fn query_swap_out(
     let lb_pair::SwapOutResponse {
         amount_out,
         amount_in_left,
-        fee,
+        total_fees,
+        shade_dao_fees: _,
+        lp_fees: _,
     } = res;
-    Ok((amount_out, amount_in_left, fee))
+    Ok((amount_out, amount_in_left, total_fees))
 }
 
 pub fn query_swap_in(

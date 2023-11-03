@@ -153,7 +153,6 @@ impl TokenType {
                         recipient_code_hash: None,
                         memo: None,
                     };
-                    // //TODO add token hash
                     let cosmos_msg = msg
                         .to_cosmos_msg(token_code_hash.to_string(), contract_addr.to_string(), None)
                         .unwrap();
@@ -194,7 +193,6 @@ impl TokenType {
                         memo: None,
                     };
 
-                    // //TODO add token hash
                     let cosmos_msg = msg
                         .to_cosmos_msg(token_code_hash.to_string(), contract_addr.to_string(), None)
                         .unwrap();
