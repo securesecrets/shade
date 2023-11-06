@@ -459,7 +459,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     //Check failing error
     assert_eq!(
         res.unwrap_err(),
-        StdError::generic_err("The LBPair implementation has not been set yet!".to_string())
+        StdError::generic_err("The LBPair implementation has not been set yet!")
     );
 
     //can't create a pair the same pair twice
@@ -537,8 +537,8 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
     bin_step = bound(bin_step, min_bin_step as u16, u16::MAX);
     filter_period = bound(filter_period, 0, MASK_UINT12.as_u16() - 1);
     decay_period = bound(decay_period, filter_period + 1, MASK_UINT12.as_u16());
-    reduction_factor = bound(reduction_factor, 0u16, BASIS_POINT_MAX as u16);
-    variable_fee_control = bound(variable_fee_control, 032, BASIS_POINT_MAX);
+    reduction_factor = bound(reduction_factor, 0u16, BASIS_POINT_MAX);
+    variable_fee_control = bound(variable_fee_control, 0u32, BASIS_POINT_MAX as u32);
     protocol_share = bound(protocol_share, 0, 2_500);
     max_volatility_accumulator = bound(max_volatility_accumulator, 0, MASK_UINT20.as_u32());
 
@@ -569,16 +569,16 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
         assert_eq!(all_bin_steps[0], bin_step);
     }
 
-    let (
-        base_factor_view,
-        filter_period_view,
-        decay_period_view,
-        reduction_factor_view,
-        variable_fee_control_view,
-        protocol_share_view,
-        max_volatility_accumulator_view,
-        is_open_view,
-    ) = lb_factory::query_preset(&mut app, &lb_factory.into(), bin_step)?;
+    let PresetResponse {
+        base_factor: base_factor_view,
+        filter_period: filter_period_view,
+        decay_period: decay_period_view,
+        reduction_factor: reduction_factor_view,
+        variable_fee_control: variable_fee_control_view,
+        protocol_share: protocol_share_view,
+        max_volatility_accumulator: max_volatility_accumulator_view,
+        is_open: is_open_view,
+    } = lb_factory::query_preset(&mut app, &lb_factory.into(), bin_step)?;
 
     assert_eq!(base_factor, base_factor_view);
     assert_eq!(filter_period, filter_period_view);
@@ -790,7 +790,10 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR * 2,
     );
 
-    assert!(res.is_err());
+    assert_eq!(
+        res.unwrap_err(),
+        StdError::generic_err("Only the Owner can do that!")
+    );
 
     Ok(())
 }
@@ -847,7 +850,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
 
     // Presets are not open to the public by default
     if bin_step == DEFAULT_BIN_STEP {
-        let (_, _, _, _, _, _, _, is_open) =
+        let PresetResponse { is_open, .. } =
             lb_factory::query_preset(&mut app, &lb_factory.clone().into(), bin_step)?;
         assert!(!is_open, "test_fuzz_open_presets::1");
     } else {
@@ -880,7 +883,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         true,
     )?;
-    let (_, _, _, _, _, _, _, is_open) =
+    let PresetResponse { is_open, .. } =
         lb_factory::query_preset(&mut app, &lb_factory.clone().into(), bin_step)?;
     assert!(is_open, "test_fuzz_open_presets::2");
 
@@ -906,7 +909,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
         false,
     )?;
 
-    let (_, _, _, _, _, _, _, is_open) =
+    let PresetResponse { is_open, .. } =
         lb_factory::query_preset(&mut app, &lb_factory.clone().into(), bin_step)?;
     assert!(!is_open, "test_fuzz_open_presets::3");
 
