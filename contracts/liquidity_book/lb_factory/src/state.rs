@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, ContractInfo, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use pair_parameter_helper::PairParameters;
 use shade_protocol::{
+    liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     secret_storage_plus::{AppendStore, Item, Map},
     Contract,
 };
@@ -61,6 +62,7 @@ pub struct State {
     pub lb_token_implementation: ContractInstantiationInfo,
     pub admin_auth: Contract,
     pub total_reward_bins: u32,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextPairKey> {

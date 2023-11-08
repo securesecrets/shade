@@ -35,10 +35,10 @@ pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); /
 pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
 
 #[cw_serde]
-#[derive(Default)]
 pub struct RewardStats {
-    pub cumm_fee: Uint256,
-    pub cumm_fee_x_bin: Uint256,
+    pub cumm_value: Uint256,
+    pub cumm_value_mul_bin_id: Uint256,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
 }
 
 #[cw_serde]
@@ -71,10 +71,10 @@ pub struct State {
     pub lb_token: ContractInfo,
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
-    pub last_rewards_epoch: Timestamp,
+    pub last_swap_timestamp: Timestamp,
     pub rewards_epoch_id: u64,
-    pub total_rewards_bin: u32,
-    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    pub base_rewards_bins: Option<u32>,
+    pub toggle_distributions_algorithm: bool,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextTokenKey> {

@@ -41,7 +41,8 @@ pub struct InstantiateMsg {
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
     pub admin_auth: RawContract,
-    pub total_reward_bins: u32,
+    pub total_reward_bins: Option<u32>,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -88,14 +89,15 @@ pub enum ExecuteMsg {
     },
     ForceDecay {},
     CalculateRewards {},
-    ResetRewardsEpoch {
+    ResetRewardsConfig {
         distribution: Option<RewardsDistributionAlgorithm>,
+        base_rewards_bins: Option<u32>,
     },
 }
 
 #[cw_serde]
 pub enum RewardsDistributionAlgorithm {
-    BaseRewards,
+    TimeBasedRewards,
     VolumeBasedRewards,
 }
 

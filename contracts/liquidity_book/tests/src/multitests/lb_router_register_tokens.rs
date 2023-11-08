@@ -12,7 +12,7 @@ use shade_multi_test::interfaces::{
 #[test]
 pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, mut deployed_contracts) = setup(None)?;
+    let (mut app, _lb_factory, mut deployed_contracts) = setup(None, None)?;
 
     //intro app
     router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;

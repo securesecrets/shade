@@ -15,15 +15,17 @@ pub mod transfer;
 pub mod types;
 pub mod viewing_keys;
 
-pub fn ceil_div(a: Uint256, b: Uint256) -> Uint256 {
+pub fn approx_div(a: Uint256, b: Uint256) -> Uint256 {
     if b == Uint256::zero() {
         panic!("Division by zero");
     }
     let div = a / b;
     let rem = a % b;
-    if rem == Uint256::zero() {
-        div
-    } else {
+    if rem >= b / Uint256::from(2u128) {
+        // If so, we add one to the division result
         div + Uint256::one()
+    } else {
+        // If not, we return the division result as it is
+        div
     }
 }

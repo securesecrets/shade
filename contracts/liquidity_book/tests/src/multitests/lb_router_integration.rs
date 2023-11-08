@@ -42,7 +42,7 @@ const SWAP_AMOUNT: u128 = 1000;
 #[test]
 pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, mut deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, mut deployed_contracts) = setup(None, None)?;
 
     //test the registered tokens
 

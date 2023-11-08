@@ -1,5 +1,3 @@
-use std::ops::Sub;
-
 use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
 
 use super::test_helper::{
@@ -11,7 +9,7 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
+use cosmwasm_std::{ContractInfo, StdError, Timestamp, Uint128, Uint256};
 use ethnum::U256;
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -25,7 +23,7 @@ use shade_protocol::{
         math::{encoded_sample::MASK_UINT20, u24::U24},
         types::LBPairInformation,
     },
-    liquidity_book::lb_pair::RemoveLiquidity,
+    liquidity_book::lb_pair::{RemoveLiquidity, RewardsDistributionAlgorithm},
     multi_test::App,
 };
 
@@ -44,7 +42,7 @@ pub fn lb_pair_setup() -> Result<
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -2171,7 +2169,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
 
     let bin_step = Uint128::from(generate_random(1u16, u16::MAX));
-    let (mut app, lb_factory, deployed_contracts) = setup(Some(bin_step.u128() as u16))?;
+    let (mut app, lb_factory, deployed_contracts) = setup(Some(bin_step.u128() as u16), None)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
     let token_x = token_type_snip20_generator(&shade)?;
@@ -2228,7 +2226,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
 
     let btc = extract_contract_info(&deployed_contracts, SBTC)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
@@ -2451,19 +2449,15 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
+pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, deployed_contracts) =
+        setup(None, Some(RewardsDistributionAlgorithm::VolumeBasedRewards))?;
 
     let btc = extract_contract_info(&deployed_contracts, SBTC)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let token_x = token_type_snip20_generator(&btc)?;
     let token_y = token_type_snip20_generator(&silk)?;
-
-    //assuming the ratio of btc to silk 1:40000
-    //Hence 1 usilk = 400 satoishi
-    // (1+DEFAULT_BIN_STEP/BASIS_POINT)^x = 400
-    // x = 5994
 
     lb_factory::create_lb_pair(
         &mut app,
@@ -2489,8 +2483,10 @@ pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
         "viewing_key".to_owned(),
     )?;
 
-    let amount_x = Uint128::from(((10000u128) * 10000_0000) / 40000); // 25_000_000 satoshi
-    let amount_y = Uint128::from((10000u128) * 1000_000); // 10_000 silk
+    let deposit_ratio = (generate_random(1u128, DEPOSIT_AMOUNT));
+
+    let amount_x = Uint128::from(((deposit_ratio) * 10000_0000) / 40000); // 25_000_000 satoshi
+    let amount_y = Uint128::from((deposit_ratio) * 1000_000); // 10_000 silk
 
     let nb_bins_x = 10;
     let nb_bins_y = 10;
@@ -2537,7 +2533,7 @@ pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
 
     //generate random number
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
-    let amount_y_out = Uint128::from(10000 * 1000_000u128); //1000 silk
+    let amount_y_out = Uint128::from(generate_random(1u128, amount_y.u128() - 1));
     // get swap_in for y
     let (amount_x_in, _amount_y_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
@@ -2564,8 +2560,7 @@ pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
 
     //generate random number
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
-    let amount_x_out = Uint128::from(5 * 1000_000u128); //5_000_000 satoshi
-    // get swap_in for y
+    let amount_x_out = Uint128::from(generate_random(1u128, amount_x.u128() - 1)); // get swap_in for y
     let (amount_y_in, _amount_x_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
 
@@ -2591,9 +2586,668 @@ pub fn test_fuzz_calculate_rewards() -> Result<(), anyhow::Error> {
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
 
-    let distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    Ok(())
+}
 
-    println!("distribution: {:?}", distribution);
+#[test]
+pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) =
+        setup(None, Some(RewardsDistributionAlgorithm::VolumeBasedRewards))?;
+
+    let btc = extract_contract_info(&deployed_contracts, SBTC)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&btc)?;
+    let token_y = token_type_snip20_generator(&silk)?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID + 5994,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
+
+    let deposit_ratio = DEPOSIT_AMOUNT;
+
+    let amount_x = Uint128::from(((deposit_ratio) * 10000_0000) / 40000);
+    let amount_y = Uint128::from((deposit_ratio) * 1000_000);
+
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
+
+    let token_x = extract_contract_info(&deployed_contracts, SBTC)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let tokens_to_mint = vec![(SBTC, amount_x), (SILK, amount_y)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
+
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID + 5994,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
+
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
+
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_y_out = amount_y.multiply_ratio(5u128, 10u128).u128();
+    // get swap_in for y
+    let (amount_x_in, _amount_y_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out.into(), true)?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SBTC, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SBTC)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 600);
+
+    app.set_time(timestamp);
+
+    //generate random number
+    // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+    let amount_x_out = amount_x.multiply_ratio(5u128, 10u128).u128(); // get swap_in for y
+    let (amount_y_in, _amount_x_out_left, _fee) =
+        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out.into(), false)?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SILK, amount_y_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SILK)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_y_in,
+    )?;
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    // println!("Distribution {:?}", _distribution);
+    Ok(())
+}
+
+#[test]
+pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+
+    let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&sscrt)?;
+    let token_y = token_type_snip20_generator(&silk)?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
+
+    let amount_x = Uint128::from(DEPOSIT_AMOUNT); // 25_000_000 satoshi
+    let amount_y = Uint128::from(DEPOSIT_AMOUNT); // 10_000 silk
+
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
+
+    let token_x = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let tokens_to_mint = vec![(SSCRT, amount_x), (SILK, amount_y)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
+
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
+
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
+
+    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
+    app.set_time(timestamp);
+
+    //making a swap for token y hence the bin id moves to the right
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y + 1),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+
+    assert_eq!(active_id, ACTIVE_ID - 1);
+
+    //making a swap for token y hence the bin id moves to the right
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);
+    app.set_time(timestamp);
+
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y * 5),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+
+    assert_eq!(active_id, ACTIVE_ID - 1 - 5);
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
+    app.set_time(timestamp);
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+
+    Ok(())
+}
+
+#[test]
+pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+
+    let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&sscrt)?;
+    let token_y = token_type_snip20_generator(&silk)?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
+
+    let amount_x = Uint128::from(DEPOSIT_AMOUNT); // 25_000_000 satoshi
+    let amount_y = Uint128::from(DEPOSIT_AMOUNT); // 10_000 silk
+
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
+
+    let token_x = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let tokens_to_mint = vec![(SSCRT, amount_x), (SILK, amount_y)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
+
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
+
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
+
+    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
+    app.set_time(timestamp);
+
+    //making a swap for token y hence the bin id moves to the right
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y + 1),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    assert_eq!(active_id, ACTIVE_ID - 1);
+
+    //making a swap for token y hence the bin id moves to the right
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);
+    app.set_time(timestamp);
+
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y * 5),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    assert_eq!(active_id, ACTIVE_ID - 1 - 5);
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
+    app.set_time(timestamp);
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    // println!("_distribution {:?}", _distribution);
+    Ok(())
+}
+
+#[test]
+pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+
+    let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let token_x = token_type_snip20_generator(&sscrt)?;
+    let token_y = token_type_snip20_generator(&silk)?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+
+    lb_token::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_token,
+        "viewing_key".to_owned(),
+    )?;
+
+    let amount_x = Uint128::from(DEPOSIT_AMOUNT); // 25_000_000 satoshi
+    let amount_y = Uint128::from(DEPOSIT_AMOUNT); // 10_000 silk
+
+    let nb_bins_x = 10;
+    let nb_bins_y = 10;
+
+    let token_x = extract_contract_info(&deployed_contracts, SSCRT)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let tokens_to_mint = vec![(SSCRT, amount_x), (SILK, amount_y)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    increase_allowance_helper(
+        &mut app,
+        &deployed_contracts,
+        addrs.batman().into_string(),
+        lb_pair.lb_pair.contract.address.to_string(),
+        tokens_to_mint,
+    )?;
+
+    //Adding liquidity
+    let liquidity_parameters = liquidity_parameters_generator(
+        &deployed_contracts,
+        ACTIVE_ID,
+        token_x,
+        token_y,
+        amount_x,
+        amount_y,
+        nb_bins_x,
+        nb_bins_y,
+    )?;
+
+    lb_pair::add_liquidity(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        liquidity_parameters,
+    )?;
+
+    lb_pair::reset_rewards_epoch(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(RewardsDistributionAlgorithm::VolumeBasedRewards),
+        None,
+    )?;
+
+    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
+    app.set_time(timestamp);
+
+    //making a swap for token y hence the bin id moves to the right
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y + 1),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+
+    assert_eq!(active_id, ACTIVE_ID - 1);
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
+
+    assert!(
+        _distribution
+            .weightages
+            .iter()
+            .all(|&x| x == _distribution.weightages[0])
+    );
+    println!("_distribution {:?}", _distribution);
+
+    //making a swap for token y hence the bin id moves to the right
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);
+    app.set_time(timestamp);
+
+    let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
+        &app,
+        &lb_pair.lb_pair.contract,
+        Uint128::from(bin_reserves_y * 5),
+        true,
+    )?;
+
+    // mint the tokens
+    let tokens_to_mint = vec![(SSCRT, amount_x_in)];
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+    // make a swap with amount_x_in
+    let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, SSCRT)?;
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        amount_x_in,
+    )?;
+
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+
+    assert_eq!(active_id, ACTIVE_ID - 1 - 5);
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
+    app.set_time(timestamp);
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
+
+    assert!(
+        _distribution
+            .weightages
+            .iter()
+            .any(|&x| x != _distribution.weightages[0])
+    );
+
+    // println!("_distribution {:?}", _distribution);
 
     Ok(())
 }

@@ -65,6 +65,9 @@ pub enum LBPairError {
     #[error("Not enough liquidity!")]
     OutOfLiquidity,
 
+    #[error("value greater than u24!")]
+    U24Overflow,
+
     #[error("Token not supported!")]
     TokenNotSupported(),
 

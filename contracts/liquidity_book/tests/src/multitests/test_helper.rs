@@ -11,7 +11,7 @@ use shade_multi_test::{
 };
 use shade_protocol::{
     lb_libraries::{constants::PRECISION, math::u24::U24, tokens::TokenType},
-    liquidity_book::lb_pair::LiquidityParameters,
+    liquidity_book::lb_pair::{LiquidityParameters, RewardsDistributionAlgorithm},
     multi_test::App,
     utils::{asset::Contract, cycle::parse_utc_datetime, MultiTestable},
 };
@@ -127,7 +127,10 @@ pub fn assert_approx_eq_abs(a: Uint256, b: Uint256, delta: Uint256, error_messag
     }
 }
 
-pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
+pub fn setup(
+    bin_step: Option<u16>,
+    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+) -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
     // init snip-20's
     let mut app = App::default();
     let addrs = init_addrs();
@@ -239,7 +242,11 @@ pub fn setup(bin_step: Option<u16>) -> Result<(App, Contract, DeployedContracts)
         addrs.joker(),
         0,
         admin_contract.into(),
-        100,
+        10,
+        Some(
+            rewards_distribution_algorithm
+                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+        ),
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());

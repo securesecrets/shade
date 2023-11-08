@@ -1,4 +1,4 @@
-use super::lb_pair;
+use super::lb_pair::{self, RewardsDistributionAlgorithm};
 use crate::utils::{
     asset::RawContract,
     liquidity_book::{
@@ -19,6 +19,7 @@ pub struct InstantiateMsg {
     pub fee_recipient: Addr,
     pub flash_loan_fee: u8,
     pub total_reward_bins: u32,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
 }
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;

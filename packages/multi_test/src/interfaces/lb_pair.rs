@@ -6,7 +6,12 @@ use shade_protocol::{
         tokens::TokenType,
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
-    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution},
+    liquidity_book::lb_pair::{
+        LiquidityParameters,
+        RemoveLiquidity,
+        RewardsDistribution,
+        RewardsDistributionAlgorithm,
+    },
     multi_test::App,
     utils::{
         asset::{Contract, RawContract},
@@ -33,6 +38,7 @@ pub fn init(
     protocol_fee_recipient: Addr,
     admin_auth: RawContract,
     total_reward_bins: u32,
+    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -47,7 +53,9 @@ pub fn init(
             entropy,
             protocol_fee_recipient,
             admin_auth,
-            total_reward_bins,
+            total_reward_bins: Some(total_reward_bins),
+            rewards_distribution_algorithm: rewards_distribution_algorithm
+                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
         }
         .test_init(
             LbPair::default(),
@@ -160,6 +168,24 @@ pub fn calculate_rewards(app: &mut App, sender: &str, lb_pair: &ContractInfo) ->
         Addr::unchecked(sender),
         &[],
     )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn reset_rewards_epoch(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    distribution: Option<RewardsDistributionAlgorithm>,
+    base_rewards_bins: Option<u32>,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::ResetRewardsConfig {
+        distribution,
+        base_rewards_bins,
+    }
+    .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
+    {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
