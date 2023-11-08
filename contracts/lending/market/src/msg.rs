@@ -1,7 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Timestamp, Uint128};
 
-use cw20::Cw20ReceiveMsg;
 use utils::interest::Interest;
 use utils::{coin::Coin, token::Token};
 
@@ -107,13 +106,6 @@ pub enum ExecuteMsg {
     AdjustInterestRates {
         new_interest_rates: Interest,
     },
-    /// Handles contract's logics that involves receiving CW20 tokens.
-    Receive(Cw20ReceiveMsg),
-}
-
-#[cw_serde]
-pub enum ReceiveMsg {
-    Deposit,
     Repay,
     RepayTo { account: String },
 }
