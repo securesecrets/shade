@@ -1,41 +1,18 @@
-use std::ops::Add;
-
 use anyhow::Ok;
-use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError};
+use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
 use shade_multi_test::interfaces::{lb_factory, lb_pair, snip20};
 use shade_protocol::lb_libraries::tokens::TokenType;
-
+use shade_multi_test::interfaces::{
+    router::{self},
+    utils::SupportedContracts,
+};
 use shadeswap_shared::{
     core::TokenAmount,
     router::{Hop, InvokeMsg},
 };
 
-use crate::multitests::test_helper::{
-    liquidity_parameters_generator_with_native,
-    token_type_native_generator,
-    SHADE,
-    SILK,
-};
-
-use super::{
-    lb_pair_fees::DEPOSIT_AMOUNT,
-    test_helper::{
-        extract_contract_info,
-        increase_allowance_helper,
-        init_addrs,
-        liquidity_parameters_generator,
-        mint_token_helper,
-        setup,
-        token_type_snip20_generator,
-        DEFAULT_BIN_STEP,
-        ID_ONE,
-    },
-};
-use cosmwasm_std::Uint128;
-use shade_multi_test::interfaces::{
-    router::{self},
-    utils::SupportedContracts,
-};
+use crate::multitests::test_helper::*;
+use super::lb_pair_fees::DEPOSIT_AMOUNT;
 
 const SWAP_AMOUNT: u128 = 1000;
 
@@ -124,6 +101,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         "entropy".to_string(),
     )?;
     //        c. LP token contract -> initializated with lb_pair
+    //  TODO: d. Staking contract
 
     //     13. LIST the AMM pairs and ASSERT that there's only 1 AMM pair.
     let all_pairs =
@@ -369,7 +347,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             .bank
             .init_balance(storage, &addrs.joker(), vec![Coin {
                 denom: "uscrt".into(),
-                amount: amount_x.add(Uint128::from(SWAP_AMOUNT)),
+                amount: amount_x + Uint128::from(SWAP_AMOUNT),
             }])
             .unwrap();
     });

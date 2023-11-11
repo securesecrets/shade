@@ -10,6 +10,7 @@ use shade_protocol::{
         types::{Bytes32, ContractInstantiationInfo},
     },
     secret_storage_plus::{AppendStore, Item, Map},
+    Contract,
 };
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
     types::{LBPair, LBPairInformation, NextPairKey},
 };
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
-pub const CONFIG: Item<State> = Item::new("config");
+pub const CONFIG: Item<Config> = Item::new("config");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 // pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");

@@ -1,4 +1,3 @@
-extern crate rand;
 use cosmwasm_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256};
 use rand::Rng;
 use shade_multi_test::{

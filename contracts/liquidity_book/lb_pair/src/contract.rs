@@ -1499,7 +1499,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         // QueryMsg::SwapSimulation { offer, exclude_fee } => {
         //     query_swap_simulation(deps, env, offer, exclude_fee)
         // }
-        _ => todo!()
+        _ => todo!(),
     }
 }
 
@@ -2164,7 +2164,8 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
         total_fees: Uint128::from(total_fees.decode_alt(swap_for_y)),
         shade_dao_fees: Uint128::from(shade_dao_fees.decode_alt(swap_for_y)),
         lp_fees: Uint128::from(lp_fees.decode_alt(swap_for_y)),
-    })
+    };
+    to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the Liquidity Book Factory.

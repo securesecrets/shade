@@ -1,20 +1,27 @@
-#![allow(unused)] // For beginning only.
-
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Reply, Response, StdError, StdResult, Storage, SubMsg, SubMsgResult, Timestamp, Uint256,
+    entry_point,
+    to_binary,
+    Addr,
+    Binary,
+    ContractInfo,
+    CosmosMsg,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Reply,
+    Response,
+    StdError,
+    StdResult,
+    SubMsg,
+    SubMsgResult,
     WasmMsg,
 };
-use ethnum::U256;
 use shade_protocol::{
-    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
-    lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types, viewing_keys},
+    admin::helpers::{validate_admin, AdminPermissions},
     liquidity_book::{
         lb_factory::*,
-        lb_pair::{
-            self,
-            ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
-        },
+        lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
     },
     utils::{
         callback::ExecuteCallback,
@@ -70,8 +77,8 @@ pub fn instantiate(
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
     };
 
-    CONFIG.save(deps.storage, &state)?;
-    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
+    CONFIG.save(deps.storage, &config)?;
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
 
     Ok(Response::default())
 }
@@ -206,11 +213,11 @@ fn try_set_lb_pair_implementation(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
     let old_lb_pair_implementation = config.lb_pair_implementation;
-    if (old_lb_pair_implementation == new_lb_pair_implementation) {
+    if old_lb_pair_implementation == new_lb_pair_implementation {
         return Err(Error::SameImplementation {
             lb_implementation: old_lb_pair_implementation.id,
         });
@@ -235,16 +242,16 @@ fn try_set_lb_token_implementation(
     info: MessageInfo,
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
     let old_lb_token_implementation = config.lb_token_implementation;
-    if (old_lb_token_implementation == new_lb_token_implementation) {
+    if old_lb_token_implementation == new_lb_token_implementation {
         return Err(Error::SameImplementation {
             lb_implementation: old_lb_token_implementation.id,
         });
@@ -319,7 +326,7 @@ fn try_create_lb_pair(
     }
 
     // safety check, making sure that the price can be calculated
-    PriceHelper::get_price_from_id(active_id, bin_step);
+    PriceHelper::get_price_from_id(active_id, bin_step)?;
 
     let (token_a, token_b) = _sort_tokens(token_x.clone(), token_y.clone());
 
@@ -369,11 +376,11 @@ fn try_create_lb_pair(
                     max_volatility_accumulator: preset.get_max_volatility_accumulator(),
                 },
                 active_id,
-                lb_token_implementation: state.lb_token_implementation,
+                lb_token_implementation: config.lb_token_implementation,
                 viewing_key,
                 entropy,
-                protocol_fee_recipient: state.fee_recipient,
-                admin_auth: state.admin_auth.into(),
+                protocol_fee_recipient: config.fee_recipient,
+                admin_auth: config.admin_auth.into(),
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -628,7 +635,7 @@ fn try_set_fee_parameters_on_pair(
         &state.admin_auth,
     )?;
     let (token_a, token_b) = _sort_tokens(token_x, token_y);
-    let mut lb_pair = LB_PAIRS_INFO
+    let lb_pair = LB_PAIRS_INFO
         .load(
             deps.storage,
             (token_a.unique_key(), token_b.unique_key(), bin_step),
@@ -666,12 +673,12 @@ fn try_set_fee_recipient(
     info: MessageInfo,
     fee_recipient: Addr,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
     let old_fee_recipient = config.fee_recipient;
@@ -702,14 +709,14 @@ fn try_set_flash_loan_fee(
     info: MessageInfo,
     flash_loan_fee: u8,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
-    let old_flash_loan_fee = state.flash_loan_fee;
+    let old_flash_loan_fee = config.flash_loan_fee;
 
     if old_flash_loan_fee == flash_loan_fee {
         return Err(Error::SameFlashLoanFee {
@@ -744,12 +751,12 @@ fn try_add_quote_asset(
     info: MessageInfo,
     quote_asset: TokenType,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
     if QUOTE_ASSET_WHITELIST
         .iter(deps.storage)?
@@ -763,7 +770,7 @@ fn try_add_quote_asset(
         });
     }
 
-    QUOTE_ASSET_WHITELIST.push(deps.storage, &quote_asset);
+    QUOTE_ASSET_WHITELIST.push(deps.storage, &quote_asset)?;
 
     Ok(Response::default()
         .add_attribute_plaintext("quote asset added", quote_asset.unique_key().as_str()))
@@ -780,12 +787,12 @@ fn try_remove_quote_asset(
     info: MessageInfo,
     asset: TokenType,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
     // Enumerate the iterator and use `find` to locate the asset
     let found_asset = QUOTE_ASSET_WHITELIST
@@ -814,16 +821,16 @@ fn try_remove_quote_asset(
 }
 
 fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
     let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);
-    let mut lb_pair = LB_PAIRS_INFO
+    let lb_pair = LB_PAIRS_INFO
         .load(
             deps.storage,
             (token_a.unique_key(), token_b.unique_key(), pair.bin_step),
@@ -1310,8 +1317,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
                 ephemeral_storage_w(deps.storage).remove();
                 Ok(Response::default()
-                    .add_attribute("lb_pair_address", lb_pair.contract.address.to_string())
-                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash.to_string()))
+                    .add_attribute("lb_pair_address", lb_pair.contract.address)
+                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash))
             }
             None => Err(StdError::generic_err("Expecting contract id")),
         },

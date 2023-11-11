@@ -1,6 +1,6 @@
 use cosmwasm_std::Uint128;
+use shade_multi_test::interfaces::{lb_pair, lb_token, snip20};
 use shade_protocol::liquidity_book::lb_token::QueryAnswer;
-use shade_multi_test::interfaces::{snip20, lb_pair, lb_token};
 
 use super::test_helper::*;
 

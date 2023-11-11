@@ -1,3 +1,5 @@
+#![allow(clippy::clone_double_ref)]
+
 // TODO: make private later
 pub mod contract_interfaces;
 pub use contract_interfaces::*;

@@ -141,7 +141,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -161,7 +161,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -170,7 +170,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -214,7 +214,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -223,7 +223,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, amount_out);
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -269,7 +269,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -278,7 +278,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -324,7 +324,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     )?;
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -333,7 +333,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     assert_eq!(silk_balance, Uint128::zero());
 
     let shade_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,

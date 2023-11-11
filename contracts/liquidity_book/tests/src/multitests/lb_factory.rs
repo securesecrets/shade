@@ -1,24 +1,3 @@
-use crate::multitests::test_helper::{
-    extract_contract_info,
-    generate_random,
-    token_type_snip20_generator,
-    DEFAULT_BASE_FACTOR,
-    DEFAULT_BIN_STEP,
-    DEFAULT_DECAY_PERIOD,
-    DEFAULT_FILTER_PERIOD,
-    DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
-    DEFAULT_OPEN_STATE,
-    DEFAULT_PROTOCOL_SHARE,
-    DEFAULT_REDUCTION_FACTOR,
-    DEFAULT_VARIABLE_FEE_CONTROL,
-    SBTC,
-    SHADE,
-    SILK,
-    SSCRT,
-    USDC,
-};
-
-use super::test_helper::{bound, init_addrs, setup, ID_ONE};
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError};
 use shade_multi_test::{
@@ -26,6 +5,7 @@ use shade_multi_test::{
     multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
+    liquidity_book::lb_factory::PresetResponse,
     lb_libraries::{
         constants::BASIS_POINT_MAX,
         math::{
@@ -36,6 +16,8 @@ use shade_protocol::{
     },
     utils::MultiTestable,
 };
+
+use crate::multitests::test_helper::*;
 
 #[test]
 pub fn test_setup() -> Result<(), anyhow::Error> {
@@ -193,7 +175,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&mut app, &lb_pair_info.lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD);
     assert_eq!(decay_period, DEFAULT_DECAY_PERIOD);
@@ -206,7 +188,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&mut app, &lb_pair_info.lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
 
     assert_eq!(volatility_reference, 0);
     assert_eq!(volatility_accumulator, 0);
@@ -722,7 +704,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         old_volatility_reference,
         old_id_reference,
         old_time_of_last_update,
-    ) = lb_pair::query_variable_fee_params(&mut app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
 
     // Set the fees parameters on pair
     lb_factory::set_fees_parameters_on_pair(
@@ -750,7 +732,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&mut app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
 
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR * 2);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD * 2);
@@ -764,7 +746,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&mut app, &all_pairs[0].lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
 
     assert_eq!(volatility_accumulator, old_volatility_accumulator);
     assert_eq!(volatility_reference, old_volatility_reference);
@@ -1100,7 +1082,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.admin().as_str(),
         &lb_factory.into(),
-        usdc.clone(),
+        usdc,
     );
     assert!(err.is_err());
 
