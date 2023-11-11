@@ -1,24 +1,24 @@
-use cosmwasm_std::{
-    entry_point,
-    to_binary,
-    Addr,
-    Binary,
-    ContractInfo,
-    CosmosMsg,
-    Deps,
-    DepsMut,
-    Env,
-    MessageInfo,
-    Reply,
-    Response,
-    StdError,
-    StdResult,
-    SubMsg,
-    SubMsgResult,
-    WasmMsg,
-};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Addr,
+        Binary,
+        ContractInfo,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Reply,
+        Response,
+        StdError,
+        StdResult,
+        SubMsg,
+        SubMsgResult,
+        WasmMsg,
+    },
     liquidity_book::{
         lb_factory::*,
         lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
@@ -50,7 +50,7 @@ pub const INSTANTIATE_REPLY_ID: u64 = 1u64;
 
 /////////////// INSTANTIATE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -85,7 +85,7 @@ pub fn instantiate(
 
 /////////////// EXECUTE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
     let contract_status = CONTRACT_STATUS.load(deps.storage)?;
     match contract_status {
@@ -861,7 +861,7 @@ fn only_owner(sender: &Addr, owner: &Addr) -> Result<()> {
     Ok(())
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetMinBinStep {} => query_min_bin_step(deps),
@@ -1269,7 +1269,7 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
     to_binary(&response).map_err(Error::CwErr)
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     match (msg.id, msg.result) {
         (INSTANTIATE_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
