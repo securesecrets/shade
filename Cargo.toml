@@ -23,9 +23,6 @@ members = [
   "contracts/basic_staking",
   "contracts/snip20_derivative",
 
-  # Lending
-  "contracts/lending/*",
-
   # DAO
   # - Core
   "contracts/dao/treasury",
@@ -37,7 +34,7 @@ members = [
   # "contracts/dao/lp_shdswap",
 
   # Lending protocol
-  "contracts/lend-token",
+  "contracts/lending/*",
 
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1
