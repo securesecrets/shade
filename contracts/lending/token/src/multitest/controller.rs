@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result as AnyResult};
-use cosmwasm_std::{
-    from_slice, to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, Uint128,
+use shade_protocol::{
+    c_std::{
+        from_slice, to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response,
+        Uint128,
+    },
+    multi_test::Contract,
 };
-use cw_multi_test::Contract;
 
 use crate::msg::{ControllerQuery, TransferableAmountResp};
 

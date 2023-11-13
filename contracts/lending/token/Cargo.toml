@@ -28,3 +28,5 @@ lending-utils = { version = "0.1.0", path = "../../packages/lending_utils" }
 
 [dev-dependencies]
 anyhow = "1"
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test"] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "snip20"] }
