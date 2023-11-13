@@ -5,7 +5,7 @@ pub mod manager;
 pub mod transaction_history;
 
 use crate::{
-    c_std::{Addr, Binary, Env, StdResult, Storage},
+    c_std::{Addr, Binary, Env, StdResult, Storage, CosmosMsg, WasmMsg, to_binary},
     query_authentication::permit::Permit,
 };
 use cosmwasm_std::{Api, MessageInfo};
@@ -389,6 +389,40 @@ pub struct Snip20ReceiveMsg {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
     pub msg: Option<Binary>,
+}
+
+impl Snip20ReceiveMsg {
+    pub fn new(
+        sender: String,
+        from: String,
+        amount: Uint128,
+        memo: Option<String>,
+        msg: Option<Binary>,
+    ) -> Self {
+        Self {
+            sender,
+            from,
+            amount,
+            memo,
+            msg,
+        }
+    }
+
+    /// creates a cosmos_msg sending this struct to the named contract
+    pub fn into_cosmos_msg(
+        self,
+        callback_code_hash: String,
+        contract_addr: String,
+    ) -> StdResult<CosmosMsg> {
+        let msg = to_binary(&self.msg)?;
+        let execute = WasmMsg::Execute {
+            msg,
+            code_hash: callback_code_hash,
+            contract_addr,
+            funds: vec![],
+        };
+        Ok(execute.into())
+    }
 }
 
 #[cw_serde]

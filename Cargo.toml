@@ -7,6 +7,7 @@ members = [
   "packages/multi_test",
   "packages/multi_derive",
   "packages/contract_derive",
+  "packages/lending_utils",
 
   # Network setups
   "contracts/airdrop",
@@ -34,6 +35,9 @@ members = [
   "contracts/dao/stkd_scrt",
   # "contracts/dao/rewards_emission",
   # "contracts/dao/lp_shdswap",
+
+  # Lending protocol
+  "contracts/lend-token",
 
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1
