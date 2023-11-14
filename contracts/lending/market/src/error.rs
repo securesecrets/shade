@@ -1,9 +1,9 @@
 use cosmwasm_std::{OverflowError, StdError, Uint128};
+use lend_utils::interest::InterestError;
 use thiserror::Error;
-use utils::interest::InterestError;
 
-use utils::credit_line::InvalidCommonTokenDenom;
-use utils::price::PriceError;
+use lend_utils::credit_line::InvalidCommonTokenDenom;
+use lend_utils::price::PriceError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

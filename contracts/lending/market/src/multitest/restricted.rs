@@ -6,7 +6,7 @@ use crate::{
 
 use cosmwasm_std::{Decimal, Uint128};
 
-use utils::{
+use lend_utils::{
     assert_approx_eq,
     interest::{Interest, ValidatedInterest},
     token::Token,

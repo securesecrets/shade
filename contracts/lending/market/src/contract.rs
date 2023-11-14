@@ -13,7 +13,7 @@ use crate::msg::{
 };
 use crate::state::{debt, Config, CONFIG};
 
-use lending_utils::token::Token;
+use lending_lend_utils::token::Token;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:lend-market";
@@ -89,7 +89,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 mod reply {
     use super::*;
 
-    use cw_utils::parse_reply_instantiate_data;
+    use cw_lend_utils::parse_reply_instantiate_data;
 
     pub fn token_instantiate_reply(
         deps: DepsMut,
@@ -197,19 +197,19 @@ pub fn execute(
 }
 
 /// Checks if `funds` contains only one denom and return the Coin version of it.
-fn require_single_denom(funds: &[StdCoin]) -> Result<utils::coin::Coin, ContractError> {
+fn require_single_denom(funds: &[StdCoin]) -> Result<lend_utils::coin::Coin, ContractError> {
     if funds.len() != 1 {
         return Err(ContractError::RequiresExactlyOneCoin {});
     };
-    Ok(utils::coin::Coin {
+    Ok(lend_utils::coin::Coin {
         denom: Token::Native(funds[0].denom.clone()),
         amount: funds[0].amount,
     })
 }
 
 // Available credit line helpers
-mod cr_utils {
-    use utils::{
+mod cr_lend_utils {
+    use lend_utils::{
         amount::base_to_token,
         credit_line::{CreditLineResponse, CreditLineValues},
     };
@@ -306,7 +306,7 @@ mod cr_utils {
 mod execute {
     use cosmwasm_std::{from_binary, SubMsg};
     use cw20::Cw20ReceiveMsg;
-    use utils::{
+    use lend_utils::{
         amount::{base_to_token, token_to_base},
         coin::Coin,
     };
@@ -433,7 +433,7 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         address: String,
-        received_tokens: utils::coin::Coin,
+        received_tokens: lend_utils::coin::Coin,
     ) -> Result<Response, ContractError> {
         let address = deps.api.addr_validate(&address)?;
         let cfg = CONFIG.load(deps.storage)?;
@@ -490,7 +490,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
 
-        if cr_utils::transferable_amount(deps.as_ref(), &cfg, &info.sender)? < amount {
+        if cr_lend_utils::transferable_amount(deps.as_ref(), &cfg, &info.sender)? < amount {
             return Err(ContractError::CannotWithdraw {
                 account: info.sender.to_string(),
                 amount,
@@ -536,7 +536,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
 
-        if !cr_utils::can_borrow(deps.as_ref(), &cfg, &info.sender, amount)? {
+        if !cr_lend_utils::can_borrow(deps.as_ref(), &cfg, &info.sender, amount)? {
             return Err(ContractError::CannotBorrow {
                 amount,
                 account: info.sender.to_string(),
@@ -571,7 +571,7 @@ mod execute {
     pub fn repay(
         mut deps: DepsMut,
         env: Env,
-        repay_tokens: utils::coin::Coin,
+        repay_tokens: lend_utils::coin::Coin,
         sender: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -609,7 +609,7 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         sender: Addr,
-        repay_tokens: utils::coin::Coin,
+        repay_tokens: lend_utils::coin::Coin,
         account: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -674,7 +674,7 @@ mod execute {
         // calculate repaid value
         let price_rate = query::price_market_local_per_common(deps.as_ref())?.rate_sell_per_buy;
 
-        let repaid_value = cr_utils::divide(amount, price_rate * liquidation_price)
+        let repaid_value = cr_lend_utils::divide(amount, price_rate * liquidation_price)
             .map_err(|_| ContractError::ZeroPrice {})?;
 
         // transfer claimed amount of repaid value in ctokens from account source to destination
@@ -850,7 +850,7 @@ mod execute {
                 deps,
                 env,
                 msg.sender,
-                utils::coin::Coin {
+                lend_utils::coin::Coin {
                     denom: Token::Cw20(info.sender.to_string()),
                     amount: msg.amount,
                 },
@@ -860,7 +860,7 @@ mod execute {
                 repay(
                     deps,
                     env,
-                    utils::coin::Coin {
+                    lend_utils::coin::Coin {
                         denom: Token::Cw20(info.sender.to_string()),
                         amount: msg.amount,
                     },
@@ -874,7 +874,7 @@ mod execute {
                     deps,
                     env,
                     sender,
-                    utils::coin::Coin {
+                    lend_utils::coin::Coin {
                         denom: Token::Cw20(info.sender.to_string()),
                         amount: msg.amount,
                     },
@@ -919,9 +919,9 @@ mod query {
     use cosmwasm_std::{Decimal, Deps, Uint128};
     use cw20::BalanceResponse;
     use lend_token::msg::{QueryMsg as TokenQueryMsg, TokenInfoResponse};
-    use utils::coin::Coin;
-    use utils::credit_line::{CreditLineResponse, CreditLineValues};
-    use utils::price::{coin_times_price_rate, PriceRate};
+    use lend_utils::coin::Coin;
+    use lend_utils::credit_line::{CreditLineResponse, CreditLineValues};
+    use lend_utils::price::{coin_times_price_rate, PriceRate};
     use wyndex::oracle::TwapResponse;
     use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
 
@@ -1007,7 +1007,7 @@ mod query {
     ) -> Result<TransferableAmountResponse, ContractError> {
         let config = CONFIG.load(deps.storage)?;
         if token == config.ctoken_contract {
-            let transferable = cr_utils::transferable_amount(deps, &config, account)?;
+            let transferable = cr_lend_utils::transferable_amount(deps, &config, account)?;
             Ok(TransferableAmountResponse { transferable })
         } else {
             Err(ContractError::UnrecognisedToken(token.to_string()))
@@ -1020,7 +1020,7 @@ mod query {
 
         let cfg = CONFIG.load(deps.storage)?;
 
-        let transferable = cr_utils::transferable_amount(deps, &cfg, &account)?;
+        let transferable = cr_lend_utils::transferable_amount(deps, &cfg, &account)?;
         let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
         let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
         let withdrawable = min(
@@ -1039,7 +1039,7 @@ mod query {
 
         let cfg = CONFIG.load(deps.storage)?;
 
-        let borrowable = cr_utils::query_borrowable_tokens(deps, &cfg, account)?;
+        let borrowable = cr_lend_utils::query_borrowable_tokens(deps, &cfg, account)?;
         let borrowable = min(
             borrowable,
             cfg.market_token
@@ -1172,7 +1172,7 @@ mod query {
 mod restricted {
     use super::*;
 
-    use utils::interest::Interest;
+    use lend_utils::interest::Interest;
 
     pub fn ensure_governance(cfg: &Config, info: &MessageInfo) -> Result<(), ContractError> {
         if cfg.governance_contract != info.sender {
@@ -1268,7 +1268,7 @@ mod tests {
     #[test]
     fn divide_u128_by_decimal_rounding() {
         assert_eq!(
-            cr_utils::divide(60u128.into(), Decimal::percent(60)).unwrap(),
+            cr_lend_utils::divide(60u128.into(), Decimal::percent(60)).unwrap(),
             Uint128::new(100u128)
         );
     }

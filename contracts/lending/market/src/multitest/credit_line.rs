@@ -6,7 +6,7 @@ use crate::{
 use super::suite::{SuiteBuilder, COMMON};
 
 use cosmwasm_std::{Decimal, StdError, Uint128};
-use utils::{credit_line::CreditLineValues, token::Token};
+use lend_utils::{credit_line::CreditLineValues, token::Token};
 use wyndex::factory::PairType;
 
 #[test]

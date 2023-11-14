@@ -1,12 +1,12 @@
 use super::suite::{SuiteBuilder, COMMON};
 
 use cosmwasm_std::{Decimal, Uint128};
-use utils::token::Token;
+use lend_utils::token::Token;
 use wyndex::factory::PairType;
 
 use crate::multitest::suite::{BORROWER, GOVERNANCE, LENDER, MARKET_TOKEN};
 use crate::state::SECONDS_IN_YEAR;
-use utils::assert_approx_eq;
+use lend_utils::assert_approx_eq;
 
 #[test]
 fn after_full_year_native() {

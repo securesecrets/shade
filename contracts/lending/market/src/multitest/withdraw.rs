@@ -1,5 +1,5 @@
 use cosmwasm_std::{Decimal, Uint128};
-use utils::{credit_line::CreditLineValues, token::Token};
+use lend_utils::{credit_line::CreditLineValues, token::Token};
 use wyndex::factory::PairType;
 
 use super::suite::{SuiteBuilder, BORROWER, COMMON, LENDER, MARKET_TOKEN};

@@ -1,8 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Timestamp, Uint128};
 
-use utils::interest::Interest;
-use utils::{coin::Coin, token::Token};
+use lend_utils::interest::Interest;
+use lend_utils::{coin::Coin, token::Token};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -139,10 +139,10 @@ pub enum QueryMsg {
     #[returns(InterestResponse)]
     Interest {},
     /// Returns PriceRate, structure representing sell/buy ratio for local(market)/common denoms
-    #[returns(utils::price::PriceRate)]
+    #[returns(lend_utils::price::PriceRate)]
     PriceMarketLocalPerCommon {},
     /// Returns CreditLineResponse
-    #[returns(utils::credit_line::CreditLineResponse)]
+    #[returns(lend_utils::credit_line::CreditLineResponse)]
     CreditLine { account: String },
     /// Returns ReserveResponse
     #[returns(ReserveResponse)]

@@ -1,7 +1,7 @@
 use super::suite::{SuiteBuilder, COMMON};
 
 use cosmwasm_std::{Decimal, Timestamp};
-use utils::token::Token;
+use lend_utils::token::Token;
 use wyndex::factory::PairType;
 
 use crate::msg::InterestResponse;

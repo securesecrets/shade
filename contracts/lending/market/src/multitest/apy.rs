@@ -1,5 +1,5 @@
 use cosmwasm_std::Decimal;
-use utils::token::Token;
+use lend_utils::token::Token;
 use wyndex::factory::PairType;
 
 use crate::multitest::suite::{BORROWER, LENDER, MARKET_TOKEN};
