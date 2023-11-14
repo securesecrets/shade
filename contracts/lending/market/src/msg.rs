@@ -20,7 +20,7 @@ pub struct InstantiateMsg {
     pub market_cap: Option<Uint128>,
     /// Interest rate curve
     pub interest_rate: Interest,
-    /// Token which would be distributed via created wynd_lend contracts
+    /// Token which would be distributed via created lend contracts
     pub distributed_token: Token,
     /// Define interest's charged period (in seconds)
     pub interest_charge_period: u64,
@@ -107,7 +107,9 @@ pub enum ExecuteMsg {
         new_interest_rates: Interest,
     },
     Repay,
-    RepayTo { account: String },
+    RepayTo {
+        account: String,
+    },
 }
 
 #[cw_serde]
@@ -156,7 +158,7 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct MigrateMsg {
-    pub wynd_lend_token_id: Option<u64>,
+    pub lend_token_id: Option<u64>,
 }
 
 #[cw_serde]

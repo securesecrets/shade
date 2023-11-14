@@ -4,7 +4,7 @@ use wyndex::factory::PairType;
 
 use super::suite::{SuiteBuilder, BORROWER, COMMON, LENDER, MARKET_TOKEN};
 use crate::error::ContractError;
-use wynd_lend_token::error::ContractError as TokenContractError;
+use lend_token::error::ContractError as TokenContractError;
 
 #[test]
 fn withdraw_native_works() {

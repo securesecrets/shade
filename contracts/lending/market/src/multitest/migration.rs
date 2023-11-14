@@ -13,7 +13,7 @@ fn migration_with_token_id() {
         .migrate(
             new_market_id,
             &MigrateMsg {
-                wynd_lend_token_id: Some(new_token_id),
+                lend_token_id: Some(new_token_id),
             },
         )
         .unwrap();
@@ -31,7 +31,7 @@ fn migration_without_token_id() {
         .migrate(
             new_market_id,
             &MigrateMsg {
-                wynd_lend_token_id: None,
+                lend_token_id: None,
             },
         )
         .unwrap();

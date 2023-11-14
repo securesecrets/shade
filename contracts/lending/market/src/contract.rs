@@ -6,8 +6,6 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use utils::wyndex::SwapOperation;
-
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryTotalCreditLine, TotalDebtResponse,
@@ -15,7 +13,7 @@ use crate::msg::{
 };
 use crate::state::{debt, Config, CONFIG};
 
-use utils::token::Token;
+use lending_utils::token::Token;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:lend-market";
@@ -32,7 +30,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let ctoken_msg = wynd_lend_token::msg::InstantiateMsg {
+    let ctoken_msg = lend_token::msg::InstantiateMsg {
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,
         decimals: msg.decimals,
@@ -311,11 +309,7 @@ mod execute {
     use utils::{
         amount::{base_to_token, token_to_base},
         coin::Coin,
-        wyndex::SimulateSwapOperationsResponse,
     };
-    use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
-
-    use wyndex_oracle::state::Config as OracleConfig;
 
     use crate::{
         interest::{calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate},
@@ -358,7 +352,7 @@ mod execute {
     /// One for ctoken rebase and one for the minting of any reserve balance rather than let it sit idle.
     /// The debt multiplier is adjusted inside this function.
     pub fn charge_interest<T>(deps: DepsMut, env: Env) -> Result<Ratios<T>, ContractError> {
-        use wynd_lend_token::msg::ExecuteMsg;
+        use lend_token::msg::ExecuteMsg;
 
         let mut cfg = CONFIG.load(deps.storage)?;
         let epochs_passed = epochs_passed(&cfg, env)?;
@@ -396,7 +390,7 @@ mod execute {
             // If we have a reserve, rather than leave it sitting idle,
             // mint the reserve as ltokens and send them to the governance contract
             if reserve > Uint128::zero() {
-                let mint_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::MintBase {
+                let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
                     recipient: cfg.governance_contract.to_string(),
                     amount: reserve,
                 })?;
@@ -469,7 +463,7 @@ mod execute {
             response = response.add_submessages(charge_msgs.messages);
         }
 
-        let mint_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::MintBase {
+        let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
             recipient: address.to_string(),
             amount: received_tokens.amount,
         })?;
@@ -512,7 +506,7 @@ mod execute {
         }
 
         // Burn the C tokens
-        let burn_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::BurnBaseFrom {
+        let burn_msg = to_binary(&lend_token::msg::ExecuteMsg::BurnBaseFrom {
             owner: info.sender.to_string(),
             amount,
         })?;
@@ -686,7 +680,7 @@ mod execute {
         // transfer claimed amount of repaid value in ctokens from account source to destination
         // using base message here, since the rebase messages from `charge_interest` are not applied yet,
         // so the multiplier is not updated yet
-        let msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::TransferBaseFrom {
+        let msg = to_binary(&lend_token::msg::ExecuteMsg::TransferBaseFrom {
             sender: source.to_string(),
             recipient: destination.to_string(),
             amount: repaid_value,
@@ -816,7 +810,7 @@ mod execute {
 
         // Burn the C tokens based on the estimate.
         let multiplier = query_ctoken_multiplier(deps.as_ref(), &cfg)?;
-        let burn_msg: Binary = to_binary(&wynd_lend_token::msg::ExecuteMsg::BurnFrom {
+        let burn_msg: Binary = to_binary(&lend_token::msg::ExecuteMsg::BurnFrom {
             owner: account,
             amount: base_to_token(estimate, multiplier),
         })?;
@@ -924,10 +918,10 @@ mod query {
 
     use cosmwasm_std::{Decimal, Deps, Uint128};
     use cw20::BalanceResponse;
+    use lend_token::msg::{QueryMsg as TokenQueryMsg, TokenInfoResponse};
     use utils::coin::Coin;
     use utils::credit_line::{CreditLineResponse, CreditLineValues};
     use utils::price::{coin_times_price_rate, PriceRate};
-    use wynd_lend_token::msg::{QueryMsg as TokenQueryMsg, TokenInfoResponse};
     use wyndex::oracle::TwapResponse;
     use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
 
@@ -1258,7 +1252,7 @@ mod restricted {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     CONFIG.update::<_, StdError>(deps.storage, |mut cfg| {
-        if let Some(token_id) = msg.wynd_lend_token_id {
+        if let Some(token_id) = msg.lend_token_id {
             cfg.token_id = token_id;
         }
         Ok(cfg)

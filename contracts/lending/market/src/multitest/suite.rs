@@ -88,9 +88,9 @@ pub fn contract_market() -> Box<dyn Contract<Empty>> {
 
 pub fn contract_token() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new_with_empty(
-        wynd_lend_token::contract::execute,
-        wynd_lend_token::contract::instantiate,
-        wynd_lend_token::contract::query,
+        lend_token::contract::execute,
+        lend_token::contract::instantiate,
+        lend_token::contract::query,
     );
 
     Box::new(contract)
@@ -140,7 +140,7 @@ pub struct SuiteBuilder {
 impl SuiteBuilder {
     pub fn new() -> Self {
         Self {
-            name: "wynd_lend".to_owned(),
+            name: "lend".to_owned(),
             symbol: "LDX".to_owned(),
             decimals: 9,
             market_token: Token::Native(MARKET_TOKEN.to_owned()),
@@ -359,10 +359,10 @@ impl SuiteBuilder {
             )
             .unwrap();
 
-        // Store wynd_lend-token contract.
+        // Store lend-token contract.
         let token_id = app.store_code(contract_token());
 
-        // Instantiate wynd_lend market contract.
+        // Instantiate lend market contract.
         let contract_id = app.store_code(contract_market());
         let contract = app
             .instantiate_contract(
@@ -408,7 +408,7 @@ impl SuiteBuilder {
             );
         }
 
-        // Distribute initial native tokens to users, wynd_lend market contract and credit agency.
+        // Distribute initial native tokens to users, lend market contract and credit agency.
         app.init_modules(|router, _, storage| -> AnyResult<()> {
             for (addr, coin) in self.funds.clone() {
                 router.bank.init_balance(storage, &addr, coin)?;
@@ -1139,7 +1139,7 @@ impl Suite {
     ) -> AnyResult<Uint128> {
         let response: BalanceResponse = self.app.wrap().query_wasm_smart(
             contract_address,
-            &wynd_lend_token::QueryMsg::Balance {
+            &lend_token::QueryMsg::Balance {
                 address: address.to_string(),
             },
         )?;
@@ -1207,11 +1207,11 @@ impl Suite {
     }
 
     /// Queries ctoken contract for token info
-    pub fn query_ctoken_info(&self) -> AnyResult<wynd_lend_token::msg::TokenInfoResponse> {
+    pub fn query_ctoken_info(&self) -> AnyResult<lend_token::msg::TokenInfoResponse> {
         let ctoken = self.ctoken_contract.clone();
         self.app
             .wrap()
-            .query_wasm_smart(ctoken, &wynd_lend_token::msg::QueryMsg::TokenInfo {})
+            .query_wasm_smart(ctoken, &lend_token::msg::QueryMsg::TokenInfo {})
             .map_err(|err| anyhow!(err))
     }
 
