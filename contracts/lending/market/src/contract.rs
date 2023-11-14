@@ -18,7 +18,7 @@ use crate::state::{debt, Config, CONFIG};
 use utils::token::Token;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:wynd_lend-market";
+const CONTRACT_NAME: &str = "crates.io:lend-market";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
