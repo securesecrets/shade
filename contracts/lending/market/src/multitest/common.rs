@@ -1,4 +1,4 @@
-use lend_utils::token::Token;
+use lending_utils::token::Token;
 
 use super::suite::SuiteBuilder;
 use crate::error::ContractError;

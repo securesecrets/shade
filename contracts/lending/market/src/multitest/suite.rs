@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result as AnyResult};
-use lend_utils::{amount::token_to_base, price::PriceRate};
+use lending_utils::{amount::token_to_base, price::PriceRate};
 use std::collections::HashMap;
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -14,7 +14,7 @@ use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, Cw20QueryMsg, MinterRespon
 use cw_multi_test::{App, AppResponse, BankSudo, Contract, ContractWrapper, Executor, SudoMsg};
 
 use cw20_base::msg::{ExecuteMsg as Cw20BaseExecuteMsg, InstantiateMsg as Cw20BaseInstantiateMsg};
-use lend_utils::{
+use lending_utils::{
     credit_line::{CreditLineResponse, CreditLineValues},
     interest::Interest,
     token::Token,
@@ -131,7 +131,7 @@ pub struct SuiteBuilder {
     borrow_limit_ratio: Decimal,
     /// Native token pools created during Suite building. Cw20 tokens pools have to be created later
     /// with token addresses.
-    pools: HashMap<u64, (lend_utils::coin::Coin, lend_utils::coin::Coin)>,
+    pools: HashMap<u64, (lending_utils::coin::Coin, lending_utils::coin::Coin)>,
     /// Initial cw20 tokens distribution. The key is the token name and the value represents balances.
     initial_cw20: HashMap<String, Vec<Cw20Coin>>,
     credit_agency_funds: Option<Coin>,
@@ -178,7 +178,7 @@ impl SuiteBuilder {
     }
 
     /// Sets initial amount of distributable tokens on address
-    pub fn with_funds(mut self, addr: &str, funds: &[lend_utils::coin::Coin]) -> Self {
+    pub fn with_funds(mut self, addr: &str, funds: &[lending_utils::coin::Coin]) -> Self {
         let native_funds = funds
             .iter()
             .map(|c| Coin::try_from(c.clone()).unwrap())
@@ -202,14 +202,14 @@ impl SuiteBuilder {
     }
 
     /// Sets initial amount of distributable tokens on market address
-    pub fn with_contract_funds(mut self, funds: lend_utils::coin::Coin) -> Self {
+    pub fn with_contract_funds(mut self, funds: lending_utils::coin::Coin) -> Self {
         let funds = Coin::try_from(funds).unwrap();
         self.contract_funds = Some(funds);
         self
     }
 
     /// Sets initial amount of distributable tokens on credit agency address
-    pub fn with_agency_funds(mut self, funds: lend_utils::coin::Coin) -> Self {
+    pub fn with_agency_funds(mut self, funds: lending_utils::coin::Coin) -> Self {
         let funds = Coin::try_from(funds).unwrap();
         self.credit_agency_funds = Some(funds);
         self
@@ -243,7 +243,7 @@ impl SuiteBuilder {
     pub fn with_pool(
         mut self,
         id: u64,
-        pool: (lend_utils::coin::Coin, lend_utils::coin::Coin),
+        pool: (lending_utils::coin::Coin, lending_utils::coin::Coin),
     ) -> Self {
         if pool.0.denom.is_cw20() || pool.1.denom.is_cw20() {
             return self;
@@ -484,7 +484,7 @@ impl Suite {
     /// Helper function to create an empty pool and register its address to the Oracle.
     pub fn set_pool(
         &mut self,
-        pools: &[(u64, (lend_utils::coin::Coin, lend_utils::coin::Coin))],
+        pools: &[(u64, (lending_utils::coin::Coin, lending_utils::coin::Coin))],
         pair_type: PairType,
     ) -> AnyResult<()> {
         let owner = self.owner.clone();
@@ -539,7 +539,7 @@ impl Suite {
     /// Returns a vector containing addresses of the created pools.
     pub fn create_pool_and_provide_liquidity(
         &mut self,
-        (coin1, coin2): (lend_utils::coin::Coin, lend_utils::coin::Coin),
+        (coin1, coin2): (lending_utils::coin::Coin, lending_utils::coin::Coin),
         pair_type: PairType,
     ) -> AnyResult<Addr> {
         let owner = self.owner.clone();
@@ -624,7 +624,7 @@ impl Suite {
     pub fn provide_liquidity(
         &mut self,
         pair: &Addr,
-        (coin1, coin2): (lend_utils::coin::Coin, lend_utils::coin::Coin),
+        (coin1, coin2): (lending_utils::coin::Coin, lending_utils::coin::Coin),
     ) -> AnyResult<()> {
         let asset_1: Asset = coin1.into();
         let asset_2: Asset = coin2.into();
@@ -747,8 +747,8 @@ impl Suite {
     /// Returns the address of the created pair.
     pub fn create_pool_with_liquidity_and_twap_price(
         &mut self,
-        coin1: lend_utils::coin::Coin,
-        coin2: lend_utils::coin::Coin,
+        coin1: lending_utils::coin::Coin,
+        coin2: lending_utils::coin::Coin,
         pair_type: PairType,
     ) -> Addr {
         let pair = self
@@ -967,7 +967,11 @@ impl Suite {
     }
 
     /// Repay borrowed tokens from the lending pool and remove debt
-    pub fn repay(&mut self, sender: &str, funds: lend_utils::coin::Coin) -> AnyResult<AppResponse> {
+    pub fn repay(
+        &mut self,
+        sender: &str,
+        funds: lending_utils::coin::Coin,
+    ) -> AnyResult<AppResponse> {
         use Token::*;
         match funds.denom {
             Native(denom) => self.app.execute_contract(
@@ -984,7 +988,7 @@ impl Suite {
         &mut self,
         sender: &str,
         account: &str,
-        funds: lend_utils::coin::Coin,
+        funds: lending_utils::coin::Coin,
     ) -> AnyResult<AppResponse> {
         use Token::*;
         match funds.denom {
@@ -1050,7 +1054,7 @@ impl Suite {
         sender: impl Into<String>,
         account: impl Into<String>,
         sell_limit: Uint128,
-        buy: lend_utils::coin::Coin,
+        buy: lending_utils::coin::Coin,
     ) -> AnyResult<AppResponse> {
         self.swap_withdraw_from_with_multiplier(
             sender,
@@ -1066,7 +1070,7 @@ impl Suite {
         sender: impl Into<String>,
         account: impl Into<String>,
         sell_limit: Uint128,
-        buy: lend_utils::coin::Coin,
+        buy: lending_utils::coin::Coin,
         estimate_multiplier: Decimal,
     ) -> AnyResult<AppResponse> {
         self.app.execute_contract(
@@ -1281,8 +1285,11 @@ impl Suite {
         Ok(response)
     }
 
-    pub fn query_withdrawable(&self, account: impl ToString) -> AnyResult<lend_utils::coin::Coin> {
-        let response: lend_utils::coin::Coin = self.app.wrap().query_wasm_smart(
+    pub fn query_withdrawable(
+        &self,
+        account: impl ToString,
+    ) -> AnyResult<lending_utils::coin::Coin> {
+        let response: lending_utils::coin::Coin = self.app.wrap().query_wasm_smart(
             self.contract.clone(),
             &QueryMsg::Withdrawable {
                 account: account.to_string(),
@@ -1291,8 +1298,8 @@ impl Suite {
         Ok(response)
     }
 
-    pub fn query_borrowable(&self, account: impl ToString) -> AnyResult<lend_utils::coin::Coin> {
-        let response: lend_utils::coin::Coin = self.app.wrap().query_wasm_smart(
+    pub fn query_borrowable(&self, account: impl ToString) -> AnyResult<lending_utils::coin::Coin> {
+        let response: lending_utils::coin::Coin = self.app.wrap().query_wasm_smart(
             self.contract.clone(),
             &QueryMsg::Borrowable {
                 account: account.to_string(),

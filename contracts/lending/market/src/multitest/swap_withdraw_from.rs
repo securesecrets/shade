@@ -1,5 +1,5 @@
 use cosmwasm_std::Uint128;
-use lend_utils::{coin::coin_native, token::Token};
+use lending_utils::{coin::coin_native, token::Token};
 use wyndex::factory::PairType;
 
 use super::suite::{SuiteBuilder, COMMON};

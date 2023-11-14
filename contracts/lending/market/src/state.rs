@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::Item;
 
-use lending_lend_utils::{interest::ValidatedInterest, token::Token};
+use lending_lending_utils::{interest::ValidatedInterest, token::Token};
 
 pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
@@ -48,7 +48,7 @@ pub mod debt {
     use cosmwasm_schema::cw_serde;
     use cosmwasm_std::{StdResult, Storage};
     use cw_storage_plus::Map;
-    use lending_lend_utils::amount::{base_to_token, token_to_base};
+    use lending_lending_utils::amount::{base_to_token, token_to_base};
 
     #[cw_serde]
     struct DebtInfo {
