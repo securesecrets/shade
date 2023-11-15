@@ -11,7 +11,7 @@ use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryTotalCreditLine, TotalDebtResponse,
     TransferableAmountResponse,
 };
-use crate::state::{debt, Config, CONFIG};
+use crate::state::{debt, Config, CONFIG, VIEWING_KEY};
 
 use lending_lending_utils::token::Token;
 
@@ -68,6 +68,7 @@ pub fn instantiate(
         borrow_limit_ratio: msg.borrow_limit_ratio,
     };
     CONFIG.save(deps.storage, &cfg)?;
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")

@@ -41,6 +41,8 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
+pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+
 pub mod debt {
     use super::*;
 

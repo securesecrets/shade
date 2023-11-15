@@ -38,6 +38,8 @@ pub struct InstantiateMsg {
     pub borrow_limit_ratio: Decimal,
     /// Address of the governance contract that controls this market
     pub gov_contract: String,
+    /// Key used for reading data in queries
+    pub viewing_key: String,
 }
 
 #[cw_serde]
