@@ -108,10 +108,6 @@ pub enum ExecuteMsg {
     AdjustInterestRates {
         new_interest_rates: Interest,
     },
-    Repay,
-    RepayTo {
-        account: String,
-    },
 }
 
 #[cw_serde]
