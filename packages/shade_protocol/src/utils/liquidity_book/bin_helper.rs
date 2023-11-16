@@ -737,8 +737,6 @@ mod tests {
 
         // Assumptions (replace with Rust's assert! or whatever you use for precondition checks)
         assert!(price > U256::ZERO);
-        assert!(amount_x1 + amount_x2 <= u128::MAX);
-        assert!(amount_y1 + amount_y2 <= u128::MAX);
         // ... (add all your assumptions here)
 
         // Simulate exploiter front-running the transaction
