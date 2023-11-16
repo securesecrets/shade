@@ -169,19 +169,19 @@ pub fn execute(
             execute::adjust_common_token(deps, info.sender, new_token)
         }
         // TODO: should allow cw20?
-        SwapWithdrawFrom {
-            account,
-            buy,
-            sell_limit,
-            estimate_multiplier,
-        } => execute::swap_withdraw_from(
-            deps,
-            info.sender,
-            account,
-            buy,
-            sell_limit,
-            estimate_multiplier,
-        ),
+        // SwapWithdrawFrom {
+        //     account,
+        //     buy,
+        //     sell_limit,
+        //     estimate_multiplier,
+        // } => execute::swap_withdraw_from(
+        //     deps,
+        //     info.sender,
+        //     account,
+        //     buy,
+        //     sell_limit,
+        //     estimate_multiplier,
+        // ),
         AdjustCollateralRatio { new_ratio } => {
             restricted::adjust_collateral_ratio(deps, info, new_ratio)
         }
@@ -736,107 +736,107 @@ mod execute {
     //     Ok(pool_addr)
     // }
 
-    pub fn swap_withdraw_from(
-        deps: DepsMut,
-        sender: Addr,
-        account: String,
-        buy: Coin,
-        sell_limit: Uint128,
-        estimate_multiplier: Decimal,
-    ) -> Result<Response, ContractError> {
-        let cfg = CONFIG.load(deps.storage)?;
-        if cfg.credit_agency != sender {
-            return Err(ContractError::RequiresCreditAgency {});
-        }
+    // pub fn swap_withdraw_from(
+    //     deps: DepsMut,
+    //     sender: Addr,
+    //     account: String,
+    //     buy: Coin,
+    //     sell_limit: Uint128,
+    //     estimate_multiplier: Decimal,
+    // ) -> Result<Response, ContractError> {
+    //     let cfg = CONFIG.load(deps.storage)?;
+    //     if cfg.credit_agency != sender {
+    //         return Err(ContractError::RequiresCreditAgency {});
+    //     }
 
-        // estimate multiplier must be at least 1.0, otherwise swap won't succeed
-        if estimate_multiplier < Decimal::one() {
-            return Err(ContractError::InvalidEstimateMultiplier {});
-        }
+    //     // estimate multiplier must be at least 1.0, otherwise swap won't succeed
+    //     if estimate_multiplier < Decimal::one() {
+    //         return Err(ContractError::InvalidEstimateMultiplier {});
+    //     }
 
-        let send_msg = buy.denom.send_msg(sender, buy.amount)?;
+    //     let send_msg = buy.denom.send_msg(sender, buy.amount)?;
 
-        // if swap is between same denoms, only send tokens
-        if cfg.market_token == buy.denom {
-            return Ok(Response::new().add_message(send_msg));
-        }
+    //     // if swap is between same denoms, only send tokens
+    //     if cfg.market_token == buy.denom {
+    //         return Ok(Response::new().add_message(send_msg));
+    //     }
 
-        // variable to store the swap to perform.
-        let mut operations: Vec<SwapOperation> = vec![];
+    //     // variable to store the swap to perform.
+    //     let mut operations: Vec<SwapOperation> = vec![];
 
-        // If the market token is the common token we can directly swap it for the buy token.
-        if cfg.market_token == cfg.common_token {
-            operations.push(SwapOperation::WyndexSwap {
-                offer_asset_info: cfg.common_token.clone().into(),
-                ask_asset_info: buy.denom.into(),
-            })
-        // If buy token is the common token we can directly swap it with the market token.
-        } else if cfg.common_token == buy.denom {
-            operations.push(SwapOperation::WyndexSwap {
-                offer_asset_info: cfg.market_token.clone().into(),
-                ask_asset_info: buy.denom.into(),
-            })
-        // Else we need two swaps.
-        } else {
-            operations.extend(vec![
-                SwapOperation::WyndexSwap {
-                    offer_asset_info: cfg.market_token.clone().into(),
-                    ask_asset_info: cfg.common_token.clone().into(),
-                },
-                SwapOperation::WyndexSwap {
-                    offer_asset_info: cfg.common_token.clone().into(),
-                    ask_asset_info: buy.denom.into(),
-                },
-            ])
-        };
+    //     // If the market token is the common token we can directly swap it for the buy token.
+    //     if cfg.market_token == cfg.common_token {
+    //         operations.push(SwapOperation::WyndexSwap {
+    //             offer_asset_info: cfg.common_token.clone().into(),
+    //             ask_asset_info: buy.denom.into(),
+    //         })
+    //     // If buy token is the common token we can directly swap it with the market token.
+    //     } else if cfg.common_token == buy.denom {
+    //         operations.push(SwapOperation::WyndexSwap {
+    //             offer_asset_info: cfg.market_token.clone().into(),
+    //             ask_asset_info: buy.denom.into(),
+    //         })
+    //     // Else we need two swaps.
+    //     } else {
+    //         operations.extend(vec![
+    //             SwapOperation::WyndexSwap {
+    //                 offer_asset_info: cfg.market_token.clone().into(),
+    //                 ask_asset_info: cfg.common_token.clone().into(),
+    //             },
+    //             SwapOperation::WyndexSwap {
+    //                 offer_asset_info: cfg.common_token.clone().into(),
+    //                 ask_asset_info: buy.denom.into(),
+    //             },
+    //         ])
+    //     };
 
-        // Compute an estimate of market tokens required to complete the buy.
-        let swap_response: SimulateSwapOperationsResponse = deps.querier.query_wasm_smart(
-            &cfg.price_oracle,
-            &OracleQueryMsg::SimulateReverseSwapOperations {
-                ask_amount: buy.amount,
-                operations: operations.clone(),
-            },
-        )?;
+    //     // Compute an estimate of market tokens required to complete the buy.
+    //     let swap_response: SimulateSwapOperationsResponse = deps.querier.query_wasm_smart(
+    //         &cfg.price_oracle,
+    //         &OracleQueryMsg::SimulateReverseSwapOperations {
+    //             ask_amount: buy.amount,
+    //             operations: operations.clone(),
+    //         },
+    //     )?;
 
-        // Add a margin
-        let estimate = swap_response.amount * estimate_multiplier;
+    //     // Add a margin
+    //     let estimate = swap_response.amount * estimate_multiplier;
 
-        if estimate > sell_limit {
-            return Err(ContractError::EstimateHigherThanLimit {
-                estimate,
-                sell_limit,
-            });
-        }
+    //     if estimate > sell_limit {
+    //         return Err(ContractError::EstimateHigherThanLimit {
+    //             estimate,
+    //             sell_limit,
+    //         });
+    //     }
 
-        // Burn the C tokens based on the estimate.
-        let multiplier = query_ctoken_multiplier(deps.as_ref(), &cfg)?;
-        let burn_msg: Binary = to_binary(&lend_token::msg::ExecuteMsg::BurnFrom {
-            owner: account,
-            amount: base_to_token(estimate, multiplier),
-        })?;
-        let burn_msg = SubMsg::new(WasmMsg::Execute {
-            contract_addr: cfg.ctoken_contract.to_string(),
-            msg: burn_msg,
-            funds: vec![],
-        });
+    //     // Burn the C tokens based on the estimate.
+    //     let multiplier = query_ctoken_multiplier(deps.as_ref(), &cfg)?;
+    //     let burn_msg: Binary = to_binary(&lend_token::msg::ExecuteMsg::BurnFrom {
+    //         owner: account,
+    //         amount: base_to_token(estimate, multiplier),
+    //     })?;
+    //     let burn_msg = SubMsg::new(WasmMsg::Execute {
+    //         contract_addr: cfg.ctoken_contract.to_string(),
+    //         msg: burn_msg,
+    //         funds: vec![],
+    //     });
 
-        let oracle_config: OracleConfig = deps
-            .querier
-            .query_wasm_smart(cfg.price_oracle, &OracleQueryMsg::Config {})?;
+    //     let oracle_config: OracleConfig = deps
+    //         .querier
+    //         .query_wasm_smart(cfg.price_oracle, &OracleQueryMsg::Config {})?;
 
-        let swap_msg = cfg.market_token.swap_msg(
-            oracle_config.multi_hop,
-            operations,
-            Some(buy.amount),
-            estimate,
-        )?;
+    //     let swap_msg = cfg.market_token.swap_msg(
+    //         oracle_config.multi_hop,
+    //         operations,
+    //         Some(buy.amount),
+    //         estimate,
+    //     )?;
 
-        Ok(Response::new()
-            .add_submessage(burn_msg)
-            .add_message(swap_msg)
-            .add_message(send_msg))
-    }
+    //     Ok(Response::new()
+    //         .add_submessage(burn_msg)
+    //         .add_message(swap_msg)
+    //         .add_message(send_msg))
+    // }
 
     pub fn receive_cw20_message(
         deps: DepsMut,

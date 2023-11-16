@@ -77,17 +77,17 @@ pub enum ExecuteMsg {
     /// Withdraw some base asset, by burning C Tokens and swapping it for `buy` amount.
     /// The bought tokens are transferred to the sender.
     /// Only callable by the credit agency. Skips the credit line check.
-    SwapWithdrawFrom {
-        account: String,
-        buy: Coin,
-        sell_limit: Uint128,
-        /// Selling assets for `buy` amount is simulated and uses the
-        /// simulation's result as input for the swap. To be ahead of ever
-        /// changing prices, add an estimate multiplicator to the output of
-        /// simulate swap query.
-        /// Have to be more then 1.0, not recommended to be above 1.01
-        estimate_multiplier: Decimal,
-    },
+    // SwapWithdrawFrom {
+    //     account: String,
+    //     buy: Coin,
+    //     sell_limit: Uint128,
+    //     /// Selling assets for `buy` amount is simulated and uses the
+    //     /// simulation's result as input for the swap. To be ahead of ever
+    //     /// changing prices, add an estimate multiplicator to the output of
+    //     /// simulate swap query.
+    //     /// Have to be more then 1.0, not recommended to be above 1.01
+    //     estimate_multiplier: Decimal,
+    // },
     /// Sender must be the Governance Contract
     AdjustCollateralRatio {
         new_ratio: Decimal,
