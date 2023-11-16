@@ -32,7 +32,7 @@ shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol",
   "chrono",
 ]}
 itertools = "0.10.5"
-cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", rev = "1e05e7e" }
 schemars = "0.7"
 chrono = "0.4.19"
 
