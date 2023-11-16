@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
     c_std::{
-        coin, to_binary, Addr, BankMsg, Coin as StdCoin, CosmosMsg, CustomQuery, Decimal, Deps,
-        StdError, StdResult, Uint128, WasmMsg,
+        coin, to_binary, Addr, BankMsg, Coin as StdCoin, ContractInfo, CosmosMsg, CustomQuery,
+        Decimal, Deps, StdError, StdResult, Uint128, WasmMsg,
     },
     secret_storage_plus::{Key, KeyDeserialize, Prefixer, PrimaryKey},
 };
@@ -17,13 +17,13 @@ use std::fmt;
     Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema, PartialOrd, Ord, Hash,
 )]
 pub enum Token {
-    /// Cw20 token with its cw20 contract address
-    Cw20(String),
+    /// Snip20 token with its snip20 contract address
+    Cw20(ContractInfo),
 }
 
 impl Token {
-    pub fn new_cw20(denom: &str) -> Self {
-        Self::Cw20(denom.to_owned())
+    pub fn new_cw20(info: ContractInfo) -> Self {
+        Self::Cw20(ContractInfo)
     }
 
     /// Returns cw20 token address or `None`
@@ -51,7 +51,7 @@ impl Token {
     pub fn denom(&self) -> String {
         use Token::*;
         match self {
-            Cw20(denom) => denom.clone(),
+            Cw20(info) => info.address.to_string(),
         }
     }
 
@@ -59,7 +59,7 @@ impl Token {
     pub fn query_balance<T: CustomQuery>(
         &self,
         deps: Deps<'_, T>,
-        address: impl Into<String>,
+        contract_info: impl Into<ContractInfo>,
     ) -> StdResult<u128> {
         Ok(match self {
             Self::Cw20(cw20_token) => deps
