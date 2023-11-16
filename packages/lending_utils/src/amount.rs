@@ -13,4 +13,3 @@ pub fn base_to_token(amount: Uint128, multiplier: Decimal) -> Uint128 {
 pub fn token_to_base(amount: Uint128, multiplier: Decimal) -> Uint128 {
     amount * multiplier
 }
-
