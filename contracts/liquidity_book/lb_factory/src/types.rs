@@ -1,8 +1,6 @@
-use cosmwasm_schema::cw_serde;
+use shade_protocol::{cosmwasm_schema::cw_serde, lb_libraries::tokens::TokenType};
 
-use shade_protocol::lb_libraries::{tokens, types};
-use tokens::TokenType;
-pub use types::{LBPair, LBPairInformation};
+pub use shade_protocol::lb_libraries::types::{LBPair, LBPairInformation};
 
 #[cw_serde]
 pub struct NextPairKey {

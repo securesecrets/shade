@@ -1,5 +1,4 @@
-use crate::{error, prelude::*, state::*};
-use core::panic;
+use crate::{prelude::*, state::*};
 
 use ethnum::U256;
 use serde::Serialize;
@@ -197,13 +196,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             ExecuteMsg::AddLiquidity { .. }
             | ExecuteMsg::SwapTokens { .. }
             | ExecuteMsg::Receive(..) => {
-                return Err(error::LBPairError::TransactionBlock());
+                return Err(Error::TransactionBlock());
             }
             _ => {}
         },
         ContractStatus::LpWithdrawOnly => match msg {
             ExecuteMsg::AddLiquidity { .. } | ExecuteMsg::SwapTokens { .. } => {
-                return Err(error::LBPairError::TransactionBlock());
+                return Err(Error::TransactionBlock());
             }
             _ => {}
         },
@@ -1425,7 +1424,7 @@ fn receiver_callback(
             // if contract_status is FreezeAll, this fn will never be called, so only need to check LpWithdrawOnly here
             let contract_status = CONTRACT_STATUS.load(deps.storage)?;
             if contract_status == ContractStatus::LpWithdrawOnly {
-                return Err(error::LBPairError::TransactionBlock());
+                return Err(Error::TransactionBlock());
             }
 
             //validate recipient address
@@ -1500,45 +1499,45 @@ fn query_pair_info(deps: Deps) -> Result<Binary> {
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
     let response = shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
-            liquidity_token: shade_protocol::Contract {
-                address: state.lb_token.address,
-                code_hash: state.lb_token.code_hash,
+        liquidity_token: shade_protocol::Contract {
+            address: state.lb_token.address,
+            code_hash: state.lb_token.code_hash,
+        },
+        factory: Some(shade_protocol::Contract {
+            address: state.factory.address,
+            code_hash: state.factory.code_hash,
+        }),
+        pair: shadeswap_shared::core::TokenPair(state.token_x, state.token_y, false),
+        amount_0: Uint128::from(reserve_x),
+        amount_1: Uint128::from(reserve_y),
+        total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
+        contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
+        fee_info: shadeswap_shared::amm_pair::FeeInfo {
+            shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
+            lp_fee: shadeswap_shared::core::Fee {
+                // TODO set this
+                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+                denom: 1_000_000_000_000_000_000,
             },
-            factory: Some(shade_protocol::Contract {
-                address: state.factory.address,
-                code_hash: state.factory.code_hash,
-            }),
-            pair: shadeswap_shared::core::TokenPair(state.token_x, state.token_y, false),
-            amount_0: Uint128::from(reserve_x),
-            amount_1: Uint128::from(reserve_y),
-            total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
-            contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
-            fee_info: shadeswap_shared::amm_pair::FeeInfo {
-                shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
-                lp_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                shade_dao_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                stable_lp_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                    denom: 1_000_000_000_000_000_000,
-                },
-                stable_shade_dao_fee: shadeswap_shared::core::Fee {
-                    // TODO set this
-                    nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                    denom: 1_000_000_000_000_000_000,
-                },
+            shade_dao_fee: shadeswap_shared::core::Fee {
+                // TODO set this
+                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+                denom: 1_000_000_000_000_000_000,
             },
-            stable_info: None,
-        };
-    
+            stable_lp_fee: shadeswap_shared::core::Fee {
+                // TODO set this
+                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+                denom: 1_000_000_000_000_000_000,
+            },
+            stable_shade_dao_fee: shadeswap_shared::core::Fee {
+                // TODO set this
+                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+                denom: 1_000_000_000_000_000_000,
+            },
+        },
+        stable_info: None,
+    };
+
     to_binary(&response).map_err(Error::CwErr)
 }
 
@@ -1552,7 +1551,7 @@ fn query_swap_simulation(
 ) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
 
-    let (mut reserve_x, mut reserve_y) = state.reserves.decode();
+    let (reserve_x, reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
     let mut swap_for_y = false;
     match offer.token {
@@ -1576,14 +1575,14 @@ fn query_swap_simulation(
     let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
 
     let response = shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
-            total_fee_amount: res.total_fees,
-            lp_fee_amount: res.lp_fees,        //TODO lpfee
-            shade_dao_fee_amount: res.shade_dao_fees, // dao fee
-            result: SwapResult {
-                return_amount: res.amount_out,
-            },
-            price,
-        };
+        total_fee_amount: res.total_fees,
+        lp_fee_amount: res.lp_fees,               //TODO lpfee
+        shade_dao_fee_amount: res.shade_dao_fees, // dao fee
+        result: SwapResult {
+            return_amount: res.amount_out,
+        },
+        price,
+    };
 
     to_binary(&response).map_err(Error::CwErr)
 }

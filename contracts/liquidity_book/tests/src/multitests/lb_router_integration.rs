@@ -1,18 +1,20 @@
 use anyhow::Ok;
 use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
-use shade_multi_test::interfaces::{lb_factory, lb_pair, snip20};
-use shade_protocol::lb_libraries::tokens::TokenType;
 use shade_multi_test::interfaces::{
+    lb_factory,
+    lb_pair,
     router::{self},
+    snip20,
     utils::SupportedContracts,
 };
+use shade_protocol::lb_libraries::tokens::TokenType;
 use shadeswap_shared::{
     core::TokenAmount,
     router::{Hop, InvokeMsg},
 };
 
-use crate::multitests::test_helper::*;
 use super::lb_pair_fees::DEPOSIT_AMOUNT;
+use crate::multitests::test_helper::*;
 
 const SWAP_AMOUNT: u128 = 1000;
 

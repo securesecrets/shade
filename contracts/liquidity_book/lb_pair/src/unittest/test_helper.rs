@@ -11,7 +11,6 @@ use cosmwasm_std::{
     Uint128,
     Uint256,
 };
-use serde::de::Error;
 use shade_multi_test::{
     interfaces::{
         lb_pair,
@@ -29,8 +28,6 @@ use shade_protocol::{
     multi_test::App,
     utils::{asset::Contract, cycle::parse_utc_datetime, MultiTestable},
 };
-
-use crate::error;
 
 pub struct Addrs {
     addrs: Vec<Addr>,

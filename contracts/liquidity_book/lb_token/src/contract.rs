@@ -1265,11 +1265,9 @@ fn impl_transfer(
             }
             // success, so need to reduce allowance
             Some(mut perm) if perm.trfer_allowance_perm >= amount => {
-                let new_allowance = Uint256::from(
-                    perm.trfer_allowance_perm
-                        .checked_sub(amount)
-                        .expect("something strange happened"),
-                );
+                let new_allowance = perm.trfer_allowance_perm
+                    .checked_sub(amount)
+                    .expect("something strange happened");
                 perm.trfer_allowance_perm = new_allowance;
                 update_permission(deps.storage, from, token_id, &info.sender, &perm)?;
             }
@@ -1361,7 +1359,7 @@ fn exec_change_balance(
         }
         balances_w(storage, token_id).save(
             to_binary(&from)?.as_slice(),
-            &Uint256::from(from_new_amount_op.unwrap()),
+            &from_new_amount_op.unwrap(),
         )?;
 
         // NOTE: if nft, the ownership history remains in storage. Any existing viewing permissions of last owner
@@ -1387,7 +1385,7 @@ fn exec_change_balance(
         // save new balances
         balances_w(storage, token_id).save(
             to_binary(&to)?.as_slice(),
-            &Uint256::from(to_new_amount_op.unwrap()),
+            &to_new_amount_op.unwrap(),
         )?;
 
         // if is_nft == true, store new owner of NFT
@@ -1404,7 +1402,7 @@ fn exec_change_balance(
             let old_amount = tkn_tot_supply_r(storage).load(token_info.token_id.as_bytes())?;
             let new_amount_op = old_amount.checked_add(*amount);
             let new_amount = match new_amount_op {
-                Ok(i) => Uint256::from(i),
+                Ok(i) => i,
                 Err(_e) => {
                     return Err(StdError::generic_err(
                         "total supply exceeds max allowed of 2^128",
@@ -1417,7 +1415,7 @@ fn exec_change_balance(
             let old_amount = tkn_tot_supply_r(storage).load(token_info.token_id.as_bytes())?;
             let new_amount_op = old_amount.checked_sub(*amount);
             let new_amount = match new_amount_op {
-                Ok(i) => Uint256::from(i),
+                Ok(i) => i,
                 Err(_e) => return Err(StdError::generic_err("total supply drops below zero")),
             };
             tkn_tot_supply_w(storage).save(token_info.token_id.as_bytes(), &new_amount)?;

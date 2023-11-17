@@ -188,7 +188,7 @@ pub fn swap_tokens_for_exact_tokens(
     path: &Vec<Hop>,
     sender: Addr,
     recipient: Option<Addr>,
-    mut response: Response,
+    response: Response,
 ) -> StdResult<Response> {
     //Validates whether the amount received is greater then the amount_out_min
 

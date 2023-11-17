@@ -1,4 +1,3 @@
-use std::{cmp::Ordering, ops::Add};
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
 use shade_multi_test::interfaces::{
@@ -13,6 +12,7 @@ use shade_protocol::{
     liquidity_book::lb_pair::RemoveLiquidity,
     multi_test::App,
 };
+use std::{cmp::Ordering, ops::Add};
 
 use crate::multitests::test_helper::*;
 

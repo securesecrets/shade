@@ -1,25 +1,18 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, ContractInfo, Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use pair_parameter_helper::PairParameters; //?
 use shade_protocol::{
+    c_std::{Addr, ContractInfo, Storage},
+    cosmwasm_schema::cw_serde,
+    lb_libraries::{
+        math::tree_math::TreeUint24,
+        oracle_helper::Oracle,
+        pair_parameter_helper::PairParameters,
+        tokens::TokenType,
+        types::Bytes32,
+        viewing_keys::ViewingKey,
+    },
     secret_storage_plus::{Bincode2, Item, Map},
+    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
     Contract,
 };
-
-use math::tree_math::TreeUint24; //?
-use oracle_helper::Oracle; //?
-use types::Bytes32; //?
-
-use shade_protocol::lb_libraries::{
-    math,
-    oracle_helper,
-    pair_parameter_helper,
-    tokens,
-    types,
-    viewing_keys::ViewingKey,
-};
-use tokens::TokenType; //?
 
 pub const CONFIG: Item<State, Bincode2> = Item::new("config");
 pub const CONTRACT_STATUS: Item<ContractStatus, Bincode2> = Item::new("contract_status");

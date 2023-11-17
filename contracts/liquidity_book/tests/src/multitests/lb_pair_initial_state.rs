@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use anyhow::Ok;
 use cosmwasm_std::{ContractInfo, Uint128, Uint256};
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
@@ -6,6 +5,7 @@ use shade_protocol::{
     lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
     multi_test::App,
 };
+use std::str::FromStr;
 
 use crate::multitests::test_helper::*;
 

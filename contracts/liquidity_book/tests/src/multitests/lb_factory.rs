@@ -5,7 +5,6 @@ use shade_multi_test::{
     multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
-    liquidity_book::lb_factory::PresetResponse,
     lb_libraries::{
         constants::BASIS_POINT_MAX,
         math::{
@@ -14,6 +13,7 @@ use shade_protocol::{
         },
         tokens::TokenType,
     },
+    liquidity_book::lb_factory::PresetResponse,
     utils::MultiTestable,
 };
 
@@ -1078,12 +1078,8 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     assert!(err.is_err());
 
     // Try to remove usdc again, should revert
-    let err = lb_factory::remove_quote_asset(
-        &mut app,
-        addrs.admin().as_str(),
-        &lb_factory.into(),
-        usdc,
-    );
+    let err =
+        lb_factory::remove_quote_asset(&mut app, addrs.admin().as_str(), &lb_factory.into(), usdc);
     assert!(err.is_err());
 
     Ok(())

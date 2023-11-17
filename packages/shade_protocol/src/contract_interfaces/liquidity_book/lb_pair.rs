@@ -6,7 +6,6 @@ use crate::{
             tokens::{SwapTokenAmount, TokenAmount, TokenType},
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         },
-        space_pad,
         ExecuteCallback,
         InstantiateCallback,
         Query,
@@ -16,16 +15,11 @@ use crate::{
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_binary,
     Addr,
-    Coin,
     ContractInfo,
-    CosmosMsg,
     Decimal256,
-    StdResult,
     Uint128,
     Uint256,
-    WasmMsg,
 };
 
 #[cw_serde]

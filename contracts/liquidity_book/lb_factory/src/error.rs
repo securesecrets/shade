@@ -1,18 +1,18 @@
 //! ### Custom Errors for LB_Factory contract.
 
-#![allow(unused)] // For beginning only.
-
-use cosmwasm_std::Addr;
-use shade_protocol::lb_libraries::{
-    bin_helper::BinError,
-    fee_helper::FeeError,
-    math::{
-        liquidity_configurations::LiquidityConfigurationsError,
-        u128x128_math::U128x128MathError,
-        u256x256_math::U256x256MathError,
+use shade_protocol::{
+    c_std::Addr,
+    lb_libraries::{
+        bin_helper::BinError,
+        fee_helper::FeeError,
+        math::{
+            liquidity_configurations::LiquidityConfigurationsError,
+            u128x128_math::U128x128MathError,
+            u256x256_math::U256x256MathError,
+        },
+        oracle_helper::OracleError,
+        pair_parameter_helper::PairParametersError,
     },
-    oracle_helper::OracleError,
-    pair_parameter_helper::PairParametersError,
 };
 
 #[derive(thiserror::Error, Debug)]

@@ -8,7 +8,7 @@
 //! A `Bytes32` value is a `[u8; 32]` and can hold 256 bits, or two `u128` values.
 
 use crate::utils::liquidity_book::types::Bytes32;
-use cosmwasm_std::StdError;
+use crate::c_std::StdError;
 
 pub const BASIS_POINT_MAX: u128 = 10_000;
 
@@ -589,8 +589,10 @@ mod tests {
         assert_eq!(result.decode(), (15, 25));
 
         // Underflow Test Case
-        let bytes1 = Bytes32::encode(0, 0);
-        let bytes2 = Bytes32::encode(10, 20);
+        let _bytes1 = Bytes32::encode(0, 0);
+        let _bytes2 = Bytes32::encode(10, 20);
+
+        // TODO - add a separate test for this?
         // This should panic
         // let result = Bytes32::sub(&bytes1, bytes2);
 
@@ -620,7 +622,7 @@ mod tests {
         // Underflow Test Case
         let bytes1 = Bytes32::encode(0, 0);
         // This should panic
-        let result = Bytes32::sub_alt(&bytes1, 10, 20);
+        let _result = Bytes32::sub_alt(&bytes1, 10, 20);
     }
 
     #[test]

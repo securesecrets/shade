@@ -2,6 +2,7 @@
 
 pub mod bin_helper;
 pub mod constants;
+pub mod error;
 pub mod fee_helper;
 pub mod lb_token;
 pub mod math;

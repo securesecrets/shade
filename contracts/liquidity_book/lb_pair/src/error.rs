@@ -1,22 +1,19 @@
 //! ### Custom Errors for LB_Pair contract.
 
-use bin_helper::BinError;
-use cosmwasm_std::{StdError, Uint128};
 use ethnum::U256;
-use fee_helper::FeeError;
-use math::{
-    liquidity_configurations::LiquidityConfigurationsError,
-    u128x128_math::U128x128MathError,
-    u256x256_math::U256x256MathError,
-};
-use oracle_helper::OracleError;
-use pair_parameter_helper::PairParametersError;
-use shade_protocol::lb_libraries::{
-    bin_helper,
-    fee_helper,
-    math,
-    oracle_helper,
-    pair_parameter_helper,
+use shade_protocol::{
+    c_std::Uint128,
+    lb_libraries::{
+        bin_helper::BinError,
+        fee_helper::FeeError,
+        math::{
+            liquidity_configurations::LiquidityConfigurationsError,
+            u128x128_math::U128x128MathError,
+            u256x256_math::U256x256MathError,
+        },
+        oracle_helper::OracleError,
+        pair_parameter_helper::PairParametersError,
+    },
 };
 
 #[derive(thiserror::Error, Debug)]

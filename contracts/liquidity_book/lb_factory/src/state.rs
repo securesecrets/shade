@@ -1,28 +1,24 @@
-#![allow(unused)] // For beginning only.
+use crate::types::{LBPair, LBPairInformation, NextPairKey};
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, ContractInfo, Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use shade_protocol::{
+    c_std::{Addr, ContractInfo, Storage},
+    cosmwasm_schema::cw_serde,
     lb_libraries::{
         pair_parameter_helper::PairParameters,
         tokens::TokenType,
-        types::{Bytes32, ContractInstantiationInfo},
+        types::ContractInstantiationInfo,
     },
     secret_storage_plus::{AppendStore, Item, Map},
+    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
     Contract,
 };
 
-use crate::{
-    prelude::*,
-    types::{LBPair, LBPairInformation, NextPairKey},
-};
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 // pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");
-pub const ALL_LB_PAIRS: AppendStore<LBPair> = AppendStore::new("all_lb_pairs");
+pub static ALL_LB_PAIRS: AppendStore<LBPair> = AppendStore::new("all_lb_pairs");
 
 /// Mapping from a (tokenA, tokenB, binStep) to a LBPair.
 /// The tokens are ordered to save gas, but they can be in the reverse order in the actual pair.
@@ -33,7 +29,7 @@ pub const PRESETS: Map<u16, PairParameters> = Map::new("presets");
 
 // Does it need to store ContractInfo or would Addr be enough?
 // pub static QUOTE_ASSET_WHITELIST: Item<Vec<ContractInfo>> = Item::new(b"quote_asset_whitelist");
-pub const QUOTE_ASSET_WHITELIST: AppendStore<TokenType> = AppendStore::new("quote_asset_whitelist");
+pub static QUOTE_ASSET_WHITELIST: AppendStore<TokenType> = AppendStore::new("quote_asset_whitelist");
 
 /// Mapping from a (tokenA, tokenB) to a set of available bin steps, this is used to keep track of the
 /// bin steps that are already used for a pair.

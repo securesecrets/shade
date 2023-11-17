@@ -1,3 +1,9 @@
+use crate::{
+    prelude::*,
+    state::*,
+    types::{LBPair, LBPairInformation, NextPairKey},
+};
+
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
@@ -33,13 +39,6 @@ use shade_protocol::{
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         },
     },
-};
-
-use crate::{
-    error,
-    prelude::*,
-    state::*,
-    types::{LBPair, LBPairInformation, NextPairKey},
 };
 
 pub static _OFFSET_IS_PRESET_OPEN: u8 = 255;
@@ -92,7 +91,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ContractStatus::FreezeAll => match msg {
             ExecuteMsg::SetLBPairImplementation { .. }
             | ExecuteMsg::SetLBTokenImplementation { .. } => {
-                return Err(error::LBFactoryError::TransactionBlock());
+                return Err(Error::TransactionBlock());
             }
             _ => {}
         },
@@ -202,7 +201,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 /// * `new_lb_pair_implementation` - The code ID and code hash of the implementation.
 fn try_set_lb_pair_implementation(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
@@ -238,7 +237,7 @@ fn try_set_lb_pair_implementation(
 /// * `new_lb_token_implementation` - The code ID and code hash of the implementation.
 fn try_set_lb_token_implementation(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
@@ -277,7 +276,6 @@ fn try_set_lb_token_implementation(
 /// # Returns
 ///
 /// * `pair` - The address of the newly created LBPair.
-#[allow(clippy::too_many_arguments)]
 fn try_create_lb_pair(
     deps: DepsMut,
     env: Env,
@@ -483,10 +481,9 @@ fn try_create_lb_pair(
 /// * `protocol_share` - The share of the fees received by the protocol
 /// * `max_volatility_accumulator` - The max value of the volatility accumulator
 /// * `is_open` - Whether the preset is open or not to be used by users
-#[allow(clippy::too_many_arguments)]
 fn try_set_pair_preset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
     base_factor: u16,
@@ -538,7 +535,7 @@ fn try_set_pair_preset(
 /// * `is_open` - Whether the preset is open or not
 fn try_set_preset_open_state(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
     is_open: bool,
@@ -577,7 +574,7 @@ fn try_set_preset_open_state(
 /// * `bin_step` - The bin step to remove
 fn try_remove_preset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
 ) -> Result<Response> {
@@ -611,10 +608,9 @@ fn try_remove_preset(
 /// * `variable_fee_control` - The variable fee control, used to control the variable fee, can be 0 to disable it
 /// * `protocol_share` - The share of the fees received by the protocol
 /// * `max_volatility_accumulator` - The max value of volatility accumulator
-#[allow(clippy::too_many_arguments)]
 fn try_set_fee_parameters_on_pair(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     token_x: TokenType,
     token_y: TokenType,
@@ -669,7 +665,7 @@ fn try_set_fee_parameters_on_pair(
 /// * `fee_recipient` - The address of the recipient
 fn try_set_fee_recipient(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     fee_recipient: Addr,
 ) -> Result<Response> {
@@ -705,7 +701,7 @@ fn try_set_fee_recipient(
 /// * `flash_loan_fee` - The value of the fee for flash loan
 fn try_set_flash_loan_fee(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     flash_loan_fee: u8,
 ) -> Result<Response> {
@@ -747,7 +743,7 @@ fn try_set_flash_loan_fee(
 /// * `quote_asset` - The quote asset (e.g: NATIVE, USDC...)
 fn try_add_quote_asset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     quote_asset: TokenType,
 ) -> Result<Response> {
@@ -783,7 +779,7 @@ fn try_add_quote_asset(
 /// * `quote_asset` - The quote asset (e.g: NATIVE, USDC...)
 fn try_remove_quote_asset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     asset: TokenType,
 ) -> Result<Response> {
@@ -820,7 +816,7 @@ fn try_remove_quote_asset(
         .add_attribute_plaintext("quote asset removed", asset.unique_key().as_str()))
 }
 
-fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
+fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
     let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
@@ -862,7 +858,7 @@ fn only_owner(sender: &Addr, owner: &Addr) -> Result<()> {
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetMinBinStep {} => query_min_bin_step(deps),
         QueryMsg::GetFeeRecipient {} => query_fee_recipient(deps),
@@ -892,7 +888,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
 /// # Returns
 ///
 /// * `min_bin_step` - The minimum bin step of the pair.
-fn query_min_bin_step(deps: Deps) -> Result<Binary> {
+fn query_min_bin_step(_deps: Deps) -> Result<Binary> {
     let response = MinBinStepResponse {
         min_bin_step: _MIN_BIN_STEP,
     };
@@ -917,7 +913,7 @@ fn query_fee_recipient(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `max_fee` - The maximum fee percentage for flash loans.
-fn query_max_flash_loan_fee(deps: Deps) -> Result<Binary> {
+fn query_max_flash_loan_fee(_deps: Deps) -> Result<Binary> {
     let response = MaxFlashLoanFeeResponse {
         max_fee: _MAX_FLASHLOAN_FEE,
     };
@@ -985,7 +981,7 @@ fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
 ///
 /// * lb_pair - The address of the LBPair at index `index`.
 // TODO: Unsure if this function is necessary. Not sure how to index the Keyset. WAITING: For Front-end to make some decisions about this
-fn query_lb_pair_at_index(deps: Deps, index: u32) -> Result<Binary> {
+fn query_lb_pair_at_index(_deps: Deps, _index: u32) -> Result<Binary> {
     let lb_pair = todo!();
 
     let response = LBPairAtIndexResponse { lb_pair };
@@ -1175,7 +1171,7 @@ fn query_all_bin_steps(deps: Deps) -> Result<Binary> {
     let iterator = PRESETS.range(deps.storage, None, None, cosmwasm_std::Order::Ascending);
 
     for result in iterator {
-        let (bin_step, preset) = result.map_err(Error::CwErr)?;
+        let (bin_step, _preset) = result.map_err(Error::CwErr)?;
         bin_step_with_preset.push(bin_step)
     }
 

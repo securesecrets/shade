@@ -1,5 +1,5 @@
 //! ### Liquidity Book Constants Library
-//! Author: Kent
+//! Author: Kent and Haseeb
 //!
 //! Set of constants for Liquidity Book contracts.
 
