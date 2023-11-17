@@ -948,8 +948,8 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.admin().as_str(),
         &mut deployed_contracts,
-        "sBTC",
-        "SBTC",
+        "SOMOS",
+        "SOMOS",
         8,
         Some(shade_protocol::snip20::InitConfig {
             public_total_supply: Some(true),
@@ -961,8 +961,8 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         }),
     )
     .unwrap();
-    let sbtc = extract_contract_info(&deployed_contracts, "SBTC")?;
-    let new_token = token_type_snip20_generator(&sbtc)?;
+    let sosmo = extract_contract_info(&deployed_contracts, "SOMOS")?;
+    let new_token = token_type_snip20_generator(&sosmo)?;
     // Check if the new token is a quote asset
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), new_token.clone())?;
@@ -988,13 +988,15 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         num_quote_assets_before + 1,
         "test_add_quote_asset::3"
     );
+    assert_eq!(num_quote_assets_after, 6, "test_add_quote_asset::4");
+    assert_eq!(num_quote_assets_before, 5, "test_add_quote_asset::5");
 
     let last_quote_asset = lb_factory::query_quote_asset_at_index(
         &mut app,
         &lb_factory.clone().into(),
         num_quote_assets_before,
     )?;
-    assert_eq!(last_quote_asset, new_token, "test_add_quote_asset::4");
+    assert_eq!(last_quote_asset, new_token, "test_add_quote_asset::6");
 
     // Try to add the same asset when not the owner
     let err = lb_factory::add_quote_asset(
