@@ -1,12 +1,12 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::c_std::{Coin as StdCoin, Decimal, OverflowError, Uint128};
+use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
 use std::{convert::From, ops::Mul};
 
 use crate::token::Token;
 
 /// Universal coin type which is either a native coin, or cw20 coin
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Coin {
     pub denom: Token,
     pub amount: Uint128,
@@ -20,8 +20,8 @@ impl Coin {
         }
     }
 
-    pub fn new_cw20(amount: u128, addr: &str) -> Self {
-        Self::new(amount, Token::new_cw20(addr))
+    pub fn new_cw20(amount: u128, info: ContractInfo) -> Self {
+        Self::new(amount, Token::new_cw20(info))
     }
 
     pub fn checked_add(self, rhs: Self) -> Result<Self, CoinError> {
@@ -55,8 +55,8 @@ impl Coin {
     }
 }
 
-pub fn coin_cw20(amount: u128, denom: impl Into<String>) -> Coin {
-    Coin::new(amount, Token::new_cw20(&denom.into()))
+pub fn coin_cw20(amount: u128, info: ContractInfo) -> Coin {
+    Coin::new(amount, Token::new_cw20(info))
 }
 
 #[derive(Debug, Eq, PartialEq)]
