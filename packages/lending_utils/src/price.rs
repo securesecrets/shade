@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use use shade_protocol::c_std::Decimal;
+use shade_protocol::c_std::Decimal;
 
 use crate::{coin::Coin, token::Token};
 
@@ -91,4 +91,3 @@ mod tests {
         );
     }
 }
-
