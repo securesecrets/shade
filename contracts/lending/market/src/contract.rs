@@ -4,7 +4,6 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
     Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
 };
-use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -13,11 +12,7 @@ use crate::msg::{
 };
 use crate::state::{debt, Config, CONFIG, VIEWING_KEY};
 
-use lending_lending_utils::token::Token;
-
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:lend-market";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+use lending_utils::token::Token;
 
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
 
@@ -28,8 +23,6 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     let ctoken_msg = lend_token::msg::InstantiateMsg {
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,

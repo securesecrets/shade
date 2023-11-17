@@ -1,7 +1,7 @@
 use crate::state::debt;
 use cosmwasm_std::{Decimal, Deps, Env, Fraction, Uint128};
 use lend_token::msg::TokenInfoResponse;
-use lending_lending_utils::amount::token_to_base;
+use lending_utils::amount::token_to_base;
 
 use crate::{
     state::{Config, CONFIG, SECONDS_IN_YEAR, VIEWING_KEY},
