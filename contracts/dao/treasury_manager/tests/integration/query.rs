@@ -26,6 +26,7 @@ pub fn query() {
                 .timestamp() as u64,
         ),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
     init_dao(
         &mut app,
@@ -366,6 +367,7 @@ pub fn query() {
                 .timestamp() as u64,
         ),
         chain_id: "chain_id".to_string(),
+        random: None,
     });
     update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
     update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
