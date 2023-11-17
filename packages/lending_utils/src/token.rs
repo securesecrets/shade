@@ -6,6 +6,7 @@ use shade_protocol::{
         Decimal, Deps, StdError, StdResult, Uint128, WasmMsg,
     },
     secret_storage_plus::{Key, KeyDeserialize, Prefixer, PrimaryKey},
+    contract_interfaces::snip20
 };
 
 use crate::coin::{self, Coin};
@@ -29,7 +30,7 @@ impl Token {
     /// Returns cw20 token address or `None`
     pub fn cw20(self) -> Option<String> {
         match self {
-            Token::Cw20(addr) => Some(addr),
+            Token::Cw20(info) => Some(info.address.to_string()),
             _ => None,
         }
     }
@@ -60,16 +61,22 @@ impl Token {
         &self,
         deps: Deps<'_, T>,
         contract_info: impl Into<ContractInfo>,
+        viewing_key: String,
     ) -> StdResult<u128> {
         Ok(match self {
-            Self::Cw20(cw20_token) => deps
-                .querier
-                .query_wasm_smart::<cw20::BalanceResponse>(
-                    cw20_token,
-                    &cw20::Cw20QueryMsg::Balance {
-                        address: address.into(),
-                    },
-                )?
+            Self::Cw20(info) =>
+                snip20::QueryMsg::Balance {
+                    address: contract_info.into().address.to_string(),
+                    viewing_key
+                }.query::<snip20::QueryAnswer::Balance>(&deps.querier, &config.sscrt_token.clone())?;
+                // deps
+                // .querier
+                // .query_wasm_smart::<cw20::BalanceResponse>(
+                //     cw20_token,
+                //     &snip20::QueryMsg::Balance {
+                //         address: address.into(),
+                //     },
+                // )?
                 .balance
                 .into(),
         })
@@ -91,20 +98,28 @@ impl Token {
     }
 
     /// Creates a send message for this token to send the given amount from this contract to the given address
-    pub fn send_msg<T>(
+    pub fn send_msg(
         &self,
         to_address: impl Into<String>,
         amount: impl Into<Uint128>,
-    ) -> StdResult<CosmosMsg<T>> {
+    ) -> StdResult<CosmosMsg<CoreumMsg>> {
         Ok(match self {
-            Self::Cw20(address) => CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: address.to_owned(),
-                msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                    recipient: to_address.into(),
-                    amount: amount.into(),
-                })?,
-                funds: vec![],
-            }),
+            Self::Cw20(address) => snip20::helpers::send_msg(
+                to_address.into(),
+                amount.into(),
+                None,
+                None,
+                None,
+                address.to_string(),
+            )
+            // CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+            //     contract_addr: address.to_owned(),
+            //     msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+            //         recipient: to_address.into(),
+            //         amount: amount.into(),
+            //     })?,
+            //     funds: vec![],
+            // }),
         })
     }
 }
