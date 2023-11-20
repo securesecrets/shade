@@ -1,4 +1,3 @@
-use crate::swap::core::{time, ContractInstantiationInfo, BLOCK_SIZE};
 use crate::{
     c_std::{
         Addr, Binary, CosmosMsg, Decimal256, OverflowError, QuerierWrapper, StdError, StdResult,
@@ -9,11 +8,13 @@ use crate::{
     secret_storage_plus::{Bincode2, Item, ItemStorage, Map},
     snip20::ExecuteMsg as Snip20ExecuteMsg,
     snip20::Snip20ReceiveMsg,
+    swap::core::ContractInstantiationInfo,
     utils::{
         asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
         InstantiateCallback, Query,
     },
     Contract,
+    BLOCK_SIZE,
 };
 use std::{cmp::min, collections::HashMap};
 

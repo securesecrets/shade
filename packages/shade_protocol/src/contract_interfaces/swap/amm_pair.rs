@@ -1,7 +1,7 @@
 use crate::{
     c_std::{Addr, Binary, Decimal256, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
-    lb_pair::SwapResult,
+    liquidity_book::lb_pair::SwapResult,
     snip20::Snip20ReceiveMsg,
     swap::core::{
         ContractInstantiationInfo, CustomFee, Fee, StableTokenData, TokenAmount, TokenPair,

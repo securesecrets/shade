@@ -1,4 +1,4 @@
-use crate::utils::liquidity_book::tokens::TokenType;
+pub use crate::utils::liquidity_book::tokens::TokenType;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
