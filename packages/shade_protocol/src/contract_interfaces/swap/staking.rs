@@ -13,8 +13,7 @@ use crate::{
         asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
         InstantiateCallback, Query,
     },
-    Contract,
-    BLOCK_SIZE,
+    Contract, BLOCK_SIZE,
 };
 use std::{cmp::min, collections::HashMap};
 

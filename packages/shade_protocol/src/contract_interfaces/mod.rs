@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-
 #[cfg(feature = "dex")]
 pub mod dex;
 

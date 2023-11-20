@@ -1,13 +1,12 @@
 use crate::{
-    cosmwasm_schema::cw_serde,
     c_std::{Addr, Binary, Uint128},
+    cosmwasm_schema::cw_serde,
     liquidity_book::lb_pair::SwapResult,
     snip20::Snip20ReceiveMsg,
-    swap::core::{TokenAmount, ContractInstantiationInfo},
-    utils::{ExecuteCallback, InstantiateCallback, Query},
+    swap::core::{ContractInstantiationInfo, TokenAmount},
     utils::liquidity_book::tokens::TokenType,
-    BLOCK_SIZE,
-    Contract,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+    Contract, BLOCK_SIZE,
 };
 
 #[cw_serde]
@@ -112,4 +111,3 @@ impl ExecuteCallback for ExecuteMsg {
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = BLOCK_SIZE;
 }
-

@@ -7,12 +7,11 @@ use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128},
     liquidity_book::lb_pair::SwapResult,
     multi_test::App,
+    swap::{
+        core::TokenAmount,
+        router::{self, Hop},
+    },
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
-};
-
-use shadeswap_shared::{
-    core::TokenAmount,
-    router::{self, Hop},
 };
 
 pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) -> StdResult<()> {
