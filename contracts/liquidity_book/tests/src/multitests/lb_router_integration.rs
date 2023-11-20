@@ -7,9 +7,8 @@ use shade_multi_test::interfaces::{
     snip20,
     utils::SupportedContracts,
 };
-use shade_protocol::lb_libraries::tokens::TokenType;
-use shadeswap_shared::{
-    core::TokenAmount,
+use shade_protocol::swap::{
+    core::{TokenAmount, TokenType},
     router::{Hop, InvokeMsg},
 };
 

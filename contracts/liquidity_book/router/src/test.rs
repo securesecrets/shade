@@ -4,52 +4,45 @@ pub mod tests {
         contract::{execute, instantiate, SWAP_REPLY_ID},
         state::{config_r, epheral_storage_r, epheral_storage_w, Config, CurrentSwapInfo},
     };
-    use cosmwasm_std::{
-        from_slice,
-        testing::{mock_env, mock_info, MockApi, MockStorage},
-        to_binary,
-        Addr,
-        OwnedDeps,
-        Response,
-        StdResult,
-        SubMsg,
-    };
-
-    use cosmwasm_std::{Api, Coin};
     use serde::{Deserialize, Serialize};
-    use shade_protocol::{snip20::Snip20ReceiveMsg, utils::liquidity_book::tokens::TokenType};
-    use shadeswap_shared::{
+    use shade_protocol::{
         admin::ValidateAdminPermissionResponse,
-        amm_pair::FeeInfo,
-        core::TokenPair,
-        msg::{
+        c_std::{
+            from_slice,
+            testing::{mock_env, mock_info, MockApi, MockStorage},
+            to_binary,
+            Addr,
+            Api,
+            Coin,
+            Empty,
+            Env,
+            OwnedDeps,
+            Querier,
+            QuerierResult,
+            QueryRequest,
+            Response,
+            StdError,
+            StdResult,
+            Storage,
+            SubMsg,
+            Uint128,
+            WasmMsg,
+            WasmQuery,
+        },
+        snip20::{manager::Balance, Snip20ReceiveMsg},
+        swap::{
             amm_pair::{
+                AMMSettings,
                 ExecuteMsg as AMMPairExecuteMsg,
+                FeeInfo,
                 QueryMsgResponse as AMMPairQueryMsgResponse,
             },
+            core::{ContractInstantiationInfo, Fee, TokenAmount, TokenPair, TokenType},
             factory::QueryResponse as FactoryQueryResponse,
+            router::{ExecuteMsg, Hop, InitMsg, InvokeMsg},
         },
+        Contract,
     };
-
-    use cosmwasm_std::{
-        Empty,
-        Env,
-        Querier,
-        QuerierResult,
-        QueryRequest,
-        StdError,
-        Storage,
-        Uint128,
-        WasmMsg,
-        WasmQuery,
-    };
-    use shade_protocol::Contract;
-    use shadeswap_shared::{
-        core::{ContractInstantiationInfo, Fee, TokenAmount},
-        router::{ExecuteMsg, Hop, InitMsg, InvokeMsg},
-    };
-
-    use shadeswap_shared::snip20::manager::Balance;
 
     pub const FACTORY_ADDRESS: &str = "FACTORY_ADDRESS";
     pub const PAIR_CONTRACT_1: &str = "paircontracta";
@@ -592,7 +585,7 @@ pub mod tests {
                                         code_hash: "".to_string(),
                                         id: 1,
                                     },
-                                    amm_settings: shadeswap_shared::amm_pair::AMMSettings {
+                                    amm_settings: AMMSettings {
                                         lp_fee: Fee::new(28, 10000),
                                         shade_dao_fee: Fee::new(2, 10000),
                                         stable_lp_fee: Fee::new(28, 10000),

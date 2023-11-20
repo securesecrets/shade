@@ -1,31 +1,33 @@
-use cosmwasm_std::{
-    to_binary,
-    Addr,
-    Coin,
-    CosmosMsg,
-    DepsMut,
-    Env,
-    Response,
-    StdError,
-    StdResult,
-    Storage,
-    SubMsg,
-    Uint128,
-    WasmMsg,
-};
-use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
-use shadeswap_shared::{
-    core::TokenAmount,
-    msg::amm_pair::{
-        ExecuteMsg as AMMPairExecuteMsg,
-        InvokeMsg as AMMPairInvokeMsg,
-        QueryMsgResponse as AMMPairQueryReponse,
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Coin,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        SubMsg,
+        Uint128,
+        WasmMsg,
     },
-    router::{ExecuteMsgResponse, Hop},
     snip20::{
         self,
         helpers::{register_receive, set_viewing_key_msg},
     },
+    swap::{
+        amm_pair::{
+            ExecuteMsg as AMMPairExecuteMsg,
+            InvokeMsg as AMMPairInvokeMsg,
+            QueryMsgResponse as AMMPairQueryReponse,
+        },
+        core::{TokenAmount, TokenType},
+        router::{ExecuteMsgResponse, Hop},
+    },
+    Contract,
 };
 
 use crate::{

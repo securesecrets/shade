@@ -1,22 +1,25 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{
-    to_binary,
-    Binary,
-    Deps,
-    QuerierWrapper,
-    QueryRequest,
-    StdError,
-    StdResult,
-    Uint128,
-    Uint256,
-    WasmQuery,
-};
-use shade_protocol::{liquidity_book::lb_pair::SwapResult, Contract};
-use shadeswap_shared::{
-    core::TokenAmount,
-    msg::amm_pair::{QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse},
-    router::{Hop, QueryMsgResponse},
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Binary,
+        Deps,
+        QuerierWrapper,
+        QueryRequest,
+        StdError,
+        StdResult,
+        Uint128,
+        Uint256,
+        WasmQuery,
+    },
+    liquidity_book::lb_pair::SwapResult,
+    swap::{
+        amm_pair::{QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse},
+        core::TokenAmount,
+        router::{Hop, QueryMsgResponse},
+    },
+    Contract,
 };
 
 pub fn pair_contract_config(

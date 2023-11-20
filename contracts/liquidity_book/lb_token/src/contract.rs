@@ -1265,7 +1265,8 @@ fn impl_transfer(
             }
             // success, so need to reduce allowance
             Some(mut perm) if perm.trfer_allowance_perm >= amount => {
-                let new_allowance = perm.trfer_allowance_perm
+                let new_allowance = perm
+                    .trfer_allowance_perm
                     .checked_sub(amount)
                     .expect("something strange happened");
                 perm.trfer_allowance_perm = new_allowance;
@@ -1357,10 +1358,8 @@ fn exec_change_balance(
         if from_new_amount_op.is_err() {
             return Err(StdError::generic_err("insufficient funds"));
         }
-        balances_w(storage, token_id).save(
-            to_binary(&from)?.as_slice(),
-            &from_new_amount_op.unwrap(),
-        )?;
+        balances_w(storage, token_id)
+            .save(to_binary(&from)?.as_slice(), &from_new_amount_op.unwrap())?;
 
         // NOTE: if nft, the ownership history remains in storage. Any existing viewing permissions of last owner
         // will remain too
@@ -1383,10 +1382,8 @@ fn exec_change_balance(
         }
 
         // save new balances
-        balances_w(storage, token_id).save(
-            to_binary(&to)?.as_slice(),
-            &to_new_amount_op.unwrap(),
-        )?;
+        balances_w(storage, token_id)
+            .save(to_binary(&to)?.as_slice(), &to_new_amount_op.unwrap())?;
 
         // if is_nft == true, store new owner of NFT
         if token_info.token_config.flatten().is_nft {

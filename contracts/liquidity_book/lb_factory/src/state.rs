@@ -29,7 +29,8 @@ pub const PRESETS: Map<u16, PairParameters> = Map::new("presets");
 
 // Does it need to store ContractInfo or would Addr be enough?
 // pub static QUOTE_ASSET_WHITELIST: Item<Vec<ContractInfo>> = Item::new(b"quote_asset_whitelist");
-pub static QUOTE_ASSET_WHITELIST: AppendStore<TokenType> = AppendStore::new("quote_asset_whitelist");
+pub static QUOTE_ASSET_WHITELIST: AppendStore<TokenType> =
+    AppendStore::new("quote_asset_whitelist");
 
 /// Mapping from a (tokenA, tokenB) to a set of available bin steps, this is used to keep track of the
 /// bin steps that are already used for a pair.

@@ -1,26 +1,29 @@
-use cosmwasm_std::{Addr, Storage, Uint128};
-use cosmwasm_storage::{
-    bucket,
-    bucket_read,
-    singleton,
-    singleton_read,
-    Bucket,
-    ReadonlyBucket,
-    ReadonlySingleton,
-    Singleton,
+use shade_protocol::{
+    c_std::{Addr, Storage, Uint128},
+    cosmwasm_schema::cw_serde,
+    storage::{
+        bucket,
+        bucket_read,
+        singleton,
+        singleton_read,
+        Bucket,
+        ReadonlyBucket,
+        ReadonlySingleton,
+        Singleton,
+    },
+    swap::{
+        core::{TokenAmount, TokenType},
+        router::Hop,
+    },
+    Contract,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
-use shadeswap_shared::{core::TokenAmount, router::Hop};
 
 pub static CONFIG: &[u8] = b"config";
 pub static REGISTERED_TOKENS: &[u8] = b"registered_tokens";
 pub static REGISTERED_TOKENS_LIST: &[u8] = b"registered_tokens_list";
 pub const EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
     pub viewing_key: String,
     pub admin_auth: Contract,
@@ -60,7 +63,7 @@ pub fn epheral_storage_r(storage: &dyn Storage) -> ReadonlySingleton<CurrentSwap
     singleton_read(storage, EPHEMERAL_STORAGE_KEY)
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct CurrentSwapInfo {
     pub(crate) amount: TokenAmount,
     pub amount_out_min: Option<Uint128>,

@@ -3,21 +3,37 @@ use crate::{
     query,
     state::{config_r, config_w, registered_tokens_list_r, registered_tokens_list_w, Config},
 };
-use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut,
-    Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128,
-};
-use shade_protocol::contract_interfaces::swap::{
-    amm_pair::QueryMsgResponse as AMMPairQueryReponse,
-    core::{
-        admin::helpers::{validate_admin, AdminPermissions},
-        TokenAmount,
+
+use shade_protocol::{
+    admin::helpers::{validate_admin, AdminPermissions},
+    c_std::{
+        from_binary,
+        shd_entry_point,
+        to_binary,
+        Addr,
+        BankMsg,
+        Binary,
+        Coin,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Reply,
+        Response,
+        StdError,
+        StdResult,
+        Uint128,
     },
-    router::{ExecuteMsg, InitMsg, InvokeMsg, QueryMsg, QueryMsgResponse},
     snip20::helpers::send_msg,
+    swap::{
+        amm_pair::QueryMsgResponse as AMMPairQueryReponse,
+        core::{TokenAmount, TokenType},
+        router::{ExecuteMsg, InitMsg, InvokeMsg, QueryMsg, QueryMsgResponse},
+    },
     utils::{pad_handle_result, pad_query_result},
+    Contract,
 };
-use shade_protocol::{utils::liquidity_book::tokens::TokenType, Contract};
 
 /// Pad handle responses and log attributes to blocks
 /// of 256 bytes to prevent leaking info based on response size
@@ -25,7 +41,7 @@ const BLOCK_SIZE: usize = 256;
 pub const SHADE_ROUTER_KEY: &str = "SHADE_ROUTER_KEY";
 pub const SWAP_REPLY_ID: u64 = 1u64;
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -41,7 +57,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
@@ -164,13 +180,11 @@ fn receiver_callback(
                     path,
                     recipient,
                 } => {
-                    let pair_contract_config = query::pair_contract_config(
-                        &deps.querier,
-                        Contract {
+                    let pair_contract_config =
+                        query::pair_contract_config(&deps.querier, Contract {
                             address: deps.api.addr_validate(&path[0].addr.to_string())?,
                             code_hash: path[0].code_hash.clone(),
-                        },
-                    )?;
+                        })?;
 
                     match pair_contract_config {
                         AMMPairQueryReponse::GetPairInfo {
@@ -233,7 +247,7 @@ fn receiver_callback(
     )
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
@@ -257,7 +271,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     )
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     pad_handle_result(
         match msg.id {
