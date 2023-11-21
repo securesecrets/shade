@@ -352,6 +352,62 @@ mod execute {
         }))
     }
 
+    /// Handler for `ExecuteMsg::Deposit`
+    /// This function checks the validity of sent funds and if they increase the deposit over the
+    /// max allowed. Both native and cw20 tokens are managed.
+    pub fn deposit(
+        mut deps: DepsMut,
+        env: Env,
+        address: String,
+        received_tokens: lending_utils::coin::Coin,
+    ) -> Result<Response, ContractError> {
+        let address = deps.api.addr_validate(&address)?;
+        let cfg = CONFIG.load(deps.storage)?;
+        if received_tokens.denom != cfg.market_token {
+            return Err(ContractError::InvalidDenom(cfg.market_token.to_string()));
+        }
+
+        let mut response = Response::new();
+
+        // Check if funds sent increase total deposit over max cap in terms of base token.
+        if let Some(cap) = cfg.market_cap {
+            let ctoken_info = query::ctoken_info(deps.as_ref(), &cfg)?;
+            let ctoken_base_supply =
+                token_to_base(ctoken_info.total_supply, ctoken_info.multiplier);
+            if ctoken_base_supply + received_tokens.amount > cap {
+                return Err(ContractError::DepositOverCap {
+                    attempted_deposit: received_tokens.amount,
+                    ctoken_base_supply,
+                    cap,
+                });
+            }
+        }
+
+        // Create rebase messagess for tokens based on interest and supply
+        let charge_msgs = charge_interest(deps.branch(), env)?;
+        if !charge_msgs.is_unchanged() {
+            response = response.add_submessages(charge_msgs.messages);
+        }
+
+        let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
+            recipient: address.to_string(),
+            amount: received_tokens.amount,
+        })?;
+        let wrapped_msg = SubMsg::new(WasmMsg::Execute {
+            contract_addr: cfg.ctoken_contract.to_string(),
+            msg: mint_msg,
+            funds: vec![],
+            code_hash: cfg.ctoken_code_hash.clone(),
+        });
+
+        response = response
+            .add_attribute("action", "deposit")
+            .add_attribute("sender", address.to_string())
+            .add_submessage(wrapped_msg)
+            .add_submessage(enter_market(&cfg, &address)?);
+        Ok(response)
+    }
+
     /// Handler for `ExecuteMsg::Withdraw`
     pub fn withdraw(
         mut deps: DepsMut,

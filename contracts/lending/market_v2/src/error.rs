@@ -36,4 +36,14 @@ pub enum ContractError {
 
     #[error("Fatal: market token price is zero")]
     ZeroPrice {},
+
+    #[error("Sent unsupported token, must deposit '{0}' in the lending pool")]
+    InvalidDenom(String),
+
+    #[error("Cannot deposit {attempted_deposit} tokens - market cap is {cap} and there are already {ctoken_base_supply} tokens present")]
+    DepositOverCap {
+        attempted_deposit: Uint128,
+        ctoken_base_supply: Uint128,
+        cap: Uint128,
+    },
 }
