@@ -234,8 +234,9 @@ mod execute {
         contract_interfaces::snip20::Snip20ReceiveMsg,
     };
 
-    use crate::interest::{
-        calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate,
+    use crate::{
+        interest::{calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate},
+        state::debt,
     };
 
     use super::*;
@@ -259,6 +260,80 @@ mod execute {
 
         pub fn is_unchanged(&self) -> bool {
             self.messages.is_empty()
+        }
+    }
+
+    /// Function that is supposed to be called before every mint/burn operation.
+    /// It calculates ratio for increasing both debt and ctokens
+    /// It also mints any amount of outstanding reserve as ltokens to be sent to the gov contract
+    /// debt formula:
+    /// b_ratio = calculate_interest() * epochs_passed * epoch_length / 31.556.736 (seconds in a year)
+    /// ctokens formula:
+    /// c_ratio = b_supply() * b_ratio / l_supply()
+    /// Up to 2 SubMsgs are returned as a result of this function
+    /// One for ctoken rebase and one for the minting of any reserve balance rather than let it sit idle.
+    /// The debt multiplier is adjusted inside this function.
+    pub fn charge_interest<T>(deps: DepsMut, env: Env) -> Result<Ratios<T>, ContractError> {
+        use lend_token::msg::ExecuteMsg;
+
+        let mut cfg = CONFIG.load(deps.storage)?;
+        let epochs_passed = epochs_passed(&cfg, env)?;
+
+        if epochs_passed == 0 {
+            return Ok(Ratios {
+                messages: vec![],
+                ctoken_ratio: Decimal::one(),
+                debt_ratio: Decimal::one(),
+            });
+        }
+
+        cfg.last_charged += epochs_passed * cfg.interest_charge_period;
+        CONFIG.save(deps.storage, &cfg)?;
+
+        // If there is an interest update rebase btoken and ctoken and mint reserve to governance
+        // contract.
+        if let Some(InterestUpdate {
+            reserve,
+            ctoken_ratio,
+            debt_ratio,
+        }) = calculate_interest(deps.as_ref(), epochs_passed)?
+        {
+            debt::rebase(deps.storage, debt_ratio + Decimal::one())?;
+
+            let ctoken_rebase = to_binary(&ExecuteMsg::Rebase {
+                ratio: ctoken_ratio + Decimal::one(),
+            })?;
+            let cwrapped = SubMsg::new(WasmMsg::Execute {
+                contract_addr: cfg.ctoken_contract.to_string(),
+                msg: ctoken_rebase,
+                funds: vec![],
+                code_hash: cfg.ctoken_code_hash.clone(),
+            });
+            let mut messages = vec![cwrapped];
+            // If we have a reserve, rather than leave it sitting idle,
+            // mint the reserve as ltokens and send them to the governance contract
+            if reserve > Uint128::zero() {
+                let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
+                    recipient: cfg.governance_contract.to_string(),
+                    amount: reserve,
+                })?;
+                let wrapped_msg = SubMsg::new(WasmMsg::Execute {
+                    contract_addr: cfg.ctoken_contract.to_string(),
+                    msg: mint_msg,
+                    funds: vec![],
+                    code_hash: cfg.ctoken_code_hash,
+                });
+
+                messages.push(wrapped_msg);
+            }
+
+            Ok(Ratios {
+                messages,
+                ctoken_ratio: ctoken_ratio + Decimal::one(),
+                debt_ratio: debt_ratio + Decimal::one(),
+            })
+        } else {
+            Ok(Ratios::unchanged())
         }
     }
 
