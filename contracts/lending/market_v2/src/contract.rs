@@ -241,27 +241,27 @@ mod query {
         Ok(config)
     }
 
-    // /// Handler for `QueryMsg::TokensBalance`
-    // pub fn tokens_balance(
-    //     deps: Deps,
-    //     env: Env,
-    //     account: String,
-    // ) -> Result<TokensBalanceResponse, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
+    /// Handler for `QueryMsg::TokensBalance`
+    pub fn tokens_balance(
+        deps: Deps,
+        env: Env,
+        account: String,
+    ) -> Result<TokensBalanceResponse, ContractError> {
+        let config = CONFIG.load(deps.storage)?;
 
-    //     let mut collateral = ctoken_base_balance(deps, &config, account.clone())?;
-    //     let mut debt = Coin {
-    //         denom: config.market_token.clone(),
-    //         amount: debt::of(deps.storage, &deps.api.addr_validate(&account)?)?,
-    //     };
+        let mut collateral = ctoken_base_balance(deps, &config, account.clone())?;
+        let mut debt = Coin {
+            denom: config.market_token.clone(),
+            amount: debt::of(deps.storage, &deps.api.addr_validate(&account)?)?,
+        };
 
-    //     if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
-    //         collateral.amount += collateral.amount * update.ctoken_ratio;
-    //         debt.amount += debt.amount * update.debt_ratio;
-    //     }
+        if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
+            collateral.amount += collateral.amount * update.ctoken_ratio;
+            debt.amount += debt.amount * update.debt_ratio;
+        }
 
-    //     Ok(TokensBalanceResponse { collateral, debt })
-    // }
+        Ok(TokensBalanceResponse { collateral, debt })
+    }
 
     // /// Handler for `QueryMsg::TransferableAmount`
     // pub fn transferable_amount(
