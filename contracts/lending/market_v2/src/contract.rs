@@ -491,6 +491,44 @@ mod execute {
             .add_message(send_msg);
         Ok(response)
     }
+
+    /// Handler for `ExecuteMsg::Repay`
+    /// Repay allows to send btokens to the contract to burn them and receive back previously
+    /// deposited market tokens. If more tokens are sent to repay the debt, these are sent back to
+    /// the sender.
+    pub fn repay(
+        mut deps: DepsMut,
+        env: Env,
+        repay_tokens: lending_utils::coin::Coin,
+        sender: Addr,
+    ) -> Result<Response, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
+        if repay_tokens.denom != cfg.market_token {
+            return Err(ContractError::InvalidDenom(cfg.market_token.to_string()));
+        }
+
+        // Create rebase messages for tokens based on interest and supply
+        let charge_msgs = charge_interest(deps.branch(), env)?;
+
+        let mut response = Response::new();
+        if !charge_msgs.is_unchanged() {
+            response = response.add_submessages(charge_msgs.messages);
+        }
+
+        let send_back = debt::decrease(deps.storage, &sender, repay_tokens.amount)?;
+
+        response = response
+            .add_attribute("action", "repay")
+            .add_attribute("sender", sender.clone());
+
+        // Return surplus of sent tokens
+        if !send_back.is_zero() {
+            let bank_msg = cfg.market_token.send_msg(sender, send_back)?;
+            response = response.add_message(bank_msg);
+        }
+
+        Ok(response)
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
