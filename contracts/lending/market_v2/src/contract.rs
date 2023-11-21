@@ -64,7 +64,7 @@ pub fn instantiate(
         credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
-        oracle: msg.oracle.into()
+        oracle: msg.oracle.into(),
     };
     CONFIG.save(deps.storage, &cfg)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
@@ -262,8 +262,8 @@ mod query {
 
     use shade_protocol::{
         c_std::{ContractInfo, Decimal, Deps, Uint128},
-        utils::asset::Contract,
         contract_interfaces::oracles,
+        utils::asset::Contract,
     };
 
     use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
@@ -275,7 +275,10 @@ mod query {
 
     use crate::{
         interest::{calculate_interest, epochs_passed, utilisation},
-        msg::{ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse},
+        msg::{
+            ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse,
+            TransferableAmountResponse,
+        },
         state::{debt, SECONDS_IN_YEAR},
     };
 
@@ -357,20 +360,20 @@ mod query {
         Ok(TokensBalanceResponse { collateral, debt })
     }
 
-    // /// Handler for `QueryMsg::TransferableAmount`
-    // pub fn transferable_amount(
-    //     deps: Deps,
-    //     token: ContractInfo,
-    //     account: String,
-    // ) -> Result<TransferableAmountResponse, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
-    //     if token == config.ctoken_contract {
-    //         let transferable = cr_lending_utils::transferable_amount(deps, &config, account)?;
-    //         Ok(TransferableAmountResponse { transferable })
-    //     } else {
-    //         Err(ContractError::UnrecognisedToken(token.to_string()))
-    //     }
-    // }
+    /// Handler for `QueryMsg::TransferableAmount`
+    pub fn transferable_amount(
+        deps: Deps,
+        token: ContractInfo,
+        account: String,
+    ) -> Result<TransferableAmountResponse, ContractError> {
+        let config = CONFIG.load(deps.storage)?;
+        if token == Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into() {
+            let transferable = cr_lending_utils::transferable_amount(deps, &config, account)?;
+            Ok(TransferableAmountResponse { transferable })
+        } else {
+            Err(ContractError::UnrecognisedToken(token.address.to_string()))
+        }
+    }
 
     // /// Handler for `QueryMsg::Withdrawable`
     // pub fn withdrawable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
@@ -453,7 +456,7 @@ mod query {
             Ok(PriceRate {
                 sell_denom: config.market_token,
                 buy_denom: config.common_token,
-                rate_sell_per_buy: Decimal::one() /*price_response.a_per_b,*/
+                rate_sell_per_buy: Decimal::one(), /*price_response.a_per_b,*/
             })
         }
     }
