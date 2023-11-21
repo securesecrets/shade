@@ -2,16 +2,17 @@
 use shade_protocol::c_std::entry_point;
 use shade_protocol::{
     c_std::{
-        to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-        Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+        from_binary, to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
+    contract_interfaces::snip20::Snip20ReceiveMsg,
     query_authentication::viewing_keys,
     utils::{asset::Contract, Query},
 };
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg},
     state::{Config, CONFIG, VIEWING_KEY},
 };
 
@@ -129,6 +130,73 @@ pub fn execute(
     use ExecuteMsg::*;
     match msg {
         Withdraw { amount } => execute::withdraw(deps, env, info, amount),
+    }
+}
+
+pub fn receive_snip20_message(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: Snip20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    use ReceiveMsg::*;
+    // TODO: Result instead of unwrap
+    match from_binary(&msg.msg.unwrap())? {
+        Deposit => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            execute::deposit(
+                deps,
+                env,
+                msg.sender,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+            )
+        }
+        Repay => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            execute::repay(
+                deps,
+                env,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+                sender,
+            )
+        }
+        RepayTo { account } => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            let account = deps.api.addr_validate(account.as_str())?;
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            execute::repay_to(
+                deps,
+                env,
+                sender,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+                account,
+            )
+        }
     }
 }
 

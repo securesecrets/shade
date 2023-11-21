@@ -61,6 +61,13 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub enum ReceiveMsg {
+    Deposit,
+    Repay,
+    RepayTo { account: String },
+}
+
+#[cw_serde]
 pub enum CreditAgencyExecuteMsg {
     /// Ensures a given account has entered a market. Meant to be called by a specific
     /// market contract - so the sender of the msg would be the market
