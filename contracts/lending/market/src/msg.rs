@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::c_std::{Decimal, Timestamp, Uint128};
+use shade_protocol::c_std::{Decimal, Timestamp, Uint128, ContractInfo};
 
 use lending_utils::interest::Interest;
 use lending_utils::{coin::Coin, token::Token};
@@ -40,6 +40,8 @@ pub struct InstantiateMsg {
     pub gov_contract: String,
     /// Key used for reading data in queries
     pub viewing_key: String,
+    // I have no idea what to do with it
+    pub ctoken_code_hash: String,
 }
 
 #[cw_serde]
@@ -125,21 +127,22 @@ pub enum QueryMsg {
     Configuration {},
     /// Returns TokensBalanceResponse
     #[returns(TokensBalanceResponse)]
-    TokensBalance { account: String },
+    TokensBalance { account: String, viewing_key: String },
     /// Returns TransferableAmountResponse
     #[returns(TransferableAmountResponse)]
     TransferableAmount {
-        /// WyndLend contract address that calls "CanTransfer"
-        token: String,
+        /// Lend contract address that calls "CanTransfer"
+        token: ContractInfo,
         /// Address that wishes to transfer
         account: String,
+        viewing_key: String,
     },
     /// Returns the amount that the given account can withdraw
     #[returns(Coin)]
-    Withdrawable { account: String },
+    Withdrawable { account: String, viewing_key: String },
     /// Returns the amount that the given account can borrow
     #[returns(Coin)]
-    Borrowable { account: String },
+    Borrowable { account: String, viewing_key: String },
     /// Returns current utilisation and interest rates
     #[returns(InterestResponse)]
     Interest {},
@@ -148,7 +151,7 @@ pub enum QueryMsg {
     PriceMarketLocalPerCommon {},
     /// Returns CreditLineResponse
     #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine { account: String },
+    CreditLine { account: String, viewing_key: String },
     /// Returns ReserveResponse
     #[returns(ReserveResponse)]
     Reserve {},

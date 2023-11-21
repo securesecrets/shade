@@ -5,7 +5,7 @@ use shade_protocol::{
         to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
         Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
-    utils::Query,
+    utils::Query, query_authentication::viewing_keys,
 };
 
 use crate::error::ContractError;
@@ -32,6 +32,7 @@ pub fn instantiate(
         decimals: msg.decimals,
         controller: env.contract.address.to_string(),
         distributed_token: msg.distributed_token.clone(),
+        viewing_key: msg.viewing_key.clone()
     };
     let ctoken_instantiate = WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
@@ -39,6 +40,7 @@ pub fn instantiate(
         msg: to_binary(&ctoken_msg)?,
         funds: vec![],
         label: format!("ctoken_contract_{}", env.contract.address),
+        code_hash: msg.code_hash,
     };
     debt::init(deps.storage)?;
 
@@ -549,7 +551,7 @@ mod execute {
         debt::increase(deps.storage, &info.sender, amount)?;
 
         // Sent tokens to sender's account
-        let send_msg = cfg.market_token.send_msg(&info.sender, amount)?;
+        let send_msg = cfg.market_token.send_msg(info.sender, amount)?;
 
         response = response
             .add_attribute("action", "borrow")
@@ -681,9 +683,10 @@ mod execute {
             amount: repaid_value,
         })?;
         let transfer_msg = SubMsg::new(WasmMsg::Execute {
-            contract_addr: cfg.ctoken_contract.to_string(),
+            contract_addr: cfg.ctoken_contract.address.to_string(),
             msg,
             funds: vec![],
+            code_hash: cfg.ctoken_contract.code_hash
         });
 
         response = response
@@ -885,13 +888,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     use QueryMsg::*;
     let res = match msg {
         Configuration {} => to_binary(&query::config(deps, env)?)?,
-        TokensBalance { account } => to_binary(&query::tokens_balance(deps, env, account)?)?,
-        TransferableAmount { token, account } => {
-            let token = deps.api.addr_validate(&token)?;
-            to_binary(&query::transferable_amount(deps, token, account)?)?
+        TokensBalance { account, viewing_key } => to_binary(&query::tokens_balance(deps, env, account, viewing_key)?)?,
+        TransferableAmount { token, account, viewing_key } => {
+            to_binary(&query::transferable_amount(deps, token, account, viewing_key)?)?
         }
-        Withdrawable { account } => to_binary(&query::withdrawable(deps, env, account)?)?,
-        Borrowable { account } => to_binary(&query::borrowable(deps, env, account)?)?,
+        Withdrawable { account, viewing_key } => to_binary(&query::withdrawable(deps, env, account, viewing_key)?)?,
+        Borrowable { account, viewing_key } => to_binary(&query::borrowable(deps, env, account, viewing_key)?)?,
         Interest {} => to_binary(&query::interest(deps)?)?,
         PriceMarketLocalPerCommon {} => to_binary(&query::price_market_local_per_common(deps)?)?,
         CreditLine { account } => {
@@ -928,7 +930,7 @@ mod query {
 
     fn token_balance(
         deps: Deps,
-        token_contract: &Addr,
+        token_contract: &ContractInfo,
         address: String,
     ) -> StdResult<BalanceResponse> {
         TokenQueryMsg::Balance { address }.query(&deps.querier, token_contract)
@@ -936,7 +938,7 @@ mod query {
 
     fn base_balance(
         deps: Deps,
-        token_contract: &Addr,
+        token_contract: &ContractInfo,
         address: String,
     ) -> StdResult<BalanceResponse> {
         TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
@@ -997,7 +999,7 @@ mod query {
     /// Handler for `QueryMsg::TransferableAmount`
     pub fn transferable_amount(
         deps: Deps,
-        token: Addr,
+        token: ContractInfo,
         account: String,
     ) -> Result<TransferableAmountResponse, ContractError> {
         let config = CONFIG.load(deps.storage)?;
@@ -1010,7 +1012,7 @@ mod query {
     }
 
     /// Handler for `QueryMsg::Withdrawable`
-    pub fn withdrawable(deps: Deps, env: Env, account: String) -> Result<Coin, ContractError> {
+    pub fn withdrawable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
@@ -1021,7 +1023,7 @@ mod query {
         let withdrawable = min(
             allowed_to_withdraw,
             cfg.market_token
-                .query_balance(deps, env.contract.address)?
+                .query_balance(deps, env.contract.address, viewing_key)?
                 .into(),
         );
 
@@ -1029,7 +1031,7 @@ mod query {
     }
 
     /// Handler for `QueryMsg::Borrowable`
-    pub fn borrowable(deps: Deps, env: Env, account: String) -> Result<Coin, ContractError> {
+    pub fn borrowable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
@@ -1038,7 +1040,7 @@ mod query {
         let borrowable = min(
             borrowable,
             cfg.market_token
-                .query_balance(deps, env.contract.address)?
+                .query_balance(deps, env.contract.address.to_string(), viewing_key)?
                 .into(),
         );
 
@@ -1072,9 +1074,6 @@ mod query {
     pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
         let config = CONFIG.load(deps.storage)?;
         // If tokens are the same, just return 1:1.
-        // TODO: we should add more test to check that return one is fine. There could be
-        // situation with small unbalances inside pools. When unbalances are with a mean around 1
-        // this could be fine, but in cases where this is not true, it could be a problem.
         if config.common_token == config.market_token {
             Ok(PriceRate {
                 sell_denom: config.market_token.clone(),

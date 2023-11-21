@@ -1,5 +1,6 @@
-use cosmwasm_std::{Decimal, Fraction};
+use shade_protocol::c_std::{Decimal, Fraction};
 use schemars::JsonSchema;
+use thiserror::Error;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema, Debug)]
@@ -88,8 +89,9 @@ impl ValidatedInterest {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum InterestError {
+    #[error("Interest error: Invalid optimal utilisation: {0}")]
     InvalidOptimalUtilisation(Decimal),
 }
 
