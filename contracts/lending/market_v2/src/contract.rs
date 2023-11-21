@@ -216,15 +216,20 @@ mod query {
         ))
     }
 
-    // pub fn ctoken_base_balance(
-    //     deps: Deps,
-    //     config: &Config,
-    //     account: impl ToString,
-    // ) -> Result<Coin, ContractError> {
-    //     Ok(config
-    //         .market_token
-    //         .amount(base_balance(deps, &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(), account.to_string())?.balance))
-    // }
+    pub fn ctoken_base_balance(
+        deps: Deps,
+        config: &Config,
+        account: impl ToString,
+    ) -> Result<Coin, ContractError> {
+        Ok(config.market_token.amount(
+            base_balance(
+                deps,
+                &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                account.to_string(),
+            )?
+            .balance,
+        ))
+    }
 
     /// Handler for `QueryMsg::Config`
     pub fn config(deps: Deps, env: Env) -> Result<Config, ContractError> {
