@@ -399,26 +399,31 @@ mod query {
         Ok(cfg.market_token.amount(withdrawable))
     }
 
-    // /// Handler for `QueryMsg::Borrowable`
-    // pub fn borrowable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
-    //     use std::cmp::min;
+    /// Handler for `QueryMsg::Borrowable`
+    pub fn borrowable(
+        deps: Deps,
+        env: Env,
+        account: String,
+        viewing_key: String,
+    ) -> Result<Coin, ContractError> {
+        use std::cmp::min;
 
-    //     let cfg = CONFIG.load(deps.storage)?;
+        let cfg = CONFIG.load(deps.storage)?;
 
-    //     let borrowable = cr_lending_utils::query_borrowable_tokens(deps, &cfg, account)?;
-    //     let borrowable = min(
-    //         borrowable,
-    //         cfg.market_token
-    //             .query_balance(deps, env.contract.address.to_string(), viewing_key)?
-    //             .into(),
-    //     );
+        let borrowable = cr_lending_utils::query_borrowable_tokens(deps, &cfg, account)?;
+        let borrowable = min(
+            borrowable,
+            cfg.market_token
+                .query_balance(deps, env.contract.address.to_string(), viewing_key)?
+                .into(),
+        );
 
-    //     Ok(cfg.market_token.amount(borrowable))
-    // }
+        Ok(cfg.market_token.amount(borrowable))
+    }
 
-    // pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, ContractError> {
-    //     crate::interest::ctoken_info(deps, config)
-    // }
+    pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, ContractError> {
+        Ok(crate::interest::ctoken_info(deps, config)?)
+    }
 
     // /// Handler for `QueryMsg::Interest`
     // pub fn interest(deps: Deps) -> Result<InterestResponse, ContractError> {
