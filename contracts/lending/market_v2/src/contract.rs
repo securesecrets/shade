@@ -506,34 +506,34 @@ mod query {
         )
     }
 
-    // /// Handler for `QueryMsg::Reserve`
-    // pub fn reserve(deps: Deps, env: Env) -> Result<ReserveResponse, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
+    /// Handler for `QueryMsg::Reserve`
+    pub fn reserve(deps: Deps, env: Env) -> Result<ReserveResponse, ContractError> {
+        let config = CONFIG.load(deps.storage)?;
 
-    //     let reserve = calculate_interest(deps, epochs_passed(&config, env)?)?
-    //         .map(|update| update.reserve)
-    //         .unwrap_or(Uint128::zero());
+        let reserve = calculate_interest(deps, epochs_passed(&config, env)?)?
+            .map(|update| update.reserve)
+            .unwrap_or(Uint128::zero());
 
-    //     Ok(ReserveResponse { reserve })
-    // }
+        Ok(ReserveResponse { reserve })
+    }
 
-    // /// Handler for `QueryMsg::Apy`
-    // pub fn apy(deps: Deps) -> Result<ApyResponse, ContractError> {
-    //     let cfg = CONFIG.load(deps.storage)?;
-    //     let charge_periods = SECONDS_IN_YEAR / (cfg.interest_charge_period as u128);
+    /// Handler for `QueryMsg::Apy`
+    pub fn apy(deps: Deps) -> Result<ApyResponse, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
+        let charge_periods = SECONDS_IN_YEAR / (cfg.interest_charge_period as u128);
 
-    //     let ctoken_info = ctoken_info(deps, &cfg)?;
-    //     let (borrowed, _) = debt::total(deps.storage)?;
-    //     let supplied = ctoken_info.total_supply_base();
-    //     let utilisation = utilisation(supplied, borrowed);
+        let ctoken_info = ctoken_info(deps, &cfg)?;
+        let (borrowed, _) = debt::total(deps.storage)?;
+        let supplied = ctoken_info.total_supply_base();
+        let utilisation = utilisation(supplied, borrowed);
 
-    //     let rate = cfg.rates.calculate_interest_rate(utilisation);
+        let rate = cfg.rates.calculate_interest_rate(utilisation);
 
-    //     let borrower = (Decimal::one() + rate / Uint128::new(charge_periods))
-    //         .checked_pow(charge_periods as u32)?
-    //         - Decimal::one();
-    //     let lender = borrower * utilisation * (Decimal::one() - cfg.reserve_factor);
+        let borrower = (Decimal::one() + rate / Uint128::new(charge_periods))
+            .checked_pow(charge_periods as u32)?
+            - Decimal::one();
+        let lender = borrower * utilisation * (Decimal::one() - cfg.reserve_factor);
 
-    //     Ok(ApyResponse { borrower, lender })
-    // }
+        Ok(ApyResponse { borrower, lender })
+    }
 }
