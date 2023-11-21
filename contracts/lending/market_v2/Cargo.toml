@@ -9,14 +9,8 @@ repository = "https://github.com/securesecrets/shade"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-backtraces = ["cosmwasm-std/backtraces"]
-library = []
-
 [dependencies]
 cosmwasm-schema = "1.4.0"
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
-cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
 lending-utils = { version = "0.1.0", path = "../../../packages/lending_utils" }
 lend-token = { version = "0.1.0", path = "../token" }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [

@@ -42,6 +42,14 @@ impl Token {
         }
     }
 
+    pub fn as_contract_info(&self) -> Option<ContractInfo> {
+        match self {
+            Token::Cw20(info) => Some(info.clone()),
+            _ => None,
+        }
+    }
+
+
     /// Checks i token is cw20
     pub fn is_cw20(&self) -> bool {
         matches!(self, Token::Cw20(_))

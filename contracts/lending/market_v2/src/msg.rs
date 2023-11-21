@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::c_std::{Decimal, Timestamp, Uint128, ContractInfo};
+use shade_protocol::c_std::{ContractInfo, Decimal, Timestamp, Uint128};
 
 use lending_utils::interest::Interest;
 use lending_utils::{coin::Coin, token::Token};
@@ -45,10 +45,8 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub enum ExecuteMsg {
-}
+pub enum ExecuteMsg {}
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {
-}
+pub enum QueryMsg {}

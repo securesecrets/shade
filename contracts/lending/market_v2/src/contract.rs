@@ -5,15 +5,13 @@ use shade_protocol::{
         to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
         Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
-    utils::Query, query_authentication::viewing_keys,
+    query_authentication::viewing_keys,
+    utils::Query,
 };
 
 use crate::error::ContractError;
-use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryTotalCreditLine, TotalDebtResponse,
-    TransferableAmountResponse,
-};
-use crate::state::{debt, Config, CONFIG, VIEWING_KEY};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{Config, CONFIG, VIEWING_KEY};
 
 use lending_utils::token::Token;
 
@@ -30,9 +28,9 @@ pub fn instantiate(
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,
         decimals: msg.decimals,
-        controller: env.contract.address.to_string(),
-        distributed_token: msg.distributed_token.clone(),
-        viewing_key: msg.viewing_key.clone()
+        controller: env.contract.clone().into(),
+        distributed_token: msg.distributed_token.as_contract_info().unwrap().into(),
+        viewing_key: msg.viewing_key.clone(),
     };
     let ctoken_instantiate = WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
@@ -40,13 +38,13 @@ pub fn instantiate(
         msg: to_binary(&ctoken_msg)?,
         funds: vec![],
         label: format!("ctoken_contract_{}", env.contract.address),
-        code_hash: msg.code_hash,
+        code_hash: msg.ctoken_code_hash.clone(),
     };
-    debt::init(deps.storage)?;
 
     let cfg = Config {
         // those will be overwritten in a response
         ctoken_contract: Addr::unchecked(""),
+        ctoken_code_hash: msg.ctoken_code_hash,
         governance_contract: deps.api.addr_validate(&msg.gov_contract)?,
         name: msg.name,
         symbol: msg.symbol,
@@ -88,7 +86,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 mod reply {
     use super::*;
 
-    use cw_utils::parse_reply_instantiate_data;
+    use lending_utils::parse_reply::parse_reply_instantiate_data;
 
     pub fn token_instantiate_reply(
         deps: DepsMut,
@@ -126,12 +124,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     use ExecuteMsg::*;
-    Ok(())
+    Ok(Response::new())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     use QueryMsg::*;
-    Ok(())
+    Ok(to_binary(&"")?)
 }
-

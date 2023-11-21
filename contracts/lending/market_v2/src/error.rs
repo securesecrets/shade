@@ -15,4 +15,13 @@ pub enum ContractError {
 
     #[error("{0}")]
     Overflow(#[from] OverflowError),
+
+    #[error("Invalid reply from submessage {id}, {err}")]
+    ReplyParseFailure { id: u64, err: String },
+
+    #[error("Unrecognised reply id: {0}")]
+    UnrecognisedReply(u64),
+
+    #[error("{0}")]
+    InterestError(#[from] InterestError),
 }

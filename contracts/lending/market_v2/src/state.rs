@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use shade_protocol::{
-    c_std::{Addr, Decimal, Uint128, ContractInfo},
+    c_std::{Addr, ContractInfo, Decimal, Uint128},
     secret_storage_plus::Item,
 };
 
@@ -12,7 +12,8 @@ pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema, Debug)]
 pub struct Config {
-    pub ctoken_contract: ContractInfo,
+    pub ctoken_contract: Addr,
+    pub ctoken_code_hash: String,
     /// The contract that controls this contract and is allowed to adjust its parameters
     pub governance_contract: Addr,
     pub name: String,
@@ -44,4 +45,3 @@ pub struct Config {
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-
