@@ -61,6 +61,13 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub enum CreditAgencyExecuteMsg {
+    /// Ensures a given account has entered a market. Meant to be called by a specific
+    /// market contract - so the sender of the msg would be the market
+    EnterMarket { account: String },
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {}
 
@@ -98,13 +105,6 @@ pub struct TransferableAmountResponse {
 #[cw_serde]
 pub struct ReserveResponse {
     pub reserve: Uint128,
-}
-
-#[cw_serde]
-pub enum CreditAgencyExecuteMsg {
-    /// Ensures a given account has entered a market. Meant to be called by a specific
-    /// market contract - so the sender of the msg would be the market
-    EnterMarket { account: String },
 }
 
 #[cw_serde]

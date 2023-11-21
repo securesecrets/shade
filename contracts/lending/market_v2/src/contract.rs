@@ -236,6 +236,7 @@ mod execute {
 
     use crate::{
         interest::{calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate},
+        msg::CreditAgencyExecuteMsg,
         state::debt,
     };
 
@@ -335,6 +336,20 @@ mod execute {
         } else {
             Ok(Ratios::unchanged())
         }
+    }
+
+    // Register the account into Credit Agency as a depositor.
+    fn enter_market<T>(cfg: &Config, account: &Addr) -> StdResult<SubMsg<T>> {
+        let msg = to_binary(&CreditAgencyExecuteMsg::EnterMarket {
+            account: account.to_string(),
+        })?;
+
+        Ok(SubMsg::new(WasmMsg::Execute {
+            contract_addr: cfg.credit_agency.address.to_string(),
+            msg,
+            funds: vec![],
+            code_hash: cfg.credit_agency.code_hash.clone(),
+        }))
     }
 
     /// Handler for `ExecuteMsg::Withdraw`
