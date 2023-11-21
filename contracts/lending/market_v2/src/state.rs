@@ -39,6 +39,8 @@ pub struct Config {
     pub price_oracle: String,
     /// Address of Credit Agency
     pub credit_agency: ContractInfo,
+    /// Address of oracle
+    pub oracle: ContractInfo,
     pub reserve_factor: Decimal,
 }
 

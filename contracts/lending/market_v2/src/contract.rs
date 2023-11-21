@@ -64,6 +64,7 @@ pub fn instantiate(
         credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
+        oracle: msg.oracle.into()
     };
     CONFIG.save(deps.storage, &cfg)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
@@ -262,6 +263,7 @@ mod query {
     use shade_protocol::{
         c_std::{ContractInfo, Decimal, Deps, Uint128},
         utils::asset::Contract,
+        contract_interfaces::oracles,
     };
 
     use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
@@ -433,26 +435,27 @@ mod query {
     pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
         todo!();
 
-        // let config = CONFIG.load(deps.storage)?;
-        // // If tokens are the same, just return 1:1.
-        // if config.common_token == config.market_token {
-        //     Ok(PriceRate {
-        //         sell_denom: config.market_token.clone(),
-        //         buy_denom: config.common_token,
-        //         rate_sell_per_buy: Decimal::one(),
-        //     })
-        // } else {
-        //     let price_response: TwapResponse = OracleQueryMsg::Twap {
-        //         offer: config.market_token.clone().into(),
-        //         ask: config.common_token.clone().into(),
-        //     }
-        //     .query(&deps.querier, config.price_oracle.clone())?;
-        //     Ok(PriceRate {
-        //         sell_denom: config.market_token,
-        //         buy_denom: config.common_token,
-        //         rate_sell_per_buy: price_response.a_per_b,
-        //     })
-        // }
+        let config = CONFIG.load(deps.storage)?;
+        // If tokens are the same, just return 1:1.
+        if config.common_token == config.market_token {
+            Ok(PriceRate {
+                sell_denom: config.market_token.clone(),
+                buy_denom: config.common_token,
+                rate_sell_per_buy: Decimal::one(),
+            })
+        } else {
+            todo!();
+            // let price_response: TwapResponse = OracleQueryMsg::Twap {
+            //     offer: config.market_token.clone().into(),
+            //     ask: config.common_token.clone().into(),
+            // }
+            // .query(&deps.querier, config.price_oracle.clone())?;
+            Ok(PriceRate {
+                sell_denom: config.market_token,
+                buy_denom: config.common_token,
+                rate_sell_per_buy: Decimal::one() /*price_response.a_per_b,*/
+            })
+        }
     }
 
     // /// Handler for `QueryMsg::CreditLine`
