@@ -163,3 +163,254 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     use QueryMsg::*;
     Ok(to_binary(&"")?)
 }
+
+mod query {
+    use super::*;
+
+    use shade_protocol::c_std::{ContractInfo, Decimal, Deps, Uint128};
+
+    use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
+    use lending_utils::{
+        coin::Coin,
+        credit_line::{CreditLineResponse, CreditLineValues},
+        price::{coin_times_price_rate, PriceRate},
+    };
+
+    use crate::{
+        interest::{calculate_interest, epochs_passed, utilisation},
+        msg::{ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse},
+        state::{debt, SECONDS_IN_YEAR},
+    };
+
+    fn token_balance(
+        deps: Deps,
+        token_contract: &ContractInfo,
+        address: String,
+    ) -> StdResult<BalanceResponse> {
+        TokenQueryMsg::Balance { address }.query(&deps.querier, token_contract)
+    }
+
+    fn base_balance(
+        deps: Deps,
+        token_contract: &ContractInfo,
+        address: String,
+    ) -> StdResult<BalanceResponse> {
+        TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
+    }
+
+    // pub fn ctoken_balance(
+    //     deps: Deps,
+    //     config: &Config,
+    //     account: impl ToString,
+    // ) -> Result<Coin, ContractError> {
+    //     Ok(config
+    //         .market_token
+    //         .amount(token_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
+    // }
+
+    // pub fn ctoken_base_balance(
+    //     deps: Deps,
+    //     config: &Config,
+    //     account: impl ToString,
+    // ) -> Result<Coin, ContractError> {
+    //     Ok(config
+    //         .market_token
+    //         .amount(base_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
+    // }
+
+    /// Handler for `QueryMsg::Config`
+    pub fn config(deps: Deps, env: Env) -> Result<Config, ContractError> {
+        let mut config = CONFIG.load(deps.storage)?;
+
+        let unhandled_charge_period = epochs_passed(&config, env)?;
+        config.last_charged += unhandled_charge_period * config.interest_charge_period;
+
+        Ok(config)
+    }
+
+    // /// Handler for `QueryMsg::TokensBalance`
+    // pub fn tokens_balance(
+    //     deps: Deps,
+    //     env: Env,
+    //     account: String,
+    // ) -> Result<TokensBalanceResponse, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+
+    //     let mut collateral = ctoken_base_balance(deps, &config, account.clone())?;
+    //     let mut debt = Coin {
+    //         denom: config.market_token.clone(),
+    //         amount: debt::of(deps.storage, &deps.api.addr_validate(&account)?)?,
+    //     };
+
+    //     if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
+    //         collateral.amount += collateral.amount * update.ctoken_ratio;
+    //         debt.amount += debt.amount * update.debt_ratio;
+    //     }
+
+    //     Ok(TokensBalanceResponse { collateral, debt })
+    // }
+
+    // /// Handler for `QueryMsg::TransferableAmount`
+    // pub fn transferable_amount(
+    //     deps: Deps,
+    //     token: ContractInfo,
+    //     account: String,
+    // ) -> Result<TransferableAmountResponse, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+    //     if token == config.ctoken_contract {
+    //         let transferable = cr_lending_utils::transferable_amount(deps, &config, account)?;
+    //         Ok(TransferableAmountResponse { transferable })
+    //     } else {
+    //         Err(ContractError::UnrecognisedToken(token.to_string()))
+    //     }
+    // }
+
+    // /// Handler for `QueryMsg::Withdrawable`
+    // pub fn withdrawable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
+    //     use std::cmp::min;
+
+    //     let cfg = CONFIG.load(deps.storage)?;
+
+    //     let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
+    //     let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
+    //     let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
+    //     let withdrawable = min(
+    //         allowed_to_withdraw,
+    //         cfg.market_token
+    //             .query_balance(deps, env.contract.address, viewing_key)?
+    //             .into(),
+    //     );
+
+    //     Ok(cfg.market_token.amount(withdrawable))
+    // }
+
+    // /// Handler for `QueryMsg::Borrowable`
+    // pub fn borrowable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
+    //     use std::cmp::min;
+
+    //     let cfg = CONFIG.load(deps.storage)?;
+
+    //     let borrowable = cr_lending_utils::query_borrowable_tokens(deps, &cfg, account)?;
+    //     let borrowable = min(
+    //         borrowable,
+    //         cfg.market_token
+    //             .query_balance(deps, env.contract.address.to_string(), viewing_key)?
+    //             .into(),
+    //     );
+
+    //     Ok(cfg.market_token.amount(borrowable))
+    // }
+
+    // pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, ContractError> {
+    //     crate::interest::ctoken_info(deps, config)
+    // }
+
+    // /// Handler for `QueryMsg::Interest`
+    // pub fn interest(deps: Deps) -> Result<InterestResponse, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+    //     let ctoken_info = ctoken_info(deps, &config)?;
+
+    //     let supplied = ctoken_info.total_supply_base();
+    //     let (borrowed, _) = debt::total(deps.storage)?;
+    //     let utilisation = utilisation(supplied, borrowed);
+
+    //     let interest = config.rates.calculate_interest_rate(utilisation);
+
+    //     Ok(InterestResponse {
+    //         interest,
+    //         utilisation,
+    //         charge_period: Timestamp::from_seconds(config.interest_charge_period),
+    //     })
+    // }
+
+    // /// Handler for `QueryMsg::PriceMarketLocalPerCommon`
+    // /// Returns the ratio of the twap of the market token over the common token.
+    // pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+    //     // If tokens are the same, just return 1:1.
+    //     if config.common_token == config.market_token {
+    //         Ok(PriceRate {
+    //             sell_denom: config.market_token.clone(),
+    //             buy_denom: config.common_token,
+    //             rate_sell_per_buy: Decimal::one(),
+    //         })
+    //     } else {
+    //         let price_response: TwapResponse = OracleQueryMsg::Twap {
+    //             offer: config.market_token.clone().into(),
+    //             ask: config.common_token.clone().into(),
+    //         }
+    //         .query(&deps.querier, config.price_oracle.clone())?;
+    //         Ok(PriceRate {
+    //             sell_denom: config.market_token,
+    //             buy_denom: config.common_token,
+    //             rate_sell_per_buy: price_response.a_per_b,
+    //         })
+    //     }
+    // }
+
+    // /// Handler for `QueryMsg::CreditLine`
+    // /// Returns the debt and credit situation of the `account` after applying interests.
+    // pub fn credit_line(
+    //     deps: Deps,
+    //     env: Env,
+    //     account: Addr,
+    // ) -> Result<CreditLineResponse, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+    //     let mut collateral = ctoken_base_balance(deps, &config, &account)?;
+    //     let mut debt = Coin {
+    //         denom: config.market_token.clone(),
+    //         amount: debt::of(deps.storage, &account)?,
+    //     };
+
+    //     // Simulate charging interest for any periods `charge_interest` wasn't called for yet
+    //     if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
+    //         collateral.amount += collateral.amount * update.ctoken_ratio;
+    //         debt.amount += debt.amount * update.debt_ratio;
+    //     }
+
+    //     if collateral.amount.is_zero() && debt.amount.is_zero() {
+    //         return Ok(CreditLineValues::zero().make_response(config.common_token));
+    //     }
+
+    //     let price_ratio = price_market_local_per_common(deps)?;
+    //     let collateral = coin_times_price_rate(&collateral, &price_ratio)?;
+    //     let debt = coin_times_price_rate(&debt, &price_ratio)?.amount;
+    //     let credit_line = collateral.amount * config.collateral_ratio;
+    //     let borrow_limit = credit_line * config.borrow_limit_ratio;
+    //     Ok(
+    //         CreditLineValues::new(collateral.amount, credit_line, borrow_limit, debt)
+    //             .make_response(config.common_token),
+    //     )
+    // }
+
+    // /// Handler for `QueryMsg::Reserve`
+    // pub fn reserve(deps: Deps, env: Env) -> Result<ReserveResponse, ContractError> {
+    //     let config = CONFIG.load(deps.storage)?;
+
+    //     let reserve = calculate_interest(deps, epochs_passed(&config, env)?)?
+    //         .map(|update| update.reserve)
+    //         .unwrap_or(Uint128::zero());
+
+    //     Ok(ReserveResponse { reserve })
+    // }
+
+    // /// Handler for `QueryMsg::Apy`
+    // pub fn apy(deps: Deps) -> Result<ApyResponse, ContractError> {
+    //     let cfg = CONFIG.load(deps.storage)?;
+    //     let charge_periods = SECONDS_IN_YEAR / (cfg.interest_charge_period as u128);
+
+    //     let ctoken_info = ctoken_info(deps, &cfg)?;
+    //     let (borrowed, _) = debt::total(deps.storage)?;
+    //     let supplied = ctoken_info.total_supply_base();
+    //     let utilisation = utilisation(supplied, borrowed);
+
+    //     let rate = cfg.rates.calculate_interest_rate(utilisation);
+
+    //     let borrower = (Decimal::one() + rate / Uint128::new(charge_periods))
+    //         .checked_pow(charge_periods as u32)?
+    //         - Decimal::one();
+    //     let lender = borrower * utilisation * (Decimal::one() - cfg.reserve_factor);
+
+    //     Ok(ApyResponse { borrower, lender })
+    // }
+}

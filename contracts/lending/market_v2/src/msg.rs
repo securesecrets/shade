@@ -56,3 +56,50 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {}
+
+#[cw_serde]
+pub struct InterestResponse {
+    pub interest: Decimal,
+    pub utilisation: Decimal,
+    pub charge_period: Timestamp,
+}
+
+#[cw_serde]
+pub struct TokensBalanceResponse {
+    pub collateral: Coin,
+    pub debt: Coin,
+}
+
+#[cw_serde]
+pub struct TransferableAmountResponse {
+    pub transferable: Uint128,
+}
+
+#[cw_serde]
+pub struct ReserveResponse {
+    pub reserve: Uint128,
+}
+
+#[cw_serde]
+pub enum CreditAgencyExecuteMsg {
+    /// Ensures a given account has entered a market. Meant to be called by a specific
+    /// market contract - so the sender of the msg would be the market
+    EnterMarket { account: String },
+}
+
+#[cw_serde]
+pub struct ApyResponse {
+    /// How much % interest will a borrower have to pay
+    pub borrower: Decimal,
+    /// How much % interest will a lender earn
+    pub lender: Decimal,
+}
+
+#[cw_serde]
+pub struct TotalDebtResponse {
+    /// Total amount of debt in the market, denominated in base asset
+    pub total: Uint128,
+
+    /// The current debt multiplier used to convert debt to base assets
+    pub multiplier: Decimal,
+}
