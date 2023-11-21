@@ -167,7 +167,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 mod query {
     use super::*;
 
-    use shade_protocol::c_std::{ContractInfo, Decimal, Deps, Uint128};
+    use shade_protocol::{
+        c_std::{ContractInfo, Decimal, Deps, Uint128},
+        utils::asset::Contract,
+    };
 
     use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
     use lending_utils::{
@@ -198,15 +201,20 @@ mod query {
         TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
     }
 
-    // pub fn ctoken_balance(
-    //     deps: Deps,
-    //     config: &Config,
-    //     account: impl ToString,
-    // ) -> Result<Coin, ContractError> {
-    //     Ok(config
-    //         .market_token
-    //         .amount(token_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
-    // }
+    pub fn ctoken_balance(
+        deps: Deps,
+        config: &Config,
+        account: impl ToString,
+    ) -> Result<Coin, ContractError> {
+        Ok(config.market_token.amount(
+            token_balance(
+                deps,
+                &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                account.to_string(),
+            )?
+            .balance,
+        ))
+    }
 
     // pub fn ctoken_base_balance(
     //     deps: Deps,
@@ -215,7 +223,7 @@ mod query {
     // ) -> Result<Coin, ContractError> {
     //     Ok(config
     //         .market_token
-    //         .amount(base_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
+    //         .amount(base_balance(deps, &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(), account.to_string())?.balance))
     // }
 
     /// Handler for `QueryMsg::Config`
