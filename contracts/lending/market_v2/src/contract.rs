@@ -425,23 +425,23 @@ mod query {
         Ok(crate::interest::ctoken_info(deps, config)?)
     }
 
-    // /// Handler for `QueryMsg::Interest`
-    // pub fn interest(deps: Deps) -> Result<InterestResponse, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
-    //     let ctoken_info = ctoken_info(deps, &config)?;
+    /// Handler for `QueryMsg::Interest`
+    pub fn interest(deps: Deps) -> Result<InterestResponse, ContractError> {
+        let config = CONFIG.load(deps.storage)?;
+        let ctoken_info = ctoken_info(deps, &config)?;
 
-    //     let supplied = ctoken_info.total_supply_base();
-    //     let (borrowed, _) = debt::total(deps.storage)?;
-    //     let utilisation = utilisation(supplied, borrowed);
+        let supplied = ctoken_info.total_supply_base();
+        let (borrowed, _) = debt::total(deps.storage)?;
+        let utilisation = utilisation(supplied, borrowed);
 
-    //     let interest = config.rates.calculate_interest_rate(utilisation);
+        let interest = config.rates.calculate_interest_rate(utilisation);
 
-    //     Ok(InterestResponse {
-    //         interest,
-    //         utilisation,
-    //         charge_period: Timestamp::from_seconds(config.interest_charge_period),
-    //     })
-    // }
+        Ok(InterestResponse {
+            interest,
+            utilisation,
+            charge_period: Timestamp::from_seconds(config.interest_charge_period),
+        })
+    }
 
     /// Handler for `QueryMsg::PriceMarketLocalPerCommon`
     /// Returns the ratio of the twap of the market token over the common token.
