@@ -240,6 +240,28 @@ mod execute {
 
     use super::*;
 
+    /// Helper struct for return of [`charge_interest`] function
+    #[derive(Debug, Clone)]
+    pub struct Ratios<T> {
+        pub messages: Vec<SubMsg<T>>,
+        pub ctoken_ratio: Decimal,
+        pub debt_ratio: Decimal,
+    }
+
+    impl<T> Ratios<T> {
+        pub fn unchanged() -> Self {
+            Self {
+                messages: vec![],
+                ctoken_ratio: Decimal::one(),
+                debt_ratio: Decimal::one(),
+            }
+        }
+
+        pub fn is_unchanged(&self) -> bool {
+            self.messages.is_empty()
+        }
+    }
+
     /// Handler for `ExecuteMsg::Withdraw`
     pub fn withdraw(
         mut deps: DepsMut,
