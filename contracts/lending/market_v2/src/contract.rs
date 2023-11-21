@@ -529,6 +529,50 @@ mod execute {
 
         Ok(response)
     }
+
+    /// Handler for `ExecuteMsg::RepayTo`
+    /// Allows to repay account's debt for for both native and cw20 tokens. Requires sender to be a
+    /// Credit Agency, otherwise fails.
+    pub fn repay_to(
+        mut deps: DepsMut,
+        env: Env,
+        sender: Addr,
+        repay_tokens: lending_utils::coin::Coin,
+        account: Addr,
+    ) -> Result<Response, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
+        if cfg.credit_agency.address != sender {
+            return Err(ContractError::RequiresCreditAgency {});
+        }
+        if repay_tokens.denom != cfg.market_token {
+            return Err(ContractError::InvalidDenom(cfg.market_token.to_string()));
+        }
+
+        let debt = debt::of(deps.storage, &account)?;
+        // if account has less debt then caller wants to pay off, liquidation fails
+        if repay_tokens.amount > debt {
+            return Err(ContractError::LiquidationInsufficientDebt {
+                account: account.to_string(),
+                debt,
+            });
+        }
+
+        let mut response = Response::new();
+
+        // Create rebase messagess for tokens based on interest and supply
+        let charge_msgs = charge_interest(deps.branch(), env)?;
+        if !charge_msgs.is_unchanged() {
+            response = response.add_submessages(charge_msgs.messages);
+        }
+
+        debt::decrease(deps.storage, &account, repay_tokens.amount)?;
+
+        response = response
+            .add_attribute("action", "repay_to")
+            .add_attribute("sender", sender)
+            .add_attribute("debtor", account);
+        Ok(response)
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

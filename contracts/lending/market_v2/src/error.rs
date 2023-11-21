@@ -52,4 +52,10 @@ pub enum ContractError {
 
     #[error("Cannot borrow amount {amount} for {account}")]
     CannotBorrow { amount: Uint128, account: String },
+
+    #[error("Insufficient amount of debt on account {account}: {debt} to liquidate debt")]
+    LiquidationInsufficientDebt { account: String, debt: Uint128 },
+
+    #[error("Unauthorized - requires sender to be a Market's Credit Agency")]
+    RequiresCreditAgency {},
 }
