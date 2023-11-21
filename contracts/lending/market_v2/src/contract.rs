@@ -375,24 +375,29 @@ mod query {
         }
     }
 
-    // /// Handler for `QueryMsg::Withdrawable`
-    // pub fn withdrawable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
-    //     use std::cmp::min;
+    /// Handler for `QueryMsg::Withdrawable`
+    pub fn withdrawable(
+        deps: Deps,
+        env: Env,
+        account: String,
+        viewing_key: String,
+    ) -> Result<Coin, ContractError> {
+        use std::cmp::min;
 
-    //     let cfg = CONFIG.load(deps.storage)?;
+        let cfg = CONFIG.load(deps.storage)?;
 
-    //     let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
-    //     let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
-    //     let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
-    //     let withdrawable = min(
-    //         allowed_to_withdraw,
-    //         cfg.market_token
-    //             .query_balance(deps, env.contract.address, viewing_key)?
-    //             .into(),
-    //     );
+        let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
+        let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
+        let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
+        let withdrawable = min(
+            allowed_to_withdraw,
+            cfg.market_token
+                .query_balance(deps, env.contract.address, viewing_key)?
+                .into(),
+        );
 
-    //     Ok(cfg.market_token.amount(withdrawable))
-    // }
+        Ok(cfg.market_token.amount(withdrawable))
+    }
 
     // /// Handler for `QueryMsg::Borrowable`
     // pub fn borrowable(deps: Deps, env: Env, account: String, viewing_key: String) -> Result<Coin, ContractError> {
