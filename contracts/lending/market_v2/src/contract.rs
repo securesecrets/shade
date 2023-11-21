@@ -415,7 +415,44 @@ mod execute {
         info: MessageInfo,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
-        Ok(Response::new())
+        let cfg = CONFIG.load(deps.storage)?;
+
+        if cr_lending_utils::transferable_amount(deps.as_ref(), &cfg, &info.sender)? < amount {
+            return Err(ContractError::CannotWithdraw {
+                account: info.sender.to_string(),
+                amount,
+            });
+        }
+
+        let mut response = Response::new();
+
+        // Create rebase messagess for tokens based on interest and supply
+        let charge_msgs = charge_interest(deps.branch(), env)?;
+        if !charge_msgs.is_unchanged() {
+            response = response.add_submessages(charge_msgs.messages);
+        }
+
+        // Burn the C tokens
+        let burn_msg = to_binary(&lend_token::msg::ExecuteMsg::BurnBaseFrom {
+            owner: info.sender.to_string(),
+            amount,
+        })?;
+        let wrapped_msg = SubMsg::new(WasmMsg::Execute {
+            contract_addr: cfg.ctoken_contract.to_string(),
+            msg: burn_msg,
+            funds: vec![],
+            code_hash: cfg.ctoken_code_hash.clone(),
+        });
+
+        // Send the base assets from contract to lender
+        let send_msg = cfg.market_token.send_msg(info.sender.clone(), amount)?;
+
+        response = response
+            .add_attribute("action", "withdraw")
+            .add_attribute("sender", info.sender)
+            .add_submessage(wrapped_msg)
+            .add_message(send_msg);
+        Ok(response)
     }
 }
 

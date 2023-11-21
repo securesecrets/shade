@@ -46,4 +46,7 @@ pub enum ContractError {
         ctoken_base_supply: Uint128,
         cap: Uint128,
     },
+
+    #[error("Address {account} cannot withdraw {amount}")]
+    CannotWithdraw { account: String, amount: Uint128 },
 }
