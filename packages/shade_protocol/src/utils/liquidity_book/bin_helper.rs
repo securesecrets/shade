@@ -4,6 +4,7 @@
 //! This library contains functions to help interaction with bins.
 
 use crate::c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128};
+use crate::contract_interfaces::swap::core::TokenType;
 use ethnum::U256;
 
 use super::constants::{SCALE, SCALE_OFFSET};
@@ -13,7 +14,6 @@ use super::math::u128x128_math::U128x128MathError;
 use super::math::u256x256_math::{U256x256Math, U256x256MathError};
 use super::pair_parameter_helper::{PairParameters, PairParametersError};
 use super::price_helper::PriceHelper;
-use super::tokens::TokenType;
 use super::transfer::HandleMsg;
 use super::types::Bytes32;
 

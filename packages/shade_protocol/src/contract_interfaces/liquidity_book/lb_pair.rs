@@ -3,7 +3,7 @@ use crate::{
     utils::{
         asset::RawContract,
         liquidity_book::{
-            tokens::{SwapTokenAmount, TokenAmount, TokenType},
+            tokens::{SwapTokenAmount, TokenAmount},
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         },
         ExecuteCallback,
@@ -11,6 +11,7 @@ use crate::{
         Query,
     },
     Contract,
+    swap::core::TokenType,
 };
 
 use cosmwasm_schema::{cw_serde, QueryResponses};

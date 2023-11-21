@@ -4,8 +4,8 @@ use crate::{
         mint::mint,
         snip20::helpers::send_msg,
     },
-    lb_libraries::tokens::TokenType,
     utils::{asset::Contract, Query},
+    swap::core::TokenType,
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_binary, CosmosMsg, Deps, StdError, StdResult, Uint128};

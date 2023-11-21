@@ -1,6 +1,6 @@
 #[warn(unused_imports)]
 use crate::c_std::{MessageInfo, StdError, StdResult, Uint128};
-use crate::utils::liquidity_book::tokens::TokenType;
+use crate::swap::core::TokenType;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -86,11 +86,7 @@ impl<'a> Iterator for TokenPairAmountIterator<'a> {
 
 pub mod tests {
     use crate::c_std::{Addr, Uint128};
-    use crate::utils::liquidity_book::tokens::TokenType;
-
-    use crate::swap::core::TokenPair;
-
-    use super::TokenPairAmount;
+    use super::*;
 
     #[test]
     pub fn test_rearrange() {

@@ -9,9 +9,10 @@ use shade_multi_test::{
     multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
-    lb_libraries::{constants::PRECISION, math::u24::U24, tokens::TokenType},
+    lb_libraries::{constants::PRECISION, math::u24::U24},
     liquidity_book::lb_pair::LiquidityParameters,
     multi_test::App,
+    swap::core::TokenType,
     utils::{asset::Contract, cycle::parse_utc_datetime, MultiTestable},
 };
 
@@ -81,7 +82,7 @@ impl Addrs {
         self.hashes[2].clone()
     }
 
-    pub fn _d_hash(&self) -> String {
+    pub fn d_hash(&self) -> String {
         self.hashes[3].clone()
     }
 }

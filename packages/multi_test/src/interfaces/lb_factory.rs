@@ -2,10 +2,7 @@ use crate::multi::lb_factory::LbFactory;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult},
     contract_interfaces::liquidity_book::lb_factory,
-    lb_libraries::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    },
+    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
     multi_test::App,
     utils::{
         asset::{Contract, RawContract},
@@ -14,6 +11,7 @@ use shade_protocol::{
         MultiTestable,
         Query,
     },
+    swap::core::TokenType,
 };
 
 pub fn init(

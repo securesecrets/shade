@@ -11,9 +11,9 @@ use shade_protocol::{
             encoded_sample::{MASK_UINT12, MASK_UINT20},
             u24::U24,
         },
-        tokens::TokenType,
     },
     liquidity_book::lb_factory::PresetResponse,
+    swap::core::TokenType,
     utils::MultiTestable,
 };
 
@@ -774,7 +774,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         res.unwrap_err(),
-        StdError::generic_err("Only the Owner can do that!")
+        StdError::generic_err("Generic error: Querier contract error: Generic error: {\"target\":\"admin\",\"code\":0,\"type\":\"unregistered_admin\",\"context\":[\"addr3\"],\"verbose\":\"addr3 has not been registered as an admin\"}")
     );
 
     Ok(())
@@ -925,6 +925,11 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
 
     let num_quote_assets_before =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("Before: {num_quote_assets_before}");
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
 
     snip20::init(
         &mut app,
@@ -943,12 +948,26 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         }),
     )
     .unwrap();
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     let sbtc = extract_contract_info(&deployed_contracts, "SBTC")?;
     let new_token = token_type_snip20_generator(&sbtc)?;
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     // Check if the new token is a quote asset
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), new_token.clone())?;
     assert!(!is_quote_asset, "test_add_quote_asset::1");
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
 
     // Add the new token as a quote asset
     lb_factory::add_quote_asset(
@@ -958,13 +977,23 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
         new_token.clone(),
     )?;
 
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     // Validate that the new token is now a quote asset
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), new_token.clone())?;
     assert!(is_quote_asset, "test_add_quote_asset::2");
 
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     let num_quote_assets_after =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("after: {num_quote_assets_after}");
+
     assert_eq!(
         num_quote_assets_after,
         num_quote_assets_before + 1,
@@ -1013,6 +1042,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     //SSCRT and SHD already added as quote asset
     let num_quote_assets_before =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("{num_quote_assets_before}");
 
     snip20::init(
         &mut app,
@@ -1031,9 +1061,18 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
         }),
     )
     .unwrap();
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     let usdc_info: ContractInfo = extract_contract_info(&deployed_contracts, USDC)?;
     let usdc_token_type = token_type_snip20_generator(&usdc_info)?;
     let usdc = usdc_token_type;
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
 
     // Add the new token as a quote asset
     lb_factory::add_quote_asset(
@@ -1043,11 +1082,15 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
         usdc.clone(),
     )?;
 
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
+
     // Check if usdc is a quote asset
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), usdc.clone())?;
     assert!(is_quote_asset, "test_remove_quote_asset::1");
-
+    
     // Remove usdc as a quote asset
     lb_factory::remove_quote_asset(
         &mut app,

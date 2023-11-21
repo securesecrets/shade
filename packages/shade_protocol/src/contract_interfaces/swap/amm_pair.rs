@@ -5,10 +5,10 @@ use crate::{
     snip20::Snip20ReceiveMsg,
     swap::core::{
         ContractInstantiationInfo, CustomFee, Fee, StableTokenData, TokenAmount, TokenPair,
-        TokenPairAmount,
+        TokenPairAmount, TokenType,
     },
     utils::{
-        asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
+        asset::RawContract, ExecuteCallback,
         InstantiateCallback, Query,
     },
     Contract, BLOCK_SIZE,

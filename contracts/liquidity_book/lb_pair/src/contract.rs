@@ -47,14 +47,13 @@ use shade_protocol::{
         oracle_helper::{Oracle, MAX_SAMPLE_LIFETIME},
         pair_parameter_helper::PairParameters,
         price_helper::PriceHelper,
-        tokens::TokenType,
         types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
     snip20,
     swap::{
         amm_pair::{FeeInfo, QueryMsgResponse::GetPairInfo},
-        core::{Fee, TokenPair},
+        core::{Fee, TokenPair, TokenType},
         router::{ExecuteMsgResponse, QueryMsgResponse::SwapSimulation},
     },
 };

@@ -8,9 +8,9 @@ use crate::{
     secret_storage_plus::{Bincode2, Item, ItemStorage, Map},
     snip20::ExecuteMsg as Snip20ExecuteMsg,
     snip20::Snip20ReceiveMsg,
-    swap::core::ContractInstantiationInfo,
+    swap::core::{ContractInstantiationInfo, TokenType},
     utils::{
-        asset::RawContract, liquidity_book::tokens::TokenType, ExecuteCallback,
+        asset::RawContract, ExecuteCallback,
         InstantiateCallback, Query,
     },
     Contract, BLOCK_SIZE,

@@ -3,13 +3,10 @@ use crate::types::{LBPair, LBPairInformation, NextPairKey};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Storage},
     cosmwasm_schema::cw_serde,
-    lb_libraries::{
-        pair_parameter_helper::PairParameters,
-        tokens::TokenType,
-        types::ContractInstantiationInfo,
-    },
+    lb_libraries::{pair_parameter_helper::PairParameters, types::ContractInstantiationInfo},
     secret_storage_plus::{AppendStore, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
+    swap::core::TokenType,
     Contract,
 };
 

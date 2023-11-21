@@ -29,13 +29,13 @@ use shade_protocol::{
         lb_factory::*,
         lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
     },
+    swap::core::TokenType,
     utils::{
         callback::ExecuteCallback,
         liquidity_book::{
             math::encoded_sample::EncodedSample,
             pair_parameter_helper::PairParameters,
             price_helper::PriceHelper,
-            tokens::TokenType,
             types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         },
     },
@@ -206,8 +206,6 @@ fn try_set_lb_pair_implementation(
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
     let config = CONFIG.load(deps.storage)?;
-    only_owner(&info.sender, &config.owner)?;
-
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,

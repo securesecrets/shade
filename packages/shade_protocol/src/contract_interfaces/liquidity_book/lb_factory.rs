@@ -1,15 +1,14 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Addr;
-
 use super::lb_pair;
-use crate::utils::{
-    asset::RawContract,
-    liquidity_book::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation},
+use crate::{
+    c_std::Addr,
+    cosmwasm_schema::{cw_serde, QueryResponses},
+    utils::{
+        asset::RawContract,
+        liquidity_book::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
+        ExecuteCallback, InstantiateCallback, Query,
     },
-};
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+    swap::core::TokenType,
+    };
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
 #[cw_serde]

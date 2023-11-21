@@ -3,8 +3,7 @@ use crate::{
     cosmwasm_schema::cw_serde,
     liquidity_book::lb_pair::SwapResult,
     snip20::Snip20ReceiveMsg,
-    swap::core::{ContractInstantiationInfo, TokenAmount},
-    utils::liquidity_book::tokens::TokenType,
+    swap::core::{ContractInstantiationInfo, TokenAmount, TokenType},
     utils::{ExecuteCallback, InstantiateCallback, Query},
     Contract, BLOCK_SIZE,
 };

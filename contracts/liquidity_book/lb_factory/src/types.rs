@@ -1,4 +1,4 @@
-use shade_protocol::{cosmwasm_schema::cw_serde, lb_libraries::tokens::TokenType};
+use shade_protocol::{cosmwasm_schema::cw_serde, swap::core::TokenType};
 
 pub use shade_protocol::lb_libraries::types::{LBPair, LBPairInformation};
 

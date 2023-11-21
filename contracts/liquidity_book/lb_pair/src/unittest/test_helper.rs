@@ -20,12 +20,10 @@ use shade_multi_test::{
     multi::{admin::init_admin_auth, lb_token::LbToken},
 };
 use shade_protocol::{
-    lb_libraries::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, StaticFeeParameters},
-    },
+    lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
     multi_test::App,
+    swap::core::TokenType,
     utils::{asset::Contract, cycle::parse_utc_datetime, MultiTestable},
 };
 

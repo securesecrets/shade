@@ -5,12 +5,12 @@ use shade_protocol::{
         math::tree_math::TreeUint24,
         oracle_helper::Oracle,
         pair_parameter_helper::PairParameters,
-        tokens::TokenType,
         types::Bytes32,
         viewing_keys::ViewingKey,
     },
     secret_storage_plus::{Bincode2, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
+    swap::core::TokenType,
     Contract,
 };
 

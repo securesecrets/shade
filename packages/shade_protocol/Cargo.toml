@@ -35,7 +35,7 @@ storage = ["dao-utils"]
 storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-lb-libraries = []
+lb-libraries = ["swap", "snip20", "interface"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
