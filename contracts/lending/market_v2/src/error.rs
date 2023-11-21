@@ -49,4 +49,7 @@ pub enum ContractError {
 
     #[error("Address {account} cannot withdraw {amount}")]
     CannotWithdraw { account: String, amount: Uint128 },
+
+    #[error("Cannot borrow amount {amount} for {account}")]
+    CannotBorrow { amount: Uint128, account: String },
 }

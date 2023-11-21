@@ -454,6 +454,43 @@ mod execute {
             .add_message(send_msg);
         Ok(response)
     }
+
+    /// Handler for `ExecuteMsg::Borrow`
+    pub fn borrow(
+        mut deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        amount: Uint128,
+    ) -> Result<Response, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
+
+        if !cr_lending_utils::can_borrow(deps.as_ref(), &cfg, &info.sender, amount)? {
+            return Err(ContractError::CannotBorrow {
+                amount,
+                account: info.sender.to_string(),
+            });
+        }
+
+        let mut response = Response::new();
+
+        // Create rebase messagess for tokens based on interest and supply
+        let charge_msgs = charge_interest(deps.branch(), env)?;
+        if !charge_msgs.is_unchanged() {
+            response = response.add_submessages(charge_msgs.messages);
+        }
+
+        debt::increase(deps.storage, &info.sender, amount)?;
+
+        // Sent tokens to sender's account
+        let send_msg = cfg.market_token.send_msg(info.sender.clone(), amount)?;
+
+        response = response
+            .add_attribute("action", "borrow")
+            .add_attribute("sender", info.sender.clone())
+            .add_submessage(enter_market(&cfg, &info.sender)?)
+            .add_message(send_msg);
+        Ok(response)
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
