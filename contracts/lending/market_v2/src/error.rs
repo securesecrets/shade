@@ -58,4 +58,7 @@ pub enum ContractError {
 
     #[error("Unauthorized - requires sender to be a Market's Credit Agency")]
     RequiresCreditAgency {},
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }
