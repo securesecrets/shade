@@ -9,9 +9,11 @@ use shade_protocol::{
     utils::Query,
 };
 
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG, VIEWING_KEY};
+use crate::{
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::{Config, CONFIG, VIEWING_KEY},
+};
 
 use lending_utils::token::Token;
 
@@ -124,7 +126,36 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     use ExecuteMsg::*;
-    Ok(Response::new())
+    match msg {
+        Withdraw { amount } => execute::withdraw(deps, env, info, amount),
+    }
+}
+
+mod execute {
+    use lending_utils::{
+        amount::{base_to_token, token_to_base},
+        coin::Coin,
+    };
+    use shade_protocol::{
+        c_std::{from_binary, SubMsg},
+        contract_interfaces::snip20::Snip20ReceiveMsg,
+    };
+
+    use crate::interest::{
+        calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate,
+    };
+
+    use super::*;
+
+    /// Handler for `ExecuteMsg::Withdraw`
+    pub fn withdraw(
+        mut deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        amount: Uint128,
+    ) -> Result<Response, ContractError> {
+        Ok(Response::new())
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

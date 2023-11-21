@@ -45,3 +45,126 @@ pub struct Config {
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+
+pub mod debt {
+    use super::*;
+
+    use cosmwasm_schema::cw_serde;
+    use shade_protocol::{
+        c_std::{StdResult, Storage},
+        secret_storage_plus::Map,
+    };
+
+    use crate::ContractError;
+    use lending_utils::amount::{base_to_token, token_to_base};
+
+    #[cw_serde]
+    struct DebtInfo {
+        /// Total amount of debt
+        pub total_points: Uint128,
+        /// The multiplier used to convert the `total_points` to base tokens
+        pub multiplier: Decimal,
+    }
+
+    /// Total amount of debt per user
+    const DEBT: Map<&Addr, Uint128> = Map::new("debt");
+    const DEBT_INFO: Item<DebtInfo> = Item::new("debt_info");
+
+    pub fn init(storage: &mut dyn Storage) -> StdResult<()> {
+        DEBT_INFO.save(
+            storage,
+            &DebtInfo {
+                total_points: Uint128::zero(),
+                multiplier: Decimal::from_ratio(1u128, 100_000u128),
+            },
+        )
+    }
+
+    pub fn multiplier(storage: &dyn Storage) -> StdResult<Decimal> {
+        Ok(DEBT_INFO.load(storage)?.multiplier)
+    }
+
+    /// Returns the total amount of debt in base tokens, as well as the multiplier
+    pub fn total(storage: &dyn Storage) -> StdResult<(Uint128, Decimal)> {
+        let info = DEBT_INFO.load(storage)?;
+        Ok((
+            token_to_base(info.total_points, info.multiplier),
+            info.multiplier,
+        ))
+    }
+
+    /// Returns the amount of debt in base tokens for the given address
+    pub fn of(storage: &dyn Storage, address: &Addr) -> Result<Uint128, ContractError> {
+        let raw_balance = DEBT.may_load(storage, address)?.unwrap_or_default();
+        let multiplier = multiplier(storage)?;
+        Ok(token_to_base(raw_balance, multiplier))
+    }
+
+    /// Changes the multiplier by the given ratio
+    pub fn rebase(storage: &mut dyn Storage, ratio: Decimal) -> Result<(), ContractError> {
+        DEBT_INFO.update(storage, |mut info| -> StdResult<_> {
+            info.multiplier *= ratio;
+            Ok(info)
+        })?;
+        Ok(())
+    }
+
+    /// Increases the debt by the given amount of base tokens
+    pub fn increase(
+        storage: &mut dyn Storage,
+        recipient: &Addr,
+        base_amount: Uint128,
+    ) -> Result<(), ContractError> {
+        if base_amount.is_zero() {
+            return Ok(());
+        }
+
+        change_amount(storage, recipient, |old_amount, multiplier| {
+            old_amount + base_to_token(base_amount, multiplier)
+        })
+    }
+
+    /// Decrease the debt by the given amount of base tokens.
+    /// Returns the leftover amount of base tokens
+    pub fn decrease(
+        storage: &mut dyn Storage,
+        from: &Addr,
+        base_amount: Uint128,
+    ) -> Result<Uint128, ContractError> {
+        if base_amount.is_zero() {
+            return Ok(Uint128::zero());
+        }
+
+        // If there are more tokens sent then there are to repay, burn only desired
+        // amount and return the difference
+        let mut surplus = Uint128::zero();
+        change_amount(storage, from, |old_amount, multiplier| {
+            // convert from base currency to equivalent token amount to reduce rounding error
+            let points = base_to_token(base_amount, multiplier);
+            if points >= old_amount {
+                surplus = token_to_base(points - old_amount, multiplier);
+                Uint128::zero()
+            } else {
+                old_amount - points
+            }
+        })?;
+        Ok(surplus)
+    }
+
+    fn change_amount(
+        storage: &mut dyn Storage,
+        account: &Addr,
+        mut change: impl FnMut(Uint128, Decimal) -> Uint128,
+    ) -> Result<(), ContractError> {
+        let mut info = DEBT_INFO.load(storage)?;
+        info.total_points = change(info.total_points, info.multiplier);
+        DEBT_INFO.save(storage, &info)?;
+
+        DEBT.update(storage, account, |debt| -> StdResult<_> {
+            let new_debt = change(debt.unwrap_or_default(), info.multiplier);
+            Ok(new_debt)
+        })?;
+
+        Ok(())
+    }
+}

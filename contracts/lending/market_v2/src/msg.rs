@@ -1,8 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::c_std::{ContractInfo, Decimal, Timestamp, Uint128};
 
-use lending_utils::interest::Interest;
-use lending_utils::{coin::Coin, token::Token};
+use lending_utils::{
+    interest::Interest,
+    {coin::Coin, token::Token},
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -45,7 +47,11 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub enum ExecuteMsg {}
+pub enum ExecuteMsg {
+    /// This requests to withdraw the amount of C Tokens. More specifically,
+    /// the contract will burn amount C Tokens and return that to the lender in base asset.
+    Withdraw { amount: Uint128 },
+}
 
 #[cw_serde]
 #[derive(QueryResponses)]
