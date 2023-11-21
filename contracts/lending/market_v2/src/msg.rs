@@ -1,5 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::c_std::{ContractInfo, Decimal, Timestamp, Uint128};
+use shade_protocol::{
+    c_std::{ContractInfo, Decimal, Timestamp, Uint128},
+    utils::{asset::Contract, Query},
+};
 
 use lending_utils::{
     interest::Interest,
@@ -44,6 +47,10 @@ pub struct InstantiateMsg {
     pub viewing_key: String,
     // I have no idea what to do with it
     pub ctoken_code_hash: String,
+    // I have no idea what to do with it
+    pub credit_agency_code_hash: String,
+    /// Oracle address
+    pub oracle: Contract,
 }
 
 #[cw_serde]
@@ -56,6 +63,19 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[cw_serde]
+pub enum QueryTotalCreditLine {
+    TotalCreditLine { account: String },
+}
+
+impl Query for QueryTotalCreditLine {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[cw_serde]
 pub struct InterestResponse {

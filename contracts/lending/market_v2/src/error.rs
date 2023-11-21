@@ -1,9 +1,9 @@
-use lending_utils::interest::InterestError;
 use shade_protocol::c_std::{OverflowError, StdError, Uint128};
 use thiserror::Error;
 
-use lending_utils::credit_line::InvalidCommonTokenDenom;
-use lending_utils::price::PriceError;
+use lending_utils::{
+    credit_line::InvalidCommonTokenDenom, interest::InterestError, price::PriceError,
+};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -24,4 +24,16 @@ pub enum ContractError {
 
     #[error("{0}")]
     InterestError(#[from] InterestError),
+
+    #[error("Unrecognised token: {0}")]
+    UnrecognisedToken(String),
+
+    #[error("Fatal: market collateral ratio is zero")]
+    ZeroCollateralRatio {},
+
+    #[error("{0}")]
+    InvalidCommonTokenDenom(#[from] InvalidCommonTokenDenom),
+
+    #[error("Fatal: market token price is zero")]
+    ZeroPrice {},
 }

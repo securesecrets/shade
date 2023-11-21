@@ -1,8 +1,9 @@
-use std::iter::Sum;
-use std::ops::Add;
+use std::{iter::Sum, ops::Add};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
 use shade_protocol::c_std::Uint128;
 
 use crate::{coin::Coin, token::Token};
@@ -124,7 +125,8 @@ impl<'a> Sum<&'a Self> for CreditLineValues {
 }
 
 /// Used for when CreditLineResponse validation fails
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
+#[error("Invalid token denomination: expected {expected:?}, but found {actual:?}")]
 pub struct InvalidCommonTokenDenom {
     pub expected: Token,
     pub actual: Token,

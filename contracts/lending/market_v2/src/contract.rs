@@ -6,7 +6,7 @@ use shade_protocol::{
         Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
     query_authentication::viewing_keys,
-    utils::Query,
+    utils::{asset::Contract, Query},
 };
 
 use crate::{
@@ -61,7 +61,7 @@ pub fn instantiate(
         common_token: msg.common_token,
         collateral_ratio: msg.collateral_ratio,
         price_oracle: msg.price_oracle,
-        credit_agency: info.sender.clone(),
+        credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
     };
@@ -128,6 +128,98 @@ pub fn execute(
     use ExecuteMsg::*;
     match msg {
         Withdraw { amount } => execute::withdraw(deps, env, info, amount),
+    }
+}
+
+// Available credit line helpers
+mod cr_lending_utils {
+    use super::*;
+
+    use shade_protocol::c_std::{Deps, DivideByZeroError, Fraction};
+
+    use lending_utils::{
+        amount::base_to_token,
+        credit_line::{CreditLineResponse, CreditLineValues},
+    };
+
+    use crate::{interest::query_ctoken_multiplier, msg::QueryTotalCreditLine};
+
+    pub fn divide(top: Uint128, bottom: Decimal) -> Result<Uint128, DivideByZeroError> {
+        (top * bottom.denominator()).checked_div(bottom.numerator())
+    }
+
+    fn available_local_tokens(
+        deps: Deps,
+        common_tokens: Uint128,
+    ) -> Result<Uint128, ContractError> {
+        // Price is defined as common/local
+        // (see price_market_local_per_common function from this file)
+        divide(
+            common_tokens,
+            query::price_market_local_per_common(deps)?.rate_sell_per_buy,
+        )
+        .map_err(|_| ContractError::ZeroPrice {})
+    }
+
+    /// Returns the amount of local tokens that can be borrowed
+    pub fn query_borrowable_tokens(
+        deps: Deps,
+        config: &Config,
+        account: String,
+    ) -> Result<Uint128, ContractError> {
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine { account }
+            .query(&deps.querier, &config.credit_agency)?;
+        let credit = credit.validate(&config.common_token.clone())?;
+
+        query_borrowable_tokens_with_creditvalues(deps, &credit)
+    }
+
+    /// Returns how many market token is it possible to borrow given a `CreditLineValues`.
+    pub fn query_borrowable_tokens_with_creditvalues(
+        deps: Deps,
+        credit: &CreditLineValues,
+    ) -> Result<Uint128, ContractError> {
+        // Available credit for that account amongst all markets
+        let available_common = credit.borrow_limit.saturating_sub(credit.debt);
+        let available_local = available_local_tokens(deps, available_common)?;
+        Ok(available_local)
+    }
+
+    /// Helper that determines if an address can borrow the specified amount.
+    pub fn can_borrow(
+        deps: Deps,
+        config: &Config,
+        account: impl Into<String>,
+        amount: Uint128,
+    ) -> Result<bool, ContractError> {
+        let available = query_borrowable_tokens(deps, config, account.into())?;
+        Ok(amount <= available)
+    }
+
+    /// Helper returning amount of tokens available to transfer/withdraw
+    pub fn transferable_amount(
+        deps: Deps,
+        config: &Config,
+        account: impl Into<String>,
+    ) -> Result<Uint128, ContractError> {
+        let account = account.into();
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine {
+            account: account.clone(),
+        }
+        .query(&deps.querier, &config.credit_agency)?;
+        let credit = credit.validate(&config.common_token.clone())?;
+
+        let available = query_borrowable_tokens_with_creditvalues(deps, &credit)?;
+        let mut can_transfer = divide(available, config.collateral_ratio)
+            .map_err(|_| ContractError::ZeroCollateralRatio {})?;
+        if credit.debt.u128() == 0 {
+            let multiplier = query_ctoken_multiplier(deps, config)?;
+            can_transfer = std::cmp::max(
+                base_to_token(can_transfer, multiplier),
+                query::ctoken_balance(deps, config, &account)?.amount,
+            );
+        }
+        Ok(can_transfer)
     }
 }
 
@@ -336,30 +428,32 @@ mod query {
     //     })
     // }
 
-    // /// Handler for `QueryMsg::PriceMarketLocalPerCommon`
-    // /// Returns the ratio of the twap of the market token over the common token.
-    // pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
-    //     // If tokens are the same, just return 1:1.
-    //     if config.common_token == config.market_token {
-    //         Ok(PriceRate {
-    //             sell_denom: config.market_token.clone(),
-    //             buy_denom: config.common_token,
-    //             rate_sell_per_buy: Decimal::one(),
-    //         })
-    //     } else {
-    //         let price_response: TwapResponse = OracleQueryMsg::Twap {
-    //             offer: config.market_token.clone().into(),
-    //             ask: config.common_token.clone().into(),
-    //         }
-    //         .query(&deps.querier, config.price_oracle.clone())?;
-    //         Ok(PriceRate {
-    //             sell_denom: config.market_token,
-    //             buy_denom: config.common_token,
-    //             rate_sell_per_buy: price_response.a_per_b,
-    //         })
-    //     }
-    // }
+    /// Handler for `QueryMsg::PriceMarketLocalPerCommon`
+    /// Returns the ratio of the twap of the market token over the common token.
+    pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
+        todo!();
+
+        // let config = CONFIG.load(deps.storage)?;
+        // // If tokens are the same, just return 1:1.
+        // if config.common_token == config.market_token {
+        //     Ok(PriceRate {
+        //         sell_denom: config.market_token.clone(),
+        //         buy_denom: config.common_token,
+        //         rate_sell_per_buy: Decimal::one(),
+        //     })
+        // } else {
+        //     let price_response: TwapResponse = OracleQueryMsg::Twap {
+        //         offer: config.market_token.clone().into(),
+        //         ask: config.common_token.clone().into(),
+        //     }
+        //     .query(&deps.querier, config.price_oracle.clone())?;
+        //     Ok(PriceRate {
+        //         sell_denom: config.market_token,
+        //         buy_denom: config.common_token,
+        //         rate_sell_per_buy: price_response.a_per_b,
+        //     })
+        // }
+    }
 
     // /// Handler for `QueryMsg::CreditLine`
     // /// Returns the debt and credit situation of the `account` after applying interests.
