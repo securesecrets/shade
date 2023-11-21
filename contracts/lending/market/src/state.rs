@@ -1,8 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::Item;
+use shade_protocol::{
+    c_std::{Addr, Decimal, Uint128},
+    secret_storage_plus::Item,
+};
 
 use lending_utils::{interest::ValidatedInterest, token::Token};
 

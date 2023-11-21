@@ -9,7 +9,7 @@ use wyndex::{
 };
 use wyndex_tests::builder::{WyndexSuite, WyndexSuiteBuilder};
 
-use cosmwasm_std::{coin, to_binary, Addr, Binary, Coin, Decimal, Empty, StdResult, Uint128};
+use shade_protocol::c_std::{coin, to_binary, Addr, Binary, Coin, Decimal, Empty, StdResult, Uint128};
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, Cw20QueryMsg, MinterResponse};
 use cw_multi_test::{App, AppResponse, BankSudo, Contract, ContractWrapper, Executor, SudoMsg};
 

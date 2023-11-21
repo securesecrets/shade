@@ -1,5 +1,5 @@
-use cosmwasm_std::{OverflowError, StdError, Uint128};
 use lending_utils::interest::InterestError;
+use shade_protocol::c_std::{OverflowError, StdError, Uint128};
 use thiserror::Error;
 
 use lending_utils::credit_line::InvalidCommonTokenDenom;

@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use shade_protocol::c_std::Uint128;
 use lending_utils::{coin::coin_native, token::Token};
 use wyndex::factory::PairType;
 

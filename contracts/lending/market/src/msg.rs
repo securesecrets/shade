@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Timestamp, Uint128};
+use shade_protocol::c_std::{Decimal, Timestamp, Uint128};
 
 use lending_utils::interest::Interest;
 use lending_utils::{coin::Coin, token::Token};
@@ -108,6 +108,13 @@ pub enum ExecuteMsg {
     AdjustInterestRates {
         new_interest_rates: Interest,
     },
+}
+
+#[cw_serde]
+pub enum ReceiveMsg {
+    Deposit,
+    Repay,
+    RepayTo { account: String },
 }
 
 #[cw_serde]

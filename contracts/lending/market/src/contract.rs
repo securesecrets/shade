@@ -1,8 +1,11 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+use shade_protocol::c_std::entry_point;
+use shade_protocol::{
+    c_std::{
+        to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
+        Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+    },
+    utils::Query,
 };
 
 use crate::error::ContractError;
@@ -83,7 +86,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 mod reply {
     use super::*;
 
-    use cw_lending_utils::parse_reply_instantiate_data;
+    use cw_utils::parse_reply_instantiate_data;
 
     pub fn token_instantiate_reply(
         deps: DepsMut,
@@ -237,10 +240,8 @@ mod cr_lending_utils {
         config: &Config,
         account: String,
     ) -> Result<Uint128, ContractError> {
-        let credit: CreditLineResponse = deps.querier.query_wasm_smart(
-            &config.credit_agency,
-            &QueryTotalCreditLine::TotalCreditLine { account },
-        )?;
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine { account }
+            .query(&deps.querier, &config.credit_agency)?;
         let credit = credit.validate(&config.common_token.clone())?;
 
         query_borrowable_tokens_with_creditvalues(deps, &credit)
@@ -275,12 +276,10 @@ mod cr_lending_utils {
         account: impl Into<String>,
     ) -> Result<Uint128, ContractError> {
         let account = account.into();
-        let credit: CreditLineResponse = deps.querier.query_wasm_smart(
-            &config.credit_agency,
-            &QueryTotalCreditLine::TotalCreditLine {
-                account: account.clone(),
-            },
-        )?;
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine {
+            account: account.clone(),
+        }
+        .query(&deps.querier, &config.credit_agency)?;
         let credit = credit.validate(&config.common_token.clone())?;
 
         let available = query_borrowable_tokens_with_creditvalues(deps, &credit)?;
@@ -298,11 +297,13 @@ mod cr_lending_utils {
 }
 
 mod execute {
-    use cosmwasm_std::{from_binary, SubMsg};
-    use cw20::Cw20ReceiveMsg;
     use lending_utils::{
         amount::{base_to_token, token_to_base},
         coin::Coin,
+    };
+    use shade_protocol::{
+        c_std::{from_binary, SubMsg},
+        contract_interfaces::snip20::Snip20ReceiveMsg,
     };
 
     use crate::{
@@ -831,11 +832,11 @@ mod execute {
     //         .add_message(send_msg))
     // }
 
-    pub fn receive_cw20_message(
+    pub fn receive_snip20_message(
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: Cw20ReceiveMsg,
+        msg: Snip20ReceiveMsg,
     ) -> Result<Response, ContractError> {
         use ReceiveMsg::*;
         // TODO: make functions accept or Addr or String
@@ -910,12 +911,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 mod query {
     use super::*;
 
-    use cosmwasm_std::{Decimal, Deps, Uint128};
-    use cw20::BalanceResponse;
+    use shade_protocol::c_std::{Decimal, Deps, Uint128};
+
     use lend_token::msg::{QueryMsg as TokenQueryMsg, TokenInfoResponse};
-    use lending_utils::coin::Coin;
-    use lending_utils::credit_line::{CreditLineResponse, CreditLineValues};
-    use lending_utils::price::{coin_times_price_rate, PriceRate};
+    use lending_utils::{
+        coin::Coin,
+        credit_line::{CreditLineResponse, CreditLineValues},
+        price::{coin_times_price_rate, PriceRate},
+    };
     use wyndex::oracle::TwapResponse;
     use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
 
@@ -928,8 +931,7 @@ mod query {
         token_contract: &Addr,
         address: String,
     ) -> StdResult<BalanceResponse> {
-        deps.querier
-            .query_wasm_smart(token_contract, &TokenQueryMsg::Balance { address })
+        TokenQueryMsg::Balance { address }.query(&deps.querier, token_contract)
     }
 
     fn base_balance(
@@ -937,8 +939,7 @@ mod query {
         token_contract: &Addr,
         address: String,
     ) -> StdResult<BalanceResponse> {
-        deps.querier
-            .query_wasm_smart(token_contract, &TokenQueryMsg::BaseBalance { address })
+        TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
     }
 
     pub fn ctoken_balance(
@@ -1081,13 +1082,11 @@ mod query {
                 rate_sell_per_buy: Decimal::one(),
             })
         } else {
-            let price_response: TwapResponse = deps.querier.query_wasm_smart(
-                config.price_oracle.clone(),
-                &OracleQueryMsg::Twap {
-                    offer: config.market_token.clone().into(),
-                    ask: config.common_token.clone().into(),
-                },
-            )?;
+            let price_response: TwapResponse = OracleQueryMsg::Twap {
+                offer: config.market_token.clone().into(),
+                ask: config.common_token.clone().into(),
+            }
+            .query(&deps.querier, config.price_oracle.clone())?;
             Ok(PriceRate {
                 sell_denom: config.market_token,
                 buy_denom: config.common_token,
