@@ -471,40 +471,40 @@ mod query {
         }
     }
 
-    // /// Handler for `QueryMsg::CreditLine`
-    // /// Returns the debt and credit situation of the `account` after applying interests.
-    // pub fn credit_line(
-    //     deps: Deps,
-    //     env: Env,
-    //     account: Addr,
-    // ) -> Result<CreditLineResponse, ContractError> {
-    //     let config = CONFIG.load(deps.storage)?;
-    //     let mut collateral = ctoken_base_balance(deps, &config, &account)?;
-    //     let mut debt = Coin {
-    //         denom: config.market_token.clone(),
-    //         amount: debt::of(deps.storage, &account)?,
-    //     };
+    /// Handler for `QueryMsg::CreditLine`
+    /// Returns the debt and credit situation of the `account` after applying interests.
+    pub fn credit_line(
+        deps: Deps,
+        env: Env,
+        account: Addr,
+    ) -> Result<CreditLineResponse, ContractError> {
+        let config = CONFIG.load(deps.storage)?;
+        let mut collateral = ctoken_base_balance(deps, &config, &account)?;
+        let mut debt = Coin {
+            denom: config.market_token.clone(),
+            amount: debt::of(deps.storage, &account)?,
+        };
 
-    //     // Simulate charging interest for any periods `charge_interest` wasn't called for yet
-    //     if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
-    //         collateral.amount += collateral.amount * update.ctoken_ratio;
-    //         debt.amount += debt.amount * update.debt_ratio;
-    //     }
+        // Simulate charging interest for any periods `charge_interest` wasn't called for yet
+        if let Some(update) = calculate_interest(deps, epochs_passed(&config, env)?)? {
+            collateral.amount += collateral.amount * update.ctoken_ratio;
+            debt.amount += debt.amount * update.debt_ratio;
+        }
 
-    //     if collateral.amount.is_zero() && debt.amount.is_zero() {
-    //         return Ok(CreditLineValues::zero().make_response(config.common_token));
-    //     }
+        if collateral.amount.is_zero() && debt.amount.is_zero() {
+            return Ok(CreditLineValues::zero().make_response(config.common_token));
+        }
 
-    //     let price_ratio = price_market_local_per_common(deps)?;
-    //     let collateral = coin_times_price_rate(&collateral, &price_ratio)?;
-    //     let debt = coin_times_price_rate(&debt, &price_ratio)?.amount;
-    //     let credit_line = collateral.amount * config.collateral_ratio;
-    //     let borrow_limit = credit_line * config.borrow_limit_ratio;
-    //     Ok(
-    //         CreditLineValues::new(collateral.amount, credit_line, borrow_limit, debt)
-    //             .make_response(config.common_token),
-    //     )
-    // }
+        let price_ratio = price_market_local_per_common(deps)?;
+        let collateral = coin_times_price_rate(&collateral, &price_ratio)?;
+        let debt = coin_times_price_rate(&debt, &price_ratio)?.amount;
+        let credit_line = collateral.amount * config.collateral_ratio;
+        let borrow_limit = credit_line * config.borrow_limit_ratio;
+        Ok(
+            CreditLineValues::new(collateral.amount, credit_line, borrow_limit, debt)
+                .make_response(config.common_token),
+        )
+    }
 
     // /// Handler for `QueryMsg::Reserve`
     // pub fn reserve(deps: Deps, env: Env) -> Result<ReserveResponse, ContractError> {
