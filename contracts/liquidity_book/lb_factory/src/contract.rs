@@ -1,4 +1,5 @@
 use crate::{
+    error,
     prelude::*,
     state::*,
     types::{LBPair, LBPairInformation, NextPairKey},
@@ -787,6 +788,7 @@ fn try_remove_quote_asset(
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
         &config.admin_auth,
+        &state.admin_auth,
     )?;
     // Enumerate the iterator and use `find` to locate the asset
     let found_asset = QUOTE_ASSET_WHITELIST
@@ -816,11 +818,14 @@ fn try_remove_quote_asset(
 
 fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
     let config = CONFIG.load(deps.storage)?;
+fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
+    let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
         &config.admin_auth,
+        &state.admin_auth,
     )?;
 
     let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);
@@ -980,6 +985,7 @@ fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
 /// * lb_pair - The address of the LBPair at index `index`.
 // TODO: Unsure if this function is necessary. Not sure how to index the Keyset. WAITING: For Front-end to make some decisions about this
 fn query_lb_pair_at_index(_deps: Deps, _index: u32) -> Result<Binary> {
+fn query_lb_pair_at_index(deps: Deps, index: u32) -> Result<Binary> {
     let lb_pair = todo!();
 
     let response = LBPairAtIndexResponse { lb_pair };
@@ -1313,6 +1319,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 Ok(Response::default()
                     .add_attribute("lb_pair_address", lb_pair.contract.address)
                     .add_attribute("lb_pair_hash", lb_pair.contract.code_hash))
+                    .add_attribute("lb_pair_address", lb_pair.contract.address.to_string())
+                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash.to_string()))
             }
             None => Err(StdError::generic_err("Expecting contract id")),
         },

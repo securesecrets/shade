@@ -393,6 +393,29 @@ pub fn query_preset(
         Ok(response) => Ok(response),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
+        Ok(lb_factory::PresetResponse {
+            base_factor,
+            filter_period,
+            decay_period,
+            reduction_factor,
+            variable_fee_control,
+            protocol_share,
+            max_volatility_accumulator,
+            is_open,
+        }) => {
+            return Ok((
+                base_factor,
+                filter_period,
+                decay_period,
+                reduction_factor,
+                variable_fee_control,
+                protocol_share,
+                max_volatility_accumulator,
+                is_open,
+            ));
+        }
+        Err(e) => return Err(StdError::generic_err(e.to_string())),
+    };
 }
 
 pub fn query_number_of_quote_assets(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u32> {

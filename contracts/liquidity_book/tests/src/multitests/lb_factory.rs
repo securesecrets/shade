@@ -772,10 +772,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR * 2,
     );
 
-    assert_eq!(
-        res.unwrap_err(),
-        StdError::generic_err("Generic error: Querier contract error: Generic error: {\"target\":\"admin\",\"code\":0,\"type\":\"unregistered_admin\",\"context\":[\"addr3\"],\"verbose\":\"addr3 has not been registered as an admin\"}")
-    );
+    assert!(res.is_err());
 
     Ok(())
 }

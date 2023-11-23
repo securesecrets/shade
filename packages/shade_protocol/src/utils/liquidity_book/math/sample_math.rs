@@ -44,7 +44,6 @@ impl OracleSample {
         cumulative_volatility: u64,
         cumulative_bin_crossed: u64,
         sample_lifetime: u8,
-        // TODO - check that this value fits it a uint40
         created_at: u64,
     ) -> OracleSample {
         let mut sample = EncodedSample::default();

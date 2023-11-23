@@ -1,4 +1,32 @@
 use crate::{prelude::*, state::*};
+#![allow(unused)] // For beginning only.
+
+use crate::{error, prelude::*, state::*};
+use core::panic;
+use cosmwasm_std::{
+    from_binary,
+    to_binary,
+    Addr,
+    Attribute,
+    BankMsg,
+    Binary,
+    Coin,
+    ContractInfo,
+    CosmosMsg,
+    Decimal,
+    Deps,
+    DepsMut,
+    Env,
+    MessageInfo,
+    Response,
+    StdError,
+    StdResult,
+    SubMsgResult,
+    Timestamp,
+    Uint128,
+    Uint256,
+    WasmMsg,
+};
 
 use ethnum::U256;
 use serde::Serialize;
@@ -28,6 +56,12 @@ use shade_protocol::{
         Uint128,
         Uint256,
         WasmMsg,
+    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
+    c_std::{shd_entry_point, Reply, SubMsg},
+    contract_interfaces::liquidity_book::{
+        lb_pair::*,
+        lb_token,
+        lb_token::InstantiateMsg as LBTokenInstantiateMsg,
     },
     contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
     lb_libraries::{
@@ -177,6 +211,7 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &state)?;
     ORACLE.save(deps.storage, &oracle)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
     BIN_TREE.save(deps.storage, &tree)?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
@@ -200,12 +235,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             | ExecuteMsg::SwapTokens { .. }
             | ExecuteMsg::Receive(..) => {
                 return Err(Error::TransactionBlock());
+                return Err(error::LBPairError::TransactionBlock());
             }
             _ => {}
         },
         ContractStatus::LpWithdrawOnly => match msg {
             ExecuteMsg::AddLiquidity { .. } | ExecuteMsg::SwapTokens { .. } => {
                 return Err(Error::TransactionBlock());
+                return Err(error::LBPairError::TransactionBlock());
             }
             _ => {}
         },
@@ -442,6 +479,7 @@ fn try_swap(
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
     let amount_out: u128;
+    let amount_out;
 
     if swap_for_y {
         amount_out = amounts_out.decode_y();
@@ -728,6 +766,8 @@ fn mint(
 
     let _token_x = state.token_x;
     let _token_y = state.token_y;
+    let token_x = state.token_x;
+    let token_y = state.token_y;
 
     if liquidity_configs.is_empty() {
         return Err(Error::EmptyMarketConfigs);
@@ -1428,6 +1468,7 @@ fn receiver_callback(
             let contract_status = CONTRACT_STATUS.load(deps.storage)?;
             if contract_status == ContractStatus::LpWithdrawOnly {
                 return Err(Error::TransactionBlock());
+                return Err(error::LBPairError::TransactionBlock());
             }
 
             //validate recipient address
@@ -1505,6 +1546,45 @@ fn query_pair_info(deps: Deps) -> Result<Binary> {
         liquidity_token: shade_protocol::Contract {
             address: state.lb_token.address,
             code_hash: state.lb_token.code_hash,
+    Ok(
+        shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
+            liquidity_token: shade_protocol::Contract {
+                address: state.lb_token.address,
+                code_hash: state.lb_token.code_hash,
+            },
+            factory: Some(shade_protocol::Contract {
+                address: state.factory.address,
+                code_hash: state.factory.code_hash,
+            }),
+            pair: shadeswap_shared::core::TokenPair {
+                0: state.token_x,
+                1: state.token_y,
+                2: false,
+            },
+            amount_0: Uint128::from(reserve_x),
+            amount_1: Uint128::from(reserve_y),
+            total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
+            contract_version: LB_PAIR_CONTRACT_VERSION,
+            fee_info: shadeswap_shared::amm_pair::FeeInfo {
+                shade_dao_address: state.protocol_fees_recipient,
+                lp_fee: shadeswap_shared::core::Fee {
+                    nom: 0,
+                    denom: 1_000_000_000_000_000_000,
+                },
+                shade_dao_fee: shadeswap_shared::core::Fee {
+                    nom: 0,
+                    denom: 1_000_000_000_000_000_000,
+                },
+                stable_lp_fee: shadeswap_shared::core::Fee {
+                    nom: 0,
+                    denom: 1_000_000_000_000_000_000,
+                },
+                stable_shade_dao_fee: shadeswap_shared::core::Fee {
+                    nom: 0,
+                    denom: 1_000_000_000_000_000_000,
+                },
+            },
+            stable_info: None,
         },
         factory: Some(shade_protocol::Contract {
             address: state.factory.address,
@@ -1583,6 +1663,15 @@ fn query_swap_simulation(
         shade_dao_fee_amount: res.shade_dao_fees, // dao fee
         result: SwapResult {
             return_amount: res.amount_out,
+    Ok(
+        shadeswap_shared::msg::amm_pair::QueryMsgResponse::SwapSimulation {
+            total_fee_amount: res.total_fees,
+            lp_fee_amount: res.lp_fees,
+            shade_dao_fee_amount: res.shade_dao_fees,
+            result: SwapResult {
+                return_amount: res.amount_out,
+            },
+            price,
         },
         price,
     };
@@ -2094,6 +2183,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
     let mut amounts_in_left = Bytes32::encode_alt(amount_in, swap_for_y);
     let mut amounts_out = [0u8; 32];
     let _fee = 0u128;
+    let mut fee = 0u128;
     let mut total_fees: [u8; 32] = [0; 32];
     let mut lp_fees: [u8; 32] = [0; 32];
     let mut shade_dao_fees: [u8; 32] = [0; 32];
@@ -2154,6 +2244,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
         lp_fees: Uint128::from(lp_fees.decode_alt(swap_for_y)),
     };
     to_binary(&response).map_err(Error::CwErr)
+    })
 }
 
 /// Returns the Liquidity Book Factory.

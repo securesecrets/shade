@@ -14,6 +14,20 @@ use shade_protocol::{
         oracle_helper::OracleError,
         pair_parameter_helper::PairParametersError,
     },
+use fee_helper::FeeError;
+use math::{
+    liquidity_configurations::LiquidityConfigurationsError,
+    u128x128_math::U128x128MathError,
+    u256x256_math::U256x256MathError,
+};
+use oracle_helper::OracleError;
+use pair_parameter_helper::PairParametersError;
+use shade_protocol::lb_libraries::{
+    bin_helper,
+    fee_helper,
+    math,
+    oracle_helper,
+    pair_parameter_helper,
 };
 
 #[derive(thiserror::Error, Debug)]

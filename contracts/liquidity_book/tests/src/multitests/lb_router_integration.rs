@@ -102,7 +102,6 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         "entropy".to_string(),
     )?;
     //        c. LP token contract -> initializated with lb_pair
-    //  TODO: d. Staking contract
 
     //     13. LIST the AMM pairs and ASSERT that there's only 1 AMM pair.
     let all_pairs =

@@ -12,6 +12,27 @@ use shade_protocol::{
 
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const CONFIG: Item<Config> = Item::new("config");
+#![allow(unused)] // For beginning only.
+
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, ContractInfo, Storage};
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use pair_parameter_helper::PairParameters;
+use shade_protocol::{
+    secret_storage_plus::{AppendStore, Item, Map},
+    Contract,
+};
+use tokens::TokenType;
+
+use shade_protocol::lb_libraries::{pair_parameter_helper, tokens, types};
+use types::{Bytes32, ContractInstantiationInfo};
+
+use crate::{
+    prelude::*,
+    types::{LBPair, LBPairInformation, NextPairKey},
+};
+pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
+pub const CONFIG: Item<State> = Item::new("config");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 // pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");
@@ -39,6 +60,12 @@ pub const AVAILABLE_LB_PAIR_BIN_STEPS: Map<(String, String), Vec<u16>> =
     Map::new("available_lb_pair_bin_steps");
 
 //TODO: add multiple other status according to your need
+#[cw_serde]
+pub enum ContractStatus {
+    Active,    // allows all operations
+    FreezeAll, // blocks everything except admin-protected config changes
+}
+
 #[cw_serde]
 pub enum ContractStatus {
     Active,    // allows all operations
