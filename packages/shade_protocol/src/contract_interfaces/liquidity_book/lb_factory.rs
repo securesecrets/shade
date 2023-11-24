@@ -6,7 +6,9 @@ use crate::{
     utils::{
         asset::RawContract,
         liquidity_book::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-        ExecuteCallback, InstantiateCallback, Query,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
     },
 };
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;

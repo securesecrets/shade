@@ -5,9 +5,13 @@
 
 use ethnum::{I256, U256};
 
-use super::constants::*;
-use super::math::u128x128_math::{U128x128Math, U128x128MathError};
-use super::math::u256x256_math::{U256x256Math, U256x256MathError};
+use super::{
+    constants::*,
+    math::{
+        u128x128_math::{U128x128Math, U128x128MathError},
+        u256x256_math::{U256x256Math, U256x256MathError},
+    },
+};
 
 // represents a 24 bit number (u24)
 const REAL_ID_SHIFT: I256 = I256::new(1 << 23);

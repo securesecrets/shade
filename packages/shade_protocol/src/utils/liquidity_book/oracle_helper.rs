@@ -20,7 +20,9 @@ use serde::{Deserialize, Serialize};
 
 use super::pair_parameter_helper::PairParameters;
 use crate::utils::liquidity_book::math::{
-    encoded_sample::EncodedSample, sample_math::OracleSample, u256x256_math::addmod,
+    encoded_sample::EncodedSample,
+    sample_math::OracleSample,
+    u256x256_math::addmod,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -318,7 +320,7 @@ impl Oracle {
         // It's confusing looking because we don't have methods for pow or bitOR for bytes32,
         // so we have to convert to U256 and back.
         let new_sample =
-            (U256::from_le_bytes(sample.0 .0) ^ U256::from(length)) | U256::from(new_length);
+            (U256::from_le_bytes(sample.0.0) ^ U256::from(length)) | U256::from(new_length);
 
         self.set_sample(
             oracle_id,

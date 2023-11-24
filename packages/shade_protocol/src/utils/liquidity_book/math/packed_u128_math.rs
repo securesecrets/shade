@@ -7,8 +7,7 @@
 //! u128 is a 128-bit unsigned integer type, which means that its little-endian byte representation is 16 bytes long.
 //! A `Bytes32` value is a `[u8; 32]` and can hold 256 bits, or two `u128` values.
 
-use crate::utils::liquidity_book::types::Bytes32;
-use crate::c_std::StdError;
+use crate::{c_std::StdError, utils::liquidity_book::types::Bytes32};
 
 pub const BASIS_POINT_MAX: u128 = 10_000;
 

@@ -7,10 +7,11 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::ContractInfo;
 use ethnum::U256;
 
-pub use crate::utils::liquidity_book::math::{
-    liquidity_configurations::LiquidityConfigurations, tree_math::TreeUint24,
-};
 use crate::swap::core::TokenType;
+pub use crate::utils::liquidity_book::math::{
+    liquidity_configurations::LiquidityConfigurations,
+    tree_math::TreeUint24,
+};
 
 pub type Bytes32 = [u8; 32];
 

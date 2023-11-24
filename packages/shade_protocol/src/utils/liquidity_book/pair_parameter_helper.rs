@@ -594,7 +594,7 @@ mod tests {
 
         // For the second assertion, we'll mimic the bitwise operations
         let shifted_mask = MASK_UINT16 << OFFSET_ORACLE_ID;
-        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
+        let new_params_bits = U256::from_le_bytes(pair_params.0.0);
         let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
         assert_eq!(
@@ -624,7 +624,7 @@ mod tests {
                     assert_eq!(pair_params.get_volatility_reference(), volatility_reference);
 
                     let shifted_mask = MASK_UINT20 << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -776,7 +776,7 @@ mod tests {
         let mask_not_uint24 = !MASK_UINT24;
         let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
 
-        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
+        let new_params_bits = U256::from_le_bytes(pair_params.0.0);
         let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
         assert_eq!(

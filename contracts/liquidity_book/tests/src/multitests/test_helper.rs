@@ -1,4 +1,3 @@
-use cosmwasm_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256};
 use rand::Rng;
 use shade_multi_test::{
     interfaces::{
@@ -9,6 +8,7 @@ use shade_multi_test::{
     multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
+    c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
     lb_libraries::{constants::PRECISION, math::u24::U24},
     liquidity_book::lb_pair::LiquidityParameters,
     multi_test::App,

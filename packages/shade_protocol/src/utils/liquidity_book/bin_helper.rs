@@ -3,19 +3,25 @@
 //!
 //! This library contains functions to help interaction with bins.
 
-use crate::c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128};
-use crate::contract_interfaces::swap::core::TokenType;
+use crate::{
+    c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128},
+    contract_interfaces::swap::core::TokenType,
+};
 use ethnum::U256;
 
-use super::constants::{SCALE, SCALE_OFFSET};
-use super::fee_helper::{FeeError, FeeHelper};
-use super::math::packed_u128_math::PackedUint128Math;
-use super::math::u128x128_math::U128x128MathError;
-use super::math::u256x256_math::{U256x256Math, U256x256MathError};
-use super::pair_parameter_helper::{PairParameters, PairParametersError};
-use super::price_helper::PriceHelper;
-use super::transfer::HandleMsg;
-use super::types::Bytes32;
+use super::{
+    constants::{SCALE, SCALE_OFFSET},
+    fee_helper::{FeeError, FeeHelper},
+    math::{
+        packed_u128_math::PackedUint128Math,
+        u128x128_math::U128x128MathError,
+        u256x256_math::{U256x256Math, U256x256MathError},
+    },
+    pair_parameter_helper::{PairParameters, PairParametersError},
+    price_helper::PriceHelper,
+    transfer::HandleMsg,
+    types::Bytes32,
+};
 
 // NOTE: not sure if it's worth having a unique type for this
 
@@ -558,8 +564,10 @@ impl BinHelper {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::liquidity_book::math::encoded_sample::EncodedSample;
-    use crate::utils::liquidity_book::types::StaticFeeParameters;
+    use crate::utils::liquidity_book::{
+        math::encoded_sample::EncodedSample,
+        types::StaticFeeParameters,
+    };
     use cosmwasm_std::StdResult;
     use ethnum::U256;
     use std::str::FromStr;

@@ -1087,7 +1087,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     let is_quote_asset =
         lb_factory::query_is_quote_asset(&mut app, &lb_factory.clone().into(), usdc.clone())?;
     assert!(is_quote_asset, "test_remove_quote_asset::1");
-    
+
     // Remove usdc as a quote asset
     lb_factory::remove_quote_asset(
         &mut app,

@@ -1,5 +1,4 @@
 use crate::{
-    error,
     prelude::*,
     state::*,
     types::{LBPair, LBPairInformation, NextPairKey},

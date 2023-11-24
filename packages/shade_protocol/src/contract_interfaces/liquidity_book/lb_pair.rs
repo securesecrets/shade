@@ -1,13 +1,8 @@
 use crate::{
-    c_std::{
-        Addr,
-        ContractInfo,
-        Decimal256,
-        Uint128,
-        Uint256,
-    },
+    c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     snip20::Snip20ReceiveMsg,
+    swap::core::TokenType,
     utils::{
         asset::RawContract,
         liquidity_book::{
@@ -19,7 +14,6 @@ use crate::{
         Query,
     },
     Contract,
-    swap::core::TokenType,
 };
 
 #[cw_serde]

@@ -7,7 +7,8 @@ pub use super::{
     bin_helper::BinError,
     fee_helper::FeeError,
     math::{
-        liquidity_configurations::LiquidityConfigurationsError, u128x128_math::U128x128MathError,
+        liquidity_configurations::LiquidityConfigurationsError,
+        u128x128_math::U128x128MathError,
         u256x256_math::U256x256MathError,
     },
     oracle_helper::OracleError,

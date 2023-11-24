@@ -2,9 +2,11 @@
 //! Author: Haseeb
 //!
 
-use crate::snip20::helpers::token_info;
-use crate::Contract;
-use crate::utils::liquidity_book::transfer::{self, HandleMsg, QueryAnswer, QueryMsg};
+use crate::{
+    snip20::helpers::token_info,
+    utils::liquidity_book::transfer::{self, HandleMsg, QueryAnswer, QueryMsg},
+    Contract,
+};
 
 use std::fmt::{Display, Formatter, Result};
 
