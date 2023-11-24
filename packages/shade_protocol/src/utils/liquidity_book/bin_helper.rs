@@ -340,9 +340,9 @@ impl BinHelper {
             amount_in128 = max_amount_in;
             amount_out128 = bin_reserve_out;
         } else {
-            feeu128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
+            fee128 = FeeHelper::get_fee_amount_from(amount_in128, total_fee)?;
 
-            let amount_in = amount_in128 - feeu128;
+            let amount_in = amount_in128 - fee128;
 
             amount_out128 = if swap_for_y {
                 U256x256Math::mul_shift_round_down(U256::from(amount_in), price, SCALE_OFFSET)?
@@ -363,13 +363,13 @@ impl BinHelper {
             (
                 Bytes32::encode_first(amount_in128),
                 Bytes32::encode_second(amount_out128),
-                Bytes32::encode_first(feeu128),
+                Bytes32::encode_first(fee128),
             )
         } else {
             (
                 Bytes32::encode_second(amount_in128),
                 Bytes32::encode_first(amount_out128),
-                Bytes32::encode_second(feeu128),
+                Bytes32::encode_second(fee128),
             )
         };
 

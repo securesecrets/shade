@@ -22,6 +22,9 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, mut deployed_contracts) = setup(None)?;
 
+    let starting_number_of_pairs =
+        lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
+
     //test the registered tokens
 
     //     1. IMPORT necessary modules and components from various libraries.
@@ -296,7 +299,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let number_of_pairs =
         lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
 
-    assert_eq!(number_of_pairs, 2);
+    assert_eq!(number_of_pairs, starting_number_of_pairs + 2);
 
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
