@@ -75,23 +75,23 @@ pub struct StoredTokenInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TknConfig {
-    /// no `owner_may_update_metadata`because there can be multiple owners
+    // no `owner_may_update_metadata`because there can be multiple owners
     Fungible {
         minters: Vec<Addr>,
-        /// Decimals play no part in the contract logic of the base specification of SNIP1155,
-        /// as there are no `deposit` and `redeem` features as seen in SNIP20. The UI application
-        /// has discretion in handling decimals
+        // Decimals play no part in the contract logic of the base specification of SNIP1155,
+        // as there are no `deposit` and `redeem` features as seen in SNIP20. The UI application
+        // has discretion in handling decimals
         decimals: u8,
         public_total_supply: bool,
         enable_mint: bool,
         enable_burn: bool,
         minter_may_update_metadata: bool,
     },
-    /// no `enable_mint` option because NFT can be minted only once using `CurateTokenIds`
+    // no `enable_mint` option because NFT can be minted only once using `CurateTokenIds`
     Nft {
-        /// NFTs' minters cannot mint additional tokens, but may be able to change metadata
+        // NFTs' minters cannot mint additional tokens, but may be able to change metadata
         minters: Vec<Addr>,
-        /// total supply can be zero if the token has been burnt
+        // total supply can be zero if the token has been burnt
         public_total_supply: bool,
         owner_is_public: bool,
         enable_burn: bool,
@@ -121,7 +121,7 @@ impl TknConfig {
                     enable_mint: *enable_mint,
                     enable_burn: *enable_burn,
                     minter_may_update_metadata: *minter_may_update_metadata,
-                    /// there can be multiple owners, so owners cannot update metadata
+                    // there can be multiple owners, so owners cannot update metadata
                     owner_may_update_metadata: false,
                 }
             }
@@ -135,12 +135,12 @@ impl TknConfig {
             } => {
                 TknConfigFlat {
                     is_nft: true,
-                    /// NFTs' minters cannot mint additional tokens, but may be able to change metadata
+                    // NFTs' minters cannot mint additional tokens, but may be able to change metadata
                     minters: minters.clone(),
                     decimals: 0_u8,
                     public_total_supply: *public_total_supply,
                     owner_is_public: *owner_is_public,
-                    /// NFT can be minted only once using `CurateTokenIds`
+                    // NFT can be minted only once using `CurateTokenIds`
                     enable_mint: false,
                     enable_burn: *enable_burn,
                     minter_may_update_metadata: *minter_may_update_metadata,
