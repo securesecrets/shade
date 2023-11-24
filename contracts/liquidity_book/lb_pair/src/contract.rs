@@ -1551,7 +1551,7 @@ fn query_pair_info(deps: Deps) -> Result<Binary> {
 fn query_swap_simulation(
     deps: Deps,
     env: Env,
-    offer: shade_protocol::lb_libraries::tokens::TokenAmount,
+    offer: shade_protocol::swap::core::TokenAmount,
     exclude_fee: Option<bool>,
 ) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;

@@ -2,13 +2,10 @@ use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     snip20::Snip20ReceiveMsg,
-    swap::core::TokenType,
+    swap::core::{TokenType, TokenAmount},
     utils::{
         asset::RawContract,
-        liquidity_book::{
-            tokens::{SwapTokenAmount, TokenAmount},
-            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        },
+        liquidity_book::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
         ExecuteCallback,
         InstantiateCallback,
         Query,
@@ -38,7 +35,7 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     SwapTokens {
-        offer: SwapTokenAmount,
+        offer: TokenAmount,
         expected_return: Option<Uint128>,
         to: Option<String>,
         padding: Option<String>,
