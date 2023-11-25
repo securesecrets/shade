@@ -15,8 +15,9 @@ name = "schemas"
 path = "src/schemas.rs"
 # Must have all of the contract_interfaces
 required-features = [
-  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
-  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration", "liquidity_book"
+  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "mint_router",
+  "oracles", "peg_stability", "query_auth", "sky", "snip20", "snip20_migration",
+  "staking", "swap", "liquidity_book",
 ]
 
 [lib]
@@ -35,7 +36,7 @@ storage = ["dao-utils"]
 storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-lb-libraries = ["swap", "snip20", "interface"]
+lb-libraries = ["swap", "snip20", "interface", "liquidity_book"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -87,8 +88,8 @@ dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
-liquidity_book = ["interface"]
-swap = ["snip20"]
+liquidity_book   = ["interface", "swap"]
+swap             = ["snip20"]
 
 chrono = ["dep:chrono"]
 
@@ -105,7 +106,7 @@ snip20-impl     = ["snip20", "query_auth_impl"]
 query_auth_impl = ["implementation", "query_auth", "dep:base64"]
 sky-utils       = ["implementation", "sky"]
 admin_impl      = ["implementation", "admin"]
-liquidity_book_impl = ["liquidity_book", "implementation"]
+# liquidity_book_impl = ["liquidity_book", "implementation", "swap"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces

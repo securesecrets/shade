@@ -3,12 +3,9 @@
 //!
 //! This library contains functions to help interaction with bins.
 
-use crate::{
-    c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128},
-    contract_interfaces::swap::core::TokenType,
-};
+use crate::c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128};
 use ethnum::U256;
-
+use crate::swap::core::TokenType;
 use super::{
     constants::{SCALE, SCALE_OFFSET},
     fee_helper::{FeeError, FeeHelper},

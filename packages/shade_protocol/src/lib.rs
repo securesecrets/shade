@@ -1,4 +1,4 @@
-#![allow(clippy::clone_double_ref)]
+#![allow(suspicious_double_ref_op)]
 
 // TODO: make private later
 pub mod contract_interfaces;
@@ -41,7 +41,7 @@ pub use anyhow::Result as AnyResult;
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
 
-#[cfg(feature = "lb-libraries")]
+#[cfg(all(feature = "lb-libraries", feature = "swap"))]
 pub use utils::liquidity_book as lb_libraries;
 
 #[cfg(feature = "chrono")]

@@ -1,35 +1,31 @@
 //! ### Liquidity Book Type Library
-//! Author: Kent
+//! Author: Kent and Haseeb
 //!
 //! This library contains common types used throughout the project.
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::ContractInfo;
 use ethnum::U256;
-
-use crate::swap::core::TokenType;
+use crate::{
+    c_std::ContractInfo,
+    cosmwasm_schema::cw_serde,
+};
 pub use crate::utils::liquidity_book::math::{
     liquidity_configurations::LiquidityConfigurations,
     tree_math::TreeUint24,
 };
+// TODO - Try to not use this type in the liquidity_book module, because it's gated by the "swap"
+// feature.
+use crate::contract_interfaces::swap::core::TokenType;
 
 pub type Bytes32 = [u8; 32];
 
-/// Info needed to instantiate a contract.
+// TODO - This type belongs somewhere else. It's not specific to liquidity_book.
 #[cw_serde]
 #[derive(Default)]
 pub struct ContractInstantiationInfo {
     pub id: u64,
     pub code_hash: String,
 }
-/// Pair parameters that don't change.
-/// * `base_factor`
-/// * `filter_period`
-/// * `decay_period`
-/// * `reduction_factor`
-/// * `variable_fee_control`
-/// * `protocol_share`
-/// * `max_volatility_accumulator`
+
 #[cw_serde]
 pub struct StaticFeeParameters {
     pub base_factor: u16,
