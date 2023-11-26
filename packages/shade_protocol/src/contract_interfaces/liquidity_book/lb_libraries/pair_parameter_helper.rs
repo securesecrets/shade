@@ -22,7 +22,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
 use ethnum::U256;
 
-use crate::utils::liquidity_book::{constants::*, math::encoded_sample::*};
+use super::{constants::*, math::encoded_sample::*};
 
 const OFFSET_BASE_FACTOR: u8 = 0;
 const OFFSET_FILTER_PERIOD: u8 = 16;

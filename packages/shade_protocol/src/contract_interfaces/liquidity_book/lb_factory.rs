@@ -2,14 +2,9 @@ use super::lb_pair;
 use crate::{
     c_std::Addr,
     cosmwasm_schema::{cw_serde, QueryResponses},
+    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
     swap::core::TokenType,
-    utils::{
-        asset::RawContract,
-        liquidity_book::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-        ExecuteCallback,
-        InstantiateCallback,
-        Query,
-    },
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
 };
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 

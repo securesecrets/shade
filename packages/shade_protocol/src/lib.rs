@@ -41,8 +41,8 @@ pub use anyhow::Result as AnyResult;
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
 
-#[cfg(all(feature = "lb-libraries", feature = "swap"))]
-pub use utils::liquidity_book as lb_libraries;
+#[cfg(all(feature = "liquidity_book_impl", feature = "swap"))]
+pub use liquidity_book::lb_libraries;
 
 #[cfg(feature = "chrono")]
 pub use chrono;

@@ -1,15 +1,10 @@
 use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
+    lb_libraries::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
     snip20::Snip20ReceiveMsg,
-    swap::core::{TokenType, TokenAmount},
-    utils::{
-        asset::RawContract,
-        liquidity_book::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        ExecuteCallback,
-        InstantiateCallback,
-        Query,
-    },
+    swap::core::{TokenAmount, TokenType},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
 };
 

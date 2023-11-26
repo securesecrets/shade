@@ -18,11 +18,9 @@ use cosmwasm_std::Timestamp;
 use ethnum::U256;
 use serde::{Deserialize, Serialize};
 
-use super::pair_parameter_helper::PairParameters;
-use crate::utils::liquidity_book::math::{
-    encoded_sample::EncodedSample,
-    sample_math::OracleSample,
-    u256x256_math::addmod,
+use super::{
+    math::{encoded_sample::EncodedSample, sample_math::OracleSample, u256x256_math::addmod},
+    pair_parameter_helper::PairParameters,
 };
 
 #[derive(Serialize, Deserialize)]

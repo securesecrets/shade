@@ -6,7 +6,7 @@
 use cosmwasm_schema::cw_serde;
 use ethnum::U256;
 
-use crate::utils::liquidity_book::types::Bytes32;
+use crate::lb_libraries::types::Bytes32;
 
 use super::packed_u128_math::PackedUint128Math;
 

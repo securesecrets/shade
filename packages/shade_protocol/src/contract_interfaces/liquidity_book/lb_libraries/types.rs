@@ -3,15 +3,9 @@
 //!
 //! This library contains common types used throughout the project.
 
+pub use super::math::{liquidity_configurations::LiquidityConfigurations, tree_math::TreeUint24};
+use crate::{c_std::ContractInfo, cosmwasm_schema::cw_serde};
 use ethnum::U256;
-use crate::{
-    c_std::ContractInfo,
-    cosmwasm_schema::cw_serde,
-};
-pub use crate::utils::liquidity_book::math::{
-    liquidity_configurations::LiquidityConfigurations,
-    tree_math::TreeUint24,
-};
 // TODO - Try to not use this type in the liquidity_book module, because it's gated by the "swap"
 // feature.
 use crate::contract_interfaces::swap::core::TokenType;

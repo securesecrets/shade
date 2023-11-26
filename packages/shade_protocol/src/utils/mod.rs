@@ -23,9 +23,6 @@ pub mod generic_response;
 
 pub mod storage;
 
-#[cfg(all(feature = "lb-libraries", feature = "swap"))]
-pub mod liquidity_book;
-
 #[cfg(feature = "dao-utils")]
 pub mod cycle;
 #[cfg(feature = "dao-utils")]

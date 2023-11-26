@@ -1,9 +1,13 @@
 // TODO - do we need this file at all?
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{ContractInfo, CosmosMsg, StdResult};
+use crate::{
+    c_std::{ContractInfo, CosmosMsg, StdResult},
+    cosmwasm_schema::cw_serde,
+};
+// use cosmwasm_schema::cw_serde;
+// use cosmwasm_std::{ContractInfo, CosmosMsg, StdResult};
 
-use crate::utils::liquidity_book::transfer::HandleMsg;
+use super::transfer::HandleMsg;
 // use cosmwasm_std::{Binary, Env, MessageInfo};
 // use std::fmt;
 // use subtle::ConstantTimeEq;

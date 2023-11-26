@@ -6,7 +6,7 @@
 
 use ethnum::{I256, U256};
 
-use crate::utils::liquidity_book::constants::*;
+use crate::lb_libraries::constants::*;
 
 use super::bit_math::BitMath;
 
