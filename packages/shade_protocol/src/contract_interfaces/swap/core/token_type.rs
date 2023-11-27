@@ -30,7 +30,8 @@ use crate::{
 
 use super::TokenAmount;
 
-#[cw_serde]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
@@ -122,7 +123,6 @@ impl TokenType {
             TokenType::CustomToken { .. } => false,
         }
     }
-
     pub fn unique_key(&self) -> String {
         match self {
             TokenType::NativeToken { denom, .. } => denom.to_string(),

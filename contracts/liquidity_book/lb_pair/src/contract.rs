@@ -19,6 +19,7 @@ use shade_protocol::{
             router::ExecuteMsgResponse,
         },
     },
+    contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
     lb_libraries::{
         approx_div,
         bin_helper::BinHelper,
@@ -171,7 +172,7 @@ pub fn instantiate(
         //TODO: set using the setter function and instantiate msg
     };
 
-    let tree: TreeUint24 = TreeUint24::new();
+    let tree = TreeUint24::new();
     let oracle = Oracle {
         samples: HashMap::<u16, OracleSample>::new(),
     };
@@ -553,6 +554,7 @@ fn try_swap(
     })?;
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
+    let amount_out: u128;
     let amount_out;
 
     if swap_for_y {

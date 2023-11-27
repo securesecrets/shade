@@ -13,6 +13,7 @@ use shade_protocol::{
         MultiTestable,
         Query,
     },
+    swap::core::TokenType,
 };
 
 pub fn init(

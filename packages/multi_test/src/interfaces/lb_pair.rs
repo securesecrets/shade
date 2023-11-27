@@ -13,6 +13,7 @@ use shade_protocol::{
         asset::{Contract, RawContract},
         ExecuteCallback, InstantiateCallback, MultiTestable, Query,
     },
+    swap::core::TokenType,
 };
 
 pub fn init(

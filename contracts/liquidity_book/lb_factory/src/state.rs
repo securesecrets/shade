@@ -55,7 +55,7 @@ pub enum ContractStatus {
 }
 
 #[cw_serde]
-pub struct State {
+pub struct Config {
     pub contract_info: ContractInfo,
     pub owner: Addr,
     pub fee_recipient: Addr,

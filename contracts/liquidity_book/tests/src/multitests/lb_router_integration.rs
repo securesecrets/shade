@@ -29,6 +29,9 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let starting_number_of_pairs =
         lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
 
+    let starting_number_of_pairs =
+        lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
+
     //test the registered tokens
 
     //     1. IMPORT necessary modules and components from various libraries.

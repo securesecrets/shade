@@ -966,6 +966,11 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
 
     let num_quote_assets_before =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("Before: {num_quote_assets_before}");
+
+    let num_quote_assets =
+        lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("check: {num_quote_assets}");
 
     let _num_quote_assets =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
@@ -1070,6 +1075,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     //SSCRT and SHD already added as quote asset
     let num_quote_assets_before =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
+    println!("{num_quote_assets_before}");
 
     snip20::init(
         &mut app,
