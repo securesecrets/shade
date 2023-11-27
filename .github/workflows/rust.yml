@@ -1,6 +1,13 @@
 name: Rust
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - liquidity-orderbook-develop
+      - main
 
 env:
   CARGO_TERM_COLOR: always
