@@ -19,8 +19,10 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
+schemars = "0.8.16"
 serde = { version = "1.0" }
 serde-json-wasm = { version = "1.0"}
+cosmwasm-schema = "1.5"
 thiserror = { version = "1.0" }
 ethnum = { version = "1.5" }
 
@@ -33,6 +35,3 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "lb_token",
   "snip20",
 ] }
-
-[[bin]]
-name = "schema"

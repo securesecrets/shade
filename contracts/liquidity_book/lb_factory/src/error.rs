@@ -1,7 +1,7 @@
 //! ### Custom Errors for LB_Factory contract.
 
 use shade_protocol::{
-    c_std::Addr,
+    c_std::{Addr, StdError},
     lb_libraries::{
         bin_helper::BinError,
         fee_helper::FeeError,
@@ -97,7 +97,7 @@ pub enum LBFactoryError {
     TransactionBlock(),
 
     #[error(transparent)]
-    CwErr(#[from] cosmwasm_std::StdError),
+    CwErr(#[from] StdError),
 
     #[error(transparent)]
     BinErr(#[from] BinError),

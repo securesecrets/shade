@@ -23,6 +23,7 @@ use shade_protocol::{
         Response,
         StdError,
         StdResult,
+        SubMsgResult,
         Uint128,
     },
     snip20::helpers::send_msg,
@@ -276,10 +277,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     pad_handle_result(
         match msg.id {
             SWAP_REPLY_ID => match msg.result {
-                cosmwasm_std::SubMsgResult::Ok(_) => {
+                SubMsgResult::Ok(_) => {
                     return next_swap(deps, env, Response::new());
                 }
-                cosmwasm_std::SubMsgResult::Err(e) => Err(StdError::generic_err(format!(
+                SubMsgResult::Err(e) => Err(StdError::generic_err(format!(
                     "Swap failed with message: {e}"
                 ))),
             },

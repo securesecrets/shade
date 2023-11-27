@@ -2,7 +2,7 @@
 
 use ethnum::U256;
 use shade_protocol::{
-    c_std::Uint128,
+    c_std::{Uint128, StdError},
     lb_libraries::{
         bin_helper::BinError,
         fee_helper::FeeError,
@@ -69,6 +69,8 @@ pub enum LBPairError {
     #[error("Zero amount for bin id: {id}")]
     ZeroAmount { id: u32 },
 
+    // TODO - why return amount_to_burn and total_supply? They will be illegible as U256 anyway.
+    // Would like to remove U256 dependency for error messages.
     #[error(
         "Zero amounts out for bin id: {id} amount to burn: {amount_to_burn} total supply: {total_supply} "
     )]
@@ -86,8 +88,9 @@ pub enum LBPairError {
     #[error("Max total fee exceeded!")]
     MaxTotalFeeExceeded,
 
+    // TODO - organize errors better. move error conversions to separate section perhaps.
     #[error(transparent)]
-    CwErr(#[from] cosmwasm_std::StdError),
+    CwErr(#[from] StdError),
 
     #[error(transparent)]
     BinErr(#[from] BinError),

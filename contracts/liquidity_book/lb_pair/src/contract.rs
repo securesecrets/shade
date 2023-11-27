@@ -177,7 +177,7 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &state)?;
     ORACLE.save(deps.storage, &oracle)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
-    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
@@ -436,7 +436,8 @@ fn try_swap(
     CONFIG.update(deps.storage, |mut state| {
         state.protocol_fees = protocol_fees;
         // TODO - map the error to a StdError
-        state.pair_parameters.set_active_id(active_id);
+        state.pair_parameters.set_active_id(active_id)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
         state.reserves = reserves;
         Ok::<State, StdError>(state)
     })?;

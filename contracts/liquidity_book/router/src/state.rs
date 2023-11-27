@@ -2,13 +2,7 @@ use shade_protocol::{
     c_std::{Addr, Storage, Uint128},
     cosmwasm_schema::cw_serde,
     storage::{
-        bucket,
-        bucket_read,
-        singleton,
-        singleton_read,
-        Bucket,
-        ReadonlyBucket,
-        ReadonlySingleton,
+        bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
         Singleton,
     },
     swap::{
@@ -38,7 +32,6 @@ pub fn config_r(storage: &dyn Storage) -> ReadonlySingleton<Config> {
     singleton_read(storage, CONFIG)
 }
 
-// { addr: code_hash }
 pub fn registered_tokens_w(storage: &mut dyn Storage) -> Bucket<String> {
     bucket(storage, REGISTERED_TOKENS)
 }
@@ -70,6 +63,6 @@ pub struct CurrentSwapInfo {
     pub path: Vec<Hop>,
     pub recipient: Addr,
     pub current_index: u32,
-    //The next token that will be in the hop
+    // The next token that will be in the hop
     pub next_token_in: TokenType,
 }

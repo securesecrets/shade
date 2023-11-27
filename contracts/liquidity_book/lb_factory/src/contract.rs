@@ -17,6 +17,7 @@ use shade_protocol::{
         DepsMut,
         Env,
         MessageInfo,
+        Order::Ascending,
         Reply,
         Response,
         StdError,
@@ -25,6 +26,12 @@ use shade_protocol::{
         SubMsgResult,
         WasmMsg,
     },
+    lb_libraries::{
+        math::encoded_sample::EncodedSample,
+        pair_parameter_helper::PairParameters,
+        price_helper::PriceHelper,
+        types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+    },
     liquidity_book::{
         lb_factory::*,
         lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
@@ -32,12 +39,6 @@ use shade_protocol::{
     swap::core::TokenType,
     utils::{
         callback::ExecuteCallback,
-        liquidity_book::{
-            math::encoded_sample::EncodedSample,
-            pair_parameter_helper::PairParameters,
-            price_helper::PriceHelper,
-            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        },
     },
 };
 
@@ -1166,7 +1167,7 @@ fn query_all_bin_steps(deps: Deps) -> Result<Binary> {
 
     let mut bin_step_with_preset = Vec::<u16>::new();
 
-    let iterator = PRESETS.range(deps.storage, None, None, cosmwasm_std::Order::Ascending);
+    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
 
     for result in iterator {
         let (bin_step, _preset) = result.map_err(Error::CwErr)?;
@@ -1204,7 +1205,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
 
     let mut open_bin_steps = Vec::<u16>::new();
 
-    let iterator = PRESETS.range(deps.storage, None, None, cosmwasm_std::Order::Ascending);
+    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
 
     for result in iterator {
         let (bin_step, preset) = result.map_err(Error::CwErr)?;
