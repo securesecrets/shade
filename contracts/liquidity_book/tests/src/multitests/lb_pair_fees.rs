@@ -1,6 +1,5 @@
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
-use ethnum::U256;
+use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
     lb_pair,
@@ -9,6 +8,7 @@ use shade_multi_test::interfaces::{
     utils::DeployedContracts,
 };
 use shade_protocol::{
+    c_std::{ContractInfo, StdError, Uint128, Uint256},
     lb_libraries::{
         math::{encoded_sample::MASK_UINT20, u24::U24},
         types::LBPairInformation,
@@ -20,7 +20,6 @@ use shade_protocol::{
 use crate::multitests::test_helper::*;
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000;
-
 pub const ACTIVE_ID: u32 = ID_ONE;
 
 pub fn lb_pair_setup() -> Result<
@@ -152,6 +151,7 @@ pub fn lb_pair_setup() -> Result<
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -268,6 +268,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -384,6 +385,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -501,6 +503,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -619,6 +622,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -807,6 +811,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -996,6 +1001,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1183,6 +1189,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1369,6 +1376,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1553,6 +1561,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1738,9 +1747,11 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fees_2lp_flash_loan() {}
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1805,6 +1816,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1869,6 +1881,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1980,6 +1993,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -2157,7 +2171,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-
+#[serial]
 pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
 
@@ -2217,6 +2231,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
 }
 
 // #[test]
+// #[serial]
 // pub fn test_fuzz_user_fee_swap_in_x() -> Result<(), anyhow::Error> {
 //     let addrs = init_addrs();
 //     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;

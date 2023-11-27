@@ -30,3 +30,4 @@ cosmwasm-schema = "1.5"
 
 [dev-dependencies]
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", features=["iterator"] }
+serial_test = "2.0.0"

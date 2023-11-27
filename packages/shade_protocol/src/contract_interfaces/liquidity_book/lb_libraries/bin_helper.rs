@@ -564,15 +564,16 @@ impl BinHelper {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::liquidity_book::{
+    use super::*;
+
+    use crate::c_std::StdResult;
+    use ethnum::U256;
+    use super::super::{
         math::encoded_sample::EncodedSample,
         types::StaticFeeParameters,
     };
-    use cosmwasm_std::StdResult;
-    use ethnum::U256;
     use std::str::FromStr;
 
-    use super::*;
 
     fn assert_approxeq_abs(a: U256, b: U256, max_diff: U256, msg: &str) {
         let diff = if a > b { a - b } else { b - a };

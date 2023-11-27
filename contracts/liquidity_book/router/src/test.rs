@@ -5,6 +5,7 @@ pub mod tests {
         state::{config_r, epheral_storage_r, epheral_storage_w, Config, CurrentSwapInfo},
     };
     use serde::{Deserialize, Serialize};
+    use serial_test::serial;
     use shade_protocol::{
         admin::ValidateAdminPermissionResponse,
         c_std::{
@@ -14,6 +15,7 @@ pub mod tests {
             Addr,
             Api,
             Coin,
+            ContractResult,
             Empty,
             Env,
             OwnedDeps,
@@ -50,6 +52,7 @@ pub mod tests {
     pub const CUSTOM_TOKEN_1: &str = "secret1h92kweqxaxwwf3wny8qmcalsxe366s940eqd54";
 
     #[test]
+    #[serial]
     fn ok_init() -> StdResult<()> {
         let ref mut deps = mkdeps();
         let env = mock_env();
@@ -61,6 +64,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn swap_native_for_snip20_tokens_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         assert!(
@@ -117,6 +121,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn swap_snip20_native_for_tokens_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
@@ -175,6 +180,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn snip20_swap() -> StdResult<()> {
         let mock_info = mock_info("admin", &[Coin {
             denom: "uscrt".to_string(),
@@ -250,6 +256,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn first_swap_callback_with_one_more_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
@@ -342,6 +349,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn first_swap_callback_with_no_more_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
@@ -427,6 +435,7 @@ pub mod tests {
     }
 
     #[test]
+    #[serial]
     fn first_swap_callback_with_no_more_not_enough_return() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
@@ -579,7 +588,7 @@ pub mod tests {
                     } => {
                         println!("{}", contract_addr);
                         match contract_addr.as_str() {
-                            FACTORY_ADDRESS => QuerierResult::Ok(cosmwasm_std::ContractResult::Ok(
+                            FACTORY_ADDRESS => QuerierResult::Ok(ContractResult::Ok(
                                 to_binary(&FactoryQueryResponse::GetConfig {
                                     pair_contract: ContractInstantiationInfo {
                                         code_hash: "".to_string(),
@@ -607,13 +616,13 @@ pub mod tests {
                                 })
                                 .unwrap(),
                             )),
-                            "admin_auth" => QuerierResult::Ok(cosmwasm_std::ContractResult::Ok(
+                            "admin_auth" => QuerierResult::Ok(ContractResult::Ok(
                                 to_binary(&ValidateAdminPermissionResponse {
                                     has_permission: true,
                                 })
                                 .unwrap(),
                             )),
-                            PAIR_CONTRACT_1 => QuerierResult::Ok(cosmwasm_std::ContractResult::Ok(
+                            PAIR_CONTRACT_1 => QuerierResult::Ok(ContractResult::Ok(
                                 to_binary(&AMMPairQueryMsgResponse::GetPairInfo {
                                     liquidity_token: Contract {
                                         address: Addr::unchecked("asd"),
@@ -662,7 +671,7 @@ pub mod tests {
                                 })
                                 .unwrap(),
                             )),
-                            CUSTOM_TOKEN_1 => QuerierResult::Ok(cosmwasm_std::ContractResult::Ok(
+                            CUSTOM_TOKEN_1 => QuerierResult::Ok(ContractResult::Ok(
                                 to_binary(&IntBalanceResponse {
                                     balance: Balance(Uint128::new(100)),
                                 })

@@ -1,4 +1,5 @@
 use anyhow::Ok;
+use serial_test::serial;
 use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -18,6 +19,7 @@ use crate::multitests::test_helper::*;
 const SWAP_AMOUNT: u128 = 1000;
 
 #[test]
+#[serial]
 pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, mut deployed_contracts) = setup(None)?;

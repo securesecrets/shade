@@ -276,8 +276,6 @@ impl TreeUint24 {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::liquidity_book::math::u24::U24;
-
     use super::*;
 
     #[test]

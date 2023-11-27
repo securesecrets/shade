@@ -37,3 +37,4 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "router",
   "lb_factory"
 ] }
+serial_test = "2.0.0"

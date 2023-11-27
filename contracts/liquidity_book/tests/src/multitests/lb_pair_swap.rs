@@ -9,6 +9,7 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
+use serial_test::serial;
 use cosmwasm_std::{ContractInfo, StdError, Uint128};
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -120,6 +121,7 @@ pub fn lb_pair_setup() -> Result<
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -182,6 +184,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -235,6 +238,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -290,6 +294,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -345,6 +350,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 
 pub fn test_revert_swap_insufficient_amount_in() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
@@ -390,6 +396,7 @@ pub fn test_revert_swap_insufficient_amount_in() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_swap_insufficient_amount_out() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -457,6 +464,7 @@ pub fn test_revert_swap_insufficient_amount_out() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_swap_out_of_liquidity() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;

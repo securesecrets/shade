@@ -1,10 +1,11 @@
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError};
+use serial_test::serial;
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
     multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
 };
 use shade_protocol::{
+    c_std::{ContractInfo, StdError},
     lb_libraries::{
         constants::BASIS_POINT_MAX,
         math::{
@@ -20,6 +21,7 @@ use shade_protocol::{
 use crate::multitests::test_helper::*;
 
 #[test]
+#[serial]
 pub fn test_setup() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -42,6 +44,7 @@ pub fn test_setup() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -61,6 +64,7 @@ pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -93,6 +97,7 @@ pub fn test_revert_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_set_lb_token_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -111,6 +116,7 @@ pub fn test_set_lb_token_implementation() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
@@ -199,6 +205,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
@@ -290,6 +297,7 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
@@ -500,6 +508,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -575,6 +584,7 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 fn test_remove_preset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -656,6 +666,7 @@ fn test_remove_preset() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
@@ -778,6 +789,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?;
@@ -818,6 +830,7 @@ pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
     let (mut app, lb_factory, _deployed_contracts) = setup(None)?; // Setup
@@ -916,6 +929,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
     let (mut app, lb_factory, mut deployed_contracts) = setup(None)?; // Setup
@@ -1032,6 +1046,7 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
     let (mut app, lb_factory, mut deployed_contracts) = setup(None)?; // Setup
@@ -1126,6 +1141,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
     let (mut app, lb_factory, deployed_contracts) = setup(None)?; // Setup
@@ -1175,6 +1191,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts) = setup(None)?;
