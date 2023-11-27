@@ -1,51 +1,45 @@
-#![allow(unused)] // For beginning only.
-
-use cosmwasm_std::{
-    entry_point,
-    to_binary,
-    Addr,
-    Binary,
-    ContractInfo,
-    CosmosMsg,
-    Deps,
-    DepsMut,
-    Env,
-    MessageInfo,
-    Reply,
-    Response,
-    StdError,
-    StdResult,
-    Storage,
-    SubMsg,
-    SubMsgResult,
-    Timestamp,
-    Uint256,
-    WasmMsg,
-};
-use ethnum::U256;
-use shade_protocol::{
-    admin::helpers::{admin_is_valid, validate_admin, AdminPermissions},
-    lb_libraries::{math, pair_parameter_helper, price_helper, tokens, types, viewing_keys},
-    liquidity_book::{
-        lb_factory::*,
-        lb_pair::{
-            self,
-            ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
-        },
-    },
-};
-
-use math::encoded_sample::EncodedSample;
-use pair_parameter_helper::PairParameters;
-use price_helper::PriceHelper;
-use tokens::TokenType;
-use types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters};
-
 use crate::{
-    error,
     prelude::*,
     state::*,
     types::{LBPair, LBPairInformation, NextPairKey},
+};
+
+use shade_protocol::{
+    admin::helpers::{validate_admin, AdminPermissions},
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Addr,
+        Binary,
+        ContractInfo,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Order::Ascending,
+        Reply,
+        Response,
+        StdError,
+        StdResult,
+        SubMsg,
+        SubMsgResult,
+        WasmMsg,
+    },
+    lb_libraries::{
+        math::encoded_sample::EncodedSample,
+        pair_parameter_helper::PairParameters,
+        price_helper::PriceHelper,
+        types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+    },
+    liquidity_book::{
+        lb_factory::*,
+        lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+    },
+    swap::core::TokenType,
+    utils::{
+        callback::ExecuteCallback,
+    },
 };
 
 pub static _OFFSET_IS_PRESET_OPEN: u8 = 255;
@@ -56,7 +50,7 @@ pub const INSTANTIATE_REPLY_ID: u64 = 1u64;
 
 /////////////// INSTANTIATE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -70,7 +64,7 @@ pub fn instantiate(
         });
     }
 
-    let state = State {
+    let config = Config {
         contract_info: ContractInfo {
             address: env.contract.address,
             code_hash: env.contract.code_hash,
@@ -83,22 +77,22 @@ pub fn instantiate(
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
     };
 
-    CONFIG.save(deps.storage, &state)?;
-    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active);
+    CONFIG.save(deps.storage, &config)?;
+    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
 
     Ok(Response::default())
 }
 
 /////////////// EXECUTE ///////////////
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
     let contract_status = CONTRACT_STATUS.load(deps.storage)?;
     match contract_status {
         ContractStatus::FreezeAll => match msg {
             ExecuteMsg::SetLBPairImplementation { .. }
             | ExecuteMsg::SetLBTokenImplementation { .. } => {
-                return Err(error::LBFactoryError::TransactionBlock());
+                return Err(Error::TransactionBlock());
             }
             _ => {}
         },
@@ -208,29 +202,28 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 /// * `new_lb_pair_implementation` - The code ID and code hash of the implementation.
 fn try_set_lb_pair_implementation(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
-
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
-    let old_lb_pair_implementation = state.lb_pair_implementation;
-    if (old_lb_pair_implementation == new_lb_pair_implementation) {
+    let old_lb_pair_implementation = config.lb_pair_implementation;
+    if old_lb_pair_implementation == new_lb_pair_implementation {
         return Err(Error::SameImplementation {
             lb_implementation: old_lb_pair_implementation.id,
         });
     }
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
-        state.lb_pair_implementation = new_lb_pair_implementation;
-        Ok(state)
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+        config.lb_pair_implementation = new_lb_pair_implementation;
+        Ok(config)
     })?;
 
     Ok(Response::default())
@@ -243,28 +236,28 @@ fn try_set_lb_pair_implementation(
 /// * `new_lb_token_implementation` - The code ID and code hash of the implementation.
 fn try_set_lb_token_implementation(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
-    let old_lb_token_implementation = state.lb_token_implementation;
-    if (old_lb_token_implementation == new_lb_token_implementation) {
+    let old_lb_token_implementation = config.lb_token_implementation;
+    if old_lb_token_implementation == new_lb_token_implementation {
         return Err(Error::SameImplementation {
             lb_implementation: old_lb_token_implementation.id,
         });
     }
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
-        state.lb_token_implementation = new_lb_token_implementation;
-        Ok(state)
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+        config.lb_token_implementation = new_lb_token_implementation;
+        Ok(config)
     })?;
 
     Ok(Response::default())
@@ -293,7 +286,7 @@ fn try_create_lb_pair(
     viewing_key: String,
     entropy: String,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     if !PRESETS.has(deps.storage, bin_step) {
         return Err(Error::BinStepHasNoPreset { bin_step });
@@ -302,7 +295,7 @@ fn try_create_lb_pair(
     let preset = PRESETS
         .load(deps.storage, bin_step)
         .map_err(|_| Error::BinStepHasNoPreset { bin_step })?;
-    let is_owner = info.sender == state.owner;
+    let is_owner = info.sender == config.owner;
 
     if !_is_preset_open(preset.0.0) && !is_owner {
         return Err(Error::PresetIsLockedForUsers {
@@ -319,29 +312,25 @@ fn try_create_lb_pair(
         })
     {
         return Err(Error::QuoteAssetNotWhitelisted {
-            quote_asset: token_y.unique_key().clone(),
+            quote_asset: token_y.unique_key(),
         });
     }
 
     if token_x == token_y {
         return Err(Error::IdenticalAddresses {
-            token: token_x.unique_key().clone(),
+            token: token_x.unique_key(),
         });
     }
 
     // safety check, making sure that the price can be calculated
-    PriceHelper::get_price_from_id(active_id, bin_step);
+    PriceHelper::get_price_from_id(active_id, bin_step)?;
 
     let (token_a, token_b) = _sort_tokens(token_x.clone(), token_y.clone());
 
     if LB_PAIRS_INFO
         .load(
             deps.storage,
-            (
-                token_a.unique_key().clone(),
-                token_b.unique_key().clone(),
-                bin_step,
-            ),
+            (token_a.unique_key(), token_b.unique_key(), bin_step),
         )
         .is_ok()
     {
@@ -352,7 +341,7 @@ fn try_create_lb_pair(
         });
     }
 
-    if state.lb_pair_implementation.id == 0 {
+    if config.lb_pair_implementation.id == 0 {
         return Err(Error::ImplementationNotSet);
     }
 
@@ -360,14 +349,14 @@ fn try_create_lb_pair(
 
     messages.push(SubMsg::reply_on_success(
         CosmosMsg::Wasm(WasmMsg::Instantiate {
-            code_id: state.lb_pair_implementation.id,
+            code_id: config.lb_pair_implementation.id,
             label: format!(
                 "{}-{}-{}-pair-{}-{}",
                 token_x.unique_key(),
                 token_y.unique_key(),
                 bin_step,
                 env.contract.address,
-                state.lb_pair_implementation.id
+                config.lb_pair_implementation.id,
             ),
             msg: to_binary(&LBPairInstantiateMsg {
                 factory: env.contract,
@@ -384,13 +373,13 @@ fn try_create_lb_pair(
                     max_volatility_accumulator: preset.get_max_volatility_accumulator(),
                 },
                 active_id,
-                lb_token_implementation: state.lb_token_implementation,
+                lb_token_implementation: config.lb_token_implementation,
                 viewing_key,
                 entropy,
-                protocol_fee_recipient: state.fee_recipient,
-                admin_auth: state.admin_auth.into(),
+                protocol_fee_recipient: config.fee_recipient,
+                admin_auth: config.admin_auth.into(),
             })?,
-            code_hash: state.lb_pair_implementation.code_hash.clone(),
+            code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
             admin: None,
         }),
@@ -398,15 +387,85 @@ fn try_create_lb_pair(
     ));
 
     ephemeral_storage_w(deps.storage).save(&NextPairKey {
-        token_a: token_a.clone(),
-        token_b: token_b.clone(),
+        token_a,
+        token_b,
         bin_step,
-        code_hash: state.lb_pair_implementation.code_hash,
+        code_hash: config.lb_pair_implementation.code_hash,
         is_open: is_owner,
     })?;
 
     Ok(Response::new().add_submessages(messages))
 }
+
+// /// Sets whether the pair is ignored or not for routing, it will make the pair unusable by the router.
+// ///
+// /// # Arguments
+// ///
+// /// * `token_x` - The address of the first token of the pair.
+// /// * `token_y` - The address of the second token of the pair.
+// /// * `bin_step` - The bin step in basis point of the pair.
+// /// * `ignored` - Whether to ignore (true) or not (false) the pair for routing.
+// fn try_set_lb_pair_ignored(
+//     deps: DepsMut,
+//     env: Env,
+//     info: MessageInfo,
+//     token_a: TokenType,
+//     token_b: TokenType,
+//     bin_step: u16,
+//     ignored: bool,
+// ) -> Result<Response> {
+//     let config = CONFIG.load(deps.storage)?;
+//     only_owner(&info.sender, &config.owner)?;
+
+//     let (token_a, token_b) = _sort_tokens(token_a, token_b);
+
+//     let mut pair_information = LB_PAIRS_INFO
+//         .load(
+//             deps.storage,
+//             (
+//                 token_a.unique_key().clone(),
+//                 token_b.unique_key().clone(),
+//                 bin_step,
+//             ),
+//         )
+//         .unwrap();
+
+//     if pair_information
+//         .lb_pair
+//         .contract
+//         .address
+//         .as_str()
+//         .is_empty()
+//     {
+//         return Err(Error::LBPairDoesNotExist {
+//             token_x: token_a.unique_key().clone(),
+//             token_y: token_b.unique_key().clone(),
+//             bin_step,
+//         });
+//     }
+
+//     if pair_information.ignored_for_routing == ignored {
+//         return Err(Error::LBPairIgnoredIsAlreadyInTheSameState);
+//     }
+
+//     pair_information.ignored_for_routing = ignored;
+
+//     LB_PAIRS_INFO.save(
+//         deps.storage,
+//         (
+//             token_a.unique_key().clone(),
+//             token_b.unique_key().clone(),
+//             bin_step,
+//         ),
+//         &pair_information,
+//     )?;
+
+//     // emit LBPairIgnoredStateChanged(pairInformation.LBPair, ignored);
+
+//     // TODO: be more specific about which pair changed
+//     Ok(Response::default()
+//         .add_attribute_plaintext("LBPair ignored state changed", format!("{}", ignored)))
+// }
 
 /// Sets the preset parameters of a bin step
 ///
@@ -423,7 +482,7 @@ fn try_create_lb_pair(
 /// * `is_open` - Whether the preset is open or not to be used by users
 fn try_set_pair_preset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
     base_factor: u16,
@@ -446,7 +505,9 @@ fn try_set_pair_preset(
         return Err(Error::BinStepTooLow { bin_step });
     }
 
-    let mut preset = PairParameters(EncodedSample([0u8; 32])).set_static_fee_parameters(
+    let mut preset = PairParameters::default();
+
+    preset.set_static_fee_parameters(
         base_factor,
         filter_period,
         decay_period,
@@ -457,7 +518,7 @@ fn try_set_pair_preset(
     )?;
 
     if is_open {
-        preset = PairParameters(preset.0.set_bool(true, _OFFSET_IS_PRESET_OPEN));
+        preset.0.set_bool(true, _OFFSET_IS_PRESET_OPEN);
     }
 
     PRESETS.save(deps.storage, bin_step, &preset)?;
@@ -473,7 +534,7 @@ fn try_set_pair_preset(
 /// * `is_open` - Whether the preset is open or not
 fn try_set_preset_open_state(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
     is_open: bool,
@@ -489,17 +550,15 @@ fn try_set_preset_open_state(
         return Err(Error::BinStepHasNoPreset { bin_step });
     }
 
-    let preset = PRESETS.load(deps.storage, bin_step).unwrap();
+    let mut preset = PRESETS.load(deps.storage, bin_step)?;
 
     if preset.0.decode_bool(_OFFSET_IS_PRESET_OPEN) == is_open {
         return Err(Error::PresetOpenStateIsAlreadyInTheSameState);
+    } else {
+        preset.0.set_bool(is_open, _OFFSET_IS_PRESET_OPEN);
     }
 
-    PRESETS.save(
-        deps.storage,
-        bin_step,
-        &PairParameters(preset.0.set_bool(is_open, _OFFSET_IS_PRESET_OPEN)),
-    )?;
+    PRESETS.save(deps.storage, bin_step, &preset)?;
 
     Ok(Response::default().add_attribute_plaintext(
         format!("bin step: {}", bin_step),
@@ -514,7 +573,7 @@ fn try_set_preset_open_state(
 /// * `bin_step` - The bin step to remove
 fn try_remove_preset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     bin_step: u16,
 ) -> Result<Response> {
@@ -550,7 +609,7 @@ fn try_remove_preset(
 /// * `max_volatility_accumulator` - The max value of volatility accumulator
 fn try_set_fee_parameters_on_pair(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     token_x: TokenType,
     token_y: TokenType,
@@ -571,14 +630,10 @@ fn try_set_fee_parameters_on_pair(
         &state.admin_auth,
     )?;
     let (token_a, token_b) = _sort_tokens(token_x, token_y);
-    let mut lb_pair = LB_PAIRS_INFO
+    let lb_pair = LB_PAIRS_INFO
         .load(
             deps.storage,
-            (
-                token_a.unique_key().clone(),
-                token_b.unique_key().clone(),
-                bin_step,
-            ),
+            (token_a.unique_key(), token_b.unique_key(), bin_step),
         )
         .map_err(|_| Error::LBPairNotCreated {
             token_x: token_a.unique_key(),
@@ -586,8 +641,6 @@ fn try_set_fee_parameters_on_pair(
             bin_step,
         })?
         .lb_pair;
-
-    let mut response = Response::new();
 
     let msg: CosmosMsg = SetStaticFeeParameters {
         base_factor,
@@ -598,13 +651,9 @@ fn try_set_fee_parameters_on_pair(
         protocol_share,
         max_volatility_accumulator,
     }
-    .to_cosmos_msg(
-        lb_pair.contract.code_hash,
-        lb_pair.contract.address.to_string(),
-        None,
-    )?;
+    .to_cosmos_msg(&lb_pair.contract, vec![])?;
 
-    response = response.add_message(msg);
+    let response = Response::new().add_message(msg);
     Ok(response)
 }
 
@@ -615,28 +664,28 @@ fn try_set_fee_parameters_on_pair(
 /// * `fee_recipient` - The address of the recipient
 fn try_set_fee_recipient(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     fee_recipient: Addr,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
-    let old_fee_recipient = state.fee_recipient;
+    let old_fee_recipient = config.fee_recipient;
     if old_fee_recipient == fee_recipient {
         return Err(Error::SameFeeRecipient {
-            fee_recipient: old_fee_recipient.clone(),
+            fee_recipient: old_fee_recipient,
         });
     }
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
-        state.fee_recipient = fee_recipient.clone();
-        Ok(state)
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+        config.fee_recipient = fee_recipient.clone();
+        Ok(config)
     })?;
 
     Ok(Response::default()
@@ -651,18 +700,18 @@ fn try_set_fee_recipient(
 /// * `flash_loan_fee` - The value of the fee for flash loan
 fn try_set_flash_loan_fee(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     flash_loan_fee: u8,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
-    let old_flash_loan_fee = state.flash_loan_fee;
+    let old_flash_loan_fee = config.flash_loan_fee;
 
     if old_flash_loan_fee == flash_loan_fee {
         return Err(Error::SameFlashLoanFee {
@@ -676,9 +725,9 @@ fn try_set_flash_loan_fee(
         });
     }
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
-        state.flash_loan_fee = flash_loan_fee;
-        Ok(state)
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+        config.flash_loan_fee = flash_loan_fee;
+        Ok(config)
     })?;
 
     Ok(Response::default()
@@ -693,16 +742,16 @@ fn try_set_flash_loan_fee(
 /// * `quote_asset` - The quote asset (e.g: NATIVE, USDC...)
 fn try_add_quote_asset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     quote_asset: TokenType,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
     if QUOTE_ASSET_WHITELIST
         .iter(deps.storage)?
@@ -712,11 +761,11 @@ fn try_add_quote_asset(
         })
     {
         return Err(Error::QuoteAssetAlreadyWhitelisted {
-            quote_asset: quote_asset.unique_key().clone(),
+            quote_asset: quote_asset.unique_key(),
         });
     }
 
-    QUOTE_ASSET_WHITELIST.push(deps.storage, &quote_asset);
+    QUOTE_ASSET_WHITELIST.push(deps.storage, &quote_asset)?;
 
     Ok(Response::default()
         .add_attribute_plaintext("quote asset added", quote_asset.unique_key().as_str()))
@@ -729,16 +778,16 @@ fn try_add_quote_asset(
 /// * `quote_asset` - The quote asset (e.g: NATIVE, USDC...)
 fn try_remove_quote_asset(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     asset: TokenType,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
     // Enumerate the iterator and use `find` to locate the asset
     let found_asset = QUOTE_ASSET_WHITELIST
@@ -757,7 +806,7 @@ fn try_remove_quote_asset(
         _ => {
             // Asset was not found
             return Err(Error::QuoteAssetNotWhitelisted {
-                quote_asset: asset.unique_key().clone(),
+                quote_asset: asset.unique_key(),
             });
         }
     }
@@ -766,24 +815,20 @@ fn try_remove_quote_asset(
         .add_attribute_plaintext("quote asset removed", asset.unique_key().as_str()))
 }
 
-fn try_force_decay(deps: DepsMut, env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
         info.sender.to_string(),
-        &state.admin_auth,
+        &config.admin_auth,
     )?;
 
     let (token_a, token_b) = _sort_tokens(pair.token_x, pair.token_y);
-    let mut lb_pair = LB_PAIRS_INFO
+    let lb_pair = LB_PAIRS_INFO
         .load(
             deps.storage,
-            (
-                token_a.unique_key().clone(),
-                token_b.unique_key().clone(),
-                pair.bin_step,
-            ),
+            (token_a.unique_key(), token_b.unique_key(), pair.bin_step),
         )
         .map_err(|_| Error::LBPairNotCreated {
             token_x: token_a.unique_key(),
@@ -811,8 +856,8 @@ fn only_owner(sender: &Addr, owner: &Addr) -> Result<()> {
     Ok(())
 }
 
-#[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetMinBinStep {} => query_min_bin_step(deps),
         QueryMsg::GetFeeRecipient {} => query_fee_recipient(deps),
@@ -842,7 +887,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
 /// # Returns
 ///
 /// * `min_bin_step` - The minimum bin step of the pair.
-fn query_min_bin_step(deps: Deps) -> Result<Binary> {
+fn query_min_bin_step(_deps: Deps) -> Result<Binary> {
     let response = MinBinStepResponse {
         min_bin_step: _MIN_BIN_STEP,
     };
@@ -855,9 +900,9 @@ fn query_min_bin_step(deps: Deps) -> Result<Binary> {
 ///
 /// * `fee_recipient` - The address of the fee recipient.
 fn query_fee_recipient(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = FeeRecipientResponse {
-        fee_recipient: state.fee_recipient,
+        fee_recipient: config.fee_recipient,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -867,7 +912,7 @@ fn query_fee_recipient(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `max_fee` - The maximum fee percentage for flash loans.
-fn query_max_flash_loan_fee(deps: Deps) -> Result<Binary> {
+fn query_max_flash_loan_fee(_deps: Deps) -> Result<Binary> {
     let response = MaxFlashLoanFeeResponse {
         max_fee: _MAX_FLASHLOAN_FEE,
     };
@@ -880,9 +925,9 @@ fn query_max_flash_loan_fee(deps: Deps) -> Result<Binary> {
 ///
 /// * `flash_loan_fee` - The fee percentage for flash loans.
 fn query_flash_loan_fee(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = FlashLoanFeeResponse {
-        flash_loan_fee: state.flash_loan_fee,
+        flash_loan_fee: config.flash_loan_fee,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -893,9 +938,9 @@ fn query_flash_loan_fee(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_pair_implementation` - The code ID and hash of the LBPair implementation.
 fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = LBPairImplementationResponse {
-        lb_pair_implementation: state.lb_pair_implementation,
+        lb_pair_implementation: config.lb_pair_implementation,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -906,9 +951,9 @@ fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_token_implementation` - The code ID and hash of the LBToken implementation.
 fn query_lb_token_implementation(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = LBTokenImplementationResponse {
-        lb_token_implementation: state.lb_token_implementation,
+        lb_token_implementation: config.lb_token_implementation,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -935,7 +980,7 @@ fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
 ///
 /// * lb_pair - The address of the LBPair at index `index`.
 // TODO: Unsure if this function is necessary. Not sure how to index the Keyset. WAITING: For Front-end to make some decisions about this
-fn query_lb_pair_at_index(deps: Deps, index: u32) -> Result<Binary> {
+fn query_lb_pair_at_index(_deps: Deps, _index: u32) -> Result<Binary> {
     let lb_pair = todo!();
 
     let response = LBPairAtIndexResponse { lb_pair };
@@ -1122,12 +1167,10 @@ fn query_all_bin_steps(deps: Deps) -> Result<Binary> {
 
     let mut bin_step_with_preset = Vec::<u16>::new();
 
-    let iterator = PRESETS
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .into_iter();
+    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
 
     for result in iterator {
-        let (bin_step, preset) = result.map_err(Error::CwErr)?;
+        let (bin_step, _preset) = result.map_err(Error::CwErr)?;
         bin_step_with_preset.push(bin_step)
     }
 
@@ -1162,9 +1205,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
 
     let mut open_bin_steps = Vec::<u16>::new();
 
-    let iterator = PRESETS
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .into_iter();
+    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
 
     for result in iterator {
         let (bin_step, preset) = result.map_err(Error::CwErr)?;
@@ -1178,7 +1219,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
 }
 
 fn _is_preset_open(preset: Bytes32) -> bool {
-    return EncodedSample(preset).decode_bool(_OFFSET_IS_PRESET_OPEN);
+    EncodedSample(preset).decode_bool(_OFFSET_IS_PRESET_OPEN)
 }
 
 /// Returns all the LBPair of a pair of tokens.
@@ -1196,14 +1237,11 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
 
     // Create a Vec of available bin steps for this pair
     let bin_steps: Vec<u16> = AVAILABLE_LB_PAIR_BIN_STEPS
-        .load(
-            deps.storage,
-            (token_a.unique_key().clone(), token_b.unique_key().clone()),
-        )
+        .load(deps.storage, (token_a.unique_key(), token_b.unique_key()))
         .map_err(|_| Error::Generic("This token pair is not in the map".to_string()))?;
 
     // Not sure if this condition is possible, but just in case.
-    if bin_steps.len() == 0 {
+    if bin_steps.is_empty() {
         return Err(Error::Generic("No available bin_steps".to_string()));
     }
 
@@ -1214,11 +1252,7 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
             LB_PAIRS_INFO
                 .load(
                     deps.storage,
-                    (
-                        token_a.unique_key().clone(),
-                        token_b.unique_key().clone(),
-                        bin_step,
-                    ),
+                    (token_a.unique_key(), token_b.unique_key(), bin_step),
                 )
                 .map_err(|_| Error::Generic("Error retrieving LBPairInformation".to_string()))
         })
@@ -1230,7 +1264,7 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
     to_binary(&response).map_err(Error::CwErr)
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     match (msg.id, msg.result) {
         (INSTANTIATE_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
@@ -1254,11 +1288,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 };
                 LB_PAIRS_INFO.save(
                     deps.storage,
-                    (
-                        token_a.unique_key().clone(),
-                        token_b.unique_key().clone(),
-                        bin_step,
-                    ),
+                    (token_a.unique_key(), token_b.unique_key(), bin_step),
                     &LBPairInformation {
                         bin_step: lb_pair_key.bin_step,
                         lb_pair: lb_pair.clone(),
@@ -1271,10 +1301,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
                 // load the different bin_step LBPairs that exist for this pair of tokens, then add the new one
                 let mut bin_step_list = AVAILABLE_LB_PAIR_BIN_STEPS
-                    .load(
-                        deps.storage,
-                        (token_a.unique_key().clone(), token_b.unique_key().clone()),
-                    )
+                    .load(deps.storage, (token_a.unique_key(), token_b.unique_key()))
                     .unwrap_or(Vec::<u16>::new());
                 bin_step_list.push(bin_step);
                 AVAILABLE_LB_PAIR_BIN_STEPS.save(
@@ -1285,11 +1312,11 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
                 ephemeral_storage_w(deps.storage).remove();
                 Ok(Response::default()
-                    .add_attribute("lb_pair_address", lb_pair.contract.address.to_string())
-                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash.to_string()))
+                    .add_attribute("lb_pair_address", lb_pair.contract.address)
+                    .add_attribute("lb_pair_hash", lb_pair.contract.code_hash))
             }
-            None => Err(StdError::generic_err(format!("Expecting contract id"))),
+            None => Err(StdError::generic_err("Expecting contract id")),
         },
-        _ => Err(StdError::generic_err(format!("Unknown reply id"))),
+        _ => Err(StdError::generic_err("Unknown reply id")),
     }
 }

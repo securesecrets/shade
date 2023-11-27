@@ -1,3 +1,5 @@
+#![allow(suspicious_double_ref_op)]
+
 // TODO: make private later
 pub mod contract_interfaces;
 pub use contract_interfaces::*;
@@ -39,8 +41,8 @@ pub use anyhow::Result as AnyResult;
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
 
-#[cfg(feature = "lb-libraries")]
-pub use utils::liquidity_book as lb_libraries;
+#[cfg(all(feature = "liquidity_book_impl", feature = "swap"))]
+pub use liquidity_book::lb_libraries;
 
 #[cfg(feature = "chrono")]
 pub use chrono;

@@ -17,22 +17,17 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
-
-
 
 [dependencies]
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
 snafu = { version = "0.7.1" }
+schemars = "0.8.16"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
-schemars = "0.8.1"
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "=1.1.11", features = ["iterator"] }
-cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "=1.1.11", features = ["iterator"] }
-shadeswap-shared = {  version = "0.1.0", path = "../../../packages/shadeswap_shared", features = []  }
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [] }
+cosmwasm-schema = "1.5"
+
 [dev-dependencies]
-cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm"}
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", features=["iterator"] }
+serial_test = "2.0.0"

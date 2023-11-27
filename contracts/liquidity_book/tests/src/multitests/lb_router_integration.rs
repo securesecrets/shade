@@ -1,48 +1,31 @@
-use std::ops::Add;
-
 use anyhow::Ok;
-use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError};
-use shade_multi_test::interfaces::{lb_factory, lb_pair, snip20};
-use shade_protocol::lb_libraries::tokens::TokenType;
-
-use shadeswap_shared::{
-    core::TokenAmount,
+use serial_test::serial;
+use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
+use shade_multi_test::interfaces::{
+    lb_factory,
+    lb_pair,
+    router::{self},
+    snip20,
+    utils::SupportedContracts,
+};
+use shade_protocol::swap::{
+    core::{TokenAmount, TokenType},
     router::{Hop, InvokeMsg},
 };
 
-use crate::multitests::test_helper::{
-    liquidity_parameters_generator_with_native,
-    token_type_native_generator,
-    SHADE,
-    SILK,
-};
-
-use super::{
-    lb_pair_fees::DEPOSIT_AMOUNT,
-    test_helper::{
-        extract_contract_info,
-        increase_allowance_helper,
-        init_addrs,
-        liquidity_parameters_generator,
-        mint_token_helper,
-        setup,
-        token_type_snip20_generator,
-        DEFAULT_BIN_STEP,
-        ID_ONE,
-    },
-};
-use cosmwasm_std::Uint128;
-use shade_multi_test::interfaces::{
-    router::{self},
-    utils::SupportedContracts,
-};
+use super::lb_pair_fees::DEPOSIT_AMOUNT;
+use crate::multitests::test_helper::*;
 
 const SWAP_AMOUNT: u128 = 1000;
 
 #[test]
+#[serial]
 pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, mut deployed_contracts) = setup(None)?;
+
+    let starting_number_of_pairs =
+        lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
 
     //test the registered tokens
 
@@ -318,7 +301,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let number_of_pairs =
         lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
 
-    assert_eq!(number_of_pairs, 2);
+    assert_eq!(number_of_pairs, starting_number_of_pairs + 2);
 
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
@@ -369,7 +352,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             .bank
             .init_balance(storage, &addrs.joker(), vec![Coin {
                 denom: "uscrt".into(),
-                amount: amount_x.add(Uint128::from(SWAP_AMOUNT)),
+                amount: amount_x + Uint128::from(SWAP_AMOUNT),
             }])
             .unwrap();
     });

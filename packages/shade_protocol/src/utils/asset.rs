@@ -1,11 +1,11 @@
-use std::vec;
-
 use crate::{
-    c_std::{Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, StdResult, Uint128},
+    c_std::{
+        Addr, Api, BalanceResponse, BankQuery, ContractInfo, CosmosMsg, Deps, DepsMut, Env,
+        StdResult, Uint128,
+    },
+    cosmwasm_schema::cw_serde,
     BLOCK_SIZE,
 };
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{CosmosMsg, DepsMut, Env};
 
 /// Validates an optional address.
 pub fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {

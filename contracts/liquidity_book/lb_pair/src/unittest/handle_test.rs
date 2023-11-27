@@ -1,19 +1,8 @@
-use core::result::Result::Ok;
-use std::str::FromStr;
-
-use cosmwasm_std::{Uint128, Uint256};
+use cosmwasm_std::Uint128;
 use shade_multi_test::interfaces::{lb_pair, lb_token, snip20};
-use shade_protocol::contract_interfaces::liquidity_book::lb_token::QueryAnswer;
+use shade_protocol::liquidity_book::lb_token::QueryAnswer;
 
-use crate::unittest::test_helper::{
-    assert_approx_eq_rel,
-    init_addrs,
-    init_lb_pair,
-    liquidity_parameters_helper,
-    lp_tokens_tempate_for_100_sscrts,
-    mint_increase_allowance_helper,
-    remove_liquidity_parameters_helper,
-};
+use super::test_helper::*;
 
 /***********************************************
  * Workflow of Init *
@@ -38,7 +27,7 @@ fn test_init() -> Result<(), anyhow::Error> {
         QueryAnswer::TokenContractInfo { curators, .. } => {
             assert_eq!(curators[0], lb_pair_contract_info.address)
         }
-        _ => (),
+        _ => todo!(),
     }
 
     let result = snip20::balance_query(
@@ -80,8 +69,8 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
     //add_liquidity
     let liquidity_parameters = liquidity_parameters_helper(
         &deployed_contracts,
-        Uint128::from(100 * 1000_000u128),
-        Uint128::from(100 * 1000_000u128),
+        Uint128::from(100 * 1_000_000u128),
+        Uint128::from(100 * 1_000_000u128),
     )?;
     lb_pair::add_liquidity(
         &mut app,
@@ -92,7 +81,7 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
 
     // query lb-pair SHD balance for token_minted
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -102,7 +91,7 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
 
     // query balance SCRT for token_minted
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SSCRT",
@@ -114,15 +103,14 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
     //p.s: values are calculated and are assumed to be correct
     let log_shares_array = lp_tokens_tempate_for_100_sscrts()?;
 
-    let mut i = 0;
-    for id in log_shares_array {
+    for (i, id) in log_shares_array.into_iter().enumerate() {
         let liquidity = lb_token::query_id_balance(&app, &lb_token_info, id.0.to_string())?;
 
         match liquidity {
-            shade_protocol::liquidity_book::lb_token::QueryAnswer::IdTotalBalance { amount } => {
+            QueryAnswer::IdTotalBalance { amount } => {
                 assert_eq!(&amount, id.1)
             }
-            _ => (),
+            _ => todo!(),
         }
 
         let bin_reserves = lb_pair::bin_query(&app, &lb_pair_contract_info.clone().into(), id.0)?;
@@ -130,14 +118,12 @@ fn test_add_liquidity() -> Result<(), anyhow::Error> {
         assert_eq!(
             bin_reserves.0,
             Uint128::from(
-                (Uint128::from(100 * 1000000u128).u128()
-                    * liquidity_parameters.distribution_x[i] as u128)
+                Uint128::from(100 * 1000000u128).u128()
+                    * liquidity_parameters.distribution_x[i] as u128
             )
             .multiply_ratio(1u128, 1e18 as u128)
             .u128()
         );
-
-        i += 1;
     }
     Ok(())
 }
@@ -167,7 +153,7 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
 
     // query lb-pair balance
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -190,7 +176,7 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
 
     // query lb-pair balance and user balance
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -199,7 +185,7 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
     assert_eq!(balance, Uint128::from(99999996u128));
 
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.user1().as_str(),
         &deployed_contracts,
         "SHD",
@@ -216,12 +202,12 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.user1().as_str(),
         &lb_pair_contract_info.clone().into(),
-        remove_liquidity_parameters.clone(),
+        remove_liquidity_parameters,
     )?;
 
     // query lb-pair balance and user balance
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -230,7 +216,7 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
     assert_approx_eq_rel(balance.u128(), 50_000_000u128, 100u128);
 
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.user1().as_str(),
         &deployed_contracts,
         "SHD",
@@ -242,15 +228,14 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
     // start: user-balance = 1000*10^6 ,lb-pair-balance = 0
     // add_liquidity: user-balance = 9000*10^6 ,lb-pair-balance = 100*10^6
 
-    let mut i = 0;
-    for (id, amt) in remove_liq_log {
+    for (i, (id, amt)) in remove_liq_log.into_iter().enumerate() {
         let liquidity = lb_token::query_id_balance(&app, &lb_token_info, id.to_string())?;
 
         match liquidity {
-            shade_protocol::liquidity_book::lb_token::QueryAnswer::IdTotalBalance { amount } => {
+            QueryAnswer::IdTotalBalance { amount } => {
                 assert_eq!(&amount, amt)
             }
-            _ => (),
+            _ => todo!(),
         }
 
         //get bin_reserves
@@ -265,8 +250,6 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
             .multiply_ratio(1u128, 1e18 as u128)
             .u128()
         );
-
-        i += 1;
     }
 
     //remove all:
@@ -277,12 +260,12 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.user1().as_str(),
         &lb_pair_contract_info.clone().into(),
-        remove_liquidity_parameters.clone(),
+        remove_liquidity_parameters,
     )?;
 
     // query lb-pair balance and user balance
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -291,13 +274,13 @@ fn test_remove_liquidity() -> Result<(), anyhow::Error> {
     assert_approx_eq_rel(0u128, balance.u128(), 100u128);
 
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.user1().as_str(),
         &deployed_contracts,
         "SHD",
         "viewing_key".to_owned(),
     )?;
-    assert_approx_eq_rel(balance.u128(), 1000_000_000u128, 100u128);
+    assert_approx_eq_rel(balance.u128(), 1_000_000_000u128, 100u128);
 
     Ok(())
 }
@@ -318,7 +301,7 @@ fn test_swap_liquidity() -> Result<(), anyhow::Error> {
 
     // query lb-pair balance
     let balance = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair_contract_info.address.as_str(),
         &deployed_contracts,
         "SHD",
@@ -336,7 +319,7 @@ fn test_swap_liquidity() -> Result<(), anyhow::Error> {
         &mut app,
         addrs.user1().as_str(),
         &lb_pair_contract_info.clone().into(),
-        liquidity_parameters.clone(),
+        liquidity_parameters,
     )?;
 
     let (amount_in, amount_out_left, fee) = lb_pair::swap_in_query(

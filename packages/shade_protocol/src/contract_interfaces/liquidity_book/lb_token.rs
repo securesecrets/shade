@@ -1,31 +1,18 @@
-use cosmwasm_std::{
-    to_binary,
-    Addr,
-    Binary,
-    Coin,
-    CosmosMsg,
-    StdResult,
-    Uint128,
-    Uint256,
-    WasmMsg,
-};
-use schemars::JsonSchema;
+use secret_toolkit::permit::Permit;
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{
-    liquidity_book::lb_token::{
+use crate::{
+    c_std::{to_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg},
+    lb_libraries::lb_token::{
         expiration::Expiration,
         metadata::Metadata,
         permissions::{Permission, PermissionKey},
         state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
         txhistory::Tx,
     },
-    ExecuteCallback,
-    InstantiateCallback,
-    Query,
+    schemars::JsonSchema,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
 };
-
-use secret_toolkit::permit::Permit;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Init messages

@@ -1,4 +1,5 @@
 use std::ops::{Add, Mul};
+use serial_test::serial;
 
 use crate::multitests::test_helper::*;
 
@@ -79,6 +80,7 @@ pub fn init_setup() -> Result<
 }
 
 #[test]
+#[serial]
 pub fn test_simple_mint() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -158,6 +160,7 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -269,6 +272,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -426,6 +430,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_simple_burn() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -559,6 +564,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -699,6 +705,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_mint_zero_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = init_setup()?;
@@ -759,6 +766,7 @@ pub fn test_revert_mint_zero_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = init_setup()?;
@@ -909,6 +917,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_burn_more_than_balance() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = init_setup()?;
@@ -995,6 +1004,7 @@ pub fn test_revert_burn_more_than_balance() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_burn_zero() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = init_setup()?;

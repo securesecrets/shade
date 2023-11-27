@@ -15,8 +15,9 @@ name = "schemas"
 path = "src/schemas.rs"
 # Must have all of the contract_interfaces
 required-features = [
-  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "oracles",
-  "peg_stability", "query_auth", "sky", "snip20", "staking", "mint_router", "snip20_migration", "liquidity_book"
+  "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "mint_router",
+  "oracles", "peg_stability", "query_auth", "sky", "snip20", "snip20_migration",
+  "staking", "swap", "liquidity_book",
 ]
 
 [lib]
@@ -35,7 +36,6 @@ storage = ["dao-utils"]
 storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-lb-libraries = []
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -49,7 +49,7 @@ interface = ["utils", "errors"]
 # #[cfg(feature = "contract_name")]
 # pub mod contract_name;
 
-# For the implementation you need to import this in your feature and prepend the feature name with `_impl`
+# For the implementation you need to import this in your feature and append the feature name with `_impl`
 implementation = ["storage_plus", "storage", "admin"]
 # Like so
 # contract_name_impl = ["contract_name", "implementation"]
@@ -87,7 +87,8 @@ dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
-liquidity_book = ["interface"]
+swap             = ["interface", "snip20"]
+liquidity_book   = ["interface", "swap"]
 
 chrono = ["dep:chrono"]
 
@@ -99,12 +100,12 @@ mock = []
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
-governance-impl = ["implementation", "governance"]
-snip20-impl     = ["snip20", "query_auth_impl"]
-query_auth_impl = ["implementation", "query_auth", "dep:base64"]
-sky-utils       = ["implementation", "sky"]
-admin_impl      = ["implementation", "admin"]
-liquidity_book_impl = ["liquidity_book", "implementation"]
+governance-impl     = ["implementation", "governance"]
+snip20-impl         = ["snip20", "query_auth_impl"]
+query_auth_impl     = ["implementation", "query_auth", "dep:base64"]
+sky-utils           = ["implementation", "sky"]
+admin_impl          = ["implementation", "admin"]
+liquidity_book_impl = ["implementation", "liquidity_book", "snip20", "swap"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -112,18 +113,19 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = [] # TODO: remove this from all cargo configs
 
 [dependencies]
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "=1.1.11", features = ["iterator"] }
-cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "=1.1.11", features = ["iterator"] }
-cosmwasm-schema = "1.1.5"
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.11", features = ["iterator"] }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.1.11", features = ["iterator"] }
+cosmwasm-schema = "1.5"
 contract-derive = { version = "0.1.0", path = "../contract_derive" }
-ethnum = { version = "1" }
+ethnum = { version = "1.5" }
+primitive-types = { version = "0.12", default-features = false }
 secret-toolkit = { version = "0.10.0", default-features = false, features = [
   "storage", "viewing-key", "permit", "serialization", 
   #"crypto", "utils", 
 ] }
-schemars = "0.8.9"
-serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
-thiserror = "1.0"
+schemars = "0.8.16"
+serde = { version = "1.0.193", default-features = false, features = ["derive", "alloc"] }
+thiserror = "1.0.50"
 
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["iterator"] }
 

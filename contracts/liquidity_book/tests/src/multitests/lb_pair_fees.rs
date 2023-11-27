@@ -1,16 +1,5 @@
-use crate::multitests::test_helper::*;
-
-use super::test_helper::{
-    increase_allowance_helper,
-    init_addrs,
-    liquidity_parameters_generator,
-    mint_token_helper,
-    setup,
-    ID_ONE,
-};
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
-use ethnum::U256;
+use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
     lb_pair,
@@ -19,6 +8,7 @@ use shade_multi_test::interfaces::{
     utils::DeployedContracts,
 };
 use shade_protocol::{
+    c_std::{ContractInfo, StdError, Uint128, Uint256},
     lb_libraries::{
         math::{encoded_sample::MASK_UINT20, u24::U24},
         types::LBPairInformation,
@@ -27,8 +17,9 @@ use shade_protocol::{
     multi_test::App,
 };
 
-pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000_u128;
+use crate::multitests::test_helper::*;
 
+pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000;
 pub const ACTIVE_ID: u32 = ID_ONE;
 
 pub fn lb_pair_setup() -> Result<
@@ -160,6 +151,7 @@ pub fn lb_pair_setup() -> Result<
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -191,7 +183,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -200,7 +192,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -250,7 +242,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -258,7 +250,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -276,6 +268,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -308,7 +301,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     )?;
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -316,7 +309,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(silk_balance, Uint128::zero());
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -366,7 +359,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -374,7 +367,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -392,6 +385,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -426,7 +420,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -435,7 +429,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -485,7 +479,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -493,7 +487,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -509,6 +503,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -542,7 +537,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     )?;
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -551,7 +546,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     assert_eq!(silk_balance, Uint128::zero());
 
     let shade_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -601,7 +596,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -609,7 +604,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -627,6 +622,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -659,7 +655,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
     // check the balance of silk if it's equal to the amount_y_out
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -667,7 +663,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(silk_balance, amount_y_out);
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -706,7 +702,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
 
     // check the balance of silk if it's equal to the amount_y_out
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -714,7 +710,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(silk_balance, amount_y_out);
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -765,7 +761,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
@@ -773,7 +769,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let lb_pair_balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SILK,
@@ -784,7 +780,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     assert_eq!(lb_pair_balance_y.u128(), protocol_fee_y);
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -792,7 +788,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -815,6 +811,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -849,7 +846,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
 
     // check the balance of silk if it's equal to the amount_y_out
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -857,7 +854,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(silk_balance, Uint128::zero());
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -895,7 +892,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
 
     // check the balance of silk if it's equal to the amount_y_out
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -903,7 +900,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(silk_balance, amount_y_out);
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -954,7 +951,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
@@ -962,7 +959,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let lb_pair_balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SILK,
@@ -973,7 +970,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     assert_eq!(lb_pair_balance_y.u128(), protocol_fee_y);
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -981,7 +978,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1004,6 +1001,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1037,7 +1035,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1046,7 +1044,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1084,7 +1082,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1093,7 +1091,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     assert_eq!(silk_balance, amount_y_out);
 
     let shade_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1144,7 +1142,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
@@ -1152,7 +1150,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let lb_pair_balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SILK,
@@ -1162,7 +1160,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     assert_eq!(lb_pair_balance_x.u128(), protocol_fee_x);
     assert_eq!(lb_pair_balance_y.u128(), protocol_fee_y);
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1170,7 +1168,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1191,6 +1189,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1224,7 +1223,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1233,7 +1232,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     assert_eq!(silk_balance, Uint128::zero());
 
     let shade_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1270,7 +1269,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1279,7 +1278,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, amount_x_out);
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1330,7 +1329,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
@@ -1338,7 +1337,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let lb_pair_balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         lb_pair.lb_pair.contract.address.as_str(),
         &deployed_contracts,
         SILK,
@@ -1348,7 +1347,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     assert_eq!(lb_pair_balance_x.u128(), protocol_fee_x);
     assert_eq!(lb_pair_balance_y.u128(), protocol_fee_y);
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1356,7 +1355,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1377,6 +1376,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1483,7 +1483,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1491,7 +1491,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1530,7 +1530,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1538,7 +1538,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1561,6 +1561,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
@@ -1668,7 +1669,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1676,7 +1677,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1715,7 +1716,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
         lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1723,7 +1724,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1746,9 +1747,11 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fees_2lp_flash_loan() {}
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1790,7 +1793,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1800,7 +1803,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), protocol_fee_x - 1);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -1813,6 +1816,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1854,7 +1858,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1864,7 +1868,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), 0);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -1877,6 +1881,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -1910,7 +1915,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     )?;
 
     let shd_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1919,7 +1924,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     assert_eq!(shd_balance, Uint128::zero());
 
     let silk_balance = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.batman().as_str(),
         &deployed_contracts,
         SILK,
@@ -1965,7 +1970,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -1975,7 +1980,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), protocol_fee_x - 1);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -1988,6 +1993,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -2039,7 +2045,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(reserves_y_after, reserves_y);
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -2049,7 +2055,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), protocol_fee_x - 1);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -2109,7 +2115,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(reserves_y_after, reserves_y);
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -2119,7 +2125,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), prev_protocol_fee_x - 1);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -2142,7 +2148,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     );
 
     let balance_x = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SHADE,
@@ -2152,7 +2158,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(balance_x.u128(), prev_protocol_fee_x - 1);
 
     let balance_y = snip20::balance_query(
-        &mut app,
+        &app,
         addrs.joker().as_str(),
         &deployed_contracts,
         SILK,
@@ -2165,6 +2171,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
 
@@ -2224,6 +2231,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
 }
 
 // #[test]
+// #[serial]
 // pub fn test_fuzz_user_fee_swap_in_x() -> Result<(), anyhow::Error> {
 //     let addrs = init_addrs();
 //     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;

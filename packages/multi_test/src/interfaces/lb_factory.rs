@@ -2,10 +2,7 @@ use crate::multi::lb_factory::LbFactory;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult},
     contract_interfaces::liquidity_book::lb_factory,
-    lb_libraries::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    },
+    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
     multi_test::App,
     utils::{
         asset::{Contract, RawContract},
@@ -14,6 +11,7 @@ use shade_protocol::{
         MultiTestable,
         Query,
     },
+    swap::core::TokenType,
 };
 
 pub fn init(
@@ -286,74 +284,62 @@ pub fn force_decay(
 }
 
 pub fn query_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    let flash_loan_fee =
-        match (lb_factory::QueryMsg::GetFlashLoanFee {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::FlashLoanFeeResponse { flash_loan_fee }) => Ok(flash_loan_fee),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    flash_loan_fee
+    match (lb_factory::QueryMsg::GetFlashLoanFee {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::FlashLoanFeeResponse { flash_loan_fee }) => Ok(flash_loan_fee),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_lb_pair_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
 ) -> StdResult<ContractInstantiationInfo> {
-    let lb_pair_implementation =
-        match (lb_factory::QueryMsg::GetLBPairImplementation {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::LBPairImplementationResponse {
-                lb_pair_implementation,
-            }) => Ok(lb_pair_implementation),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    lb_pair_implementation
+    match (lb_factory::QueryMsg::GetLBPairImplementation {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::LBPairImplementationResponse {
+            lb_pair_implementation,
+        }) => Ok(lb_pair_implementation),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_lb_token_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
 ) -> StdResult<ContractInstantiationInfo> {
-    let lb_token_implementation =
-        match (lb_factory::QueryMsg::GetLBTokenImplementation {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::LBTokenImplementationResponse {
-                lb_token_implementation,
-            }) => Ok(lb_token_implementation),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    lb_token_implementation
+    match (lb_factory::QueryMsg::GetLBTokenImplementation {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::LBTokenImplementationResponse {
+            lb_token_implementation,
+        }) => Ok(lb_token_implementation),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_min_bin_step(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    let min_bin_step = match (lb_factory::QueryMsg::GetMinBinStep {}.test_query(lb_factory, app)) {
+    match (lb_factory::QueryMsg::GetMinBinStep {}.test_query(lb_factory, app)) {
         Ok(lb_factory::MinBinStepResponse { min_bin_step }) => Ok(min_bin_step),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    min_bin_step
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_fee_recipient(app: &mut App, lb_factory: &ContractInfo) -> StdResult<Addr> {
-    let fee_recpient = match (lb_factory::QueryMsg::GetFeeRecipient {}.test_query(lb_factory, app))
-    {
+    match (lb_factory::QueryMsg::GetFeeRecipient {}.test_query(lb_factory, app)) {
         Ok(lb_factory::FeeRecipientResponse { fee_recipient }) => Ok(fee_recipient),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    fee_recpient
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_max_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    let max_fee = match (lb_factory::QueryMsg::GetMaxFlashLoanFee {}.test_query(lb_factory, app)) {
+    match (lb_factory::QueryMsg::GetMaxFlashLoanFee {}.test_query(lb_factory, app)) {
         Ok(lb_factory::MaxFlashLoanFeeResponse { max_fee }) => Ok(max_fee),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    max_fee
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_number_of_lb_pairs(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u32> {
-    let lb_pair_number =
-        match (lb_factory::QueryMsg::GetNumberOfLBPairs {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::NumberOfLBPairsResponse { lb_pair_number }) => Ok(lb_pair_number),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    lb_pair_number
+    match (lb_factory::QueryMsg::GetNumberOfLBPairs {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::NumberOfLBPairsResponse { lb_pair_number }) => Ok(lb_pair_number),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_all_lb_pairs(
@@ -362,13 +348,10 @@ pub fn query_all_lb_pairs(
     token_x: TokenType,
     token_y: TokenType,
 ) -> StdResult<Vec<LBPairInformation>> {
-    let lb_pairs_available = match (lb_factory::QueryMsg::GetAllLBPairs { token_x, token_y }
-        .test_query(lb_factory, app))
-    {
+    match (lb_factory::QueryMsg::GetAllLBPairs { token_x, token_y }.test_query(lb_factory, app)) {
         Ok(lb_factory::AllLBPairsResponse { lb_pairs_available }) => Ok(lb_pairs_available),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    lb_pairs_available
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_lb_pair_information(
@@ -378,7 +361,7 @@ pub fn query_lb_pair_information(
     token_y: TokenType,
     bin_step: u16,
 ) -> StdResult<LBPairInformation> {
-    let lb_pair_information = match (lb_factory::QueryMsg::GetLBPairInformation {
+    match (lb_factory::QueryMsg::GetLBPairInformation {
         token_x,
         token_y,
         bin_step,
@@ -388,62 +371,37 @@ pub fn query_lb_pair_information(
         Ok(lb_factory::LBPairInformationResponse {
             lb_pair_information,
         }) => Ok(lb_pair_information),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    lb_pair_information
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_all_bin_steps(app: &mut App, lb_factory: &ContractInfo) -> StdResult<Vec<u16>> {
-    let bin_step_with_preset =
-        match (lb_factory::QueryMsg::GetAllBinSteps {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::AllBinStepsResponse {
-                bin_step_with_preset,
-            }) => Ok(bin_step_with_preset),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    bin_step_with_preset
+    match (lb_factory::QueryMsg::GetAllBinSteps {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::AllBinStepsResponse {
+            bin_step_with_preset,
+        }) => Ok(bin_step_with_preset),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_preset(
     app: &mut App,
     lb_factory: &ContractInfo,
     bin_step: u16,
-) -> StdResult<(u16, u16, u16, u16, u32, u16, u32, bool)> {
+) -> StdResult<lb_factory::PresetResponse> {
     match (lb_factory::QueryMsg::GetPreset { bin_step }.test_query(lb_factory, app)) {
-        Ok(lb_factory::PresetResponse {
-            base_factor,
-            filter_period,
-            decay_period,
-            reduction_factor,
-            variable_fee_control,
-            protocol_share,
-            max_volatility_accumulator,
-            is_open,
-        }) => {
-            return Ok((
-                base_factor,
-                filter_period,
-                decay_period,
-                reduction_factor,
-                variable_fee_control,
-                protocol_share,
-                max_volatility_accumulator,
-                is_open,
-            ));
-        }
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
+        Ok(response) => Ok(response),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_number_of_quote_assets(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u32> {
-    let number_of_quote_assets =
-        match (lb_factory::QueryMsg::GetNumberOfQuoteAssets {}.test_query(lb_factory, app)) {
-            Ok(lb_factory::NumberOfQuoteAssetsResponse {
-                number_of_quote_assets,
-            }) => Ok(number_of_quote_assets),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    number_of_quote_assets
+    match (lb_factory::QueryMsg::GetNumberOfQuoteAssets {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::NumberOfQuoteAssetsResponse {
+            number_of_quote_assets,
+        }) => Ok(number_of_quote_assets),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_is_quote_asset(
@@ -451,12 +409,10 @@ pub fn query_is_quote_asset(
     lb_factory: &ContractInfo,
     token: TokenType,
 ) -> StdResult<bool> {
-    let is_quote = match (lb_factory::QueryMsg::IsQuoteAsset { token }.test_query(lb_factory, app))
-    {
+    match (lb_factory::QueryMsg::IsQuoteAsset { token }.test_query(lb_factory, app)) {
         Ok(lb_factory::IsQuoteAssetResponse { is_quote }) => Ok(is_quote),
-        Err(e) => return Err(StdError::generic_err(e.to_string())),
-    };
-    is_quote
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn query_quote_asset_at_index(
@@ -464,10 +420,8 @@ pub fn query_quote_asset_at_index(
     lb_factory: &ContractInfo,
     index: u32,
 ) -> StdResult<TokenType> {
-    let asset =
-        match (lb_factory::QueryMsg::GetQuoteAssetAtIndex { index }.test_query(lb_factory, app)) {
-            Ok(lb_factory::QuoteAssetAtIndexResponse { asset }) => Ok(asset),
-            Err(e) => return Err(StdError::generic_err(e.to_string())),
-        };
-    asset
+    match (lb_factory::QueryMsg::GetQuoteAssetAtIndex { index }.test_query(lb_factory, app)) {
+        Ok(lb_factory::QuoteAssetAtIndexResponse { asset }) => Ok(asset),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }

@@ -1,15 +1,11 @@
 use super::lb_pair;
-use crate::utils::{
-    asset::RawContract,
-    liquidity_book::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    },
+use crate::{
+    c_std::Addr,
+    cosmwasm_schema::{cw_serde, QueryResponses},
+    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
+    swap::core::TokenType,
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
 };
-
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Addr;
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
 #[cw_serde]

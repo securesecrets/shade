@@ -18,28 +18,20 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
-  "liquidity_book","storage_plus","lb-libraries",
-] }
-cosmwasm-std = { package = "secret-cosmwasm-std", version = "=1.1.11", features = ["iterator"] }
-cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "=1.1.11", features = ["iterator"] }
-cosmwasm-schema = "1.1.5"
-# schemars = { version = "0.8" }
-serde = { version = "1" }
-serde-json-wasm = { version = "0.5"}
-thiserror = { version = "1" }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
-ethnum = { version = "1" }
-shadeswap-shared = {  version = "0.1.0", path = "../../../packages/shadeswap_shared", features = []  }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
+schemars = "0.8.16"
+serde = { version = "1.0" }
+serde-json-wasm = { version = "1.0"}
+cosmwasm-schema = "1.5"
+thiserror = { version = "1.0" }
+ethnum = { version = "1.5" }
 
 [dev-dependencies]
 anyhow = "1"
-# cw-multi-test = { version = "0.16.0", default-features = false }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.11" }
 shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+  "admin",
   "lb_pair",
   "lb_token",
   "snip20",
 ] }
-
-[[bin]]
-name = "schema"

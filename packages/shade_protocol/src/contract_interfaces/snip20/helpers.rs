@@ -31,7 +31,7 @@ pub fn send_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    Ok(ExecuteMsg::Send {
+    ExecuteMsg::Send {
         recipient: recipient.to_string(),
         recipient_code_hash: None,
         amount,
@@ -39,7 +39,7 @@ pub fn send_msg(
         memo,
         padding,
     }
-    .to_cosmos_msg(contract, vec![])?)
+    .to_cosmos_msg(contract, vec![])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Redeem

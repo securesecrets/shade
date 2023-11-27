@@ -2,10 +2,7 @@ use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::{liquidity_book::lb_pair, snip20},
-    lb_libraries::{
-        tokens::TokenType,
-        types::{ContractInstantiationInfo, StaticFeeParameters},
-    },
+    lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
     multi_test::App,
     utils::{
@@ -15,6 +12,7 @@ use shade_protocol::{
         MultiTestable,
         Query,
     },
+    swap::core::TokenType,
 };
 
 pub fn init(
