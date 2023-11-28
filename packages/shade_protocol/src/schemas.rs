@@ -81,15 +81,11 @@ pub fn main() {
     // generate_nested_schemas!(oracles, oracle);
     generate_nested_schemas!(dao, treasury_manager, treasury, scrt_staking, stkd_scrt);
 
-    // generate_nested_schemas_2!(liquidity_book, lb_factory, lb_pair);
-    // generate_nested_schemas!(liquidity_book, lb_token);
-    use shade_protocol::contract_interfaces::liquidity_book::lb_factory;
-    write_api! {
-        name: "lb_factory",
-        instantiate: lb_factory::InstantiateMsg,
-        execute: lb_factory::ExecuteMsg,
-        query: lb_factory::QueryMsg,
-    }
+    // TODO: make lb schema generation better. We can't use the write_api! macro in a workspace
+    // because it will always write to the same location. So I don't know how to generate the
+    // QueryResponse in the was cosmwasm_schema suggests.
+    generate_nested_schemas!(liquidity_book, lb_token);
+    generate_nested_schemas_2!(liquidity_book, lb_factory, lb_pair);
 
     // TODO: make admin interface up to standard
     use shade_protocol::contract_interfaces::admin;
