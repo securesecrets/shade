@@ -66,6 +66,7 @@ pub fn instantiate(
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
         oracle: msg.oracle.into(),
+        query_auth: msg.query_auth.into(),
     };
     CONFIG.save(deps.storage, &cfg)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;

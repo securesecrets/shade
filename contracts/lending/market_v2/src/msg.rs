@@ -51,6 +51,8 @@ pub struct InstantiateMsg {
     pub credit_agency_code_hash: String,
     /// Oracle address
     pub oracle: Contract,
+    /// Address of auth query contract
+    pub query_auth: Contract,
 }
 
 #[cw_serde]

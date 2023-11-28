@@ -41,6 +41,8 @@ pub struct Config {
     pub credit_agency: ContractInfo,
     /// Address of oracle
     pub oracle: ContractInfo,
+    /// Address of auth query contract
+    pub query_auth: ContractInfo,
     pub reserve_factor: Decimal,
 }
 
