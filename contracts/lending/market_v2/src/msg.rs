@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
-    c_std::{ContractInfo, Decimal, Timestamp, Uint128},
+    c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
     utils::{asset::Contract, Query},
 };
 
@@ -58,12 +58,27 @@ pub enum ExecuteMsg {
     /// This requests to withdraw the amount of C Tokens. More specifically,
     /// the contract will burn amount C Tokens and return that to the lender in base asset.
     Withdraw { amount: Uint128 },
+    /// Increases the sender's debt and dispatches a message to send amount base asset to the sender
+    Borrow { amount: Uint128 },
+    /// Helper to allow transfering Ctokens from account source to account destination.
+    /// Sender must be a Credit Agency
+    TransferFrom {
+        source: Addr,
+        destination: Addr,
+        amount: Uint128,
+        liquidation_price: Decimal,
+    },
 }
 
 #[cw_serde]
 pub enum ReceiveMsg {
-    Deposit,
+    /// X market_token must be sent along with this message. If it matches, X c_token is minted of the sender address.
+    /// The underlying market_token is stored in this Market contract
+    Deposit {},
+    /// If sent tokens' denom matches market_token, burns tokens from sender's address
     Repay,
+    /// Helper to allow repay of debt on given account.
+    /// Sender must be a Credit Agency
     RepayTo { account: String },
 }
 

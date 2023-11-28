@@ -130,6 +130,21 @@ pub fn execute(
     use ExecuteMsg::*;
     match msg {
         Withdraw { amount } => execute::withdraw(deps, env, info, amount),
+        Borrow { amount } => execute::borrow(deps, env, info, amount),
+        TransferFrom {
+            source,
+            destination,
+            amount,
+            liquidation_price,
+        } => execute::transfer_from(
+            deps,
+            env,
+            info,
+            source,
+            destination,
+            amount,
+            liquidation_price,
+        ),
     }
 }
 
