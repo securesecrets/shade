@@ -17,7 +17,8 @@ path = "src/schemas.rs"
 required-features = [
   "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "mint_router",
   "oracles", "peg_stability", "query_auth", "sky", "snip20", "snip20_migration",
-  "staking", "swap", "liquidity_book",
+  "staking", "swap", "liquidity_book_impl", "treasury", "manager", "treasury_manager",
+  "basic_staking", "scrt_staking", "stkd_scrt"
 ]
 
 [lib]

@@ -111,26 +111,34 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum QueryMsg {
     #[returns(MinBinStepResponse)]
     GetMinBinStep {},
+
     #[returns(FeeRecipientResponse)]
     GetFeeRecipient {},
     #[returns(LBPairImplementationResponse)]
     #[serde(rename = "get_lb_pair_implementation")]
     GetLBPairImplementation {},
+
     #[returns(LBTokenImplementationResponse)]
     #[serde(rename = "get_lb_token_implementation")]
     GetLBTokenImplementation {},
+
     #[returns(NumberOfLBPairsResponse)]
     #[serde(rename = "get_number_of_lb_pairs")]
     GetNumberOfLBPairs {},
+
     #[returns(LBPairAtIndexResponse)]
     #[serde(rename = "get_lb_pair_at_index")]
     GetLBPairAtIndex { index: u32 },
+
     #[returns(NumberOfQuoteAssetsResponse)]
     GetNumberOfQuoteAssets {},
+
     #[returns(QuoteAssetAtIndexResponse)]
     GetQuoteAssetAtIndex { index: u32 },
+
     #[returns(IsQuoteAssetResponse)]
     IsQuoteAsset { token: TokenType },
+
     #[returns(LBPairInformationResponse)]
     #[serde(rename = "get_lb_pair_information")]
     GetLBPairInformation {
@@ -138,12 +146,16 @@ pub enum QueryMsg {
         token_y: TokenType,
         bin_step: u16,
     },
+
     #[returns(PresetResponse)]
     GetPreset { bin_step: u16 },
+
     #[returns(AllBinStepsResponse)]
     GetAllBinSteps {},
+
     #[returns(OpenBinStepsResponse)]
     GetOpenBinSteps {},
+
     #[returns(AllLBPairsResponse)]
     #[serde(rename = "get_all_lb_pairs")]
     GetAllLBPairs {

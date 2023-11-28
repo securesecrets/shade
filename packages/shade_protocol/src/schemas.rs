@@ -1,4 +1,4 @@
-use cosmwasm_schema::{export_schema, remove_schemas};
+use cosmwasm_schema::{write_api, export_schema, remove_schemas};
 use schemars::schema_for;
 use std::{env::current_dir, fs::create_dir_all};
 
@@ -43,9 +43,32 @@ macro_rules! generate_nested_schemas {
     };
 }
 
+macro_rules! generate_nested_schemas_2 {
+    ($Folder:ident, $($Contract:ident),+) => {
+        $(
+            use shade_protocol::contract_interfaces::$Folder::$Contract;
+
+            let mut out_dir = current_dir().unwrap();
+            out_dir.push("schema");
+            out_dir.push(stringify!($Folder));
+            out_dir.push(stringify!($Contract));
+            create_dir_all(&out_dir).unwrap();
+            remove_schemas(&out_dir).unwrap();
+
+            export_schema(&schema_for!($Contract::InstantiateMsg), &out_dir);
+            export_schema(&schema_for!($Contract::ExecuteMsg), &out_dir);
+            export_schema(&schema_for!($Contract::QueryMsg), &out_dir);
+        )+
+    };
+}
+
+
+
+
 pub fn main() {
     generate_schemas!(
         airdrop,
+        basic_staking,
         bonds,
         governance,
         peg_stability,
@@ -55,12 +78,18 @@ pub fn main() {
     );
 
     // generate_nested_schemas!(mint, liability_mint, mint, mint_router);
+    // generate_nested_schemas!(oracles, oracle);
+    generate_nested_schemas!(dao, treasury_manager, treasury, scrt_staking, stkd_scrt);
 
-    generate_nested_schemas!(oracles, oracle);
-
-    generate_nested_schemas!(dao, treasury_manager, treasury, scrt_staking);
-
-    // generate_nested_schemas!(staking, snip20_staking);
+    // generate_nested_schemas_2!(liquidity_book, lb_factory, lb_pair);
+    // generate_nested_schemas!(liquidity_book, lb_token);
+    use shade_protocol::contract_interfaces::liquidity_book::lb_factory;
+    write_api! {
+        name: "lb_factory",
+        instantiate: lb_factory::InstantiateMsg,
+        execute: lb_factory::ExecuteMsg,
+        query: lb_factory::QueryMsg,
+    }
 
     // TODO: make admin interface up to standard
     use shade_protocol::contract_interfaces::admin;
