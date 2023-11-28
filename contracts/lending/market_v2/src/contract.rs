@@ -12,8 +12,8 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg},
-    state::{Config, CONFIG, VIEWING_KEY},
+    msg::{AuthQueryMsg, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
+    state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
 use lending_utils::token::Token;
@@ -321,7 +321,6 @@ mod execute {
     use crate::{
         interest::{calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate},
         msg::CreditAgencyExecuteMsg,
-        state::debt,
     };
 
     use super::*;
@@ -734,9 +733,8 @@ mod execute {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    use QueryMsg::*;
     let res = match msg {
-        WithPermit { permit, query_msg } => {
+        QueryMsg::WithPermit { permit, query_msg } => {
             // Handle AuthQueryMsg here
             match query_msg {
                 AuthQueryMsg::TokensBalance { account } => {
@@ -754,17 +752,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 }
             }
         }
-        Configuration {} => to_binary(&query::config(deps, env)?)?,
-        Interest {} => to_binary(&query::interest(deps)?)?,
-        PriceMarketLocalPerCommon {} => to_binary(&query::price_market_local_per_common(deps)?)?,
-        TransferableAmount {
-            token,
-            account,
-            viewing_key,
-        } => to_binary(&query::transferable_amount(deps, token, account)?)?,
-        Reserve {} => to_binary(&query::reserve(deps, env)?)?,
-        Apy {} => to_binary(&query::apy(deps)?)?,
-        TotalDebt {} => {
+        QueryMsg::Configuration {} => to_binary(&query::config(deps, env)?)?,
+        QueryMsg::Interest {} => to_binary(&query::interest(deps)?)?,
+        QueryMsg::PriceMarketLocalPerCommon {} => {
+            to_binary(&query::price_market_local_per_common(deps)?)?
+        }
+        QueryMsg::TransferableAmount { token, account } => {
+            to_binary(&query::transferable_amount(deps, token, account)?)?
+        }
+        QueryMsg::Reserve {} => to_binary(&query::reserve(deps, env)?)?,
+        QueryMsg::Apy {} => to_binary(&query::apy(deps)?)?,
+        QueryMsg::TotalDebt {} => {
             let (total, multiplier) = debt::total(deps.storage)?;
             to_binary(&TotalDebtResponse { total, multiplier })?
         }
@@ -891,15 +889,11 @@ mod query {
     }
 
     /// Handler for `QueryMsg::Withdrawable`
-    pub fn withdrawable(
-        deps: Deps,
-        env: Env,
-        account: String,
-        viewing_key: String,
-    ) -> Result<Coin, ContractError> {
+    pub fn withdrawable(deps: Deps, env: Env, account: String) -> Result<Coin, ContractError> {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
         let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
         let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
@@ -915,15 +909,11 @@ mod query {
     }
 
     /// Handler for `QueryMsg::Borrowable`
-    pub fn borrowable(
-        deps: Deps,
-        env: Env,
-        account: String,
-        viewing_key: String,
-    ) -> Result<Coin, ContractError> {
+    pub fn borrowable(deps: Deps, env: Env, account: String) -> Result<Coin, ContractError> {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
         let borrowable = cr_lending_utils::query_borrowable_tokens(deps, &cfg, account)?;
         let borrowable = min(
