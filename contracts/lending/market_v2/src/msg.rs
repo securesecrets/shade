@@ -117,7 +117,6 @@ pub enum QueryMsg {
         token: ContractInfo,
         /// Address that wishes to transfer
         account: String,
-        viewing_key: String,
     },
     #[returns(ReserveResponse)]
     Reserve {},
@@ -139,28 +138,16 @@ impl Query for QueryMsg {
 pub enum AuthQueryMsg {
     /// Returns TokensBalanceResponse
     #[returns(TokensBalanceResponse)]
-    TokensBalance {
-        account: String,
-        viewing_key: String,
-    },
+    TokensBalance { account: String },
     /// Returns the amount that the given account can withdraw
     #[returns(Coin)]
-    Withdrawable {
-        account: String,
-        viewing_key: String,
-    },
+    Withdrawable { account: String },
     /// Returns the amount that the given account can borrow
     #[returns(Coin)]
-    Borrowable {
-        account: String,
-        viewing_key: String,
-    },
+    Borrowable { account: String },
     /// Returns CreditLineResponse
     #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine {
-        account: String,
-        viewing_key: String,
-    },
+    CreditLine { account: String },
 }
 
 // Define an enum for all possible return types of AuthQueryMsg

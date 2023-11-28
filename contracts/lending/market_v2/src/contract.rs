@@ -735,7 +735,41 @@ mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     use QueryMsg::*;
-    Ok(to_binary(&"")?)
+    let res = match msg {
+        WithPermit { permit, query_msg } => {
+            // Handle AuthQueryMsg here
+            match query_msg {
+                AuthQueryMsg::TokensBalance { account } => {
+                    to_binary(&query::tokens_balance(deps, env, account)?)?
+                }
+                AuthQueryMsg::Withdrawable { account } => {
+                    to_binary(&query::withdrawable(deps, env, account)?)?
+                }
+                AuthQueryMsg::Borrowable { account } => {
+                    to_binary(&query::borrowable(deps, env, account)?)?
+                }
+                AuthQueryMsg::CreditLine { account } => {
+                    let account = deps.api.addr_validate(&account)?;
+                    to_binary(&query::credit_line(deps, env, account)?)?
+                }
+            }
+        }
+        Configuration {} => to_binary(&query::config(deps, env)?)?,
+        Interest {} => to_binary(&query::interest(deps)?)?,
+        PriceMarketLocalPerCommon {} => to_binary(&query::price_market_local_per_common(deps)?)?,
+        TransferableAmount {
+            token,
+            account,
+            viewing_key,
+        } => to_binary(&query::transferable_amount(deps, token, account)?)?,
+        Reserve {} => to_binary(&query::reserve(deps, env)?)?,
+        Apy {} => to_binary(&query::apy(deps)?)?,
+        TotalDebt {} => {
+            let (total, multiplier) = debt::total(deps.storage)?;
+            to_binary(&TotalDebtResponse { total, multiplier })?
+        }
+    };
+    Ok(res)
 }
 
 mod query {
