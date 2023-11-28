@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
+    contract_interfaces::query_auth::QueryPermit,
     utils::{asset::Contract, Query},
 };
 
@@ -93,10 +94,82 @@ pub enum CreditAgencyExecuteMsg {
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    /// Queries that requires viewing permit
+    #[returns(AuthQueryResponse)]
+    WithPermit {
+        permit: QueryPermit,
+        query_msg: AuthQueryMsg,
+    },
+    /// Returns current configuration
+    #[returns(crate::state::Config)]
+    Configuration {},
+    /// Returns current utilisation and interest rates
+    #[returns(InterestResponse)]
+    Interest {},
+    /// Returns PriceRate, structure representing sell/buy ratio for local(market)/common denoms
+    #[returns(lending_utils::price::PriceRate)]
+    PriceMarketLocalPerCommon {},
+    /// Returns TransferableAmountResponse
+    #[returns(TransferableAmountResponse)]
+    TransferableAmount {
+        /// Lend contract address that calls "CanTransfer"
+        token: ContractInfo,
+        /// Address that wishes to transfer
+        account: String,
+        viewing_key: String,
+    },
+    #[returns(ReserveResponse)]
+    Reserve {},
+    /// APY Query
+    #[returns(ApyResponse)]
+    Apy {},
+    /// Returns the total amount of debt in the market in base asset
+    /// Return type: `TokenInfoResponse`.
+    #[returns(TotalDebtResponse)]
+    TotalDebt {},
+}
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum AuthQueryMsg {
+    /// Returns TokensBalanceResponse
+    #[returns(TokensBalanceResponse)]
+    TokensBalance {
+        account: String,
+        viewing_key: String,
+    },
+    /// Returns the amount that the given account can withdraw
+    #[returns(Coin)]
+    Withdrawable {
+        account: String,
+        viewing_key: String,
+    },
+    /// Returns the amount that the given account can borrow
+    #[returns(Coin)]
+    Borrowable {
+        account: String,
+        viewing_key: String,
+    },
+    /// Returns CreditLineResponse
+    #[returns(lending_utils::credit_line::CreditLineResponse)]
+    CreditLine {
+        account: String,
+        viewing_key: String,
+    },
+}
+
+// Define an enum for all possible return types of AuthQueryMsg
+#[cw_serde]
+enum AuthQueryResponse {
+    TokensBalance(TokensBalanceResponse),
+    Withdrawable(Coin),
+    Borrowable(Coin),
+    CreditLine(lending_utils::credit_line::CreditLineResponse),
 }
 
 #[cw_serde]
