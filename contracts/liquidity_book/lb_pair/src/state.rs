@@ -1,14 +1,10 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, ContractInfo, Storage, Timestamp, Uint128, Uint256};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use pair_parameter_helper::PairParameters; //?
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, Storage},
+    c_std::{Addr, ContractInfo, Storage, Timestamp, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
     lb_libraries::{
         math::tree_math::TreeUint24,
         oracle_helper::Oracle,
-        pair_parameter_helper::PairParameters,
+        pair_parameter_helper::{self, PairParameters},
         types::Bytes32,
         viewing_keys::ViewingKey,
     },

@@ -29,11 +29,21 @@ use shade_protocol::{
         Uint512,
         WasmMsg,
     },
-    contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
+    contract_interfaces::{
+        liquidity_book::{lb_pair::*, lb_token},
+        swap::{
+            amm_pair::{
+                FeeInfo,
+                QueryMsgResponse::{GetPairInfo, SwapSimulation},
+            },
+            core::{Fee, TokenPair, TokenType},
+            router::ExecuteMsgResponse,
+        },
+    },
     lb_libraries::{
         approx_div,
         bin_helper::BinHelper,
-        constants::{MAX_FEE, SCALE_OFFSET},
+        constants::{BASIS_POINT_MAX, MAX_FEE, SCALE_OFFSET},
         fee_helper::FeeHelper,
         lb_token::state_structs::{LbPair, TokenAmount, TokenIdBalance},
         math::{
@@ -44,22 +54,19 @@ use shade_protocol::{
             u24::U24,
             u256x256_math::U256x256Math,
             uint256_to_u256::{ConvertU256, ConvertUint256},
-            BASIS_POINT_MAX,
         },
         oracle_helper::{Oracle, MAX_SAMPLE_LIFETIME},
         pair_parameter_helper::PairParameters,
         price_helper::PriceHelper,
-        types::{Bytes32, MintArrays},
+        types::{self, Bytes32, LBPairInformation, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
     snip20,
     utils::pad_handle_result,
+    Contract,
     BLOCK_SIZE,
 };
-use shadeswap_shared::router::ExecuteMsgResponse;
 use std::{collections::HashMap, ops::Sub};
-use tokens::TokenType;
-use types::{Bytes32, LBPairInformation, MintArrays};
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
@@ -1786,11 +1793,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetLbToken {} => query_lb_token(deps),
         QueryMsg::GetTokens {} => query_tokens(deps),
         QueryMsg::SwapSimulation { offer, exclude_fee } => {
-            to_binary(&query_swap_simulation(deps, env, offer, exclude_fee)?).map_err(Error::CwErr)
+            query_swap_simulation(deps, env, offer, exclude_fee)
         }
-        QueryMsg::GetRewardsDistribution { epoch_id } => {
-            to_binary(&query_rewards_distribution(deps, epoch_id)?).map_err(Error::CwErr)
-        }
+        QueryMsg::GetRewardsDistribution { epoch_id } => query_rewards_distribution(deps, epoch_id),
     }
 }
 
@@ -2412,7 +2417,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             let price = PriceHelper::get_price_from_id(id, bin_step)?;
 
-            params = params.update_volatility_accumulator(id)?;
+            params = *params.update_volatility_accumulator(id)?;
 
             let (amounts_in_with_fees, amounts_out_of_bin, fees) = BinHelper::get_amounts(
                 bin_reserves,
@@ -2473,7 +2478,19 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
     let total_supply =
         _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
             .u256_to_uint256();
-    Ok(TotalSupplyResponse { total_supply })
+    to_binary(&TotalSupplyResponse { total_supply }).map_err(Error::CwErr)
+}
+
+fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binary> {
+    let (epoch_id) = match epoch_id {
+        Some(id) => id,
+        None => CONFIG.load(deps.storage)?.rewards_epoch_id - 1,
+    };
+
+    to_binary(&RewardsDistributionResponse {
+        distribution: REWARDS_DISTRIBUTION.load(deps.storage, epoch_id)?,
+    })
+    .map_err(Error::CwErr)
 }
 
 #[shd_entry_point]

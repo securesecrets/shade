@@ -9,8 +9,8 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Timestamp, Uint128, Uint256};
 use ethnum::U256;
+use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
     lb_pair,
@@ -19,7 +19,7 @@ use shade_multi_test::interfaces::{
     utils::DeployedContracts,
 };
 use shade_protocol::{
-    c_std::{ContractInfo, StdError, Uint128, Uint256},
+    c_std::{ContractInfo, StdError, Timestamp, Uint128, Uint256},
     lb_libraries::{
         math::{encoded_sample::MASK_UINT20, u24::U24},
         types::LBPairInformation,
