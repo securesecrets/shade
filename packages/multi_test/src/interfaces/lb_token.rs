@@ -1,3 +1,4 @@
+use crate::multi::lb_token::LbToken;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult, Uint256},
     contract_interfaces::liquidity_book::{lb_token, lb_token::*},

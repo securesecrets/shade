@@ -115,15 +115,18 @@ mod tests {
         let _real_value = integer_part;
     }
 
+    // TODO - weak test
     #[test]
     fn test_get_id_from_price() {
-        let price = U256::from(100u128);
-        let bin_step = 1u16;
+        let price = U256::from_words(1u128, 0u128);
+        let bin_step = 100u16;
         let id = PriceHelper::get_id_from_price(price, bin_step).unwrap();
+        println!("{id}");
 
         assert!(id > 0);
     }
 
+    // TODO - weak test
     #[test]
     fn test_convert_decimal_price_to128x128() {
         let price = U256::from(100u128);
@@ -132,6 +135,7 @@ mod tests {
         assert!(converted_price > U256::ZERO);
     }
 
+    // TODO - weak test
     #[test]
     fn test_convert128x128_price_to_decimal() {
         let price128x128 = U256::from(1000000000000000000000000000000000u128);

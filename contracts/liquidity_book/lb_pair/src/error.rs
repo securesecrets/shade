@@ -2,7 +2,7 @@
 
 use ethnum::U256;
 use shade_protocol::{
-    c_std::{Uint128, StdError},
+    c_std::{StdError, Uint128},
     lb_libraries::{
         bin_helper::BinError,
         fee_helper::FeeError,

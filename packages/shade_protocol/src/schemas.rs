@@ -1,4 +1,4 @@
-use cosmwasm_schema::{write_api, export_schema, remove_schemas};
+use cosmwasm_schema::{export_schema, remove_schemas, write_api};
 use schemars::schema_for;
 use std::{env::current_dir, fs::create_dir_all};
 
@@ -61,9 +61,6 @@ macro_rules! generate_nested_schemas_2 {
         )+
     };
 }
-
-
-
 
 pub fn main() {
     generate_schemas!(
