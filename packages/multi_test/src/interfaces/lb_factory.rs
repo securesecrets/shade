@@ -3,7 +3,9 @@ use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult},
     contract_interfaces::liquidity_book::lb_factory,
     lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
+    liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     multi_test::App,
+    swap::core::TokenType,
     utils::{
         asset::{Contract, RawContract},
         ExecuteCallback,
@@ -11,7 +13,6 @@ use shade_protocol::{
         MultiTestable,
         Query,
     },
-    swap::core::TokenType,
 };
 
 pub fn init(
@@ -20,6 +21,8 @@ pub fn init(
     fee_recipient: Addr,
     flash_loan_fee: u8,
     admin_auth: RawContract,
+    total_reward_bins: u32,
+    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
         match (lb_factory::InstantiateMsg {
@@ -27,6 +30,9 @@ pub fn init(
             fee_recipient,
             flash_loan_fee,
             admin_auth,
+            total_reward_bins,
+            rewards_distribution_algorithm: rewards_distribution_algorithm
+                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
         }
         .test_init(
             LbFactory::default(),

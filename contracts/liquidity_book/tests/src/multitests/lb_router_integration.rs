@@ -22,7 +22,7 @@ const SWAP_AMOUNT: u128 = 1000;
 #[serial]
 pub fn router_integration() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, mut deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, mut deployed_contracts) = setup(None, None)?;
 
     let starting_number_of_pairs =
         lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;

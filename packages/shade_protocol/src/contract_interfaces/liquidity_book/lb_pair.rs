@@ -21,6 +21,8 @@ pub struct InstantiateMsg {
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
     pub admin_auth: RawContract,
+    pub total_reward_bins: Option<u32>,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -66,6 +68,17 @@ pub enum ExecuteMsg {
         max_volatility_accumulator: u32,
     },
     ForceDecay {},
+    CalculateRewards {},
+    ResetRewardsConfig {
+        distribution: Option<RewardsDistributionAlgorithm>,
+        base_rewards_bins: Option<u32>,
+    },
+}
+
+#[cw_serde]
+pub enum RewardsDistributionAlgorithm {
+    TimeBasedRewards,
+    VolumeBasedRewards,
 }
 
 // impl ExecuteMsg {
@@ -174,6 +187,8 @@ pub enum QueryMsg {
     },
     #[returns(TotalSupplyResponse)]
     TotalSupply { id: u32 },
+    #[returns(RewardsDistributionResponse)]
+    GetRewardsDistribution { epoch_id: Option<u64> },
 }
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
@@ -329,6 +344,18 @@ pub enum LbTokenQueryMsg {
 #[cw_serde]
 pub struct TotalSupplyResponse {
     pub total_supply: Uint256,
+}
+
+#[cw_serde]
+pub struct RewardsDistributionResponse {
+    pub distribution: RewardsDistribution,
+}
+
+#[cw_serde]
+pub struct RewardsDistribution {
+    pub ids: Vec<u32>,
+    pub weightages: Vec<u16>,
+    pub denominator: u16,
 }
 
 #[cw_serde]

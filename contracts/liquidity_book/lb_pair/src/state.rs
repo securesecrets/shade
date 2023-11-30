@@ -1,14 +1,15 @@
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, Storage},
+    c_std::{Addr, ContractInfo, Storage, Timestamp, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
     lb_libraries::{
         math::tree_math::TreeUint24,
         oracle_helper::Oracle,
-        pair_parameter_helper::PairParameters,
+        pair_parameter_helper::{self, PairParameters},
         types::Bytes32,
         viewing_keys::ViewingKey,
     },
-    secret_storage_plus::{Bincode2, Item, Map},
+    liquidity_book::lb_pair::{RewardsDistribution, RewardsDistributionAlgorithm},
+    secret_storage_plus::{AppendStore, Bincode2, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
     swap::core::TokenType,
     Contract,
@@ -20,6 +21,27 @@ pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins"); //?
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
 pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
+pub const FEE_APPEND_STORE: AppendStore<FeeLog, Bincode2> = AppendStore::new("fee_logs"); //?
+pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats"); //?
+pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution"); //?
+pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); //?
+pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
+
+#[cw_serde]
+pub struct RewardStats {
+    pub cumm_value: Uint256,
+    pub cumm_value_mul_bin_id: Uint256,
+    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+}
+
+#[cw_serde]
+pub struct FeeLog {
+    pub is_token_x: bool,
+    pub fee: Uint128,
+    pub bin_id: u32,
+    pub timestamp: Timestamp,
+    pub last_rewards_epoch_id: u64,
+}
 
 #[cw_serde]
 pub enum ContractStatus {
@@ -42,6 +64,10 @@ pub struct State {
     pub lb_token: ContractInfo,
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
+    pub last_swap_timestamp: Timestamp,
+    pub rewards_epoch_id: u64,
+    pub base_rewards_bins: Option<u32>,
+    pub toggle_distributions_algorithm: bool,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextTokenKey> {

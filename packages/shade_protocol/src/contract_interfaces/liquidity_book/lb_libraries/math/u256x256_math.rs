@@ -371,74 +371,74 @@ impl U256x256Math {
 
             // Compute remainder using mulmod.
             let remainder = mulmod(x, y, denominator);
-            println!("remainder: {:#?}", remainder);
+            // println!("remainder: {:#?}", remainder);
 
             // Subtract 256 bit number from 512 bit number.
             if remainder > prod0 {
                 prod1 = prod1.wrapping_sub(U256::ONE)
             }
             prod0 = prod0.wrapping_sub(remainder);
-            println!("prod0 - remainder: {:#?}", prod0);
+            // println!("prod0 - remainder: {:#?}", prod0);
 
             // Factor powers of two out of denominator and compute largest power of two divisor of denominator. Always >= 1
             // See https://cs.stackexchange.com/q/138556/92363
 
             // Does not overflow because the denominator cannot be zero at this stage in the function
             let mut lpotdod = denominator & (!denominator + U256::ONE);
-            println!("lpotdod: {:#?}", lpotdod);
+            // println!("lpotdod: {:#?}", lpotdod);
 
             // Divide denominator by lpotdod.
             let denominator = denominator / lpotdod;
-            println!("denominator / lpotdod: {:#?}", denominator);
+            // println!("denominator / lpotdod: {:#?}", denominator);
 
             // Divide [prod1 prod0] by lpotdod.
             let prod0 = prod0 / lpotdod;
-            println!("prod0 / lpotdod: {:#?}", prod0);
+            // println!("prod0 / lpotdod: {:#?}", prod0);
 
             // Flip lpotdod such that it is 2^256 / lpotdod. If lpotdod is zero, then it becomes one
             match lpotdod {
                 U256::ONE => lpotdod = U256::ONE,
                 _ => lpotdod = (U256::ZERO.wrapping_sub(lpotdod) / lpotdod).wrapping_add(U256::ONE),
             }
-            println!("lpotdod: {:#?}", lpotdod);
+            // println!("lpotdod: {:#?}", lpotdod);
 
             // Shift in bits from prod1 into prod0
             let prod0 = prod0 | (prod1.wrapping_mul(lpotdod));
-            println!("prod0 bit-shifted: {:#?}", prod0);
+            // println!("prod0 bit-shifted: {:#?}", prod0);
 
             // Invert denominator mod 2^256. Now that denominator is an odd number, it has an inverse modulo 2^256 such
             // that denominator * inv = 1 mod 2^256. Compute the inverse by starting with a seed that is correct for
             // four bits. That is, denominator * inv = 1 mod 2^4
             let mut inverse = U256::from(3u8).wrapping_mul(denominator).bitxor(2);
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
 
             // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also works
             // in modular arithmetic, doubling the correct bits in each step
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^8
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^16
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^32
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^64
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^128
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
             inverse = inverse
                 .wrapping_mul(U256::from(2u8).wrapping_sub(denominator.wrapping_mul(inverse))); // inverse mod 2^256
-            println!("inverse: {:#?}", inverse);
+            // println!("inverse: {:#?}", inverse);
 
             // Because the division is now exact we can divide by multiplying with the modular inverse of denominator.
             // This will give us the correct result modulo 2^256. Since the preconditions guarantee that the outcome is
             // less than 2^256, this is the final result. We don't need to compute the high bits of the result and prod1
             // is no longer required.
             result = prod0.wrapping_mul(inverse);
-            println!("result: {:#?}", result);
+            // println!("result: {:#?}", result);
 
             Ok(result)
         }

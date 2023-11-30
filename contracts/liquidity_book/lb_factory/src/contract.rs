@@ -37,9 +37,7 @@ use shade_protocol::{
         lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
     },
     swap::core::TokenType,
-    utils::{
-        callback::ExecuteCallback,
-    },
+    utils::callback::ExecuteCallback,
 };
 
 pub static _OFFSET_IS_PRESET_OPEN: u8 = 255;
@@ -75,6 +73,8 @@ pub fn instantiate(
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        total_reward_bins: msg.total_reward_bins,
+        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -378,6 +378,8 @@ fn try_create_lb_pair(
                 entropy,
                 protocol_fee_recipient: config.fee_recipient,
                 admin_auth: config.admin_auth.into(),
+                total_reward_bins: Some(config.total_reward_bins),
+                rewards_distribution_algorithm: config.rewards_distribution_algorithm,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

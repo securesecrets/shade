@@ -13,7 +13,7 @@ use crate::multitests::test_helper::*;
 pub fn lb_pair_setup()
 -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None)?;
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
