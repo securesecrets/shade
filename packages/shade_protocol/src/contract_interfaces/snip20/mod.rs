@@ -65,7 +65,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
     let len_is_valid = (3..=6).contains(&len);
 
-    len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
+    len_is_valid && symbol.bytes().all(|byte| byte.is_ascii_uppercase())
 }
 
 #[cfg(feature = "snip20-impl")]
@@ -114,7 +114,7 @@ impl InstantiateMsg {
         if let Some(initial_balances) = &self.initial_balances {
             for balance in initial_balances.iter() {
                 let address = api.addr_validate(balance.address.as_str())?;
-                Balance::set(storage, balance.amount.clone(), &address)?;
+                Balance::set(storage, balance.amount, &address)?;
                 total_supply = total_supply.checked_add(balance.amount)?;
 
                 store_mint(
@@ -144,6 +144,7 @@ impl InstantiateMsg {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
@@ -163,19 +164,6 @@ pub struct InitConfig {
     /// Indicates whether transferring tokens should be enables
     /// default: True
     pub enable_transfer: Option<bool>,
-}
-
-impl Default for InitConfig {
-    fn default() -> Self {
-        Self {
-            public_total_supply: None,
-            enable_deposit: None,
-            enable_redeem: None,
-            enable_mint: None,
-            enable_burn: None,
-            enable_transfer: None,
-        }
-    }
 }
 
 #[cfg(feature = "snip20-impl")]

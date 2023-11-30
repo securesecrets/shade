@@ -3,24 +3,21 @@ use cosmwasm_std::{Addr, ContractInfo, Storage, Timestamp, Uint128, Uint256};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use pair_parameter_helper::PairParameters; //?
 use shade_protocol::{
+    c_std::{Addr, ContractInfo, Storage},
+    cosmwasm_schema::cw_serde,
+    lb_libraries::{
+        math::tree_math::TreeUint24,
+        oracle_helper::Oracle,
+        pair_parameter_helper::PairParameters,
+        types::Bytes32,
+        viewing_keys::ViewingKey,
+    },
     liquidity_book::lb_pair::{RewardsDistribution, RewardsDistributionAlgorithm},
     secret_storage_plus::{AppendStore, Bincode2, Item, Map},
+    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
+    swap::core::TokenType,
     Contract,
 };
-
-use math::tree_math::TreeUint24; //?
-use oracle_helper::Oracle; //?
-use types::Bytes32; //?
-
-use shade_protocol::lb_libraries::{
-    math,
-    oracle_helper,
-    pair_parameter_helper,
-    tokens,
-    types,
-    viewing_keys::ViewingKey,
-};
-use tokens::TokenType; //?
 
 pub const CONFIG: Item<State, Bincode2> = Item::new("config");
 pub const CONTRACT_STATUS: Item<ContractStatus, Bincode2> = Item::new("contract_status");
@@ -90,8 +87,7 @@ pub struct NextTokenKey {
     pub code_hash: String,
 }
 
-// NOTE: I don't think these types are necessary, since we are encoding the values into a U256.
-// I wonder how much benefit encoding things into 256-bit numbers has over encoding structs with Bincode2.
+// NOTE: These types are not used, since we are encoding the values into a U256.
 
 // #[cw_serde]
 // #[derive(Default)]

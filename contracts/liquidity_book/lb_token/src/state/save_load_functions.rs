@@ -1,19 +1,10 @@
-use std::{
-    any::type_name,
-    // collections::HashSet,
-};
+use std::any::type_name;
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use cosmwasm_std::{
-    Storage, 
-    StdResult, StdError,
-};
+use cosmwasm_std::{StdError, StdResult, Storage};
 
-use secret_toolkit::{
-    serialization::{Json, Serde}, //Bincode2 
-};
-
+use secret_toolkit::serialization::{Json, Serde};
 
 // /////////////////////////////////////////////////////////////////////////////////
 // // Save and load functions
@@ -27,11 +18,7 @@ use secret_toolkit::{
 /// * `storage` - a mutable reference to the storage this item should go to
 /// * `key` - a byte slice representing the key to access the stored item
 /// * `value` - a reference to the item to store
-pub fn json_save<T: Serialize>(
-    storage: &mut dyn Storage,
-    key: &[u8],
-    value: &T,
-) -> StdResult<()> {
+pub fn json_save<T: Serialize>(storage: &mut dyn Storage, key: &[u8], value: &T) -> StdResult<()> {
     storage.set(key, &Json::serialize(value)?);
     Ok(())
 }
@@ -69,4 +56,3 @@ pub fn json_load<T: DeserializeOwned>(storage: &dyn Storage, key: &[u8]) -> StdR
 //         None => Ok(None),
 //     }
 // }
-

@@ -1,29 +1,14 @@
-use std::str::FromStr;
-
-use crate::multitests::test_helper::{
-    extract_contract_info,
-    generate_random,
-    token_type_snip20_generator,
-    DEFAULT_BASE_FACTOR,
-    DEFAULT_BIN_STEP,
-    DEFAULT_DECAY_PERIOD,
-    DEFAULT_FILTER_PERIOD,
-    DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
-    DEFAULT_PROTOCOL_SHARE,
-    DEFAULT_REDUCTION_FACTOR,
-    DEFAULT_VARIABLE_FEE_CONTROL,
-    SHADE,
-    SSCRT,
-};
-
-use super::test_helper::{assert_approx_eq_abs, assert_approx_eq_rel, init_addrs, setup, ID_ONE};
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, Uint128, Uint256};
+use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
 use shade_protocol::{
+    c_std::{ContractInfo, Uint128, Uint256},
     lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
     multi_test::App,
 };
+use std::str::FromStr;
+
+use crate::multitests::test_helper::*;
 
 pub fn lb_pair_setup()
 -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
@@ -54,6 +39,7 @@ pub fn lb_pair_setup()
 }
 
 #[test]
+#[serial]
 pub fn test_query_factory() -> Result<(), anyhow::Error> {
     let (app, lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -65,6 +51,7 @@ pub fn test_query_factory() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_token_x() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -78,6 +65,7 @@ pub fn test_query_token_x() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_token_y() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -91,6 +79,7 @@ pub fn test_query_token_y() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_bin_step() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -102,6 +91,7 @@ pub fn test_query_bin_step() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_bin_reserves() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -114,6 +104,7 @@ pub fn test_query_bin_reserves() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_active_id() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -125,6 +116,7 @@ pub fn test_query_active_id() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_fuzz_query_bin() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -138,6 +130,7 @@ pub fn test_fuzz_query_bin() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_next_non_empty_bin() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -156,6 +149,7 @@ pub fn test_query_next_non_empty_bin() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_protocol_fees() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -168,6 +162,7 @@ pub fn test_query_protocol_fees() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_static_fee_parameters() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -196,6 +191,7 @@ pub fn test_query_static_fee_parameters() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_variable_fee_parameters() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -211,6 +207,7 @@ pub fn test_query_variable_fee_parameters() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -227,6 +224,7 @@ pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_oracle_sample_at() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -241,6 +239,7 @@ pub fn test_query_oracle_sample_at() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_price_from_id() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
     let delta = Uint256::from(DEFAULT_BIN_STEP).checked_mul(Uint256::from((5 * 10) ^ 13_u128))?;
@@ -311,6 +310,7 @@ pub fn test_query_price_from_id() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 pub fn test_query_id_from_price() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
     let delta = Uint256::from(1u128);
@@ -409,6 +409,7 @@ pub fn test_query_id_from_price() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 fn test_fuzz_query_swap_out() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
@@ -426,6 +427,7 @@ fn test_fuzz_query_swap_out() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+#[serial]
 fn test_fuzz_query_swap_in() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 

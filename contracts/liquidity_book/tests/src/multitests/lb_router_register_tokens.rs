@@ -1,4 +1,5 @@
 use anyhow::Ok;
+use serial_test::serial;
 use cosmwasm_std::Addr;
 
 use crate::multitests::test_helper::{SHADE, SILK};
@@ -10,6 +11,7 @@ use shade_multi_test::interfaces::{
 };
 
 #[test]
+#[serial]
 pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, mut deployed_contracts) = setup(None, None)?;

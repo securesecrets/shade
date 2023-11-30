@@ -1,31 +1,11 @@
 use crate::{
+    c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
+    cosmwasm_schema::{cw_serde, QueryResponses},
+    lb_libraries::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
     snip20::Snip20ReceiveMsg,
-    utils::{
-        asset::RawContract,
-        liquidity_book::{
-            tokens::{SwapTokenAmount, TokenAmount, TokenType},
-            types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
-        },
-        space_pad,
-        ExecuteCallback,
-        InstantiateCallback,
-        Query,
-    },
+    swap::core::{TokenAmount, TokenType},
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
-};
-
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{
-    to_binary,
-    Addr,
-    Coin,
-    ContractInfo,
-    CosmosMsg,
-    Decimal256,
-    StdResult,
-    Uint128,
-    Uint256,
-    WasmMsg,
 };
 
 #[cw_serde]
@@ -52,7 +32,7 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     SwapTokens {
-        offer: SwapTokenAmount,
+        offer: TokenAmount,
         expected_return: Option<Uint128>,
         to: Option<String>,
         padding: Option<String>,
@@ -101,31 +81,31 @@ pub enum RewardsDistributionAlgorithm {
     VolumeBasedRewards,
 }
 
-impl ExecuteMsg {
-    pub fn to_cosmos_msg(
-        &self,
-        code_hash: String,
-        contract_addr: String,
-        send_amount: Option<Uint128>,
-    ) -> StdResult<CosmosMsg> {
-        let mut msg = to_binary(self)?;
-        space_pad(&mut msg.0, 256);
-        let mut funds = Vec::new();
-        if let Some(amount) = send_amount {
-            funds.push(Coin {
-                amount,
-                denom: String::from("uscrt"),
-            });
-        }
-        let execute = WasmMsg::Execute {
-            contract_addr,
-            code_hash,
-            msg,
-            funds,
-        };
-        Ok(execute.into())
-    }
-}
+// impl ExecuteMsg {
+//     pub fn to_cosmos_msg(
+//         &self,
+//         code_hash: String,
+//         contract_addr: String,
+//         send_amount: Option<Uint128>,
+//     ) -> StdResult<CosmosMsg> {
+//         let mut msg = to_binary(self)?;
+//         space_pad(&mut msg.0, 256);
+//         let mut funds = Vec::new();
+//         if let Some(amount) = send_amount {
+//             funds.push(Coin {
+//                 amount,
+//                 denom: String::from("uscrt"),
+//             });
+//         }
+//         let execute = WasmMsg::Execute {
+//             contract_addr,
+//             code_hash,
+//             msg,
+//             funds,
+//         };
+//         Ok(execute.into())
+//     }
+// }
 
 impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;

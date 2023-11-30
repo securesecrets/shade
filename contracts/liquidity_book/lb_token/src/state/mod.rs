@@ -5,8 +5,16 @@ pub mod txhistory;
 use cosmwasm_std::{to_binary, Addr, BlockInfo, StdError, StdResult, Storage, Uint256};
 
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, PrefixedStorage, ReadonlyBucket,
-    ReadonlyPrefixedStorage, ReadonlySingleton, Singleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    PrefixedStorage,
+    ReadonlyBucket,
+    ReadonlyPrefixedStorage,
+    ReadonlySingleton,
+    Singleton,
 };
 
 use shade_protocol::lb_libraries::lb_token::{
@@ -106,14 +114,11 @@ fn permission_w<'a>(
     token_id: &'a str,
 ) -> Bucket<'a, Permission> {
     let owner_bin = to_binary(owner).unwrap();
-    Bucket::multilevel(
-        storage,
-        &[
-            PREFIX_PERMISSIONS,
-            owner_bin.as_slice(),
-            token_id.as_bytes(),
-        ],
-    )
+    Bucket::multilevel(storage, &[
+        PREFIX_PERMISSIONS,
+        owner_bin.as_slice(),
+        token_id.as_bytes(),
+    ])
 }
 /// private functions.
 /// To read permission. key is to be [`owner`, `token_id`, `allowed_addr`]
@@ -124,14 +129,11 @@ fn permission_r<'a>(
     token_id: &'a str,
 ) -> ReadonlyBucket<'a, Permission> {
     let owner_bin = to_binary(owner).unwrap();
-    ReadonlyBucket::multilevel(
-        storage,
-        &[
-            PREFIX_PERMISSIONS,
-            owner_bin.as_slice(),
-            token_id.as_bytes(),
-        ],
-    )
+    ReadonlyBucket::multilevel(storage, &[
+        PREFIX_PERMISSIONS,
+        owner_bin.as_slice(),
+        token_id.as_bytes(),
+    ])
 }
 #[cfg(test)]
 pub fn perm_r<'a>(
@@ -140,14 +142,11 @@ pub fn perm_r<'a>(
     token_id: &'a str,
 ) -> ReadonlyBucket<'a, Permission> {
     let owner_bin = to_binary(owner).unwrap();
-    ReadonlyBucket::multilevel(
-        storage,
-        &[
-            PREFIX_PERMISSIONS,
-            owner_bin.as_slice(),
-            token_id.as_bytes(),
-        ],
-    )
+    ReadonlyBucket::multilevel(storage, &[
+        PREFIX_PERMISSIONS,
+        owner_bin.as_slice(),
+        token_id.as_bytes(),
+    ])
 }
 
 /////////////////////////////////////////////////////////////////////////////////

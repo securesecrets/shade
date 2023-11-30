@@ -1,24 +1,19 @@
 //! ### Custom Errors for LB_Pair contract.
 
-#![allow(unused)] // For beginning only.
-
-use bin_helper::BinError;
-use cosmwasm_std::{StdError, Uint128};
 use ethnum::U256;
-use fee_helper::FeeError;
-use math::{
-    liquidity_configurations::LiquidityConfigurationsError,
-    u128x128_math::U128x128MathError,
-    u256x256_math::U256x256MathError,
-};
-use oracle_helper::OracleError;
-use pair_parameter_helper::PairParametersError;
-use shade_protocol::lb_libraries::{
-    bin_helper,
-    fee_helper,
-    math,
-    oracle_helper,
-    pair_parameter_helper,
+use shade_protocol::{
+    c_std::{Uint128, StdError},
+    lb_libraries::{
+        bin_helper::BinError,
+        fee_helper::FeeError,
+        math::{
+            liquidity_configurations::LiquidityConfigurationsError,
+            u128x128_math::U128x128MathError,
+            u256x256_math::U256x256MathError,
+        },
+        oracle_helper::OracleError,
+        pair_parameter_helper::PairParametersError,
+    },
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -77,6 +72,8 @@ pub enum LBPairError {
     #[error("Zero amount for bin id: {id}")]
     ZeroAmount { id: u32 },
 
+    // TODO - why return amount_to_burn and total_supply? They will be illegible as U256 anyway.
+    // Would like to remove U256 dependency for error messages.
     #[error(
         "Zero amounts out for bin id: {id} amount to burn: {amount_to_burn} total supply: {total_supply} "
     )]
@@ -94,8 +91,9 @@ pub enum LBPairError {
     #[error("Max total fee exceeded!")]
     MaxTotalFeeExceeded,
 
+    // TODO - organize errors better. move error conversions to separate section perhaps.
     #[error(transparent)]
-    CwErr(#[from] cosmwasm_std::StdError),
+    CwErr(#[from] StdError),
 
     #[error(transparent)]
     BinErr(#[from] BinError),

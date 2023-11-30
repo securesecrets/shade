@@ -23,8 +23,6 @@ pub mod generic_response;
 
 pub mod storage;
 
-pub mod liquidity_book;
-
 #[cfg(feature = "dao-utils")]
 pub mod cycle;
 #[cfg(feature = "dao-utils")]

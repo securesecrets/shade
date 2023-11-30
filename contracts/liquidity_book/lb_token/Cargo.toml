@@ -15,17 +15,6 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = true
-
 [features]
 default = []
 # for quicker tests, cargo test --lib
@@ -43,9 +32,7 @@ secret-toolkit = { version = "0.10.0", default-features = false, features = [
   "storage", "viewing-key", "permit", "serialization", 
   #"crypto", "utils", 
 ] }
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
-  "liquidity_book","lb-libraries", "snip20"
-] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
 
 #base64 = "0.21.2"
 #rand = { version = "0.8.5", default-features = false }

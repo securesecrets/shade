@@ -47,3 +47,6 @@ pub mod basic_staking;
 
 #[cfg(feature = "snip20_migration")]
 pub mod snip20_migration;
+
+#[cfg(feature = "swap")]
+pub mod swap;
