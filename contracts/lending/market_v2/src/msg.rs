@@ -95,12 +95,6 @@ pub enum CreditAgencyExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Queries that requires viewing permit
-    #[returns(AuthQueryResponse)]
-    WithPermit {
-        permit: QueryPermit,
-        query_msg: AuthQueryMsg,
-    },
     /// Returns current configuration
     #[returns(crate::state::Config)]
     Configuration {},
@@ -127,6 +121,18 @@ pub enum QueryMsg {
     /// Return type: `TokenInfoResponse`.
     #[returns(TotalDebtResponse)]
     TotalDebt {},
+    /// Returns TokensBalanceResponse
+    #[returns(TokensBalanceResponse)]
+    TokensBalance { account: String, viewing_key: String },
+    /// Returns the amount that the given account can withdraw
+    #[returns(Coin)]
+    Withdrawable { account: String, viewing_key: String  },
+    /// Returns the amount that the given account can borrow
+    #[returns(Coin)]
+    Borrowable { account: String, viewing_key: String  },
+    /// Returns CreditLineResponse
+    #[returns(lending_utils::credit_line::CreditLineResponse)]
+    CreditLine { account: String, viewing_key: String  },
 }
 
 impl Query for QueryMsg {
@@ -136,18 +142,6 @@ impl Query for QueryMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum AuthQueryMsg {
-    /// Returns TokensBalanceResponse
-    #[returns(TokensBalanceResponse)]
-    TokensBalance { account: String },
-    /// Returns the amount that the given account can withdraw
-    #[returns(Coin)]
-    Withdrawable { account: String },
-    /// Returns the amount that the given account can borrow
-    #[returns(Coin)]
-    Borrowable { account: String },
-    /// Returns CreditLineResponse
-    #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine { account: String },
 }
 
 // Define an enum for all possible return types of AuthQueryMsg
