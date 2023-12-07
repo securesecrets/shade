@@ -140,20 +140,6 @@ impl Query for QueryMsg {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
-pub enum AuthQueryMsg {
-}
-
-// Define an enum for all possible return types of AuthQueryMsg
-#[cw_serde]
-enum AuthQueryResponse {
-    TokensBalance(TokensBalanceResponse),
-    Withdrawable(Coin),
-    Borrowable(Coin),
-    CreditLine(lending_utils::credit_line::CreditLineResponse),
-}
-
-#[cw_serde]
 pub enum QueryTotalCreditLine {
     TotalCreditLine { account: String },
 }
