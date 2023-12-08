@@ -2520,8 +2520,6 @@ fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binar
 
 #[shd_entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
-    println!("TESTING3");
-
     match (msg.id, msg.result) {
         (INSTANTIATE_LP_TOKEN_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {

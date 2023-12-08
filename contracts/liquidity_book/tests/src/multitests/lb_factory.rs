@@ -2,7 +2,12 @@ use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
-    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
+    multi::{
+        admin::init_admin_auth,
+        lb_pair::LbPair,
+        lb_token::LbToken,
+        staking_contract::StakingContract,
+    },
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError},
@@ -457,6 +462,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     //can't create a pair the same pair twice
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
+    let staking_contract = app.store_code(StakingContract::default().contract());
 
     lb_factory::set_lb_pair_implementation(
         &mut app,
@@ -474,6 +480,14 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         &new_lb_factory.clone().into(),
         lb_token_stored_code.code_id,
         lb_token_stored_code.code_hash,
+    )?;
+
+    lb_factory::set_staking_contract_implementation(
+        &mut app,
+        addrs.admin().as_str(),
+        &new_lb_factory.clone().into(),
+        staking_contract.code_id,
+        staking_contract.code_hash,
     )?;
     println!("TESTING");
 

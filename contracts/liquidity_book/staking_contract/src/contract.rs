@@ -161,7 +161,7 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
-            ExecuteMsg::Receive(msg) => {
+            ExecuteMsg::Snip1155Receive(msg) => {
                 let checked_from = deps.api.addr_validate(&msg.from.as_str())?;
                 receiver_callback(
                     deps,

@@ -74,7 +74,7 @@ pub enum ExecuteMsg {
         remove_liquidity: Option<bool>,
         padding: Option<String>,
     },
-    Receive(Snip1155ReceiveMsg),
+    Snip1155Receive(Snip1155ReceiveMsg),
     UpdateRewardTokens(Vec<RewardTokenUpdate>),
     CreateRewardTokens(Vec<RewardTokenCreate>),
     UpdateConfig {
