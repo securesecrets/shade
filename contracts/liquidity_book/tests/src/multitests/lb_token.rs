@@ -12,10 +12,10 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
 use ethnum::U256;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
+    c_std::{ContractInfo, StdError, Uint128, Uint256},
     lb_libraries::{
         constants::SCALE_OFFSET,
         math::uint256_to_u256::ConvertU256,

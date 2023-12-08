@@ -1,6 +1,5 @@
 use anyhow::Ok;
 use serial_test::serial;
-use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
 use shade_multi_test::interfaces::{
     lb_factory,
     lb_pair,
@@ -8,9 +7,12 @@ use shade_multi_test::interfaces::{
     snip20,
     utils::SupportedContracts,
 };
-use shade_protocol::swap::{
-    core::{TokenAmount, TokenType},
-    router::{Hop, InvokeMsg},
+use shade_protocol::{
+    c_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128},
+    swap::{
+        core::{TokenAmount, TokenType},
+        router::{Hop, InvokeMsg},
+    },
 };
 
 use super::lb_pair_fees::DEPOSIT_AMOUNT;

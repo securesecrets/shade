@@ -9,7 +9,6 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128};
 use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -18,7 +17,11 @@ use shade_multi_test::interfaces::{
     snip20,
     utils::DeployedContracts,
 };
-use shade_protocol::{lb_libraries::types::LBPairInformation, multi_test::App};
+use shade_protocol::{
+    c_std::{ContractInfo, StdError, Uint128},
+    lb_libraries::types::LBPairInformation,
+    multi_test::App,
+};
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000_u128;
 

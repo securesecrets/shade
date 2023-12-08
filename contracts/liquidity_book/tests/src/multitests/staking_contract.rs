@@ -1,7 +1,7 @@
-use cosmwasm_std::{to_binary, ContractInfo, Uint128, Uint256};
 use ethnum::U256;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
+    c_std::{to_binary, ContractInfo, Uint128},
     lb_libraries::{math::uint256_to_u256::ConvertU256, types::LBPairInformation},
     liquidity_book::{
         lb_token::SendAction,
