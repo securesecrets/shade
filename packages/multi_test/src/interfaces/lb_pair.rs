@@ -30,6 +30,7 @@ pub fn init(
     pair_parameters: StaticFeeParameters,
     active_id: u32,
     lb_token_implementation: ContractInstantiationInfo,
+    staking_contract_implementation: ContractInstantiationInfo,
     viewing_key: String,
     pair_name: String,
     entropy: String,
@@ -54,6 +55,7 @@ pub fn init(
             total_reward_bins: Some(total_reward_bins),
             rewards_distribution_algorithm: rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+            staking_contract_implementation,
         }
         .test_init(
             LbPair::default(),
@@ -217,10 +219,18 @@ pub fn set_static_fee_parameters(
     }
 }
 
-pub fn lb_token_query(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+pub fn query_lb_token(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
     let res = lb_pair::QueryMsg::GetLbToken {}.test_query(lb_pair, app)?;
-    let lb_pair::LbTokenResponse { lb_token } = res;
+    let lb_pair::LbTokenResponse { contract: lb_token } = res;
     Ok(lb_token)
+}
+
+pub fn query_staking_contract(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+    let res = lb_pair::QueryMsg::GetStakingContract {}.test_query(lb_pair, app)?;
+    let lb_pair::StakingResponse {
+        contract: staking_contract,
+    } = res;
+    Ok(staking_contract)
 }
 
 pub fn bin_query(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {

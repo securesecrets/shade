@@ -38,6 +38,7 @@ use shade_protocol::{
             },
             core::{Fee, TokenPair, TokenType},
             router::ExecuteMsgResponse,
+            staking,
         },
     },
     lb_libraries::{
@@ -58,17 +59,17 @@ use shade_protocol::{
         oracle_helper::{Oracle, MAX_SAMPLE_LIFETIME},
         pair_parameter_helper::PairParameters,
         price_helper::PriceHelper,
-        types::{self, Bytes32, LBPairInformation, MintArrays},
+        types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
     snip20,
-    utils::pad_handle_result,
+    utils::asset::RawContract,
     Contract,
-    BLOCK_SIZE,
 };
 use std::{collections::HashMap, ops::Sub};
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
+pub const INSTANTIATE_STAKING_CONTRACT_REPLY_ID: u64 = 2u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
 const LB_PAIR_CONTRACT_VERSION: u32 = 1;
 const DEFAULT_REWARDS_BINS: u32 = 100;
@@ -182,6 +183,10 @@ pub fn instantiate(
             address: Addr::unchecked("".to_string()),
             code_hash: "".to_string(),
         }, // intentionally keeping this empty will be filled in reply
+        staking_contract: ContractInfo {
+            address: Addr::unchecked("".to_string()),
+            code_hash: "".to_string(),
+        },
         viewing_key,
         protocol_fees_recipient: msg.protocol_fee_recipient,
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
@@ -210,10 +215,13 @@ pub fn instantiate(
         cumm_value: Uint256::zero(),
         cumm_value_mul_bin_id: Uint256::zero(),
         rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
-    });
+    })?;
 
     ephemeral_storage_w(deps.storage).save(&NextTokenKey {
-        code_hash: msg.lb_token_implementation.code_hash,
+        lb_token_code_hash: msg.lb_token_implementation.code_hash,
+        staking_contract: msg.staking_contract_implementation,
+        token_x_symbol,
+        token_y_symbol,
     })?;
 
     response = response.add_messages(messages);
@@ -550,7 +558,6 @@ fn try_swap(
     })?;
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
-    let amount_out: u128;
     let amount_out;
 
     if swap_for_y {
@@ -1561,6 +1568,9 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
         let tree: TreeUint24 = TreeUint24::new();
         FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_id, &tree)?;
     }
+
+    //distribution algorithm
+
     Ok(Response::default())
 }
 
@@ -1614,7 +1624,7 @@ fn calculate_volume_based_rewards_distribution(
     state: &State,
     reward_stats: &RewardStats,
 ) -> Result<RewardsDistribution> {
-    let mut cum_fee = reward_stats.cumm_value;
+    let cum_fee = reward_stats.cumm_value;
     let mut ids: Vec<u32> = Vec::new();
     let mut weightages: Vec<u16> = Vec::new();
 
@@ -1659,7 +1669,7 @@ fn calculate_volume_based_rewards_distribution(
 //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
 fn try_reset_rewards_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
     base_reward_bins: Option<u32>,
@@ -1671,7 +1681,7 @@ fn try_reset_rewards_config(
         info.sender.to_string(),
         &state.admin_auth,
     )?;
-    let mut reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
+    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
 
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
     match rewards_distribution_algorithm {
@@ -1721,7 +1731,7 @@ fn receiver_callback(
 
     let config = CONFIG.load(deps.storage)?;
 
-    let mut response = Response::new();
+    let response;
     match from_binary(&msg)? {
         InvokeMsg::SwapTokens {
             to,
@@ -1791,6 +1801,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         } => query_swap_out(deps, env, amount_in.u128(), swap_for_y),
         QueryMsg::TotalSupply { id } => query_total_supply(deps, id),
         QueryMsg::GetLbToken {} => query_lb_token(deps),
+        QueryMsg::GetStakingContract {} => query_staking(deps),
         QueryMsg::GetTokens {} => query_tokens(deps),
         QueryMsg::SwapSimulation { offer, exclude_fee } => {
             query_swap_simulation(deps, env, offer, exclude_fee)
@@ -1918,7 +1929,22 @@ fn query_lb_token(deps: Deps) -> Result<Binary> {
     let state = CONFIG.load(deps.storage)?;
     let lb_token = state.lb_token;
 
-    let response = LbTokenResponse { lb_token };
+    let response = LbTokenResponse { contract: lb_token };
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+/// Returns the Liquidity Book Factory.
+///
+/// # Returns
+///
+/// * `factory` - The Liquidity Book Factory
+fn query_staking(deps: Deps) -> Result<Binary> {
+    let state = CONFIG.load(deps.storage)?;
+    let staking_contract = state.staking_contract;
+
+    let response = StakingResponse {
+        contract: staking_contract,
+    };
     to_binary(&response).map_err(Error::CwErr)
 }
 
@@ -2495,6 +2521,8 @@ fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binar
 
 #[shd_entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
+    println!("TESTING3");
+
     match (msg.id, msg.result) {
         (INSTANTIATE_LP_TOKEN_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
@@ -2502,18 +2530,68 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let trimmed_str = contract_address_string.trim_matches('\"');
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
-                let lb_token_key = ephemeral_storage_r(deps.storage).load()?;
+                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+                let mut state = CONFIG.load(deps.storage)?;
 
-                CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
-                    state.lb_token = ContractInfo {
-                        address: contract_address,
-                        code_hash: lb_token_key.code_hash,
-                    };
-                    Ok(state)
-                })?;
+                state.lb_token = ContractInfo {
+                    address: contract_address,
+                    code_hash: emp_storage.lb_token_code_hash,
+                };
+
+                CONFIG.save(deps.storage, &state)?;
 
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
+
+                let instantiate_token_msg = staking::InstantiateMsg {
+                    amm_pair: env.contract.address.to_string(),
+                    lb_token: state.lb_token.to_owned().into(),
+                    admin_auth: state.admin_auth.into(),
+                    query_auth: None,
+                    first_reward_token: None,
+                    epoch_index: 0,      //TODO: Set this
+                    epoch_duration: 100, //TODO: Set this
+                    expiry_duration: None,
+                };
+
+                response = response.add_submessage(SubMsg::reply_on_success(
+                    CosmosMsg::Wasm(WasmMsg::Instantiate {
+                        code_id: emp_storage.staking_contract.id,
+                        code_hash: emp_storage.staking_contract.code_hash.clone(),
+                        msg: to_binary(&instantiate_token_msg)?,
+                        label: format!(
+                            "{}-{}-Staking-Contract-{}",
+                            emp_storage.token_x_symbol, emp_storage.token_y_symbol, state.bin_step
+                        ),
+                        funds: vec![],
+                        admin: None,
+                    }),
+                    INSTANTIATE_STAKING_CONTRACT_REPLY_ID,
+                ));
+
+                Ok(response)
+            }
+            None => Err(StdError::generic_err("Unknown reply id")),
+        },
+        (INSTANTIATE_STAKING_CONTRACT_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
+            Some(x) => {
+                let contract_address_string = &String::from_utf8(x.to_vec())?;
+                let trimmed_str = contract_address_string.trim_matches('\"');
+                let contract_address = deps.api.addr_validate(trimmed_str)?;
+                // not the best name but it matches the pair key idea
+                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+                let mut state = CONFIG.load(deps.storage)?;
+
+                state.staking_contract = ContractInfo {
+                    address: contract_address,
+                    code_hash: emp_storage.staking_contract.code_hash,
+                };
+
+                CONFIG.save(deps.storage, &state)?;
+
+                let mut response = Response::new();
+                response.data = Some(env.contract.address.to_string().as_bytes().into());
+
                 Ok(response)
             }
             None => Err(StdError::generic_err("Unknown reply id")),

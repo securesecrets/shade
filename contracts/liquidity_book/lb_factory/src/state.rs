@@ -53,6 +53,7 @@ pub struct Config {
     pub flash_loan_fee: u8,
     pub lb_pair_implementation: ContractInstantiationInfo,
     pub lb_token_implementation: ContractInstantiationInfo,
+    pub staking_contract_implementation: ContractInstantiationInfo,
     pub admin_auth: Contract,
     pub total_reward_bins: u32,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,

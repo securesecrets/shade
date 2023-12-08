@@ -5,7 +5,12 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
+    multi::{
+        admin::init_admin_auth,
+        lb_pair::LbPair,
+        lb_token::LbToken,
+        staking_contract::StakingContract,
+    },
 };
 use shade_protocol::{
     c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
@@ -250,6 +255,7 @@ pub fn setup(
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
+    let staking_contract = app.store_code(StakingContract::default().contract());
 
     lb_factory::set_lb_pair_implementation(
         &mut app,
@@ -265,6 +271,14 @@ pub fn setup(
         &lb_factory.clone().into(),
         lb_token_stored_code.code_id,
         lb_token_stored_code.code_hash,
+    )?;
+
+    lb_factory::set_staking_contract_implementation(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        staking_contract.code_id,
+        staking_contract.code_hash,
     )?;
 
     lb_factory::set_pair_preset(

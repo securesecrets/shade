@@ -466,6 +466,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         lb_pair_stored_code.code_hash,
     )?;
 
+    println!("TESTING");
+
     lb_factory::set_lb_token_implementation(
         &mut app,
         addrs.admin().as_str(),
@@ -473,6 +475,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         lb_token_stored_code.code_id,
         lb_token_stored_code.code_hash,
     )?;
+    println!("TESTING");
+
     lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
@@ -484,6 +488,8 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         "viewing_key".to_string(),
         "entropy".to_string(),
     )?;
+    println!("TESTING");
+
     let res = lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
@@ -495,6 +501,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         "viewing_key".to_string(),
         "entropy".to_string(),
     );
+    println!("TESTING");
 
     assert_eq!(
         res.unwrap_err(),

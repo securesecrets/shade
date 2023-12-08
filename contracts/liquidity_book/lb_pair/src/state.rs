@@ -4,8 +4,8 @@ use shade_protocol::{
     lb_libraries::{
         math::tree_math::TreeUint24,
         oracle_helper::Oracle,
-        pair_parameter_helper::{self, PairParameters},
-        types::Bytes32,
+        pair_parameter_helper::PairParameters,
+        types::{Bytes32, ContractInstantiationInfo},
         viewing_keys::ViewingKey,
     },
     liquidity_book::lb_pair::{RewardsDistribution, RewardsDistributionAlgorithm},
@@ -26,6 +26,9 @@ pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats")
 pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution"); //?
 pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); //?
 pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
+
+pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo, Bincode2> =
+    Item::new("staking_contract_impl");
 
 #[cw_serde]
 pub struct RewardStats {
@@ -62,6 +65,7 @@ pub struct State {
     pub reserves: Bytes32,
     pub protocol_fees: Bytes32,
     pub lb_token: ContractInfo,
+    pub staking_contract: ContractInfo,
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
     pub last_swap_timestamp: Timestamp,
@@ -80,7 +84,10 @@ pub fn ephemeral_storage_r(storage: &dyn Storage) -> ReadonlySingleton<NextToken
 
 #[cw_serde]
 pub struct NextTokenKey {
-    pub code_hash: String,
+    pub lb_token_code_hash: String,
+    pub staking_contract: ContractInstantiationInfo,
+    pub token_x_symbol: String,
+    pub token_y_symbol: String,
 }
 
 // NOTE: These types are not used, since we are encoding the values into a U256.

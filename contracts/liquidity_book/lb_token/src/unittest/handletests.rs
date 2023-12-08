@@ -2,16 +2,11 @@ use crate::contract::{execute, instantiate, query};
 
 use super::testhelpers::*;
 
-use super::super::{
-    // msg::*,
-    receiver::{ReceiverHandleMsg, Snip1155ReceiveMsg},
-    state::*,
-    // state::{expiration::*, metadata::*, permissions::*, state_structs::*},
-};
+use super::super::state::*;
 
 use shade_protocol::{
     lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*},
-    liquidity_book::lb_token::*,
+    liquidity_book::lb_token::{ReceiverHandleMsg, Snip1155ReceiveMsg, *},
 };
 
 use cosmwasm_std::{from_binary, testing::*, to_binary, Addr, Response, StdResult, Uint256};

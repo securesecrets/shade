@@ -56,7 +56,7 @@ pub fn set_lb_pair_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBPairImplementation {
-        lb_pair_implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractInstantiationInfo { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -73,7 +73,24 @@ pub fn set_lb_token_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBTokenImplementation {
-        lb_token_implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractInstantiationInfo { id, code_hash },
+    }
+    .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
+    {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn set_staking_contract_implementation(
+    app: &mut App,
+    sender: &str,
+    lb_factory: &ContractInfo,
+    id: u64,
+    code_hash: String,
+) -> StdResult<()> {
+    match (lb_factory::ExecuteMsg::SetStakingContractImplementation {
+        implementation: ContractInstantiationInfo { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {

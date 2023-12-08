@@ -1,11 +1,13 @@
 use super::lb_pair::{self, RewardsDistributionAlgorithm};
 use crate::{
-    c_std::Addr,
-    cosmwasm_schema::{cw_serde, QueryResponses},
+    contract_interfaces::swap::core::TokenType,
     lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    swap::core::TokenType,
-    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
+    utils::asset::RawContract,
 };
+
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
 #[cw_serde]
@@ -25,11 +27,15 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum ExecuteMsg {
     #[serde(rename = "set_lb_pair_implementation")]
     SetLBPairImplementation {
-        lb_pair_implementation: ContractInstantiationInfo,
+        implementation: ContractInstantiationInfo,
     },
     #[serde(rename = "set_lb_token_implementation")]
     SetLBTokenImplementation {
-        lb_token_implementation: ContractInstantiationInfo,
+        implementation: ContractInstantiationInfo,
+    },
+    #[serde(rename = "set_staking_contract_implementation")]
+    SetStakingContractImplementation {
+        implementation: ContractInstantiationInfo,
     },
     #[serde(rename = "create_lb_pair")]
     CreateLBPair {

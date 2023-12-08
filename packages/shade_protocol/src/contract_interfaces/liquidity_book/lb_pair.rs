@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub pair_parameters: StaticFeeParameters,
     pub active_id: u32,
     pub lb_token_implementation: ContractInstantiationInfo,
+    pub staking_contract_implementation: ContractInstantiationInfo,
     pub viewing_key: String,
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
@@ -134,6 +135,8 @@ pub struct MintResponse {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(StakingResponse)]
+    GetStakingContract {},
     #[returns(LbTokenResponse)]
     GetLbToken {},
     #[returns(GetPairInfoResponse)]
@@ -195,8 +198,13 @@ impl Query for QueryMsg {
 }
 
 #[cw_serde]
+pub struct StakingResponse {
+    pub contract: ContractInfo,
+}
+
+#[cw_serde]
 pub struct LbTokenResponse {
-    pub lb_token: ContractInfo,
+    pub contract: ContractInfo,
 }
 #[cw_serde]
 pub struct GetPairInfoResponse {

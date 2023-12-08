@@ -35,3 +35,4 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "lb_token",
   "snip20",
 ] }
+

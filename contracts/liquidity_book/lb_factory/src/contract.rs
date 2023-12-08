@@ -75,6 +75,7 @@ pub fn instantiate(
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         total_reward_bins: msg.total_reward_bins,
         rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
+        staking_contract_implementation: ContractInstantiationInfo::default(),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -99,12 +100,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ContractStatus::Active => {}
     }
     match msg {
-        ExecuteMsg::SetLBPairImplementation {
-            lb_pair_implementation,
-        } => try_set_lb_pair_implementation(deps, env, info, lb_pair_implementation),
-        ExecuteMsg::SetLBTokenImplementation {
-            lb_token_implementation,
-        } => try_set_lb_token_implementation(deps, env, info, lb_token_implementation),
+        ExecuteMsg::SetLBPairImplementation { implementation } => {
+            try_set_lb_pair_implementation(deps, env, info, implementation)
+        }
+        ExecuteMsg::SetLBTokenImplementation { implementation } => {
+            try_set_lb_token_implementation(deps, env, info, implementation)
+        }
+        ExecuteMsg::SetStakingContractImplementation { implementation } => {
+            try_set_staking_contract_implementation(deps, env, info, implementation)
+        }
         ExecuteMsg::CreateLBPair {
             token_x,
             token_y,
@@ -217,7 +221,7 @@ fn try_set_lb_pair_implementation(
     let old_lb_pair_implementation = config.lb_pair_implementation;
     if old_lb_pair_implementation == new_lb_pair_implementation {
         return Err(Error::SameImplementation {
-            lb_implementation: old_lb_pair_implementation.id,
+            implementation: old_lb_pair_implementation.id,
         });
     }
 
@@ -251,12 +255,46 @@ fn try_set_lb_token_implementation(
     let old_lb_token_implementation = config.lb_token_implementation;
     if old_lb_token_implementation == new_lb_token_implementation {
         return Err(Error::SameImplementation {
-            lb_implementation: old_lb_token_implementation.id,
+            implementation: old_lb_token_implementation.id,
         });
     }
 
     CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
         config.lb_token_implementation = new_lb_token_implementation;
+        Ok(config)
+    })?;
+
+    Ok(Response::default())
+}
+
+/// Sets the LBPair implementation details.
+///
+/// # Arguments
+///
+/// * `new_lb_pair_implementation` - The code ID and code hash of the implementation.
+fn try_set_staking_contract_implementation(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    new_implementation: ContractInstantiationInfo,
+) -> Result<Response> {
+    let config = CONFIG.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::LiquidityBookAdmin,
+        info.sender.to_string(),
+        &config.admin_auth,
+    )?;
+
+    let old_staking_contract_implementation = config.staking_contract_implementation;
+    if old_staking_contract_implementation == new_implementation {
+        return Err(Error::SameImplementation {
+            implementation: old_staking_contract_implementation.id,
+        });
+    }
+
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+        config.staking_contract_implementation = new_implementation;
         Ok(config)
     })?;
 
@@ -380,6 +418,7 @@ fn try_create_lb_pair(
                 admin_auth: config.admin_auth.into(),
                 total_reward_bins: Some(config.total_reward_bins),
                 rewards_distribution_algorithm: config.rewards_distribution_algorithm,
+                staking_contract_implementation: config.staking_contract_implementation,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

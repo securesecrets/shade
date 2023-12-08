@@ -38,11 +38,11 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "snip20",
   "storage_plus",
 ] }
-secret-toolkit = { version = "0.7.0",  features = [
+secret-toolkit = { version = "0.10.0",  features = [
   "permit",
   "viewing-key",
 ] }
-secret-toolkit-crypto = { version = "0.7.0", features = ["rand", "hash"]}
+secret-toolkit-crypto = { version = "0.10.0", features = ["rand", "hash"]}
 
 schemars = "0.8.11"
 serde = { version = "1.0.114", default-features = false, features = ["derive"] }

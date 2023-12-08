@@ -66,7 +66,7 @@ pub fn lb_pair_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2271,7 +2271,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2492,7 +2492,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2501,7 +2501,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         "viewing_key".to_owned(),
     )?;
 
-    let deposit_ratio = (generate_random(1u128, DEPOSIT_AMOUNT));
+    let deposit_ratio = generate_random(1u128, DEPOSIT_AMOUNT);
 
     let amount_x = Uint128::from(((deposit_ratio) * 10000_0000) / 40000); // 25_000_000 satoshi
     let amount_y = Uint128::from((deposit_ratio) * 1000_000); // 10_000 silk
@@ -2634,7 +2634,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2780,7 +2780,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2942,7 +2942,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -3102,7 +3102,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,

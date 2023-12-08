@@ -109,7 +109,7 @@ impl U256x256Math {
         let (prod0, prod1) = Self::_get_mul_prods(x, y)?;
 
         let result = Self::_get_end_of_div_round_down(x, y, denominator, prod0, prod1)?;
-        println!("result: {:#?}", result);
+        // println!("result: {:#?}", result);
 
         Ok(result)
     }
@@ -323,13 +323,10 @@ impl U256x256Math {
         // variables such that product = prod1 * 2^256 + prod0.
 
         let mm = mulmod(x, y, U256::MAX);
-        println!("mm: {:#?}", mm);
         let prod0 = x.wrapping_mul(y);
-        println!("prod0: {:#?}", prod0);
         let prod1 =
             mm.wrapping_sub(prod0)
                 .wrapping_sub(if mm < prod0 { U256::ONE } else { U256::ZERO });
-        println!("prod1: {:#?}", prod1);
 
         Ok((prod0, prod1))
     }

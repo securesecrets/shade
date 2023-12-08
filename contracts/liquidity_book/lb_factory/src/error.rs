@@ -87,8 +87,8 @@ pub enum LBFactoryError {
     )]
     LBFactorySafetyCheckFailed { lb_factory_implementation: Addr },
 
-    #[error("LB implementation is already set to code ID {lb_implementation}!")]
-    SameImplementation { lb_implementation: u64 },
+    #[error("LB implementation is already set to code ID {implementation}!")]
+    SameImplementation { implementation: u64 },
 
     #[error("The LBPair implementation has not been set yet!")]
     ImplementationNotSet,
