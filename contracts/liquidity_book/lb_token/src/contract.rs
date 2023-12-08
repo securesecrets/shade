@@ -1796,10 +1796,13 @@ fn query_all_balances(
             .may_load(to_binary(account).unwrap().as_slice())
             .unwrap();
         if let Some(i) = amount {
-            balances.push(OwnerBalance {
-                token_id,
-                amount: i,
-            })
+            // LB change
+            if !i.is_zero() {
+                balances.push(OwnerBalance {
+                    token_id,
+                    amount: i,
+                })
+            }
         }
     }
 

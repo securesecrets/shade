@@ -112,6 +112,31 @@ pub fn lb_pair_setup() -> Result<
 
 #[test]
 pub fn staking_contract_init() -> Result<(), anyhow::Error> {
+    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) = lb_pair_setup()?;
+
+    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let all_pairs = lb_factory::query_all_lb_pairs(
+        &mut app,
+        &lb_factory.clone().into(),
+        token_x.into(),
+        token_y.into(),
+    )?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.lb_pair.contract)?;
+
+    let staking_contract = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
+
+    assert!(lb_token.address.as_str().len() > 0);
+    assert!(staking_contract.address.as_str().len() > 0);
+
+    Ok(())
+}
+
+#[test]
+pub fn stake() -> Result<(), anyhow::Error> {
     // should be init with the lb-pair
     //then query it about the contract info
     let addrs = init_addrs();
@@ -132,25 +157,15 @@ pub fn staking_contract_init() -> Result<(), anyhow::Error> {
 
     let staking_contract = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
 
-    // let token_send_message = SendAction {
-    //     token_id: String::new(),
-    //     from: todo!(),
-    //     recipient: todo!(),
-    //     recipient_code_hash: None,
-    //     amount: Uint256::default(),
-    //     msg: None,
-    //     memo: None,
-    // };
-
     //deposit funds here
 
     let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
 
     let mut actions = vec![];
-
+    //Querying all the bins
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+
         let balance = lb_token::query_balance(
             &app,
             &lb_token,
@@ -183,9 +198,7 @@ pub fn staking_contract_init() -> Result<(), anyhow::Error> {
         String::from("viewing_key"),
     )?;
 
-    for obj in owner_balance.iter() {
-        assert_eq!(obj.amount, Uint256::zero());
-    }
+    assert_eq!(owner_balance.len(), 0);
 
     Ok(())
 }
