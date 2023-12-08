@@ -26,7 +26,6 @@ use shade_protocol::{
         Timestamp,
         Uint128,
         Uint256,
-        Uint512,
         WasmMsg,
     },
     contract_interfaces::{
