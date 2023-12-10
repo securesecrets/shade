@@ -8,6 +8,7 @@ use shade_protocol::{
         BankMsg,
         Binary,
         Coin,
+        ContractInfo,
         CosmosMsg,
         Deps,
         DepsMut,
@@ -20,75 +21,71 @@ use shade_protocol::{
         Uint128,
         Uint256,
     },
-    liquidity_book::staking::{EpochInfo, StakerInfo, StakerLiquiditySnapshot},
+    liquidity_book::staking::{
+        EpochInfo,
+        RewardTokenInfo,
+        StakerInfo,
+        StakerLiquiditySnapshot,
+        State,
+    },
     query_auth::QueryPermit,
     secret_storage_plus::ItemStorage,
     snip20::helpers::{register_receive, set_viewing_key_msg, token_info},
-    swap::staking::{InstantiateMsg, RewardTokenInfo, RewardTokenSet, State},
     Contract,
     BLOCK_SIZE,
 };
 
-use crate::state::{
-    EPOCH_STORE,
-    REWARD_TOKENS,
-    REWARD_TOKEN_INFO,
-    STAKERS,
-    STAKERS_LIQUIDITY_SNAPSHOT,
-    TOTAL_LIQUIDITY,
-    TOTAL_LIQUIDITY_SNAPSHOT,
+use crate::{
+    contract::SHADE_STAKING_VIEWING_KEY,
+    state::{
+        EPOCH_STORE,
+        REWARD_TOKENS,
+        REWARD_TOKEN_INFO,
+        STAKERS,
+        STAKERS_LIQUIDITY_SNAPSHOT,
+        TOTAL_LIQUIDITY,
+        TOTAL_LIQUIDITY_SNAPSHOT,
+    },
 };
 
-pub fn create_reward_token(
+pub fn register_reward_tokens(
     storage: &mut dyn Storage,
-    now_epoch_index: u64,
-    token: &Contract,
-    epoch_emission_amount: Uint128,
-    valid_to_epoch: u64,
-    decimals: u8,
-) -> StdResult<Vec<RewardTokenInfo>> {
-    let mut reward_configs = match REWARD_TOKEN_INFO.may_load(storage, &token.address)? {
-        Some(rewards) => rewards,
-        None => vec![],
-    };
-    let info = init_from_daily_rewards(
-        now_epoch_index,
-        token,
-        decimals,
-        epoch_emission_amount,
-        valid_to_epoch,
-    )?;
-    match REWARD_TOKENS.may_load(storage)? {
-        Some(mut tokens) => {
-            tokens.insert(&info.token.address);
-            REWARD_TOKENS.save(storage, &tokens)?;
-        }
-        None => REWARD_TOKENS.save(storage, &RewardTokenSet(vec![info.token.address.clone()]))?,
-    };
-    reward_configs.push(info);
-    REWARD_TOKEN_INFO.save(storage, &token.address, &reward_configs)?;
-    Ok(reward_configs)
-}
+    tokens: Vec<ContractInfo>,
+    contract_code_hash: String,
+) -> StdResult<Vec<CosmosMsg>> {
+    let mut binding = REWARD_TOKENS.load(storage)?;
+    let mut messages = Vec::new();
+    for token in tokens.iter() {
+        if !binding.contains(token) {
+            binding.push(token.clone());
 
-pub fn init_from_daily_rewards(
-    now: u64,
-    token: &Contract,
-    decimals: u8,
-    epoch_emission_amount: Uint128,
-    valid_to: u64,
-) -> StdResult<RewardTokenInfo> {
-    Ok(RewardTokenInfo {
-        token: token.clone(),
-        decimals,
-        reward_per_epoch: epoch_emission_amount.into(),
-        valid_to,
-    })
+            let contract = &Contract {
+                address: token.address.to_owned(),
+                code_hash: token.code_hash.to_owned(),
+            };
+
+            //register receive
+            messages.push(register_receive(
+                contract_code_hash.to_owned(),
+                None,
+                contract,
+            )?);
+            messages.push(set_viewing_key_msg(
+                SHADE_STAKING_VIEWING_KEY.to_string(),
+                None,
+                contract,
+            )?);
+            //set viewing_key
+        }
+    }
+    REWARD_TOKENS.save(storage, &binding)?;
+    Ok(messages)
 }
 
 pub fn store_empty_reward_set(storage: &mut dyn Storage) -> StdResult<()> {
     match REWARD_TOKENS.may_load(storage)? {
         Some(_) => Err(StdError::generic_err("Reward token storage already exists")),
-        None => REWARD_TOKENS.save(storage, &RewardTokenSet(vec![])),
+        None => REWARD_TOKENS.save(storage, &(vec![])),
     }
 }
 

@@ -120,6 +120,7 @@ pub struct RewardTokenCreate {
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
     GetConfig {},
+
     #[returns(PermitQueryResponse)]
     WithPermit {
         permit: QueryPermit,

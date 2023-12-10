@@ -2560,6 +2560,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                             "{}-{}-Staking-Contract-{}",
                             emp_storage.token_x_symbol, emp_storage.token_y_symbol, state.bin_step
                         ),
+
                         funds: vec![],
                         admin: None,
                     }),
