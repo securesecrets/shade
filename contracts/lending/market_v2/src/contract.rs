@@ -5,7 +5,11 @@ use shade_protocol::{
         from_binary, to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env,
         MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
-    contract_interfaces::{query_auth::helpers::authenticate_vk, snip20::Snip20ReceiveMsg},
+    contract_interfaces::{
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
+        query_auth::helpers::authenticate_vk,
+        snip20::Snip20ReceiveMsg,
+    },
     query_authentication::viewing_keys,
     utils::{asset::Contract, Query},
 };
@@ -804,6 +808,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     Ok(res)
 }
 
+fn oracle(deps: Deps, symbol: String) -> StdResult<Uint128> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.oracle)?;
+
+    Ok(Uint128::from(answer.rate))
+}
+
 mod query {
     use super::*;
 
@@ -985,8 +996,6 @@ mod query {
     /// Handler for `QueryMsg::PriceMarketLocalPerCommon`
     /// Returns the ratio of the twap of the market token over the common token.
     pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
-        todo!();
-
         let config = CONFIG.load(deps.storage)?;
         // If tokens are the same, just return 1:1.
         if config.common_token == config.market_token {
@@ -996,16 +1005,13 @@ mod query {
                 rate_sell_per_buy: Decimal::one(),
             })
         } else {
-            todo!();
-            // let price_response: TwapResponse = OracleQueryMsg::Twap {
-            //     offer: config.market_token.clone().into(),
-            //     ask: config.common_token.clone().into(),
-            // }
-            // .query(&deps.querier, config.price_oracle.clone())?;
+            // TODO: Should I use .denom() here? It needs a ticker apaarently
+            let price = oracle(deps, config.market_token.denom().clone())?;
             Ok(PriceRate {
                 sell_denom: config.market_token,
                 buy_denom: config.common_token,
-                rate_sell_per_buy: Decimal::one(), /*price_response.a_per_b,*/
+                // oracle query apparently returns 18 decimal value, so this should work
+                rate_sell_per_buy: Decimal::new(price),
             })
         }
     }

@@ -14,6 +14,7 @@ cosmwasm-schema = "1.4.0"
 lending-utils = { version = "0.1.0", path = "../../../packages/lending_utils" }
 lend-token = { version = "0.1.0", path = "../token" }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "oracles",
   "snip20",
   "storage_plus",
 ] }
