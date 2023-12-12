@@ -2,8 +2,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, Decimal, Uint128},
+    c_std::{Addr, Decimal, Uint128},
     secret_storage_plus::Item,
+    utils::asset::Contract,
 };
 
 use lending_utils::{interest::ValidatedInterest, token::Token};
@@ -38,11 +39,11 @@ pub struct Config {
     /// Address of Oracle's contract
     pub price_oracle: String,
     /// Address of Credit Agency
-    pub credit_agency: ContractInfo,
+    pub credit_agency: Contract,
     /// Address of oracle
-    pub oracle: ContractInfo,
+    pub oracle: Contract,
     /// Address of auth query contract
-    pub query_auth: ContractInfo,
+    pub query_auth: Contract,
     pub reserve_factor: Decimal,
 }
 

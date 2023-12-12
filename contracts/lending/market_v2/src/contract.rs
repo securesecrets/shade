@@ -5,14 +5,14 @@ use shade_protocol::{
         from_binary, to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env,
         MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
     },
-    contract_interfaces::snip20::Snip20ReceiveMsg,
+    contract_interfaces::{query_auth::helpers::authenticate_vk, snip20::Snip20ReceiveMsg},
     query_authentication::viewing_keys,
     utils::{asset::Contract, Query},
 };
 
 use crate::{
     error::ContractError,
-    msg::{AuthQueryMsg, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
@@ -737,11 +737,53 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::TokensBalance {
             account,
             viewing_key,
-        } => to_binary(&query::tokens_balance(deps, env, account)?)?,
-        QueryMsg::Withdrawable { account } => to_binary(&query::withdrawable(deps, env, account)?)?,
-        QueryMsg::Borrowable { account } => to_binary(&query::borrowable(deps, env, account)?)?,
-        QueryMsg::CreditLine { account } => {
-            let account = deps.api.addr_validate(&account)?;
+        } => {
+            let config = CONFIG.load(deps.storage)?;
+            authenticate_vk(
+                account.clone(),
+                viewing_key,
+                &deps.querier,
+                &config.query_auth,
+            )?;
+            to_binary(&query::tokens_balance(deps, env, account.to_string())?)?
+        }
+        QueryMsg::Withdrawable {
+            account,
+            viewing_key,
+        } => {
+            let config = CONFIG.load(deps.storage)?;
+            authenticate_vk(
+                account.clone(),
+                viewing_key,
+                &deps.querier,
+                &config.query_auth,
+            )?;
+            to_binary(&query::withdrawable(deps, env, account.to_string())?)?
+        }
+        QueryMsg::Borrowable {
+            account,
+            viewing_key,
+        } => {
+            let config = CONFIG.load(deps.storage)?;
+            authenticate_vk(
+                account.clone(),
+                viewing_key,
+                &deps.querier,
+                &config.query_auth,
+            )?;
+            to_binary(&query::borrowable(deps, env, account.to_string())?)?
+        }
+        QueryMsg::CreditLine {
+            account,
+            viewing_key,
+        } => {
+            let config = CONFIG.load(deps.storage)?;
+            authenticate_vk(
+                account.clone(),
+                viewing_key,
+                &deps.querier,
+                &config.query_auth,
+            )?;
             to_binary(&query::credit_line(deps, env, account)?)?
         }
         QueryMsg::Configuration {} => to_binary(&query::config(deps, env)?)?,
