@@ -734,23 +734,15 @@ mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::WithPermit { permit, query_msg } => {
-            // Handle AuthQueryMsg here
-            match query_msg {
-                AuthQueryMsg::TokensBalance { account } => {
-                    to_binary(&query::tokens_balance(deps, env, account)?)?
-                }
-                AuthQueryMsg::Withdrawable { account } => {
-                    to_binary(&query::withdrawable(deps, env, account)?)?
-                }
-                AuthQueryMsg::Borrowable { account } => {
-                    to_binary(&query::borrowable(deps, env, account)?)?
-                }
-                AuthQueryMsg::CreditLine { account } => {
-                    let account = deps.api.addr_validate(&account)?;
-                    to_binary(&query::credit_line(deps, env, account)?)?
-                }
-            }
+        QueryMsg::TokensBalance {
+            account,
+            viewing_key,
+        } => to_binary(&query::tokens_balance(deps, env, account)?)?,
+        QueryMsg::Withdrawable { account } => to_binary(&query::withdrawable(deps, env, account)?)?,
+        QueryMsg::Borrowable { account } => to_binary(&query::borrowable(deps, env, account)?)?,
+        QueryMsg::CreditLine { account } => {
+            let account = deps.api.addr_validate(&account)?;
+            to_binary(&query::credit_line(deps, env, account)?)?
         }
         QueryMsg::Configuration {} => to_binary(&query::config(deps, env)?)?,
         QueryMsg::Interest {} => to_binary(&query::interest(deps)?)?,

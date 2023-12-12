@@ -123,16 +123,28 @@ pub enum QueryMsg {
     TotalDebt {},
     /// Returns TokensBalanceResponse
     #[returns(TokensBalanceResponse)]
-    TokensBalance { account: String, viewing_key: String },
+    TokensBalance {
+        account: String,
+        viewing_key: String,
+    },
     /// Returns the amount that the given account can withdraw
     #[returns(Coin)]
-    Withdrawable { account: String, viewing_key: String  },
+    Withdrawable {
+        account: String,
+        viewing_key: String,
+    },
     /// Returns the amount that the given account can borrow
     #[returns(Coin)]
-    Borrowable { account: String, viewing_key: String  },
+    Borrowable {
+        account: String,
+        viewing_key: String,
+    },
     /// Returns CreditLineResponse
     #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine { account: String, viewing_key: String  },
+    CreditLine {
+        account: String,
+        viewing_key: String,
+    },
 }
 
 impl Query for QueryMsg {
