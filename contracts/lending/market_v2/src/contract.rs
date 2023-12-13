@@ -16,7 +16,7 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
+    msg::{AuthQueryMsg, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
@@ -803,6 +803,24 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::TotalDebt {} => {
             let (total, multiplier) = debt::total(deps.storage)?;
             to_binary(&TotalDebtResponse { total, multiplier })?
+        }
+        QueryMsg::WithPermit { permit, query_msg } => {
+            // Handle AuthQueryMsg here
+            match query_msg {
+                AuthQueryMsg::TokensBalance { account } => {
+                    to_binary(&query::tokens_balance(deps, env, account)?)?
+                }
+                AuthQueryMsg::Withdrawable { account } => {
+                    to_binary(&query::withdrawable(deps, env, account)?)?
+                }
+                AuthQueryMsg::Borrowable { account } => {
+                    to_binary(&query::borrowable(deps, env, account)?)?
+                }
+                AuthQueryMsg::CreditLine { account } => {
+                    let account = deps.api.addr_validate(&account)?;
+                    to_binary(&query::credit_line(deps, env, account)?)?
+                }
+            }
         }
     };
     Ok(res)
