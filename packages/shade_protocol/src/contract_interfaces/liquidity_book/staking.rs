@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use cosmwasm_schema::QueryResponses;
+use cosmwasm_std::{BlockInfo, StdResult};
+use secret_toolkit::permit::Permit;
 
 use crate::{
     c_std::{Addr, Binary, ContractInfo, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
     lb_libraries::types::ContractInstantiationInfo,
-    query_auth::QueryPermit,
     snip20::Snip20ReceiveMsg,
     swap::core::TokenType,
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
@@ -59,20 +60,34 @@ pub enum ExecuteMsg {
     },
     Snip1155Receive(Snip1155ReceiveMsg),
     Receive(Snip20ReceiveMsg),
-    UpdateRewardTokens(Vec<RewardTokenUpdate>),
     RegisterRewardTokens(Vec<ContractInfo>),
     UpdateConfig {
         admin_auth: Option<RawContract>,
         query_auth: Option<RawContract>,
-        padding: Option<String>,
+        epoch_duration: Option<u64>,
+        expiry_duration: Option<u64>,
     },
     RecoverFunds {
         token: TokenType,
         amount: Uint128,
         to: String,
         msg: Option<Binary>,
-        padding: Option<String>,
     },
+    CreateViewingKey {
+        entropy: String,
+    },
+    SetViewingKey {
+        key: String,
+    },
+    /// disallow the use of a query permit
+    RevokePermit {
+        permit_name: String,
+    },
+}
+
+#[cw_serde]
+pub enum ExecuteAnswer {
+    CreateViewingKey { key: String },
 }
 
 #[cw_serde]
@@ -95,22 +110,22 @@ pub struct RewardTokenUpdate {
     pub valid_to: u64,
 }
 
-#[allow(clippy::large_enum_variant)]
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {
-    #[returns(ConfigResponse)]
-    GetConfig {},
+// #[allow(clippy::large_enum_variant)]
+// #[cw_serde]
+// #[derive(QueryResponses)]
+// pub enum QueryMsg {
+//     #[returns(ConfigResponse)]
+//     GetConfig {},
 
-    #[returns(PermitQueryResponse)]
-    WithPermit {
-        permit: QueryPermit,
-        query: AuthQuery,
-    },
-}
+//     #[returns(PermitQueryResponse)]
+//     WithPermit {
+//         permit: QueryPermit,
+//         query: AuthQuery,
+//     },
+// }
 
-#[cw_serde]
-pub struct QueryPermitData {}
+// #[cw_serde]
+// pub struct QueryPermitData {}
 
 #[cw_serde]
 pub enum AuthQuery {
@@ -164,14 +179,13 @@ pub struct RewardTokenInfo {
 /// Manages the global state of the staking contract.
 #[cw_serde]
 pub struct State {
-    pub lp_token: ContractInfo,
+    pub lb_token: ContractInfo,
     pub lb_pair: Addr,
     pub admin_auth: ContractInfo,
     pub query_auth: Option<ContractInfo>,
     pub epoch_index: u64,
     pub epoch_durations: u64,
     pub expiry_durations: Option<u64>,
-    pub total_amount_staked: Uint128,
 }
 
 #[cw_serde]
@@ -278,4 +292,150 @@ impl Default for TotalLiquiditySnapshot {
             liquidity: Uint256::zero(),
         }
     }
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+// Query messages
+/////////////////////////////////////////////////////////////////////////////////
+
+/// Query messages to SNIP1155 contract. See [QueryAnswer](crate::msg::QueryAnswer)
+/// for the response messages for each variant, which has more detail.
+#[cw_serde]
+pub enum QueryMsg {
+    /// returns public information of the SNIP1155 contract
+    ContractInfo {},
+    IdTotalBalance {
+        id: String,
+    },
+    Balance {
+        owner: Addr,
+        viewer: Addr,
+        key: String,
+        token_id: String,
+    },
+    AllBalances {
+        owner: Addr,
+        key: String,
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+    Liquidity {
+        owner: Addr,
+        key: String,
+        round_index: Option<u64>,
+        token_ids: Vec<u32>,
+    },
+    TransactionHistory {
+        address: Addr,
+        key: String,
+        page: Option<u32>,
+        page_size: u32,
+    },
+    WithPermit {
+        permit: Permit,
+        query: QueryWithPermit,
+    },
+}
+
+impl QueryMsg {
+    pub fn get_validation_params(&self) -> StdResult<(Vec<&Addr>, String)> {
+        match self {
+            Self::Balance {
+                owner, viewer, key, ..
+            } => Ok((vec![owner, viewer], key.clone())),
+            Self::AllBalances { owner, key, .. } => Ok((vec![owner], key.clone())),
+            Self::Liquidity { owner, key, .. } => Ok((vec![owner], key.clone())),
+            Self::ContractInfo {} | Self::IdTotalBalance { .. } | Self::WithPermit { .. } => {
+                unreachable!("This query type does not require viewing key authentication")
+            }
+            Self::TransactionHistory { address, key, .. } => Ok((vec![address], key.clone())),
+        }
+    }
+}
+
+#[cw_serde]
+pub enum QueryWithPermit {
+    Balance {
+        owner: Addr,
+        token_id: String,
+    },
+    AllBalances {
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+    TransactionHistory {
+        page: Option<u32>,
+        page_size: u32,
+    },
+}
+
+/// the query responses for each [QueryMsg](crate::msg::QueryMsg) variant
+#[cw_serde]
+pub enum QueryAnswer {
+    /// returns contract-level information:
+    ContractInfo {
+        lb_token: ContractInfo,
+        lb_pair: Addr,
+        admin_auth: ContractInfo,
+        query_auth: Option<ContractInfo>,
+        epoch_index: u64,
+        epoch_durations: u64,
+        expiry_durations: Option<u64>,
+    },
+    IdTotalBalance {
+        amount: Uint256,
+    },
+    /// returns balance of a specific token_id. Owners can give permission to other addresses to query their balance
+    Balance {
+        amount: Uint256,
+    },
+    /// returns all token_id balances owned by an address. Only owners can use this query
+    AllBalances(Vec<OwnerBalance>),
+
+    Liquidity(Vec<Liquidity>),
+
+    TokenIdBalance {
+        total_supply: Option<Uint256>,
+    },
+
+    /// returned when an viewing_key-specific errors occur during a user's attempt to
+    /// perform an authenticated query
+    ViewingKeyError {
+        msg: String,
+    },
+}
+
+#[cw_serde]
+pub struct Liquidity {
+    pub token_id: String,
+    pub user_liquidity: Uint256,
+    pub total_liquidity: Uint256,
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+// Structs, Enums and other functions
+/////////////////////////////////////////////////////////////////////////////////
+
+#[cw_serde]
+pub enum ResponseStatus {
+    Success,
+    Failure,
+}
+
+#[cw_serde]
+pub struct Permission {
+    pub view_balance_perm: bool,
+}
+
+/// to store all keys to access all permissions for a given `owner`
+#[cw_serde]
+pub struct PermissionKey {
+    pub token_id: String,
+    pub allowed_addr: Addr,
+}
+
+#[cw_serde]
+pub struct OwnerBalance {
+    pub token_id: String,
+    pub amount: Uint256,
 }

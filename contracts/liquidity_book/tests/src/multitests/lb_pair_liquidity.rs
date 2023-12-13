@@ -78,8 +78,8 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
 
     let amount_x = Uint128::from(600 * 100_000_000_u128); //10^8
     let amount_y = Uint128::from(100 * 100_000_000_u128);
-    let nb_bins_x = 6;
-    let nb_bins_y = 6;
+    let nb_bins_x = 6u32;
+    let nb_bins_y = 6u32;
 
     let token_x = extract_contract_info(&deployed_contracts, SILK)?;
     let token_y = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -264,7 +264,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
         &lb_pair.lb_pair.contract,
         liquidity_parameters.clone(),
     )?;
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     let mut balances = vec![Uint256::zero(); total_bins as usize];
 
@@ -405,7 +405,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
 
     for i in 0..total_bins {
@@ -537,7 +537,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
 
@@ -595,7 +595,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
     assert_eq!(reserves_x, 0u128);
     assert_eq!(reserves_y, 0u128);
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
@@ -680,7 +680,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
         "viewing_key".to_owned(),
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut half_balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
@@ -849,7 +849,7 @@ pub fn test_query_next_non_empty_bin() -> Result<(), anyhow::Error> {
     let mut id = lb_pair::query_next_non_empty_bin(&app, &lb_pair.lb_pair.contract, false, 0)?;
     assert_eq!(lower_id, id);
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..(total_bins - 1u32) {
         id = lb_pair::query_next_non_empty_bin(&app, &lb_pair.lb_pair.contract, false, id)?;

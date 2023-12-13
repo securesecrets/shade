@@ -216,7 +216,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
     let token_y = extract_contract_info(&deployed_contracts, SILK)?;
 
-    let total_bins = get_total_bins(10, 10) as u32;
+    let total_bins = get_total_bins(10u32, 10u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
 

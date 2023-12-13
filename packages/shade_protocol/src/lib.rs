@@ -13,6 +13,10 @@ pub mod c_std {
     pub use cosmwasm_std::*;
 }
 
+pub mod s_toolkit {
+    pub use secret_toolkit::*;
+}
+
 pub mod storage {
     pub use cosmwasm_storage::*;
 }

@@ -27,6 +27,7 @@ use shade_protocol::{
         StakerInfo,
         StakerLiquiditySnapshot,
         State,
+        TotalLiquiditySnapshot,
     },
     query_auth::QueryPermit,
     secret_storage_plus::ItemStorage,
@@ -89,13 +90,13 @@ pub fn store_empty_reward_set(storage: &mut dyn Storage) -> StdResult<()> {
     }
 }
 
-pub fn require_lp_token(state: &State, addr: &Addr) -> StdResult<()> {
-    if state.lp_token.address.eq(addr) {
+pub fn require_lb_token(state: &State, addr: &Addr) -> StdResult<()> {
+    if state.lb_token.address.eq(addr) {
         return Ok(());
     }
     Err(StdError::generic_err(format!(
         "Must stake the LP token {}. Attempted to stake {addr}.",
-        state.lp_token.address
+        state.lb_token.address
     )))
 }
 
@@ -143,19 +144,19 @@ pub fn check_if_claimable(starting_round: Option<u64>, current_round_index: u64)
 }
 
 pub fn finding_user_liquidity(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     info: &MessageInfo,
     staker_info: &StakerInfo,
     epoch_index: u64,
     bin_id: u32,
-) -> StdResult<Uint256> {
+) -> StdResult<(StakerLiquiditySnapshot)> {
     let mut legacy_bal: Uint256 = Uint256::zero();
     let mut staker_liq_snap = STAKERS_LIQUIDITY_SNAPSHOT
         .load(storage, (&info.sender, epoch_index, bin_id))
         .unwrap_or_default();
 
     if !staker_liq_snap.liquidity.is_zero() {
-        Ok(staker_liq_snap.liquidity)
+        Ok(staker_liq_snap)
     } else {
         let mut finding_liq_round: u64 = if let Some(rn) = epoch_index.checked_sub(1) {
             rn
@@ -186,21 +187,16 @@ pub fn finding_user_liquidity(
         staker_liq_snap.liquidity = legacy_bal;
         staker_liq_snap.amount_delegated = legacy_bal;
         // user_liquidity_snapshot_stats_helper_store(storage, round_index, sender, staker_liq_snap)?;
-        STAKERS_LIQUIDITY_SNAPSHOT.save(
-            storage,
-            (&info.sender, epoch_index, bin_id),
-            &staker_liq_snap,
-        )?;
 
-        Ok(legacy_bal)
+        Ok((staker_liq_snap))
     }
 }
 
 pub fn finding_total_liquidity(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     epoch_index: u64,
     bin_id: u32,
-) -> StdResult<Uint256> {
+) -> StdResult<TotalLiquiditySnapshot> {
     let mut legacy_bal: Uint256 = Uint256::zero();
     let mut total_liq_snap = TOTAL_LIQUIDITY_SNAPSHOT
         .load(storage, (epoch_index, bin_id))
@@ -208,7 +204,7 @@ pub fn finding_total_liquidity(
     let total_liq = TOTAL_LIQUIDITY.load(storage, bin_id).unwrap_or_default();
 
     if !total_liq_snap.liquidity.is_zero() {
-        Ok(total_liq_snap.liquidity)
+        Ok(total_liq_snap)
     } else {
         let mut finding_liq_round: u64 = if let Some(rn) = epoch_index.checked_sub(1) {
             rn
@@ -218,7 +214,7 @@ pub fn finding_total_liquidity(
         let start = if total_liq.last_deposited.is_some() {
             total_liq.last_deposited.unwrap()
         } else {
-            return Ok(legacy_bal);
+            return Ok(total_liq_snap);
         };
         while finding_liq_round >= start {
             let staker_liq_snap_prev_round = TOTAL_LIQUIDITY_SNAPSHOT
@@ -238,9 +234,7 @@ pub fn finding_total_liquidity(
 
         total_liq_snap.liquidity = legacy_bal;
         total_liq_snap.amount_delegated = legacy_bal;
-        // user_liquidity_snapshot_stats_helper_store(storage, round_index, sender, staker_liq_snap)?;
-        TOTAL_LIQUIDITY_SNAPSHOT.save(storage, (epoch_index, bin_id), &total_liq_snap)?;
 
-        Ok(legacy_bal)
+        Ok(total_liq_snap)
     }
 }

@@ -400,7 +400,7 @@ fn safe64_divide(numerator: u128, denominator: u64) -> u64 {
     (numerator / denominator as u128) as u64
 }
 
-pub fn get_id(active_id: u32, i: u32, nb_bin_y: u8) -> u32 {
+pub fn get_id(active_id: u32, i: u32, nb_bin_y: u32) -> u32 {
     let mut id: u32 = active_id + i;
 
     if nb_bin_y > 0 {
@@ -410,7 +410,7 @@ pub fn get_id(active_id: u32, i: u32, nb_bin_y: u8) -> u32 {
     safe24(id)
 }
 
-pub fn get_total_bins(nb_bin_x: u8, nb_bin_y: u8) -> u8 {
+pub fn get_total_bins(nb_bin_x: u32, nb_bin_y: u32) -> u32 {
     if nb_bin_x > 0 && nb_bin_y > 0 {
         return nb_bin_x + nb_bin_y - 1; // Convert to u256
     }
@@ -454,8 +454,8 @@ pub fn liquidity_parameters_generator(
     token_y: ContractInfo,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
 ) -> StdResult<LiquidityParameters> {
     liquidity_parameters_generator_custom(
         // Assuming lbPair has methods to get tokenX and tokenY
@@ -481,8 +481,8 @@ pub fn liquidity_parameters_generator_custom(
     token_y: ContractInfo,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
     bin_step: u16,
 ) -> StdResult<LiquidityParameters> {
     let total = get_total_bins(nb_bins_x, nb_bins_y);
@@ -553,8 +553,8 @@ pub fn liquidity_parameters_generator_with_native(
     token_y: TokenType,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
 ) -> StdResult<LiquidityParameters> {
     let total = get_total_bins(nb_bins_x, nb_bins_y);
 
