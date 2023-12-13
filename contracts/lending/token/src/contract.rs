@@ -1,24 +1,29 @@
 #[cfg(not(feature = "library"))]
-use lending_utils::amount::{base_to_token, token_to_base};
+use shade_protocol::c_std::shd_entry_point;
 use shade_protocol::{
     c_std::{
-        shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo,
-        Response, StdResult, Uint128,
+        to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Uint128,
     },
     contract_interfaces::snip20::Snip20ReceiveMsg,
+    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20,
     utils::Query,
 };
 
-use crate::error::ContractError;
-use crate::msg::{
-    BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse, InstantiateMsg,
-    MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
+use crate::{
+    error::ContractError,
+    msg::{
+        AuthPermit, Authentication, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse,
+        InstantiateMsg, MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
+    },
+    state::{
+        Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER,
+        DISTRIBUTION, MULTIPLIER, POINTS_SCALE, QUERY_AUTH, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY,
+        WITHDRAW_ADJUSTMENT,
+    },
 };
-use crate::state::{
-    Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER, DISTRIBUTION,
-    MULTIPLIER, POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY, WITHDRAW_ADJUSTMENT,
-};
+use lending_utils::amount::{base_to_token, token_to_base};
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -42,8 +47,9 @@ pub fn instantiate(
         distributed_total: Uint128::zero(),
         withdrawable_total: Uint128::zero(),
     };
-
     DISTRIBUTION.save(deps.storage, &distribution)?;
+
+    QUERY_AUTH.save(deps.storage, &msg.query_auth)?;
 
     TOTAL_SUPPLY.save(deps.storage, &Uint128::zero())?;
     CONTROLLER.save(deps.storage, &msg.controller.into_valid(deps.api)?)?;
@@ -565,19 +571,72 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
     })
 }
 
+pub fn authenticate(deps: Deps, auth: Authentication, account: Addr) -> StdResult<()> {
+    match auth {
+        Authentication::ViewingKey { key, address } => {
+            let address = deps.api.addr_validate(&address)?;
+            if !authenticate_vk(
+                address.clone(),
+                key,
+                &deps.querier,
+                &QUERY_AUTH.load(deps.storage)?,
+            )? {
+                return Err(StdError::generic_err("Invalid Viewing Key"));
+            }
+            if address != account {
+                return Err(StdError::generic_err(
+                    "Trying to query using viewing key not matching the account",
+                ));
+            }
+            Ok(())
+        }
+        Authentication::Permit(permit) => {
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, QUERY_AUTH.load(deps.storage)?)?;
+            if res.revoked {
+                return Err(StdError::generic_err("Permit Revoked"));
+            }
+            if res.sender != CONTROLLER.load(deps.storage)?.address {
+                return Err(StdError::generic_err(
+                    "Unauthorized: Only proper market contract can query using permit",
+                ));
+            }
+            Ok(())
+        }
+    }
+}
+
 /// `QueryMsg` entry point
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     use QueryMsg::*;
 
     match msg {
-        Balance { address } => to_binary(&query_balance(deps, address)?),
-        BaseBalance { address } => to_binary(&query_base_balance(deps, address)?),
+        Balance {
+            address,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&address)?)?;
+            to_binary(&query_balance(deps, address)?)
+        }
+        BaseBalance {
+            address,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&address)?)?;
+            to_binary(&query_base_balance(deps, address)?)
+        }
         TokenInfo {} => to_binary(&query_token_info(deps)?),
         Multiplier {} => to_binary(&query_multiplier(deps)?),
         DistributedFunds {} => to_binary(&query_distributed_funds(deps)?),
         UndistributedFunds {} => to_binary(&query_undistributed_funds(deps, env)?),
-        WithdrawableFunds { owner } => to_binary(&query_withdrawable_funds(deps, owner)?),
+        WithdrawableFunds {
+            owner,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&owner)?)?;
+            to_binary(&query_withdrawable_funds(deps, owner)?)
+        }
     }
 }
 

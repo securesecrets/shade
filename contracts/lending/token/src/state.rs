@@ -63,3 +63,4 @@ pub const DISTRIBUTION: Item<Distribution> = Item::new("distribution");
 pub const WITHDRAW_ADJUSTMENT: Map<&Addr, WithdrawAdjustment> = Map::new("withdraw_adjustment");
 
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const QUERY_AUTH: Item<Contract> = Item::new("query_auth");
