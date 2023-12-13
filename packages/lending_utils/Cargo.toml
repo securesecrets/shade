@@ -17,3 +17,4 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "snip20",
   "storage_plus",
 ] }
+thiserror = "1"

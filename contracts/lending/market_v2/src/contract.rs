@@ -1,25 +1,29 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+use shade_protocol::c_std::entry_point;
+use shade_protocol::{
+    c_std::{
+        from_binary, to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+    },
+    contract_interfaces::{
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
+        query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
+        snip20::Snip20ReceiveMsg,
+    },
+    query_authentication::viewing_keys,
+    utils::{asset::Contract, Query},
 };
-use cw2::set_contract_version;
 
-use utils::wyndex::SwapOperation;
-
-use crate::error::ContractError;
-use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryTotalCreditLine, TotalDebtResponse,
-    TransferableAmountResponse,
+use crate::{
+    error::ContractError,
+    msg::{
+        AuthPermit, Authentication, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg,
+        TotalDebtResponse,
+    },
+    state::{debt, Config, CONFIG, VIEWING_KEY},
 };
-use crate::state::{debt, Config, CONFIG};
 
-use utils::token::Token;
-
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:wynd_lend-market";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+use lending_utils::token::Token;
 
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
 
@@ -30,14 +34,13 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    let ctoken_msg = wynd_lend_token::msg::InstantiateMsg {
+    let ctoken_msg = lend_token::msg::InstantiateMsg {
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,
         decimals: msg.decimals,
-        controller: env.contract.address.to_string(),
-        distributed_token: msg.distributed_token.clone(),
+        controller: env.contract.clone().into(),
+        distributed_token: msg.distributed_token.as_contract_info().unwrap().into(),
+        viewing_key: msg.viewing_key.clone(),
     };
     let ctoken_instantiate = WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
@@ -45,12 +48,13 @@ pub fn instantiate(
         msg: to_binary(&ctoken_msg)?,
         funds: vec![],
         label: format!("ctoken_contract_{}", env.contract.address),
+        code_hash: msg.ctoken_code_hash.clone(),
     };
-    debt::init(deps.storage)?;
 
     let cfg = Config {
         // those will be overwritten in a response
         ctoken_contract: Addr::unchecked(""),
+        ctoken_code_hash: msg.ctoken_code_hash,
         governance_contract: deps.api.addr_validate(&msg.gov_contract)?,
         name: msg.name,
         symbol: msg.symbol,
@@ -65,11 +69,14 @@ pub fn instantiate(
         common_token: msg.common_token,
         collateral_ratio: msg.collateral_ratio,
         price_oracle: msg.price_oracle,
-        credit_agency: info.sender.clone(),
+        credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
+        oracle: msg.oracle.into(),
+        query_auth: msg.query_auth.into(),
     };
     CONFIG.save(deps.storage, &cfg)?;
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -91,7 +98,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 mod reply {
     use super::*;
 
-    use cw_utils::parse_reply_instantiate_data;
+    use lending_utils::parse_reply::parse_reply_instantiate_data;
 
     pub fn token_instantiate_reply(
         deps: DepsMut,
@@ -130,97 +137,104 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     use ExecuteMsg::*;
     match msg {
-        Deposit {} => {
-            let received_tokens = require_single_denom(&info.funds)?;
-            execute::deposit(deps, env, info.sender.into_string(), received_tokens)
-        }
         Withdraw { amount } => execute::withdraw(deps, env, info, amount),
         Borrow { amount } => execute::borrow(deps, env, info, amount),
-        Repay {} => {
-            let repay_tokens = require_single_denom(&info.funds)?;
-            execute::repay(deps, env, repay_tokens, info.sender)
-        }
-        RepayTo { account } => {
-            let account = deps.api.addr_validate(&account)?;
-            let repay_tokens = require_single_denom(&info.funds)?;
-            execute::repay_to(deps, env, info.sender, repay_tokens, account)
-        }
         TransferFrom {
             source,
             destination,
             amount,
             liquidation_price,
-        } => {
-            let source = deps.api.addr_validate(&source)?;
-            let destination = deps.api.addr_validate(&destination)?;
-            if liquidation_price == Decimal::zero() {
-                return Err(ContractError::ZeroLiquidationPrice {});
-            }
-            execute::transfer_from(
-                deps,
-                env,
-                info,
-                source,
-                destination,
-                amount,
-                liquidation_price,
-            )
-        }
-        AdjustCommonToken { new_token } => {
-            execute::adjust_common_token(deps, info.sender, new_token)
-        }
-        // TODO: should allow cw20?
-        SwapWithdrawFrom {
-            account,
-            buy,
-            sell_limit,
-            estimate_multiplier,
-        } => execute::swap_withdraw_from(
+        } => execute::transfer_from(
             deps,
-            info.sender,
-            account,
-            buy,
-            sell_limit,
-            estimate_multiplier,
+            env,
+            info,
+            source,
+            destination,
+            amount,
+            liquidation_price,
         ),
-        AdjustCollateralRatio { new_ratio } => {
-            restricted::adjust_collateral_ratio(deps, info, new_ratio)
-        }
-        AdjustReserveFactor { new_factor } => {
-            restricted::adjust_reserve_factor(deps, info, new_factor)
-        }
-        AdjustPriceOracle { new_oracle } => restricted::adjust_price_oracle(deps, info, new_oracle),
-        AdjustMarketCap { new_cap } => restricted::adjust_market_cap(deps, info, new_cap),
-        AdjustInterestRates { new_interest_rates } => {
-            restricted::adjust_interest_rates(deps, env, info, new_interest_rates)
-        }
-        Receive(msg) => execute::receive_cw20_message(deps, env, info, msg),
     }
 }
 
-/// Checks if `funds` contains only one denom and return the Coin version of it.
-fn require_single_denom(funds: &[StdCoin]) -> Result<utils::coin::Coin, ContractError> {
-    if funds.len() != 1 {
-        return Err(ContractError::RequiresExactlyOneCoin {});
-    };
-    Ok(utils::coin::Coin {
-        denom: Token::Native(funds[0].denom.clone()),
-        amount: funds[0].amount,
-    })
+pub fn receive_snip20_message(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: Snip20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    use ReceiveMsg::*;
+    // TODO: Result instead of unwrap
+    match from_binary(&msg.msg.unwrap())? {
+        Deposit => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            execute::deposit(
+                deps,
+                env,
+                msg.sender,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+            )
+        }
+        Repay => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            execute::repay(
+                deps,
+                env,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+                sender,
+            )
+        }
+        RepayTo { account } => {
+            let config = CONFIG.load(deps.storage)?;
+            if config.ctoken_contract != info.sender {
+                return Err(ContractError::Unauthorized {});
+            };
+            let account = deps.api.addr_validate(account.as_str())?;
+            let sender = deps.api.addr_validate(msg.sender.as_str())?;
+            execute::repay_to(
+                deps,
+                env,
+                sender,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+                account,
+            )
+        }
+    }
 }
 
 // Available credit line helpers
-mod cr_utils {
-    use utils::{
+mod cr_lending_utils {
+    use super::*;
+
+    use shade_protocol::c_std::{Deps, DivideByZeroError, Fraction};
+
+    use lending_utils::{
         amount::base_to_token,
         credit_line::{CreditLineResponse, CreditLineValues},
     };
 
-    use crate::interest::query_ctoken_multiplier;
-
-    use super::*;
-
-    use cosmwasm_std::{Deps, DivideByZeroError, Fraction};
+    use crate::{interest::query_ctoken_multiplier, msg::QueryTotalCreditLine};
 
     pub fn divide(top: Uint128, bottom: Decimal) -> Result<Uint128, DivideByZeroError> {
         (top * bottom.denominator()).checked_div(bottom.numerator())
@@ -245,10 +259,8 @@ mod cr_utils {
         config: &Config,
         account: String,
     ) -> Result<Uint128, ContractError> {
-        let credit: CreditLineResponse = deps.querier.query_wasm_smart(
-            &config.credit_agency,
-            &QueryTotalCreditLine::TotalCreditLine { account },
-        )?;
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine { account }
+            .query(&deps.querier, &config.credit_agency)?;
         let credit = credit.validate(&config.common_token.clone())?;
 
         query_borrowable_tokens_with_creditvalues(deps, &credit)
@@ -283,12 +295,10 @@ mod cr_utils {
         account: impl Into<String>,
     ) -> Result<Uint128, ContractError> {
         let account = account.into();
-        let credit: CreditLineResponse = deps.querier.query_wasm_smart(
-            &config.credit_agency,
-            &QueryTotalCreditLine::TotalCreditLine {
-                account: account.clone(),
-            },
-        )?;
+        let credit: CreditLineResponse = QueryTotalCreditLine::TotalCreditLine {
+            account: account.clone(),
+        }
+        .query(&deps.querier, &config.credit_agency)?;
         let credit = credit.validate(&config.common_token.clone())?;
 
         let available = query_borrowable_tokens_with_creditvalues(deps, &credit)?;
@@ -306,21 +316,18 @@ mod cr_utils {
 }
 
 mod execute {
-    use cosmwasm_std::{from_binary, SubMsg};
-    use cw20::Cw20ReceiveMsg;
-    use utils::{
+    use lending_utils::{
         amount::{base_to_token, token_to_base},
         coin::Coin,
-        wyndex::SimulateSwapOperationsResponse,
     };
-    use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
-
-    use wyndex_oracle::state::Config as OracleConfig;
+    use shade_protocol::{
+        c_std::{from_binary, SubMsg},
+        contract_interfaces::snip20::Snip20ReceiveMsg,
+    };
 
     use crate::{
         interest::{calculate_interest, epochs_passed, query_ctoken_multiplier, InterestUpdate},
-        msg::{CreditAgencyExecuteMsg, ReceiveMsg},
-        state::debt,
+        msg::CreditAgencyExecuteMsg,
     };
 
     use super::*;
@@ -358,7 +365,7 @@ mod execute {
     /// One for ctoken rebase and one for the minting of any reserve balance rather than let it sit idle.
     /// The debt multiplier is adjusted inside this function.
     pub fn charge_interest<T>(deps: DepsMut, env: Env) -> Result<Ratios<T>, ContractError> {
-        use wynd_lend_token::msg::ExecuteMsg;
+        use lend_token::msg::ExecuteMsg;
 
         let mut cfg = CONFIG.load(deps.storage)?;
         let epochs_passed = epochs_passed(&cfg, env)?;
@@ -391,12 +398,13 @@ mod execute {
                 contract_addr: cfg.ctoken_contract.to_string(),
                 msg: ctoken_rebase,
                 funds: vec![],
+                code_hash: cfg.ctoken_code_hash.clone(),
             });
             let mut messages = vec![cwrapped];
             // If we have a reserve, rather than leave it sitting idle,
             // mint the reserve as ltokens and send them to the governance contract
             if reserve > Uint128::zero() {
-                let mint_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::MintBase {
+                let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
                     recipient: cfg.governance_contract.to_string(),
                     amount: reserve,
                 })?;
@@ -404,6 +412,7 @@ mod execute {
                     contract_addr: cfg.ctoken_contract.to_string(),
                     msg: mint_msg,
                     funds: vec![],
+                    code_hash: cfg.ctoken_code_hash,
                 });
 
                 messages.push(wrapped_msg);
@@ -426,9 +435,10 @@ mod execute {
         })?;
 
         Ok(SubMsg::new(WasmMsg::Execute {
-            contract_addr: cfg.credit_agency.to_string(),
+            contract_addr: cfg.credit_agency.address.to_string(),
             msg,
             funds: vec![],
+            code_hash: cfg.credit_agency.code_hash.clone(),
         }))
     }
 
@@ -439,7 +449,7 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         address: String,
-        received_tokens: utils::coin::Coin,
+        received_tokens: lending_utils::coin::Coin,
     ) -> Result<Response, ContractError> {
         let address = deps.api.addr_validate(&address)?;
         let cfg = CONFIG.load(deps.storage)?;
@@ -469,7 +479,7 @@ mod execute {
             response = response.add_submessages(charge_msgs.messages);
         }
 
-        let mint_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::MintBase {
+        let mint_msg = to_binary(&lend_token::msg::ExecuteMsg::MintBase {
             recipient: address.to_string(),
             amount: received_tokens.amount,
         })?;
@@ -477,6 +487,7 @@ mod execute {
             contract_addr: cfg.ctoken_contract.to_string(),
             msg: mint_msg,
             funds: vec![],
+            code_hash: cfg.ctoken_code_hash.clone(),
         });
 
         response = response
@@ -496,7 +507,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
 
-        if cr_utils::transferable_amount(deps.as_ref(), &cfg, &info.sender)? < amount {
+        if cr_lending_utils::transferable_amount(deps.as_ref(), &cfg, &info.sender)? < amount {
             return Err(ContractError::CannotWithdraw {
                 account: info.sender.to_string(),
                 amount,
@@ -512,7 +523,7 @@ mod execute {
         }
 
         // Burn the C tokens
-        let burn_msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::BurnBaseFrom {
+        let burn_msg = to_binary(&lend_token::msg::ExecuteMsg::BurnBaseFrom {
             owner: info.sender.to_string(),
             amount,
         })?;
@@ -520,10 +531,11 @@ mod execute {
             contract_addr: cfg.ctoken_contract.to_string(),
             msg: burn_msg,
             funds: vec![],
+            code_hash: cfg.ctoken_code_hash.clone(),
         });
 
         // Send the base assets from contract to lender
-        let send_msg = cfg.market_token.send_msg(&info.sender, amount)?;
+        let send_msg = cfg.market_token.send_msg(info.sender.clone(), amount)?;
 
         response = response
             .add_attribute("action", "withdraw")
@@ -542,7 +554,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
 
-        if !cr_utils::can_borrow(deps.as_ref(), &cfg, &info.sender, amount)? {
+        if !cr_lending_utils::can_borrow(deps.as_ref(), &cfg, &info.sender, amount)? {
             return Err(ContractError::CannotBorrow {
                 amount,
                 account: info.sender.to_string(),
@@ -560,7 +572,7 @@ mod execute {
         debt::increase(deps.storage, &info.sender, amount)?;
 
         // Sent tokens to sender's account
-        let send_msg = cfg.market_token.send_msg(&info.sender, amount)?;
+        let send_msg = cfg.market_token.send_msg(info.sender.clone(), amount)?;
 
         response = response
             .add_attribute("action", "borrow")
@@ -577,7 +589,7 @@ mod execute {
     pub fn repay(
         mut deps: DepsMut,
         env: Env,
-        repay_tokens: utils::coin::Coin,
+        repay_tokens: lending_utils::coin::Coin,
         sender: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -615,11 +627,11 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         sender: Addr,
-        repay_tokens: utils::coin::Coin,
+        repay_tokens: lending_utils::coin::Coin,
         account: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
-        if cfg.credit_agency != sender {
+        if cfg.credit_agency.address != sender {
             return Err(ContractError::RequiresCreditAgency {});
         }
         if repay_tokens.denom != cfg.market_token {
@@ -665,7 +677,7 @@ mod execute {
         liquidation_price: Decimal,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
-        if cfg.credit_agency != info.sender {
+        if cfg.credit_agency.address != info.sender {
             return Err(ContractError::RequiresCreditAgency {});
         }
 
@@ -680,13 +692,13 @@ mod execute {
         // calculate repaid value
         let price_rate = query::price_market_local_per_common(deps.as_ref())?.rate_sell_per_buy;
 
-        let repaid_value = cr_utils::divide(amount, price_rate * liquidation_price)
+        let repaid_value = cr_lending_utils::divide(amount, price_rate * liquidation_price)
             .map_err(|_| ContractError::ZeroPrice {})?;
 
         // transfer claimed amount of repaid value in ctokens from account source to destination
         // using base message here, since the rebase messages from `charge_interest` are not applied yet,
         // so the multiplier is not updated yet
-        let msg = to_binary(&wynd_lend_token::msg::ExecuteMsg::TransferBaseFrom {
+        let msg = to_binary(&lend_token::msg::ExecuteMsg::TransferBaseFrom {
             sender: source.to_string(),
             recipient: destination.to_string(),
             amount: repaid_value,
@@ -695,6 +707,7 @@ mod execute {
             contract_addr: cfg.ctoken_contract.to_string(),
             msg,
             funds: vec![],
+            code_hash: cfg.ctoken_code_hash.clone(),
         });
 
         response = response
@@ -714,7 +727,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         let mut cfg = CONFIG.load(deps.storage)?;
 
-        if sender != cfg.credit_agency {
+        if sender != cfg.credit_agency.address {
             return Err(ContractError::Unauthorized {});
         }
 
@@ -723,195 +736,81 @@ mod execute {
         CONFIG.save(deps.storage, &cfg)?;
         Ok(Response::new())
     }
+}
 
-    /// Returns the addrress associated to the pool for the two given `Token`s.
-    // fn query_pool_address(
-    //     deps: Deps,
-    //     cfg: &Config,
-    //     denom1: Token,
-    //     denom2: Token,
-    // ) -> Result<Addr, ContractError> {
-    //     let pool_addr: Addr = deps.querier.query_wasm_smart(
-    //         cfg.price_oracle.clone(),
-    //         &OracleQueryMsg::PoolAddress {
-    //             first_asset: denom1.into(),
-    //             second_asset: denom2.into(),
-    //         },
-    //     )?;
-    //     Ok(pool_addr)
-    // }
-
-    pub fn swap_withdraw_from(
-        deps: DepsMut,
-        sender: Addr,
-        account: String,
-        buy: Coin,
-        sell_limit: Uint128,
-        estimate_multiplier: Decimal,
-    ) -> Result<Response, ContractError> {
-        let cfg = CONFIG.load(deps.storage)?;
-        if cfg.credit_agency != sender {
-            return Err(ContractError::RequiresCreditAgency {});
-        }
-
-        // estimate multiplier must be at least 1.0, otherwise swap won't succeed
-        if estimate_multiplier < Decimal::one() {
-            return Err(ContractError::InvalidEstimateMultiplier {});
-        }
-
-        let send_msg = buy.denom.send_msg(sender, buy.amount)?;
-
-        // if swap is between same denoms, only send tokens
-        if cfg.market_token == buy.denom {
-            return Ok(Response::new().add_message(send_msg));
-        }
-
-        // variable to store the swap to perform.
-        let mut operations: Vec<SwapOperation> = vec![];
-
-        // If the market token is the common token we can directly swap it for the buy token.
-        if cfg.market_token == cfg.common_token {
-            operations.push(SwapOperation::WyndexSwap {
-                offer_asset_info: cfg.common_token.clone().into(),
-                ask_asset_info: buy.denom.into(),
-            })
-        // If buy token is the common token we can directly swap it with the market token.
-        } else if cfg.common_token == buy.denom {
-            operations.push(SwapOperation::WyndexSwap {
-                offer_asset_info: cfg.market_token.clone().into(),
-                ask_asset_info: buy.denom.into(),
-            })
-        // Else we need two swaps.
-        } else {
-            operations.extend(vec![
-                SwapOperation::WyndexSwap {
-                    offer_asset_info: cfg.market_token.clone().into(),
-                    ask_asset_info: cfg.common_token.clone().into(),
-                },
-                SwapOperation::WyndexSwap {
-                    offer_asset_info: cfg.common_token.clone().into(),
-                    ask_asset_info: buy.denom.into(),
-                },
-            ])
-        };
-
-        // Compute an estimate of market tokens required to complete the buy.
-        let swap_response: SimulateSwapOperationsResponse = deps.querier.query_wasm_smart(
-            &cfg.price_oracle,
-            &OracleQueryMsg::SimulateReverseSwapOperations {
-                ask_amount: buy.amount,
-                operations: operations.clone(),
-            },
-        )?;
-
-        // Add a margin
-        let estimate = swap_response.amount * estimate_multiplier;
-
-        if estimate > sell_limit {
-            return Err(ContractError::EstimateHigherThanLimit {
-                estimate,
-                sell_limit,
-            });
-        }
-
-        // Burn the C tokens based on the estimate.
-        let multiplier = query_ctoken_multiplier(deps.as_ref(), &cfg)?;
-        let burn_msg: Binary = to_binary(&wynd_lend_token::msg::ExecuteMsg::BurnFrom {
-            owner: account,
-            amount: base_to_token(estimate, multiplier),
-        })?;
-        let burn_msg = SubMsg::new(WasmMsg::Execute {
-            contract_addr: cfg.ctoken_contract.to_string(),
-            msg: burn_msg,
-            funds: vec![],
-        });
-
-        let oracle_config: OracleConfig = deps
-            .querier
-            .query_wasm_smart(cfg.price_oracle, &OracleQueryMsg::Config {})?;
-
-        let swap_msg = cfg.market_token.swap_msg(
-            oracle_config.multi_hop,
-            operations,
-            Some(buy.amount),
-            estimate,
-        )?;
-
-        Ok(Response::new()
-            .add_submessage(burn_msg)
-            .add_message(swap_msg)
-            .add_message(send_msg))
-    }
-
-    pub fn receive_cw20_message(
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        msg: Cw20ReceiveMsg,
-    ) -> Result<Response, ContractError> {
-        use ReceiveMsg::*;
-        // TODO: make functions accept or Addr or String
-        match from_binary(&msg.msg)? {
-            Deposit => deposit(
-                deps,
-                env,
-                msg.sender,
-                utils::coin::Coin {
-                    denom: Token::Cw20(info.sender.to_string()),
-                    amount: msg.amount,
-                },
-            ),
-            Repay => {
-                let sender = deps.api.addr_validate(msg.sender.as_str())?;
-                repay(
-                    deps,
-                    env,
-                    utils::coin::Coin {
-                        denom: Token::Cw20(info.sender.to_string()),
-                        amount: msg.amount,
-                    },
-                    sender,
-                )
+pub fn authenticate(deps: Deps, auth: Authentication, account: &Addr) -> StdResult<()> {
+    let config = CONFIG.load(deps.storage)?;
+    match auth {
+        Authentication::ViewingKey { key, address } => {
+            let address = deps.api.addr_validate(&address)?;
+            if !authenticate_vk(address.clone(), key, &deps.querier, &config.query_auth)? {
+                return Err(StdError::generic_err("Invalid Viewing Key"));
             }
-            RepayTo { account } => {
-                let account = deps.api.addr_validate(account.as_str())?;
-                let sender = deps.api.addr_validate(msg.sender.as_str())?;
-                repay_to(
-                    deps,
-                    env,
-                    sender,
-                    utils::coin::Coin {
-                        denom: Token::Cw20(info.sender.to_string()),
-                        amount: msg.amount,
-                    },
-                    account,
-                )
+            if &address != account {
+                return Err(StdError::generic_err(
+                    "Trying to query using viewing key not matching the account",
+                ));
             }
+            Ok(())
+        }
+        Authentication::Permit(permit) => {
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, config.query_auth)?;
+            if res.revoked {
+                return Err(StdError::generic_err("Permit Revoked"));
+            }
+            if res.sender != config.governance_contract {
+                return Err(StdError::generic_err(
+                    "Unauthorized: Only credit agency can query using permit",
+                ));
+            }
+            Ok(())
         }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    use QueryMsg::*;
     let res = match msg {
-        Configuration {} => to_binary(&query::config(deps, env)?)?,
-        TokensBalance { account } => to_binary(&query::tokens_balance(deps, env, account)?)?,
-        TransferableAmount { token, account } => {
-            let token = deps.api.addr_validate(&token)?;
-            to_binary(&query::transferable_amount(deps, token, account)?)?
+        QueryMsg::TokensBalance {
+            account,
+            authentication,
+        } => {
+            authenticate(deps, authentication, &account)?;
+            to_binary(&query::tokens_balance(deps, env, account.to_string())?)?
         }
-        Withdrawable { account } => to_binary(&query::withdrawable(deps, env, account)?)?,
-        Borrowable { account } => to_binary(&query::borrowable(deps, env, account)?)?,
-        Interest {} => to_binary(&query::interest(deps)?)?,
-        PriceMarketLocalPerCommon {} => to_binary(&query::price_market_local_per_common(deps)?)?,
-        CreditLine { account } => {
-            let account = deps.api.addr_validate(&account)?;
+        QueryMsg::Withdrawable {
+            account,
+            authentication,
+        } => {
+            authenticate(deps, authentication, &account)?;
+            to_binary(&query::withdrawable(deps, env, account.to_string())?)?
+        }
+        QueryMsg::Borrowable {
+            account,
+            authentication,
+        } => {
+            authenticate(deps, authentication, &account)?;
+            to_binary(&query::borrowable(deps, env, account.to_string())?)?
+        }
+        QueryMsg::CreditLine {
+            account,
+            authentication,
+        } => {
+            authenticate(deps, authentication, &account)?;
             to_binary(&query::credit_line(deps, env, account)?)?
         }
-        Reserve {} => to_binary(&query::reserve(deps, env)?)?,
-        Apy {} => to_binary(&query::apy(deps)?)?,
-        TotalDebt {} => {
+        QueryMsg::Configuration {} => to_binary(&query::config(deps, env)?)?,
+        QueryMsg::Interest {} => to_binary(&query::interest(deps)?)?,
+        QueryMsg::PriceMarketLocalPerCommon {} => {
+            to_binary(&query::price_market_local_per_common(deps)?)?
+        }
+        QueryMsg::TransferableAmount { token, account } => {
+            to_binary(&query::transferable_amount(deps, token, account)?)?
+        }
+        QueryMsg::Reserve {} => to_binary(&query::reserve(deps, env)?)?,
+        QueryMsg::Apy {} => to_binary(&query::apy(deps)?)?,
+        QueryMsg::TotalDebt {} => {
             let (total, multiplier) = debt::total(deps.storage)?;
             to_binary(&TotalDebtResponse { total, multiplier })?
         }
@@ -919,38 +818,52 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     Ok(res)
 }
 
+fn oracle(deps: Deps, symbol: String) -> StdResult<Uint128> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.oracle)?;
+
+    Ok(Uint128::from(answer.rate))
+}
+
 mod query {
     use super::*;
 
-    use cosmwasm_std::{Decimal, Deps, Uint128};
-    use cw20::BalanceResponse;
-    use utils::coin::Coin;
-    use utils::credit_line::{CreditLineResponse, CreditLineValues};
-    use utils::price::{coin_times_price_rate, PriceRate};
-    use wynd_lend_token::msg::{QueryMsg as TokenQueryMsg, TokenInfoResponse};
-    use wyndex::oracle::TwapResponse;
-    use wyndex_oracle::msg::QueryMsg as OracleQueryMsg;
+    use shade_protocol::{
+        c_std::{ContractInfo, Decimal, Deps, Uint128},
+        contract_interfaces::oracles,
+        utils::asset::Contract,
+    };
 
-    use crate::interest::{calculate_interest, epochs_passed, utilisation};
-    use crate::msg::{ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse};
-    use crate::state::{debt, SECONDS_IN_YEAR};
+    use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
+    use lending_utils::{
+        coin::Coin,
+        credit_line::{CreditLineResponse, CreditLineValues},
+        price::{coin_times_price_rate, PriceRate},
+    };
+
+    use crate::{
+        interest::{calculate_interest, epochs_passed, utilisation},
+        msg::{
+            ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse,
+            TransferableAmountResponse,
+        },
+        state::{debt, SECONDS_IN_YEAR},
+    };
 
     fn token_balance(
         deps: Deps,
-        token_contract: &Addr,
+        token_contract: &ContractInfo,
         address: String,
     ) -> StdResult<BalanceResponse> {
-        deps.querier
-            .query_wasm_smart(token_contract, &TokenQueryMsg::Balance { address })
+        TokenQueryMsg::Balance { address }.query(&deps.querier, token_contract)
     }
 
     fn base_balance(
         deps: Deps,
-        token_contract: &Addr,
+        token_contract: &ContractInfo,
         address: String,
     ) -> StdResult<BalanceResponse> {
-        deps.querier
-            .query_wasm_smart(token_contract, &TokenQueryMsg::BaseBalance { address })
+        TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
     }
 
     pub fn ctoken_balance(
@@ -958,9 +871,14 @@ mod query {
         config: &Config,
         account: impl ToString,
     ) -> Result<Coin, ContractError> {
-        Ok(config
-            .market_token
-            .amount(token_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
+        Ok(config.market_token.amount(
+            token_balance(
+                deps,
+                &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                account.to_string(),
+            )?
+            .balance,
+        ))
     }
 
     pub fn ctoken_base_balance(
@@ -968,9 +886,14 @@ mod query {
         config: &Config,
         account: impl ToString,
     ) -> Result<Coin, ContractError> {
-        Ok(config
-            .market_token
-            .amount(base_balance(deps, &config.ctoken_contract, account.to_string())?.balance))
+        Ok(config.market_token.amount(
+            base_balance(
+                deps,
+                &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+                account.to_string(),
+            )?
+            .balance,
+        ))
     }
 
     /// Handler for `QueryMsg::Config`
@@ -1008,15 +931,15 @@ mod query {
     /// Handler for `QueryMsg::TransferableAmount`
     pub fn transferable_amount(
         deps: Deps,
-        token: Addr,
+        token: ContractInfo,
         account: String,
     ) -> Result<TransferableAmountResponse, ContractError> {
         let config = CONFIG.load(deps.storage)?;
-        if token == config.ctoken_contract {
-            let transferable = cr_utils::transferable_amount(deps, &config, account)?;
+        if token == Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into() {
+            let transferable = cr_lending_utils::transferable_amount(deps, &config, account)?;
             Ok(TransferableAmountResponse { transferable })
         } else {
-            Err(ContractError::UnrecognisedToken(token.to_string()))
+            Err(ContractError::UnrecognisedToken(token.address.to_string()))
         }
     }
 
@@ -1025,14 +948,15 @@ mod query {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
-        let transferable = cr_utils::transferable_amount(deps, &cfg, &account)?;
+        let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
         let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
         let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
         let withdrawable = min(
             allowed_to_withdraw,
             cfg.market_token
-                .query_balance(deps, env.contract.address)?
+                .query_balance(deps, env.contract.address, viewing_key)?
                 .into(),
         );
 
@@ -1044,12 +968,13 @@ mod query {
         use std::cmp::min;
 
         let cfg = CONFIG.load(deps.storage)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
-        let borrowable = cr_utils::query_borrowable_tokens(deps, &cfg, account)?;
+        let borrowable = cr_lending_utils::query_borrowable_tokens(deps, &cfg, account)?;
         let borrowable = min(
             borrowable,
             cfg.market_token
-                .query_balance(deps, env.contract.address)?
+                .query_balance(deps, env.contract.address.to_string(), viewing_key)?
                 .into(),
         );
 
@@ -1057,7 +982,7 @@ mod query {
     }
 
     pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, ContractError> {
-        crate::interest::ctoken_info(deps, config)
+        Ok(crate::interest::ctoken_info(deps, config)?)
     }
 
     /// Handler for `QueryMsg::Interest`
@@ -1083,9 +1008,6 @@ mod query {
     pub fn price_market_local_per_common(deps: Deps) -> Result<PriceRate, ContractError> {
         let config = CONFIG.load(deps.storage)?;
         // If tokens are the same, just return 1:1.
-        // TODO: we should add more test to check that return one is fine. There could be
-        // situation with small unbalances inside pools. When unbalances are with a mean around 1
-        // this could be fine, but in cases where this is not true, it could be a problem.
         if config.common_token == config.market_token {
             Ok(PriceRate {
                 sell_denom: config.market_token.clone(),
@@ -1093,17 +1015,13 @@ mod query {
                 rate_sell_per_buy: Decimal::one(),
             })
         } else {
-            let price_response: TwapResponse = deps.querier.query_wasm_smart(
-                config.price_oracle.clone(),
-                &OracleQueryMsg::Twap {
-                    offer: config.market_token.clone().into(),
-                    ask: config.common_token.clone().into(),
-                },
-            )?;
+            // TODO: Should I use .denom() here? It needs a ticker apaarently
+            let price = oracle(deps, config.market_token.denom().clone())?;
             Ok(PriceRate {
                 sell_denom: config.market_token,
                 buy_denom: config.common_token,
-                rate_sell_per_buy: price_response.a_per_b,
+                // oracle query apparently returns 18 decimal value, so this should work
+                rate_sell_per_buy: Decimal::new(price),
             })
         }
     }
@@ -1172,110 +1090,5 @@ mod query {
         let lender = borrower * utilisation * (Decimal::one() - cfg.reserve_factor);
 
         Ok(ApyResponse { borrower, lender })
-    }
-}
-
-mod restricted {
-    use super::*;
-
-    use utils::interest::Interest;
-
-    pub fn ensure_governance(cfg: &Config, info: &MessageInfo) -> Result<(), ContractError> {
-        if cfg.governance_contract != info.sender {
-            return Err(ContractError::Unauthorized {});
-        }
-        Ok(())
-    }
-
-    pub fn adjust_collateral_ratio(
-        deps: DepsMut,
-        info: MessageInfo,
-        new_ratio: Decimal,
-    ) -> Result<Response, ContractError> {
-        let mut cfg = CONFIG.load(deps.storage)?;
-        ensure_governance(&cfg, &info)?;
-        cfg.collateral_ratio = new_ratio;
-        CONFIG.save(deps.storage, &cfg)?;
-        Ok(Response::new())
-    }
-
-    pub fn adjust_reserve_factor(
-        deps: DepsMut,
-        info: MessageInfo,
-        new_factor: Decimal,
-    ) -> Result<Response, ContractError> {
-        let mut cfg = CONFIG.load(deps.storage)?;
-        ensure_governance(&cfg, &info)?;
-        cfg.reserve_factor = new_factor;
-        CONFIG.save(deps.storage, &cfg)?;
-        Ok(Response::new())
-    }
-
-    pub fn adjust_price_oracle(
-        deps: DepsMut,
-        info: MessageInfo,
-        new_oracle: String,
-    ) -> Result<Response, ContractError> {
-        let mut cfg = CONFIG.load(deps.storage)?;
-        ensure_governance(&cfg, &info)?;
-        cfg.price_oracle = new_oracle;
-        CONFIG.save(deps.storage, &cfg)?;
-        Ok(Response::new())
-    }
-
-    pub fn adjust_market_cap(
-        deps: DepsMut,
-        info: MessageInfo,
-        new_cap: Option<Uint128>,
-    ) -> Result<Response, ContractError> {
-        let mut cfg = CONFIG.load(deps.storage)?;
-        ensure_governance(&cfg, &info)?;
-        cfg.market_cap = new_cap;
-        CONFIG.save(deps.storage, &cfg)?;
-        Ok(Response::new())
-    }
-
-    pub fn adjust_interest_rates(
-        mut deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        new_interest_rates: Interest,
-    ) -> Result<Response, ContractError> {
-        let mut cfg = CONFIG.load(deps.storage)?;
-        ensure_governance(&cfg, &info)?;
-        let charge_msgs = execute::charge_interest(deps.branch(), env)?;
-        let mut response = Response::new();
-        if !charge_msgs.is_unchanged() {
-            response = response.add_submessages(charge_msgs.messages);
-        }
-        let interest_rates = new_interest_rates.validate()?;
-        cfg.rates = interest_rates;
-        CONFIG.save(deps.storage, &cfg)?;
-        Ok(response)
-    }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    CONFIG.update::<_, StdError>(deps.storage, |mut cfg| {
-        if let Some(token_id) = msg.wynd_lend_token_id {
-            cfg.token_id = token_id;
-        }
-        Ok(cfg)
-    })?;
-
-    Ok(Response::new())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn divide_u128_by_decimal_rounding() {
-        assert_eq!(
-            cr_utils::divide(60u128.into(), Decimal::percent(60)).unwrap(),
-            Uint128::new(100u128)
-        );
     }
 }

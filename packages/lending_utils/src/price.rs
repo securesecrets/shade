@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use use shade_protocol::c_std::Decimal;
+use shade_protocol::c_std::Decimal;
 
 use crate::{coin::Coin, token::Token};
 
@@ -41,33 +41,42 @@ pub enum PriceError {
 mod tests {
     use super::*;
 
-    use cosmwasm_std::coin;
+    use shade_protocol::c_std::{Addr, ContractInfo};
+
+    use crate::coin::coin_cw20;
+
+    fn new_snip20(address: &str) -> ContractInfo {
+        ContractInfo {
+            address: Addr::unchecked(address),
+            code_hash: "hash".to_owned(),
+        }
+    }
 
     #[test]
     fn price_rate_correct_denom() {
         let price_rate = PriceRate {
-            buy_denom: Token::Native("USD".to_owned()),
-            sell_denom: Token::Native("EUR".to_owned()),
+            buy_denom: Token::new_cw20(new_snip20("USD")),
+            sell_denom: Token::new_cw20(new_snip20("EUR")),
             rate_sell_per_buy: Decimal::percent(110),
         };
-        let eur_coin = coin(100, "EUR");
+        let eur_coin = coin_cw20(100, new_snip20("EUR"));
         let usd_coin = coin_times_price_rate(&eur_coin.into(), &price_rate).unwrap();
-        assert_eq!(usd_coin, coin(110, "USD").into());
+        assert_eq!(usd_coin, coin_cw20(110, new_snip20("USD")).into());
     }
 
     #[test]
     fn price_rate_wrong_buy_denom() {
         let price_rate = PriceRate {
-            buy_denom: Token::Native("USD".to_owned()),
-            sell_denom: Token::Native("EUR".to_owned()),
+            buy_denom: Token::new_cw20(new_snip20("USD")),
+            sell_denom: Token::new_cw20(new_snip20("EUR")),
             rate_sell_per_buy: Decimal::percent(110),
         };
-        let usd_coin = coin(100, "USD");
+        let usd_coin = coin_cw20(100, new_snip20("USD"));
         let err = coin_times_price_rate(&usd_coin.into(), &price_rate).unwrap_err();
         assert_eq!(
             PriceError::MulPrice {
-                incorrect: Token::Native("USD".to_owned()),
-                correct: Token::Native("EUR".to_owned())
+                incorrect: Token::Cw20(new_snip20("USD")),
+                correct: Token::Cw20(new_snip20("EUR"))
             },
             err
         );
@@ -76,19 +85,18 @@ mod tests {
     #[test]
     fn price_rate_incorrect_denom() {
         let price_rate = PriceRate {
-            buy_denom: Token::Native("USD".to_owned()),
-            sell_denom: Token::Native("EUR".to_owned()),
+            buy_denom: Token::new_cw20(new_snip20("USD")),
+            sell_denom: Token::new_cw20(new_snip20("EUR")),
             rate_sell_per_buy: Decimal::percent(110),
         };
-        let pln_coin = coin(100, "PLN");
+        let pln_coin = coin_cw20(100, new_snip20("PLN"));
         let err = coin_times_price_rate(&pln_coin.into(), &price_rate).unwrap_err();
         assert_eq!(
             PriceError::MulPrice {
-                incorrect: Token::Native("PLN".to_owned()),
-                correct: Token::Native("EUR".to_owned())
+                incorrect: Token::Cw20(new_snip20("PLN")),
+                correct: Token::Cw20(new_snip20("EUR"))
             },
             err
         );
     }
 }
-

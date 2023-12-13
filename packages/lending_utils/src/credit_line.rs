@@ -1,8 +1,9 @@
-use std::iter::Sum;
-use std::ops::Add;
+use std::{iter::Sum, ops::Add};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
 use shade_protocol::c_std::Uint128;
 
 use crate::{coin::Coin, token::Token};
@@ -124,7 +125,8 @@ impl<'a> Sum<&'a Self> for CreditLineValues {
 }
 
 /// Used for when CreditLineResponse validation fails
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
+#[error("Invalid token denomination: expected {expected:?}, but found {actual:?}")]
 pub struct InvalidCommonTokenDenom {
     pub expected: Token,
     pub actual: Token,
@@ -133,6 +135,15 @@ pub struct InvalidCommonTokenDenom {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use shade_protocol::c_std::{Addr, ContractInfo};
+
+    fn new_snip20(address: &str) -> ContractInfo {
+        ContractInfo {
+            address: Addr::unchecked(address),
+            code_hash: "hash".to_owned(),
+        }
+    }
 
     #[test]
     fn sum_credit_line_response() {
@@ -167,10 +178,10 @@ mod tests {
     #[test]
     fn credit_line_response_validation() {
         let resp = CreditLineResponse {
-            collateral: Coin::new_native(50, "BTC"),
-            credit_line: Coin::new_native(40, "BTC"),
-            borrow_limit: Coin::new_native(40, "BTC"),
-            debt: Coin::new_native(20, "BTC"),
+            collateral: Coin::new_cw20(50, new_snip20("BTC")),
+            credit_line: Coin::new_cw20(40, new_snip20("BTC")),
+            borrow_limit: Coin::new_cw20(40, new_snip20("BTC")),
+            debt: Coin::new_cw20(20, new_snip20("BTC")),
         };
         assert_eq!(
             Ok(CreditLineValues {
@@ -179,27 +190,27 @@ mod tests {
                 borrow_limit: Uint128::from(40u128),
                 debt: Uint128::from(20u128)
             }),
-            resp.validate(&Token::new_native("BTC"))
+            resp.validate(&Token::new_cw20(new_snip20("BTC")))
         );
         assert_eq!(
             Err(InvalidCommonTokenDenom {
-                expected: Token::new_native("OSMO"),
-                actual: Token::new_native("BTC")
+                expected: Token::new_cw20(new_snip20("OSMO")),
+                actual: Token::new_cw20(new_snip20("BTC"))
             }),
-            resp.validate(&Token::new_native("OSMO"))
+            resp.validate(&Token::new_cw20(new_snip20("OSMO")))
         );
     }
 
     #[test]
     fn credit_line_inconsistent_response_validation() {
         let resp = CreditLineResponse {
-            collateral: Coin::new_native(50, "BTC"),
-            credit_line: Coin::new_native(40, "OSMO"),
-            borrow_limit: Coin::new_native(40, "OSMO"),
-            debt: Coin::new_native(20, "BTC"),
+            collateral: Coin::new_cw20(50, new_snip20("BTC")),
+            credit_line: Coin::new_cw20(40, new_snip20("OSMO")),
+            borrow_limit: Coin::new_cw20(40, new_snip20("OSMO")),
+            debt: Coin::new_cw20(20, new_snip20("BTC")),
         };
-        assert!(resp.validate(&Token::new_native("OSMO")).is_err());
-        assert!(resp.validate(&Token::new_native("BTC")).is_err());
-        assert!(resp.validate(&Token::new_native("ATOM")).is_err());
+        assert!(resp.validate(&Token::new_cw20(new_snip20("OSMO"))).is_err());
+        assert!(resp.validate(&Token::new_cw20(new_snip20("BTC"))).is_err());
+        assert!(resp.validate(&Token::new_cw20(new_snip20("ATOM"))).is_err());
     }
 }

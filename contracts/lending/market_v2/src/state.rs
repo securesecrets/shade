@@ -1,16 +1,20 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::Item;
+use shade_protocol::{
+    c_std::{Addr, Decimal, Uint128},
+    secret_storage_plus::Item,
+    utils::asset::Contract,
+};
 
-use utils::{interest::ValidatedInterest, token::Token};
+use lending_utils::{interest::ValidatedInterest, token::Token};
 
 pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema, Debug)]
 pub struct Config {
     pub ctoken_contract: Addr,
+    pub ctoken_code_hash: String,
     /// The contract that controls this contract and is allowed to adjust its parameters
     pub governance_contract: Addr,
     pub name: String,
@@ -35,20 +39,29 @@ pub struct Config {
     /// Address of Oracle's contract
     pub price_oracle: String,
     /// Address of Credit Agency
-    pub credit_agency: Addr,
+    pub credit_agency: Contract,
+    /// Address of oracle
+    pub oracle: Contract,
+    /// Address of auth query contract
+    pub query_auth: Contract,
     pub reserve_factor: Decimal,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
+pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+
 pub mod debt {
     use super::*;
 
-    use crate::ContractError;
     use cosmwasm_schema::cw_serde;
-    use cosmwasm_std::{StdResult, Storage};
-    use cw_storage_plus::Map;
-    use utils::amount::{base_to_token, token_to_base};
+    use shade_protocol::{
+        c_std::{StdResult, Storage},
+        secret_storage_plus::Map,
+    };
+
+    use crate::ContractError;
+    use lending_utils::amount::{base_to_token, token_to_base};
 
     #[cw_serde]
     struct DebtInfo {

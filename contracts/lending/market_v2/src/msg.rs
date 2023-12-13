@@ -1,9 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Timestamp, Uint128};
+use shade_protocol::{
+    c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
+    contract_interfaces::query_auth::QueryPermit,
+    utils::{asset::Contract, Query},
+};
 
-use cw20::Cw20ReceiveMsg;
-use utils::interest::Interest;
-use utils::{coin::Coin, token::Token};
+use lending_utils::{
+    interest::Interest,
+    {coin::Coin, token::Token},
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -21,7 +26,7 @@ pub struct InstantiateMsg {
     pub market_cap: Option<Uint128>,
     /// Interest rate curve
     pub interest_rate: Interest,
-    /// Token which would be distributed via created wynd_lend contracts
+    /// Token which would be distributed via created lend contracts
     pub distributed_token: Token,
     /// Define interest's charged period (in seconds)
     pub interest_charge_period: u64,
@@ -39,83 +44,61 @@ pub struct InstantiateMsg {
     pub borrow_limit_ratio: Decimal,
     /// Address of the governance contract that controls this market
     pub gov_contract: String,
+    /// Key used for reading data in queries
+    pub viewing_key: String,
+    // I have no idea what to do with it
+    pub ctoken_code_hash: String,
+    // I have no idea what to do with it
+    pub credit_agency_code_hash: String,
+    /// Oracle address
+    pub oracle: Contract,
+    /// Address of auth query contract
+    pub query_auth: Contract,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// X market_token must be sent along with this message. If it matches, X c_token is minted of the sender address.
-    /// The underlying market_token is stored in this Market contract
-    Deposit {},
     /// This requests to withdraw the amount of C Tokens. More specifically,
     /// the contract will burn amount C Tokens and return that to the lender in base asset.
-    Withdraw {
-        amount: Uint128,
-    },
-    /// If sent tokens' denom matches market_token, burns tokens from sender's address
-    Repay {},
+    Withdraw { amount: Uint128 },
     /// Increases the sender's debt and dispatches a message to send amount base asset to the sender
-    Borrow {
-        amount: Uint128,
-    },
-    /// Helper to allow repay of debt on given account.
-    /// Sender must be a Credit Agency
-    RepayTo {
-        account: String,
-    },
+    Borrow { amount: Uint128 },
     /// Helper to allow transfering Ctokens from account source to account destination.
     /// Sender must be a Credit Agency
     TransferFrom {
-        source: String,
-        destination: String,
+        source: Addr,
+        destination: Addr,
         amount: Uint128,
         liquidation_price: Decimal,
     },
-    AdjustCommonToken {
-        new_token: Token,
-    },
-    /// Withdraw some base asset, by burning C Tokens and swapping it for `buy` amount.
-    /// The bought tokens are transferred to the sender.
-    /// Only callable by the credit agency. Skips the credit line check.
-    SwapWithdrawFrom {
-        account: String,
-        buy: Coin,
-        sell_limit: Uint128,
-        /// Selling assets for `buy` amount is simulated and uses the
-        /// simulation's result as input for the swap. To be ahead of ever
-        /// changing prices, add an estimate multiplicator to the output of
-        /// simulate swap query.
-        /// Have to be more then 1.0, not recommended to be above 1.01
-        estimate_multiplier: Decimal,
-    },
-    /// Sender must be the Governance Contract
-    AdjustCollateralRatio {
-        new_ratio: Decimal,
-    },
-    /// Sender must be the Governance Contract
-    AdjustReserveFactor {
-        new_factor: Decimal,
-    },
-    /// Sender must be the Governance Contract
-    AdjustPriceOracle {
-        new_oracle: String,
-    },
-    /// Sender must be the Governance Contract
-    AdjustMarketCap {
-        new_cap: Option<Uint128>,
-    },
-    /// Sender must be the Governance Contract
-    AdjustInterestRates {
-        new_interest_rates: Interest,
-    },
-    /// Handles contract's logics that involves receiving CW20 tokens.
-    Receive(Cw20ReceiveMsg),
 }
 
 #[cw_serde]
 pub enum ReceiveMsg {
-    Deposit,
+    /// X market_token must be sent along with this message. If it matches, X c_token is minted of the sender address.
+    /// The underlying market_token is stored in this Market contract
+    Deposit {},
+    /// If sent tokens' denom matches market_token, burns tokens from sender's address
     Repay,
+    /// Helper to allow repay of debt on given account.
+    /// Sender must be a Credit Agency
     RepayTo { account: String },
+}
+
+#[cw_serde]
+pub enum CreditAgencyExecuteMsg {
+    /// Ensures a given account has entered a market. Meant to be called by a specific
+    /// market contract - so the sender of the msg would be the market
+    EnterMarket { account: String },
+}
+
+#[cw_serde]
+pub struct AuthPermit {}
+
+#[cw_serde]
+pub enum Authentication {
+    ViewingKey { key: String, address: String },
+    Permit(QueryPermit),
 }
 
 #[cw_serde]
@@ -124,33 +107,20 @@ pub enum QueryMsg {
     /// Returns current configuration
     #[returns(crate::state::Config)]
     Configuration {},
-    /// Returns TokensBalanceResponse
-    #[returns(TokensBalanceResponse)]
-    TokensBalance { account: String },
-    /// Returns TransferableAmountResponse
-    #[returns(TransferableAmountResponse)]
-    TransferableAmount {
-        /// WyndLend contract address that calls "CanTransfer"
-        token: String,
-        /// Address that wishes to transfer
-        account: String,
-    },
-    /// Returns the amount that the given account can withdraw
-    #[returns(Coin)]
-    Withdrawable { account: String },
-    /// Returns the amount that the given account can borrow
-    #[returns(Coin)]
-    Borrowable { account: String },
     /// Returns current utilisation and interest rates
     #[returns(InterestResponse)]
     Interest {},
     /// Returns PriceRate, structure representing sell/buy ratio for local(market)/common denoms
-    #[returns(utils::price::PriceRate)]
+    #[returns(lending_utils::price::PriceRate)]
     PriceMarketLocalPerCommon {},
-    /// Returns CreditLineResponse
-    #[returns(utils::credit_line::CreditLineResponse)]
-    CreditLine { account: String },
-    /// Returns ReserveResponse
+    /// Returns TransferableAmountResponse
+    #[returns(TransferableAmountResponse)]
+    TransferableAmount {
+        /// Lend contract address that calls "CanTransfer"
+        token: ContractInfo,
+        /// Address that wishes to transfer
+        account: String,
+    },
     #[returns(ReserveResponse)]
     Reserve {},
     /// APY Query
@@ -160,16 +130,43 @@ pub enum QueryMsg {
     /// Return type: `TokenInfoResponse`.
     #[returns(TotalDebtResponse)]
     TotalDebt {},
+    /// Returns TokensBalanceResponse
+    #[returns(TokensBalanceResponse)]
+    TokensBalance {
+        account: Addr,
+        authentication: Authentication,
+    },
+    /// Returns the amount that the given account can withdraw
+    #[returns(Coin)]
+    Withdrawable {
+        account: Addr,
+        authentication: Authentication,
+    },
+    /// Returns the amount that the given account can borrow
+    #[returns(Coin)]
+    Borrowable {
+        account: Addr,
+        authentication: Authentication,
+    },
+    /// Returns CreditLineResponse
+    #[returns(lending_utils::credit_line::CreditLineResponse)]
+    CreditLine {
+        account: Addr,
+        authentication: Authentication,
+    },
 }
 
-#[cw_serde]
-pub struct MigrateMsg {
-    pub wynd_lend_token_id: Option<u64>,
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
 pub enum QueryTotalCreditLine {
     TotalCreditLine { account: String },
+}
+
+impl Query for QueryTotalCreditLine {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
@@ -193,15 +190,6 @@ pub struct TransferableAmountResponse {
 #[cw_serde]
 pub struct ReserveResponse {
     pub reserve: Uint128,
-}
-
-// TODO: should this be defined elsewhere?
-// This is here so we can call CA entrypoints without adding credit agency as a dependency.
-#[cw_serde]
-pub enum CreditAgencyExecuteMsg {
-    /// Ensures a given account has entered a market. Meant to be called by a specific
-    /// market contract - so the sender of the msg would be the market
-    EnterMarket { account: String },
 }
 
 #[cw_serde]

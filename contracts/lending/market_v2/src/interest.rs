@@ -1,10 +1,13 @@
-use crate::state::debt;
-use cosmwasm_std::{Decimal, Deps, Env, Fraction, Uint128};
-use utils::amount::token_to_base;
-use wynd_lend_token::msg::TokenInfoResponse;
+use shade_protocol::{
+    c_std::{Decimal, Deps, Env, Fraction, StdError, Uint128},
+    utils::{asset::Contract, Query},
+};
+
+use lend_token::msg::TokenInfoResponse;
+use lending_utils::amount::token_to_base;
 
 use crate::{
-    state::{Config, CONFIG, SECONDS_IN_YEAR},
+    state::{debt, Config, CONFIG, SECONDS_IN_YEAR, VIEWING_KEY},
     ContractError,
 };
 
@@ -94,18 +97,17 @@ pub fn utilisation(supplied: Uint128, borrowed: Uint128) -> Decimal {
     }
 }
 
-pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, ContractError> {
-    let ctoken_contract = &config.ctoken_contract;
-    Ok(deps.querier.query_wasm_smart(
-        ctoken_contract,
-        &wynd_lend_token::msg::QueryMsg::TokenInfo {},
-    )?)
+pub fn ctoken_info(deps: Deps, config: &Config) -> Result<TokenInfoResponse, StdError> {
+    lend_token::msg::QueryMsg::TokenInfo {}.query(
+        &deps.querier,
+        &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash),
+    )
 }
 
-pub fn query_ctoken_multiplier(deps: Deps, cfg: &Config) -> Result<Decimal, ContractError> {
-    let resp: wynd_lend_token::msg::MultiplierResponse = deps.querier.query_wasm_smart(
-        cfg.ctoken_contract.clone(),
-        &wynd_lend_token::QueryMsg::Multiplier {},
+pub fn query_ctoken_multiplier(deps: Deps, config: &Config) -> Result<Decimal, StdError> {
+    let resp: lend_token::msg::MultiplierResponse = lend_token::QueryMsg::Multiplier {}.query(
+        &deps.querier,
+        &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash),
     )?;
     Ok(resp.multiplier)
 }

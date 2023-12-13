@@ -1,5 +1,5 @@
 use cosmwasm_schema::write_api;
-use wynd_lend_market::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use lend_token::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {
