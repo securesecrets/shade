@@ -93,6 +93,15 @@ pub enum CreditAgencyExecuteMsg {
 }
 
 #[cw_serde]
+pub struct AuthPermit {}
+
+#[cw_serde]
+pub enum Authentication {
+    ViewingKey { key: String, address: String },
+    Permit(QueryPermit),
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Returns current configuration
@@ -123,53 +132,32 @@ pub enum QueryMsg {
     TotalDebt {},
     /// Returns TokensBalanceResponse
     #[returns(TokensBalanceResponse)]
-    TokensBalance { account: Addr, viewing_key: String },
+    TokensBalance {
+        account: Addr,
+        authentication: Authentication,
+    },
     /// Returns the amount that the given account can withdraw
     #[returns(Coin)]
-    Withdrawable { account: Addr, viewing_key: String },
+    Withdrawable {
+        account: Addr,
+        authentication: Authentication,
+    },
     /// Returns the amount that the given account can borrow
     #[returns(Coin)]
-    Borrowable { account: Addr, viewing_key: String },
+    Borrowable {
+        account: Addr,
+        authentication: Authentication,
+    },
     /// Returns CreditLineResponse
     #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine { account: Addr, viewing_key: String },
-
-    /// Queries that requires viewing permit
-    #[returns(AuthQueryResponse)]
-    WithPermit {
-        permit: QueryPermit,
-        query_msg: AuthQueryMsg,
+    CreditLine {
+        account: Addr,
+        authentication: Authentication,
     },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
-}
-
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum AuthQueryMsg {
-    /// Returns TokensBalanceResponse
-    #[returns(TokensBalanceResponse)]
-    TokensBalance { account: String },
-    /// Returns the amount that the given account can withdraw
-    #[returns(Coin)]
-    Withdrawable { account: String },
-    /// Returns the amount that the given account can borrow
-    #[returns(Coin)]
-    Borrowable { account: String },
-    /// Returns CreditLineResponse
-    #[returns(lending_utils::credit_line::CreditLineResponse)]
-    CreditLine { account: String },
-}
-
-// Define an enum for all possible return types of AuthQueryMsg
-#[cw_serde]
-enum AuthQueryResponse {
-    TokensBalance(TokensBalanceResponse),
-    Withdrawable(Coin),
-    Borrowable(Coin),
-    CreditLine(lending_utils::credit_line::CreditLineResponse),
 }
 
 #[cw_serde]

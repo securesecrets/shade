@@ -7,7 +7,7 @@ use shade_protocol::{
     },
     contract_interfaces::{
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
-        query_auth::helpers::authenticate_vk,
+        query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
         snip20::Snip20ReceiveMsg,
     },
     query_authentication::viewing_keys,
@@ -16,7 +16,10 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{AuthQueryMsg, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
+    msg::{
+        AuthPermit, Authentication, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg,
+        TotalDebtResponse,
+    },
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
@@ -735,59 +738,66 @@ mod execute {
     }
 }
 
+pub fn authenticate(deps: Deps, auth: Authentication, account: &Addr) -> StdResult<()> {
+    let config = CONFIG.load(deps.storage)?;
+    match auth {
+        Authentication::ViewingKey { key, address } => {
+            let address = deps.api.addr_validate(&address)?;
+            if !authenticate_vk(address.clone(), key, &deps.querier, &config.query_auth)? {
+                return Err(StdError::generic_err("Invalid Viewing Key"));
+            }
+            if &address != account {
+                return Err(StdError::generic_err(
+                    "Trying to query using viewing key not matching the account",
+                ));
+            }
+            Ok(())
+        }
+        Authentication::Permit(permit) => {
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, config.query_auth)?;
+            if res.revoked {
+                return Err(StdError::generic_err("Permit Revoked"));
+            }
+            if res.sender != config.governance_contract {
+                return Err(StdError::generic_err(
+                    "Unauthorized: Only credit agency can query using permit",
+                ));
+            }
+            Ok(())
+        }
+    }
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::TokensBalance {
             account,
-            viewing_key,
+            authentication,
         } => {
-            let config = CONFIG.load(deps.storage)?;
-            authenticate_vk(
-                account.clone(),
-                viewing_key,
-                &deps.querier,
-                &config.query_auth,
-            )?;
+            authenticate(deps, authentication, &account)?;
             to_binary(&query::tokens_balance(deps, env, account.to_string())?)?
         }
         QueryMsg::Withdrawable {
             account,
-            viewing_key,
+            authentication,
         } => {
-            let config = CONFIG.load(deps.storage)?;
-            authenticate_vk(
-                account.clone(),
-                viewing_key,
-                &deps.querier,
-                &config.query_auth,
-            )?;
+            authenticate(deps, authentication, &account)?;
             to_binary(&query::withdrawable(deps, env, account.to_string())?)?
         }
         QueryMsg::Borrowable {
             account,
-            viewing_key,
+            authentication,
         } => {
-            let config = CONFIG.load(deps.storage)?;
-            authenticate_vk(
-                account.clone(),
-                viewing_key,
-                &deps.querier,
-                &config.query_auth,
-            )?;
+            authenticate(deps, authentication, &account)?;
             to_binary(&query::borrowable(deps, env, account.to_string())?)?
         }
         QueryMsg::CreditLine {
             account,
-            viewing_key,
+            authentication,
         } => {
-            let config = CONFIG.load(deps.storage)?;
-            authenticate_vk(
-                account.clone(),
-                viewing_key,
-                &deps.querier,
-                &config.query_auth,
-            )?;
+            authenticate(deps, authentication, &account)?;
             to_binary(&query::credit_line(deps, env, account)?)?
         }
         QueryMsg::Configuration {} => to_binary(&query::config(deps, env)?)?,
@@ -803,24 +813,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::TotalDebt {} => {
             let (total, multiplier) = debt::total(deps.storage)?;
             to_binary(&TotalDebtResponse { total, multiplier })?
-        }
-        QueryMsg::WithPermit { permit, query_msg } => {
-            // Handle AuthQueryMsg here
-            match query_msg {
-                AuthQueryMsg::TokensBalance { account } => {
-                    to_binary(&query::tokens_balance(deps, env, account)?)?
-                }
-                AuthQueryMsg::Withdrawable { account } => {
-                    to_binary(&query::withdrawable(deps, env, account)?)?
-                }
-                AuthQueryMsg::Borrowable { account } => {
-                    to_binary(&query::borrowable(deps, env, account)?)?
-                }
-                AuthQueryMsg::CreditLine { account } => {
-                    let account = deps.api.addr_validate(&account)?;
-                    to_binary(&query::credit_line(deps, env, account)?)?
-                }
-            }
         }
     };
     Ok(res)
