@@ -29,7 +29,7 @@ use shade_protocol::{
         WasmMsg,
     },
     contract_interfaces::{
-        liquidity_book::{lb_pair::*, lb_token},
+        liquidity_book::{lb_pair::*, lb_token, staking},
         swap::{
             amm_pair::{
                 FeeInfo,
@@ -37,7 +37,6 @@ use shade_protocol::{
             },
             core::{Fee, TokenPair, TokenType},
             router::ExecuteMsgResponse,
-            staking,
         },
     },
     lb_libraries::{
@@ -1569,8 +1568,16 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
     }
 
     //distribution algorithm
+    let res = staking::ExecuteMsg::EndEpoch {
+        rewards_distribution: distribution,
+    }
+    .to_cosmos_msg(
+        state.staking_contract.code_hash,
+        state.staking_contract.address.to_string(),
+        None,
+    )?;
 
-    Ok(Response::default())
+    Ok(Response::default().add_message(res))
 }
 
 fn calculate_time_based_rewards_distribution(
@@ -2546,7 +2553,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                     admin_auth: state.admin_auth.into(),
                     query_auth: None,
                     first_reward_token: None,
-                    epoch_index: 0,      //TODO: Set this
+                    epoch_index: 1,      //TODO: Set this
                     epoch_duration: 100, //TODO: Set this
                     expiry_duration: None,
                 };

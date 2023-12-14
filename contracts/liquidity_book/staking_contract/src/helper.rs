@@ -54,11 +54,11 @@ pub fn register_reward_tokens(
     tokens: Vec<ContractInfo>,
     contract_code_hash: String,
 ) -> StdResult<Vec<CosmosMsg>> {
-    let mut binding = REWARD_TOKENS.load(storage)?;
+    let mut reg_tokens = REWARD_TOKENS.load(storage)?;
     let mut messages = Vec::new();
     for token in tokens.iter() {
-        if !binding.contains(token) {
-            binding.push(token.clone());
+        if !reg_tokens.contains(token) {
+            reg_tokens.push(token.clone());
 
             let contract = &Contract {
                 address: token.address.to_owned(),
@@ -77,9 +77,11 @@ pub fn register_reward_tokens(
                 contract,
             )?);
             //set viewing_key
+        } else {
+            return Err(StdError::generic_err("Reward token already exists"));
         }
     }
-    REWARD_TOKENS.save(storage, &binding)?;
+    REWARD_TOKENS.save(storage, &reg_tokens)?;
     Ok(messages)
 }
 
@@ -168,6 +170,7 @@ pub fn finding_user_liquidity(
         } else {
             staker_info.starting_round.unwrap()
         };
+
         while finding_liq_round >= start {
             let staker_liq_snap_prev_round = STAKERS_LIQUIDITY_SNAPSHOT
                 .load(storage, (&info.sender, finding_liq_round, bin_id))
@@ -179,6 +182,8 @@ pub fn finding_user_liquidity(
                 finding_liq_round = if let Some(f_liq_round) = finding_liq_round.checked_sub(1) {
                     f_liq_round
                 } else {
+                    println!("finding_liq_round {:?}", finding_liq_round);
+                    println!("start {:?}", start);
                     return Err(StdError::generic_err("Under-flow sub error 4"));
                 };
             }
@@ -188,7 +193,7 @@ pub fn finding_user_liquidity(
         staker_liq_snap.amount_delegated = legacy_bal;
         // user_liquidity_snapshot_stats_helper_store(storage, round_index, sender, staker_liq_snap)?;
 
-        Ok((staker_liq_snap))
+        Ok(staker_liq_snap)
     }
 }
 
@@ -227,6 +232,8 @@ pub fn finding_total_liquidity(
                 finding_liq_round = if let Some(f_liq_round) = finding_liq_round.checked_sub(1) {
                     f_liq_round
                 } else {
+                    print!("finding_liq_round {:?}", finding_liq_round);
+                    print!("start {:?}", start);
                     return Err(StdError::generic_err("Under-flow sub error 4"));
                 };
             }

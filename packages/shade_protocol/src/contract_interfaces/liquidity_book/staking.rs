@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use cosmwasm_schema::QueryResponses;
-use cosmwasm_std::{BlockInfo, StdResult};
+use cosmwasm_std::{to_binary, BlockInfo, Coin, CosmosMsg, StdResult, WasmMsg};
 use secret_toolkit::permit::Permit;
 
 use crate::{
@@ -14,7 +14,10 @@ use crate::{
     BLOCK_SIZE,
 };
 
-use super::{lb_pair::RewardsDistribution, lb_token::Snip1155ReceiveMsg};
+use super::{
+    lb_pair::RewardsDistribution,
+    lb_token::{space_pad, Snip1155ReceiveMsg},
+};
 
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = BLOCK_SIZE;
@@ -304,12 +307,12 @@ impl Default for TotalLiquiditySnapshot {
 pub enum QueryMsg {
     /// returns public information of the SNIP1155 contract
     ContractInfo {},
+    RegisteredTokens {},
     IdTotalBalance {
         id: String,
     },
     Balance {
         owner: Addr,
-        viewer: Addr,
         key: String,
         token_id: String,
     },
@@ -340,12 +343,13 @@ pub enum QueryMsg {
 impl QueryMsg {
     pub fn get_validation_params(&self) -> StdResult<(Vec<&Addr>, String)> {
         match self {
-            Self::Balance {
-                owner, viewer, key, ..
-            } => Ok((vec![owner, viewer], key.clone())),
+            Self::Balance { owner, key, .. } => Ok((vec![owner], key.clone())),
             Self::AllBalances { owner, key, .. } => Ok((vec![owner], key.clone())),
             Self::Liquidity { owner, key, .. } => Ok((vec![owner], key.clone())),
-            Self::ContractInfo {} | Self::IdTotalBalance { .. } | Self::WithPermit { .. } => {
+            Self::ContractInfo {}
+            | Self::IdTotalBalance { .. }
+            | Self::RegisteredTokens { .. }
+            | Self::WithPermit { .. } => {
                 unreachable!("This query type does not require viewing key authentication")
             }
             Self::TransactionHistory { address, key, .. } => Ok((vec![address], key.clone())),
@@ -382,6 +386,7 @@ pub enum QueryAnswer {
         epoch_durations: u64,
         expiry_durations: Option<u64>,
     },
+    RegisteredTokens(Vec<ContractInfo>),
     IdTotalBalance {
         amount: Uint256,
     },
@@ -438,4 +443,30 @@ pub struct PermissionKey {
 pub struct OwnerBalance {
     pub token_id: String,
     pub amount: Uint256,
+}
+
+impl ExecuteMsg {
+    pub fn to_cosmos_msg(
+        &self,
+        code_hash: String,
+        contract_addr: String,
+        send_amount: Option<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        let mut msg = to_binary(self)?;
+        space_pad(256, &mut msg.0);
+        let mut funds = Vec::new();
+        if let Some(amount) = send_amount {
+            funds.push(Coin {
+                amount,
+                denom: String::from("uscrt"),
+            });
+        }
+        let execute = WasmMsg::Execute {
+            contract_addr,
+            code_hash,
+            msg,
+            funds,
+        };
+        Ok(execute.into())
+    }
 }

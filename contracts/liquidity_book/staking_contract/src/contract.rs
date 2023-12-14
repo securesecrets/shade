@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ops::{Add, AddAssign, Sub},
     str::FromStr,
 };
@@ -590,20 +591,16 @@ pub fn try_end_epoch(
     let mut state = STATE.load(deps.storage)?;
     //check that only be called by lp-pair
     assert_lb_pair(&state, info)?;
-    //saves the distribution
-    let mut epoch_obj = EPOCH_STORE.load(deps.storage, state.epoch_index)?;
-    epoch_obj.rewards_distribution = Some(rewards_distribution);
-
-    if let Some(expiry_duration) = epoch_obj.expired_at {
-        epoch_obj.expired_at = Some(state.epoch_index + expiry_duration)
-    }
-
-    EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
 
     let mut reward_tokens = vec![];
 
     for reward_token in REWARD_TOKENS.load(deps.storage)? {
-        let rewards_token_info = REWARD_TOKEN_INFO.load(deps.storage, &reward_token.address)?;
+        let rewards_token_info;
+        if let Ok(r_t_i) = REWARD_TOKEN_INFO.load(deps.storage, &reward_token.address) {
+            rewards_token_info = r_t_i;
+        } else {
+            continue;
+        };
 
         // Create a filtered list of rewards to add to reward_tokens
         let rewards_to_add: Vec<_> = rewards_token_info
@@ -621,13 +618,24 @@ pub fn try_end_epoch(
         }
     }
 
+    //saves the distribution
+    let mut epoch_obj = EPOCH_STORE.load(deps.storage, state.epoch_index)?;
+    epoch_obj.rewards_distribution = Some(rewards_distribution);
+    epoch_obj.reward_tokens = Some(reward_tokens);
+
+    if let Some(expiry_duration) = epoch_obj.expired_at {
+        epoch_obj.expired_at = Some(state.epoch_index + expiry_duration)
+    }
+
+    EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
+
     let now = env.block.time.seconds();
     EPOCH_STORE.save(deps.storage, state.epoch_index.add(1), &EpochInfo {
         rewards_distribution: None,
         start_time: now,
         end_time: now + state.epoch_durations,
         duration: state.epoch_durations,
-        reward_tokens: Some(reward_tokens),
+        reward_tokens: None,
         expired_at: None,
     })?;
 
@@ -642,6 +650,8 @@ pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResu
     let state = STATE.load(deps.storage)?;
     let staker_result = STAKERS.load(deps.storage, &info.sender);
     let mut messages = Vec::new();
+
+    let mut rewards_accumulator: HashMap<TokenKey, Uint128> = HashMap::new();
 
     // Check if staker exists
     let staker = match staker_result {
@@ -690,19 +700,26 @@ pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResu
         if let Some(rewards_distribution) = &epoch_info.rewards_distribution {
             for (i, dis) in rewards_distribution.ids.iter().enumerate() {
                 let staker_liq_snap =
-                    finding_user_liquidity(deps.storage, &info, &staker, state.epoch_index, *dis)?;
+                    finding_user_liquidity(deps.storage, &info, &staker, round_epoch, *dis)?;
+                if staker_liq_snap.liquidity.is_zero() {
+                    continue;
+                }
                 STAKERS_LIQUIDITY_SNAPSHOT.save(
                     deps.storage,
-                    (&info.sender, state.epoch_index, *dis),
+                    (&info.sender, round_epoch, *dis),
                     &staker_liq_snap,
                 )?;
 
                 let total_liquidity_snap =
-                    finding_total_liquidity(deps.storage, state.epoch_index, *dis)?;
+                    finding_total_liquidity(deps.storage, round_epoch, *dis)?;
+
+                if total_liquidity_snap.liquidity.is_zero() {
+                    continue;
+                }
 
                 TOTAL_LIQUIDITY_SNAPSHOT.save(
                     deps.storage,
-                    (state.epoch_index, *dis),
+                    (round_epoch, *dis),
                     &total_liquidity_snap,
                 )?;
 
@@ -723,24 +740,65 @@ pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResu
                                 .to_string(),
                         )?;
 
-                        messages.push(
-                            Snip20ExecuteMsg::Send {
-                                recipient: info.sender.to_string(),
-                                recipient_code_hash: None,
-                                amount: staker_rewards,
-                                msg: None,
-                                memo: None,
-                                padding: None,
-                            }
-                            .to_cosmos_msg(&x.token, vec![])?,
-                        );
+                        let token_key = TokenKey {
+                            address: x.token.address.clone(),
+                            code_hash: x.token.code_hash.clone(),
+                        };
+                        let entry = rewards_accumulator
+                            .entry(token_key)
+                            .or_insert(Uint128::zero());
+                        *entry += staker_rewards;
                     }
                 }
             }
         }
     }
 
+    // Create messages for each token with the accumulated rewards
+    for (token_key, amount) in rewards_accumulator {
+        let contract_info = ContractInfo {
+            address: token_key.address,
+            code_hash: token_key.code_hash,
+        };
+        messages.push(
+            Snip20ExecuteMsg::Send {
+                recipient: info.sender.to_string(),
+                recipient_code_hash: None,
+                amount,
+                msg: None,
+                memo: None,
+                padding: None,
+            }
+            .to_cosmos_msg(&contract_info, vec![])?,
+        );
+    }
+
+    //TODO: add user rewards somewhere
+
     Ok(Response::default().add_messages(messages))
+}
+
+use std::hash::{Hash, Hasher};
+
+#[derive(Clone, Debug)]
+struct TokenKey {
+    address: Addr,
+    code_hash: String,
+}
+
+impl PartialEq for TokenKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.address == other.address && self.code_hash == other.code_hash
+    }
+}
+
+impl Eq for TokenKey {}
+
+impl Hash for TokenKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.address.hash(state);
+        self.code_hash.hash(state);
+    }
 }
 
 pub fn try_register_reward_tokens(
@@ -825,12 +883,6 @@ pub fn try_add_rewards(
             return Err(StdError::generic_err("Cannot start emitting in the past"));
         }
 
-        validate_admin(
-            &deps.querier,
-            AdminPermissions::StakingAdmin,
-            info.sender.to_string(),
-            &state.admin_auth.into(),
-        )?;
         let decimals = token_info(&deps.querier, &Contract {
             address: token.address.clone(),
             code_hash: token.code_hash.clone(),
@@ -918,6 +970,7 @@ fn try_revoke_permit(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => query_contract_info(deps),
+        QueryMsg::RegisteredTokens {} => query_registered_tokens(deps),
         QueryMsg::IdTotalBalance { id } => query_token_id_balance(deps, id),
         QueryMsg::Balance { .. }
         | QueryMsg::AllBalances { .. }
@@ -940,6 +993,13 @@ fn query_contract_info(deps: Deps) -> StdResult<Binary> {
         epoch_durations: state.epoch_durations,
         expiry_durations: state.expiry_durations,
     };
+    to_binary(&response)
+}
+
+fn query_registered_tokens(deps: Deps) -> StdResult<Binary> {
+    let reg_tokens = REWARD_TOKENS.load(deps.storage)?;
+
+    let response = QueryAnswer::RegisteredTokens(reg_tokens);
     to_binary(&response)
 }
 
