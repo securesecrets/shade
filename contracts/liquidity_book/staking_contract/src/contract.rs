@@ -48,6 +48,7 @@ use shade_protocol::{
             QueryTxnType,
             QueryWithPermit,
             Reward,
+            RewardToken,
             RewardTokenInfo,
             StakerLiquidity,
             StakerLiquiditySnapshot,
@@ -682,12 +683,11 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
     let staker_result = STAKERS.load(deps.storage, &info.sender);
     let mut messages = Vec::new();
 
-    let mut rewards_accumulator: HashMap<TokenKey, (Uint128, Vec<Uint128>)> = HashMap::new();
-
-    let mut ids: Vec<u32> = Vec::new();
+    let mut rewards_accumulator: HashMap<(u64, TokenKey), (Uint128, Vec<Uint128>, Vec<u32>)> =
+        HashMap::new();
 
     // Check if staker exists
-    let staker = match staker_result {
+    let mut staker = match staker_result {
         Ok(staker) => staker,
         Err(_) => {
             return Err(StdError::generic_err(format!(
@@ -731,20 +731,25 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
 
         // Process reward distribution
         if let Some(rewards_distribution) = &epoch_info.rewards_distribution {
-            for (i, dis) in rewards_distribution.ids.iter().enumerate() {
+            for (id, weightage) in rewards_distribution
+                .clone()
+                .ids
+                .iter()
+                .zip(rewards_distribution.weightages.iter())
+            {
+                // println!("id: {} weightage: {}", id, weightage);
                 let staker_liq_snap =
-                    finding_user_liquidity(deps.storage, &info, &staker, round_epoch, *dis)?;
+                    finding_user_liquidity(deps.storage, &info, &staker, round_epoch, *id)?;
                 if staker_liq_snap.liquidity.is_zero() {
                     continue;
                 }
                 STAKERS_LIQUIDITY_SNAPSHOT.save(
                     deps.storage,
-                    (&info.sender, round_epoch, *dis),
+                    (&info.sender, round_epoch, *id),
                     &staker_liq_snap,
                 )?;
 
-                let total_liquidity_snap =
-                    finding_total_liquidity(deps.storage, round_epoch, *dis)?;
+                let total_liquidity_snap = finding_total_liquidity(deps.storage, round_epoch, *id)?;
 
                 if total_liquidity_snap.liquidity.is_zero() {
                     continue;
@@ -752,17 +757,17 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
 
                 TOTAL_LIQUIDITY_SNAPSHOT.save(
                     deps.storage,
-                    (round_epoch, *dis),
+                    (round_epoch, *id),
                     &total_liquidity_snap,
                 )?;
 
                 // Calculate and distribute rewards
                 if let Some(reward_tokens) = &epoch_info.reward_tokens {
                     for x in reward_tokens.iter() {
-                        let total_bin_rewards = Uint256::from(x.reward_per_epoch.multiply_ratio(
-                            rewards_distribution.weightages[i],
-                            rewards_distribution.denominator,
-                        ));
+                        let total_bin_rewards = Uint256::from(
+                            x.reward_per_epoch
+                                .multiply_ratio(*weightage, rewards_distribution.denominator),
+                        );
 
                         let staker_rewards = Uint128::from_str(
                             &total_bin_rewards
@@ -779,22 +784,21 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
                         };
 
                         let entry = rewards_accumulator
-                            .entry(token_key.clone())
-                            .or_insert((Uint128::zero(), Vec::new()));
+                            .entry((round_epoch, token_key.clone()))
+                            .or_insert((Uint128::zero(), Vec::new(), Vec::new()));
                         entry.0 += staker_rewards;
                         entry.1.push(staker_rewards);
-
-                        ids.push(*dis);
+                        entry.2.push(*id);
                     }
                 }
             }
         }
     }
 
-    let mut rs: Vec<Reward> = Vec::new();
+    let mut rewards_by_epoch: HashMap<u64, Vec<RewardToken>> = HashMap::new();
 
     // Create messages for each token with the accumulated rewards
-    for (token_key, (total_amount, amounts)) in rewards_accumulator {
+    for ((epoch_id, token_key), (total_amount, amounts, ids)) in rewards_accumulator {
         let contract_info = ContractInfo {
             address: token_key.address,
             code_hash: token_key.code_hash,
@@ -811,24 +815,38 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
             .to_cosmos_msg(&contract_info, vec![])?,
         );
 
-        rs.push(Reward {
-            token: contract_info,
-            amounts,
-            total_amount,
-        })
+        rewards_by_epoch
+            .entry(epoch_id)
+            .or_default()
+            .push(RewardToken {
+                token: contract_info,
+                ids,
+                amounts,
+                total_amount,
+            });
     }
 
-    //TODO: add user rewards somewhere
+    staker.last_claim_rewards_round = Some(ending_epoch - 1);
+    STAKERS.save(deps.storage, &info.sender, &staker)?;
 
-    store_claim_rewards(
-        deps.storage,
-        info.sender,
-        &mut state,
-        ids,
-        rs,
-        env.block.time.seconds(),
-        env.block.height,
-    )?;
+    let rewards: Vec<Reward> = rewards_by_epoch
+        .into_iter()
+        .map(|(epoch_index, reward_tokens)| Reward {
+            epoch_index,
+            rewards: reward_tokens,
+        })
+        .collect();
+
+    if rewards.len() > 0 {
+        store_claim_rewards(
+            deps.storage,
+            info.sender,
+            &mut state,
+            rewards,
+            env.block.time.seconds(),
+            env.block.height,
+        )?;
+    }
     STATE.save(deps.storage, &state)?;
 
     Ok(Response::default().add_messages(messages))
@@ -922,7 +940,7 @@ pub fn try_add_rewards(
         })?
         .decimals;
 
-        let total_epoches = end.sub(start);
+        let total_epoches = end.sub(start) + 1;
 
         let reward_per_epoch = amount.multiply_ratio(Uint128::one(), total_epoches);
 

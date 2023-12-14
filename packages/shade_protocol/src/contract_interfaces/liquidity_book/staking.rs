@@ -503,10 +503,7 @@ pub enum TxAction {
         ids: Vec<u32>,
         amounts: Vec<Uint256>,
     },
-    ClaimRewards {
-        ids: Vec<u32>,
-        rewards: Vec<Reward>,
-    },
+    ClaimRewards(Vec<Reward>),
 }
 
 #[cw_serde]
@@ -531,10 +528,15 @@ pub struct Tx {
 }
 
 #[cw_serde]
-pub struct Reward {
-    /// tx id
+pub struct RewardToken {
     pub token: ContractInfo,
-    /// the block containing this tx
+    pub ids: Vec<u32>,
     pub amounts: Vec<Uint128>,
     pub total_amount: Uint128,
+}
+
+#[cw_serde]
+pub struct Reward {
+    pub epoch_index: u64,
+    pub rewards: Vec<RewardToken>,
 }

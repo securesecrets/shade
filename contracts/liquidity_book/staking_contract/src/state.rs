@@ -4,6 +4,7 @@ use shade_protocol::{
     liquidity_book::staking::{
         EpochInfo,
         Reward,
+        RewardToken,
         RewardTokenInfo,
         StakerInfo,
         StakerLiquidity,
@@ -87,12 +88,11 @@ pub fn store_claim_rewards(
     storage: &mut dyn Storage,
     addr: Addr,
     state: &mut State,
-    ids: Vec<u32>,
     rewards: Vec<Reward>,
     block_time: u64,
     block_height: u64,
 ) -> StdResult<()> {
-    let action = TxAction::ClaimRewards { ids, rewards };
+    let action = TxAction::ClaimRewards(rewards);
     let tx = Tx {
         tx_id: state.tx_id,
         block_height,
