@@ -23,11 +23,13 @@ use shade_protocol::{
     },
     liquidity_book::staking::{
         EpochInfo,
+        QueryTxnType,
         RewardTokenInfo,
         StakerInfo,
         StakerLiquiditySnapshot,
         State,
         TotalLiquiditySnapshot,
+        Tx,
     },
     query_auth::QueryPermit,
     secret_storage_plus::ItemStorage,
@@ -35,6 +37,7 @@ use shade_protocol::{
     Contract,
     BLOCK_SIZE,
 };
+use std::hash::{Hash, Hasher};
 
 use crate::{
     contract::SHADE_STAKING_VIEWING_KEY,
@@ -46,6 +49,8 @@ use crate::{
         STAKERS_LIQUIDITY_SNAPSHOT,
         TOTAL_LIQUIDITY,
         TOTAL_LIQUIDITY_SNAPSHOT,
+        TX_ID_STORE,
+        TX_STORE,
     },
 };
 
@@ -182,8 +187,6 @@ pub fn finding_user_liquidity(
                 finding_liq_round = if let Some(f_liq_round) = finding_liq_round.checked_sub(1) {
                     f_liq_round
                 } else {
-                    println!("finding_liq_round {:?}", finding_liq_round);
-                    println!("start {:?}", start);
                     return Err(StdError::generic_err("Under-flow sub error 4"));
                 };
             }
@@ -232,8 +235,6 @@ pub fn finding_total_liquidity(
                 finding_liq_round = if let Some(f_liq_round) = finding_liq_round.checked_sub(1) {
                     f_liq_round
                 } else {
-                    print!("finding_liq_round {:?}", finding_liq_round);
-                    print!("start {:?}", start);
                     return Err(StdError::generic_err("Under-flow sub error 4"));
                 };
             }
@@ -244,4 +245,56 @@ pub fn finding_total_liquidity(
 
         Ok(total_liq_snap)
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct TokenKey {
+    pub address: Addr,
+    pub code_hash: String,
+}
+
+impl PartialEq for TokenKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.address == other.address && self.code_hash == other.code_hash
+    }
+}
+
+impl Eq for TokenKey {}
+
+impl Hash for TokenKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.address.hash(state);
+        self.code_hash.hash(state);
+    }
+}
+
+pub fn get_txs(
+    storage: &dyn Storage,
+    address: &Addr,
+    page: u32,
+    page_size: u32,
+    query_tx_type: QueryTxnType,
+) -> StdResult<(Vec<Tx>, u64)> {
+    let mut addr_store = TX_ID_STORE.add_suffix(address.as_bytes());
+
+    addr_store = match query_tx_type {
+        QueryTxnType::All => addr_store,
+        QueryTxnType::Stake => addr_store.add_suffix("STAKE".as_bytes()),
+        QueryTxnType::UnStake => addr_store.add_suffix("UNSTAKE".as_bytes()),
+        QueryTxnType::ClaimRewards => addr_store.add_suffix("CLAIM_REWARDS".as_bytes()),
+    };
+
+    let count = addr_store.get_len(storage)? as u64;
+    // access tx storage
+    // Take `page_size` txs starting from the latest tx, potentially skipping `page * page_size`
+    // txs from the start.
+    let txs: StdResult<Vec<Tx>> = addr_store
+        .iter(storage)?
+        .rev()
+        .skip((page * page_size) as usize)
+        .take(page_size as usize)
+        .map(|id| id.map(|id| TX_STORE.load(storage, id)).and_then(|x| x))
+        .collect();
+
+    txs.map(|t| (t, count))
 }

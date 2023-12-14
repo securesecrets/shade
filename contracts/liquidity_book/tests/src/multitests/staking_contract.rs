@@ -14,7 +14,10 @@ use shade_multi_test::interfaces::{
 use shade_protocol::{
     c_std::{to_binary, ContractInfo, Uint128},
     lb_libraries::{math::uint256_to_u256::ConvertU256, types::LBPairInformation},
-    liquidity_book::{lb_token::SendAction, staking::InvokeMsg},
+    liquidity_book::{
+        lb_token::SendAction,
+        staking::{InvokeMsg, QueryTxnType},
+    },
     multi_test::App,
 };
 
@@ -930,6 +933,8 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
         })
     }
 
+    // TODO: complete this
+
     Ok(())
 }
 
@@ -1175,6 +1180,208 @@ fn query_all_balance() -> Result<(), anyhow::Error> {
         assert_eq!(total.u256_to_uint256(), owner_balance.amount);
         assert!(owner_balance.amount > Uint256::MIN);
     }
+
+    Ok(())
+}
+
+#[test]
+fn query_txn_history() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) =
+        lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
+
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
+    let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
+
+    //stake:
+    let mut actions = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    let mut ids: Vec<u32> = Vec::new();
+
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+        balances.push(balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    staking_contract::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_staking,
+        "viewing_key".to_owned(),
+    )?;
+
+    // query all txn history and staking  txn history
+
+    let (all_txns_1, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::All,
+    )?;
+
+    assert_eq!(all_txns_1.len(), total_bins as usize);
+    assert_eq!(count, total_bins as u64);
+
+    let (staking_txns, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::Stake,
+    )?;
+
+    assert_eq!(staking_txns.len(), total_bins as usize);
+    assert_eq!(count, total_bins as u64);
+
+    //Adding the rewards
+    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
+    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let reward_tokens = vec![shade_token, silk_token];
+
+    staking_contract::register_reward_tokens(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        reward_tokens.clone(),
+    )?;
+
+    //mint tokens
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        DEPOSIT_AMOUNT.into(),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        DEPOSIT_AMOUNT.into(),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 20,
+        })?),
+    )?;
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+
+    //query all txns and claim rewards txns
+
+    let (all_txns_2, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::All,
+    )?;
+
+    assert_eq!(all_txns_2.len(), all_txns_1.len() + 1);
+    assert_eq!(count, (all_txns_1.len() + 1) as u64);
+
+    let (claim_rewards_txns, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::ClaimRewards,
+    )?;
+
+    assert_eq!(claim_rewards_txns.len(), 1);
+    assert_eq!(count, 1);
+
+    staking_contract::unstaking(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_staking,
+        ids.clone(),
+        balances.clone(),
+    )?;
+
+    //query all txns and unstaking txns
+    let (all_txns_3, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::All,
+    )?;
+
+    assert_eq!(all_txns_3.len(), all_txns_2.len() + 1);
+    assert_eq!(count, (all_txns_2.len() + 1) as u64);
+
+    let (unstaking_txns, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::UnStake,
+    )?;
+
+    assert_eq!(unstaking_txns.len(), 1);
+    assert_eq!(count, 1);
+
+    //checking pagination
+
+    //query all txns and unstaking txns
+    let (all_txns, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        Some(10),
+        QueryTxnType::All,
+    )?;
+
+    assert_eq!(all_txns.len(), 10);
+    assert_eq!(count, 11); // total txns
 
     Ok(())
 }

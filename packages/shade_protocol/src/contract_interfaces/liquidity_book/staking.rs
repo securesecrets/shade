@@ -1,11 +1,23 @@
 use std::collections::HashMap;
 
 use cosmwasm_schema::QueryResponses;
-use cosmwasm_std::{to_binary, BlockInfo, Coin, CosmosMsg, StdResult, WasmMsg};
 use secret_toolkit::permit::Permit;
 
 use crate::{
-    c_std::{Addr, Binary, ContractInfo, Uint128, Uint256},
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        BlockInfo,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        StdResult,
+        Uint128,
+        Uint256,
+        WasmMsg,
+    },
     cosmwasm_schema::cw_serde,
     lb_libraries::types::ContractInstantiationInfo,
     snip20::Snip20ReceiveMsg,
@@ -189,6 +201,7 @@ pub struct State {
     pub epoch_index: u64,
     pub epoch_durations: u64,
     pub expiry_durations: Option<u64>,
+    pub tx_id: u64,
 }
 
 #[cw_serde]
@@ -329,10 +342,11 @@ pub enum QueryMsg {
         token_ids: Vec<u32>,
     },
     TransactionHistory {
-        address: Addr,
+        owner: Addr,
         key: String,
         page: Option<u32>,
-        page_size: u32,
+        page_size: Option<u32>,
+        txn_type: QueryTxnType,
     },
     WithPermit {
         permit: Permit,
@@ -346,13 +360,13 @@ impl QueryMsg {
             Self::Balance { owner, key, .. } => Ok((vec![owner], key.clone())),
             Self::AllBalances { owner, key, .. } => Ok((vec![owner], key.clone())),
             Self::Liquidity { owner, key, .. } => Ok((vec![owner], key.clone())),
+            Self::TransactionHistory { owner, key, .. } => Ok((vec![owner], key.clone())),
             Self::ContractInfo {}
             | Self::IdTotalBalance { .. }
             | Self::RegisteredTokens { .. }
             | Self::WithPermit { .. } => {
                 unreachable!("This query type does not require viewing key authentication")
             }
-            Self::TransactionHistory { address, key, .. } => Ok((vec![address], key.clone())),
         }
     }
 }
@@ -401,6 +415,11 @@ pub enum QueryAnswer {
 
     TokenIdBalance {
         total_supply: Option<Uint256>,
+    },
+
+    TransactionHistory {
+        txns: Vec<Tx>,
+        count: u64,
     },
 
     /// returned when an viewing_key-specific errors occur during a user's attempt to
@@ -469,4 +488,53 @@ impl ExecuteMsg {
         };
         Ok(execute.into())
     }
+}
+
+//Txn history
+
+/// tx type and specifics for storage
+#[cw_serde]
+pub enum TxAction {
+    Stake {
+        ids: Vec<u32>,
+        amounts: Vec<Uint256>,
+    },
+    UnStake {
+        ids: Vec<u32>,
+        amounts: Vec<Uint256>,
+    },
+    ClaimRewards {
+        ids: Vec<u32>,
+        rewards: Vec<Reward>,
+    },
+}
+
+#[cw_serde]
+pub enum QueryTxnType {
+    All,
+    Stake,
+    UnStake,
+    ClaimRewards,
+}
+
+/// tx in storage
+#[cw_serde]
+pub struct Tx {
+    /// tx id
+    pub tx_id: u64,
+    /// the block containing this tx
+    pub block_height: u64,
+    /// the time (in seconds since 01/01/1970) of the block containing this tx
+    pub block_time: u64,
+    /// tx type and specifics
+    pub action: TxAction,
+}
+
+#[cw_serde]
+pub struct Reward {
+    /// tx id
+    pub token: ContractInfo,
+    /// the block containing this tx
+    pub amounts: Vec<Uint128>,
+    pub total_amount: Uint128,
 }

@@ -1,7 +1,15 @@
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult, Uint256},
     cosmwasm_schema::cw_serde,
-    liquidity_book::staking::{ExecuteMsg, Liquidity, OwnerBalance, QueryAnswer, QueryMsg},
+    liquidity_book::staking::{
+        ExecuteMsg,
+        Liquidity,
+        OwnerBalance,
+        QueryAnswer,
+        QueryMsg,
+        QueryTxnType,
+        Tx,
+    },
     multi_test::App,
     utils::{asset::RawContract, ExecuteCallback, Query},
 };
@@ -143,6 +151,29 @@ pub fn query_balance(
     .test_query(&lb_staking, app)?;
     match res {
         QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("Query failed")),
+    }
+}
+
+pub fn query_txn_history(
+    app: &App,
+    lb_staking: &ContractInfo,
+    staker: Addr,
+    key: String,
+    page: Option<u32>,
+    page_size: Option<u32>,
+    txn_type: QueryTxnType,
+) -> StdResult<(Vec<Tx>, u64)> {
+    let res: QueryAnswer = QueryMsg::TransactionHistory {
+        owner: staker,
+        key,
+        page,
+        page_size,
+        txn_type,
+    }
+    .test_query(&lb_staking, app)?;
+    match res {
+        QueryAnswer::TransactionHistory { txns, count } => Ok((txns, count)),
         _ => Err(StdError::generic_err("Query failed")),
     }
 }

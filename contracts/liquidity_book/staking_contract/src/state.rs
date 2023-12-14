@@ -1,8 +1,9 @@
 use shade_protocol::{
-    c_std::{Addr, ContractInfo},
+    c_std::{Addr, ContractInfo, StdResult, Storage, Uint256},
     lb_libraries::types::TreeUint24,
     liquidity_book::staking::{
         EpochInfo,
+        Reward,
         RewardTokenInfo,
         StakerInfo,
         StakerLiquidity,
@@ -10,9 +11,11 @@ use shade_protocol::{
         State,
         TotalLiquidity,
         TotalLiquiditySnapshot,
+        Tx,
+        TxAction,
     },
+    s_toolkit::storage::AppendStore,
     secret_storage_plus::{Bincode2, Item, Map},
-    Contract,
 };
 
 pub const STATE: Item<State, Bincode2> = Item::new("state");
@@ -28,3 +31,113 @@ pub const STAKERS_LIQUIDITY_SNAPSHOT: Map<(&Addr, u64, u32), StakerLiquiditySnap
 pub const TOTAL_LIQUIDITY: Map<u32, TotalLiquidity, Bincode2> = Map::new("total_liquidity");
 pub const TOTAL_LIQUIDITY_SNAPSHOT: Map<(u64, u32), TotalLiquiditySnapshot, Bincode2> =
     Map::new("total_liquidity_snapshot");
+pub static TX_ID_STORE: AppendStore<u64> = AppendStore::new(b"txids");
+pub const TX_STORE: Map<u64, Tx> = Map::new("tx_store");
+
+pub fn store_stake(
+    storage: &mut dyn Storage,
+    addr: Addr,
+    state: &mut State,
+    ids: Vec<u32>,
+    amounts: Vec<Uint256>,
+    block_time: u64,
+    block_height: u64,
+) -> StdResult<()> {
+    let action = TxAction::Stake { ids, amounts };
+
+    let tx = Tx {
+        tx_id: state.tx_id,
+        block_height,
+        block_time,
+        action,
+    };
+
+    TX_STORE.save(storage, state.tx_id, &tx)?;
+    append_tx_for_addr(storage, state.tx_id, &addr)?;
+    append_stake_tx_for_addr(storage, state.tx_id, &addr)?;
+    state.tx_id += 1;
+    Ok(())
+}
+
+pub fn store_unstake(
+    storage: &mut dyn Storage,
+    addr: Addr,
+    state: &mut State,
+    ids: Vec<u32>,
+    amounts: Vec<Uint256>,
+    block_time: u64,
+    block_height: u64,
+) -> StdResult<()> {
+    let action = TxAction::UnStake { ids, amounts };
+    let tx = Tx {
+        tx_id: state.tx_id,
+        block_height,
+        block_time,
+        action,
+    };
+
+    TX_STORE.save(storage, state.tx_id, &tx)?;
+    append_tx_for_addr(storage, state.tx_id, &addr)?;
+    append_unstake_tx_for_addr(storage, state.tx_id, &addr)?;
+    state.tx_id += 1;
+    Ok(())
+}
+
+pub fn store_claim_rewards(
+    storage: &mut dyn Storage,
+    addr: Addr,
+    state: &mut State,
+    ids: Vec<u32>,
+    rewards: Vec<Reward>,
+    block_time: u64,
+    block_height: u64,
+) -> StdResult<()> {
+    let action = TxAction::ClaimRewards { ids, rewards };
+    let tx = Tx {
+        tx_id: state.tx_id,
+        block_height,
+        block_time,
+        action,
+    };
+
+    TX_STORE.save(storage, state.tx_id, &tx)?;
+    append_tx_for_addr(storage, state.tx_id, &addr)?;
+    append_claim_rewards_tx_for_addr(storage, state.tx_id, &addr)?;
+    state.tx_id += 1;
+    Ok(())
+}
+
+fn append_tx_for_addr(storage: &mut dyn Storage, tx_id: u64, address: &Addr) -> StdResult<()> {
+    let addr_store = TX_ID_STORE.add_suffix(address.as_bytes());
+    addr_store.push(storage, &tx_id)
+}
+
+fn append_stake_tx_for_addr(
+    storage: &mut dyn Storage,
+    tx_id: u64,
+    address: &Addr,
+) -> StdResult<()> {
+    let addr_store = TX_ID_STORE.add_suffix(address.as_bytes());
+    let stake_store = addr_store.add_suffix("STAKE".as_bytes());
+    stake_store.push(storage, &tx_id)
+}
+
+fn append_unstake_tx_for_addr(
+    storage: &mut dyn Storage,
+    tx_id: u64,
+    address: &Addr,
+) -> StdResult<()> {
+    let addr_store = TX_ID_STORE.add_suffix(address.as_bytes());
+    let unstake_store = addr_store.add_suffix("UNSTAKE".as_bytes());
+    unstake_store.push(storage, &tx_id)
+}
+
+fn append_claim_rewards_tx_for_addr(
+    storage: &mut dyn Storage,
+    tx_id: u64,
+    address: &Addr,
+) -> StdResult<()> {
+    let addr_store = TX_ID_STORE.add_suffix(address.as_bytes());
+    let claim_rewards_store = addr_store.add_suffix("CLAIM_REWARDS".as_bytes());
+    claim_rewards_store.push(storage, &tx_id)
+}

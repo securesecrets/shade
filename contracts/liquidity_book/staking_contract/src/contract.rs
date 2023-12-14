@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     ops::{Add, AddAssign, Sub},
     str::FromStr,
+    vec,
 };
 
 use shade_protocol::{
@@ -44,7 +45,9 @@ use shade_protocol::{
             OwnerBalance,
             QueryAnswer,
             QueryMsg,
+            QueryTxnType,
             QueryWithPermit,
+            Reward,
             RewardTokenInfo,
             StakerLiquidity,
             StakerLiquiditySnapshot,
@@ -67,12 +70,17 @@ use crate::{
         check_if_claimable,
         finding_total_liquidity,
         finding_user_liquidity,
+        get_txs,
         register_reward_tokens,
         require_lb_token,
         staker_init_checker,
         store_empty_reward_set,
+        TokenKey,
     },
     state::{
+        store_claim_rewards,
+        store_stake,
+        store_unstake,
         EPOCH_STORE,
         REWARD_TOKENS,
         REWARD_TOKEN_INFO,
@@ -107,6 +115,7 @@ pub fn instantiate(
         epoch_index: msg.epoch_index,
         epoch_durations: msg.epoch_duration,
         expiry_durations: msg.expiry_duration,
+        tx_id: 0,
     };
 
     let now = env.block.time.seconds();
@@ -285,7 +294,7 @@ fn receiver_callback(
 pub fn try_stake(
     deps: DepsMut,
     env: Env,
-    state: State,
+    mut state: State,
     staker: Addr,
     token_id: u32,
     amount: Uint256,
@@ -391,6 +400,17 @@ pub fn try_stake(
     //*STORING pool_state_liquidity_snapshot
     TOTAL_LIQUIDITY_SNAPSHOT.save(deps.storage, (state.epoch_index, token_id), &total_liq_snap)?;
 
+    store_stake(
+        deps.storage,
+        staker,
+        &mut state,
+        vec![token_id],
+        vec![amount],
+        env.block.time.seconds(),
+        env.block.height,
+    )?;
+    STATE.save(deps.storage, &state)?;
+
     Ok(Response::default())
 }
 
@@ -407,7 +427,7 @@ pub fn try_unstake(
         ));
     }
 
-    let state = STATE.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
     let epoch_obj = EPOCH_STORE
         .may_load(deps.storage, state.epoch_index)?
         .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
@@ -416,19 +436,19 @@ pub fn try_unstake(
 
     let mut actions: Vec<TransferAction> = Vec::new();
 
-    for (token_id, amount) in token_ids.into_iter().zip(amounts.into_iter()) {
+    for (token_id, amount) in token_ids.iter().zip(amounts.iter()) {
         let mut staker_liq = STAKERS_LIQUIDITY
-            .load(deps.storage, (&info.sender, token_id))
+            .load(deps.storage, (&info.sender, *token_id))
             .unwrap_or_default();
         let mut staker_liq_snap = STAKERS_LIQUIDITY_SNAPSHOT
-            .load(deps.storage, (&info.sender, state.epoch_index, token_id))
+            .load(deps.storage, (&info.sender, state.epoch_index, *token_id))
             .unwrap_or_default();
 
         if amount.is_zero() {
             return Err(StdError::generic_err("cannot request to withdraw 0"));
         }
 
-        if staker_liq.amount_delegated < amount {
+        if staker_liq.amount_delegated < *amount {
             return Err(StdError::generic_err(format!(
                 "insufficient funds to redeem: balance={}, required={}",
                 staker_liq.amount_delegated, amount
@@ -463,8 +483,8 @@ pub fn try_unstake(
             &state,
             &epoch_obj,
             &info.sender,
-            token_id,
-            amount,
+            *token_id,
+            *amount,
             &mut staker_liq,
             &mut staker_liq_snap,
         )?;
@@ -473,7 +493,7 @@ pub fn try_unstake(
             token_id: token_id.to_string(),
             from: env.contract.address.clone(),
             recipient: info.sender.clone(),
-            amount,
+            amount: *amount,
             memo: None,
         });
     }
@@ -487,6 +507,17 @@ pub fn try_unstake(
         state.lb_token.address.to_string(),
         None,
     )?;
+
+    store_unstake(
+        deps.storage,
+        info.sender,
+        &mut state,
+        token_ids,
+        amounts,
+        env.block.time.seconds(),
+        env.block.height,
+    )?;
+    STATE.save(deps.storage, &state)?;
 
     Ok(Response::default().add_message(message))
 }
@@ -605,7 +636,7 @@ pub fn try_end_epoch(
         // Create a filtered list of rewards to add to reward_tokens
         let rewards_to_add: Vec<_> = rewards_token_info
             .iter()
-            .filter(|reward| reward.end > state.epoch_index)
+            .filter(|reward| reward.end >= state.epoch_index)
             .cloned()
             .collect();
 
@@ -646,12 +677,14 @@ pub fn try_end_epoch(
     Ok(Response::default())
 }
 
-pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResult<Response> {
-    let state = STATE.load(deps.storage)?;
+pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    let mut state = STATE.load(deps.storage)?;
     let staker_result = STAKERS.load(deps.storage, &info.sender);
     let mut messages = Vec::new();
 
-    let mut rewards_accumulator: HashMap<TokenKey, Uint128> = HashMap::new();
+    let mut rewards_accumulator: HashMap<TokenKey, (Uint128, Vec<Uint128>)> = HashMap::new();
+
+    let mut ids: Vec<u32> = Vec::new();
 
     // Check if staker exists
     let staker = match staker_result {
@@ -744,18 +777,24 @@ pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResu
                             address: x.token.address.clone(),
                             code_hash: x.token.code_hash.clone(),
                         };
+
                         let entry = rewards_accumulator
-                            .entry(token_key)
-                            .or_insert(Uint128::zero());
-                        *entry += staker_rewards;
+                            .entry(token_key.clone())
+                            .or_insert((Uint128::zero(), Vec::new()));
+                        entry.0 += staker_rewards;
+                        entry.1.push(staker_rewards);
+
+                        ids.push(*dis);
                     }
                 }
             }
         }
     }
 
+    let mut rs: Vec<Reward> = Vec::new();
+
     // Create messages for each token with the accumulated rewards
-    for (token_key, amount) in rewards_accumulator {
+    for (token_key, (total_amount, amounts)) in rewards_accumulator {
         let contract_info = ContractInfo {
             address: token_key.address,
             code_hash: token_key.code_hash,
@@ -764,41 +803,35 @@ pub fn try_claim_rewards(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResu
             Snip20ExecuteMsg::Send {
                 recipient: info.sender.to_string(),
                 recipient_code_hash: None,
-                amount,
+                amount: total_amount,
                 msg: None,
                 memo: None,
                 padding: None,
             }
             .to_cosmos_msg(&contract_info, vec![])?,
         );
+
+        rs.push(Reward {
+            token: contract_info,
+            amounts,
+            total_amount,
+        })
     }
 
     //TODO: add user rewards somewhere
 
+    store_claim_rewards(
+        deps.storage,
+        info.sender,
+        &mut state,
+        ids,
+        rs,
+        env.block.time.seconds(),
+        env.block.height,
+    )?;
+    STATE.save(deps.storage, &state)?;
+
     Ok(Response::default().add_messages(messages))
-}
-
-use std::hash::{Hash, Hasher};
-
-#[derive(Clone, Debug)]
-struct TokenKey {
-    address: Addr,
-    code_hash: String,
-}
-
-impl PartialEq for TokenKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.address == other.address && self.code_hash == other.code_hash
-    }
-}
-
-impl Eq for TokenKey {}
-
-impl Hash for TokenKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.address.hash(state);
-        self.code_hash.hash(state);
-    }
 }
 
 pub fn try_register_reward_tokens(
@@ -1042,6 +1075,14 @@ fn viewing_keys_queries(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
                     ..
                 } => query_liquidity(deps, &owner, token_ids, round_index),
 
+                QueryMsg::TransactionHistory {
+                    owner,
+                    page,
+                    page_size,
+                    txn_type,
+                    ..
+                } => query_transaction_history(deps, &owner, page, page_size, txn_type),
+
                 QueryMsg::WithPermit { .. } => {
                     unreachable!("This query type does not require viewing key authentication")
                 }
@@ -1098,6 +1139,22 @@ fn query_all_balances(
     }
 
     let response = QueryAnswer::AllBalances(balances);
+    to_binary(&response)
+}
+
+fn query_transaction_history(
+    deps: Deps,
+    owner: &Addr,
+    page: Option<u32>,
+    page_size: Option<u32>,
+    query_type: QueryTxnType,
+) -> StdResult<Binary> {
+    let page = page.unwrap_or(0u32);
+    let page_size = page_size.unwrap_or(50u32);
+
+    let (txns, count) = get_txs(deps.storage, owner, page, page_size, query_type)?;
+
+    let response = QueryAnswer::TransactionHistory { txns, count };
     to_binary(&response)
 }
 
