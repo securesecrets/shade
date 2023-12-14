@@ -655,8 +655,8 @@ pub fn try_end_epoch(
     epoch_obj.rewards_distribution = Some(rewards_distribution);
     epoch_obj.reward_tokens = Some(reward_tokens);
 
-    if let Some(expiry_duration) = epoch_obj.expired_at {
-        epoch_obj.expired_at = Some(state.epoch_index + expiry_duration)
+    if let Some(expiry_duration) = state.expiry_durations {
+        epoch_obj.expired_at = Some(state.epoch_index + expiry_duration);
     }
 
     EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
@@ -724,7 +724,7 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
             .map_or(true, Vec::is_empty)
             || epoch_info
                 .expired_at
-                .map_or(false, |expired_at| expired_at < round_epoch)
+                .map_or(false, |expired_at| expired_at <= state.epoch_index)
         {
             continue;
         }
@@ -926,7 +926,7 @@ pub fn try_add_rewards(
         .find(|contract| contract.address == info.sender)
     {
         // Disallow end before start
-        if start >= end {
+        if start > end {
             return Err(StdError::generic_err("'start' must be after 'end'"));
         }
         // Disallow retro-active emissions (maybe could allow?)

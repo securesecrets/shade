@@ -241,109 +241,6 @@ pub fn fuzz_stake_simple() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
-#[test]
-pub fn fuzz_claim_rewards() -> Result<(), anyhow::Error> {
-    let x_bins = generate_random(0, 50);
-    let y_bins = generate_random(0, 50);
-
-    // should be init with the lb-pair
-    //then query it about the contract info
-    let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
-        lb_pair_setup(Some(x_bins), Some(y_bins))?;
-
-    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
-    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
-
-    let all_pairs = lb_factory::query_all_lb_pairs(
-        &mut app,
-        &lb_factory.clone().into(),
-        token_x.into(),
-        token_y.into(),
-    )?;
-    let lb_pair = all_pairs[0].clone();
-
-    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.lb_pair.contract)?;
-
-    let staking_contract = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
-
-    //deposit funds here
-    let total_bins = get_total_bins(x_bins, y_bins) as u32;
-
-    let mut actions = vec![];
-    let mut ids = vec![];
-    //Querying all the bins
-    for i in 0..total_bins {
-        let id = get_id(ACTIVE_ID, i, y_bins);
-        ids.push(id);
-
-        let balance = lb_token::query_balance(
-            &app,
-            &lb_token,
-            addrs.batman(),
-            addrs.batman(),
-            String::from("viewing_key"),
-            id.to_string(),
-        )?;
-
-        actions.push(SendAction {
-            token_id: id.to_string(),
-            from: addrs.batman(),
-            recipient: staking_contract.address.clone(),
-            recipient_code_hash: Some(staking_contract.code_hash.clone()),
-            amount: balance,
-            msg: Some(to_binary(&InvokeMsg::Stake {
-                from: Some(addrs.batman().to_string()),
-                padding: None,
-            })?),
-            memo: None,
-        })
-    }
-
-    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
-
-    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
-    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
-
-    let reward_tokens = vec![shade_token, silk_token];
-
-    staking_contract::register_reward_tokens(
-        &mut app,
-        addrs.admin().as_str(),
-        &staking_contract,
-        reward_tokens.clone(),
-    )?;
-
-    //mint tokens
-    snip20::mint_exec(
-        &mut app,
-        addrs.admin().as_str(),
-        &deployed_contracts,
-        SHADE,
-        &vec![],
-        addrs.admin().to_string(),
-        DEPOSIT_AMOUNT.into(),
-    )?;
-
-    snip20::send_exec(
-        &mut app,
-        addrs.admin().as_str(),
-        &deployed_contracts,
-        SHADE,
-        staking_contract.address.to_string(),
-        DEPOSIT_AMOUNT.into(),
-        Some(to_binary(&InvokeMsg::AddRewards {
-            start: None,
-            end: 11,
-        })?),
-    )?;
-
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
-
-    staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &staking_contract)?;
-
-    Ok(())
-}
 
 #[test]
 pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
@@ -892,15 +789,30 @@ pub fn end_epoch() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-pub fn claim_rewards() -> Result<(), anyhow::Error> {
+pub fn fuzz_claim_rewards() -> Result<(), anyhow::Error> {
+    let x_bins = generate_random(0, 50);
+    let y_bins = generate_random(0, 50);
+
+    // should be init with the lb-pair
+    //then query it about the contract info
     let addrs = init_addrs();
-    let x_bins = 20;
-    let y_bins = 20;
-    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
+    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let all_pairs = lb_factory::query_all_lb_pairs(
+        &mut app,
+        &lb_factory.clone().into(),
+        token_x.into(),
+        token_y.into(),
+    )?;
+    let lb_pair = all_pairs[0].clone();
+
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.lb_pair.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
+
+    let staking_contract = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -920,6 +832,98 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
             String::from("viewing_key"),
             id.to_string(),
         )?;
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: staking_contract.address.clone(),
+            recipient_code_hash: Some(staking_contract.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
+    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let reward_tokens = vec![shade_token, silk_token];
+
+    staking_contract::register_reward_tokens(
+        &mut app,
+        addrs.admin().as_str(),
+        &staking_contract,
+        reward_tokens.clone(),
+    )?;
+
+    //mint tokens
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        DEPOSIT_AMOUNT.into(),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        staking_contract.address.to_string(),
+        DEPOSIT_AMOUNT.into(),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 11,
+        })?),
+    )?;
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+
+    staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &staking_contract)?;
+
+    Ok(())
+}
+
+#[test]
+pub fn claim_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let x_bins = 20;
+    let y_bins = 20;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.lb_pair.contract)?;
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    let mut ids = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances.push(balance);
 
         actions.push(SendAction {
             token_id: id.to_string(),
@@ -1000,7 +1004,7 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //11
     staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //11
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //12 -> 13
     staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     staking_contract::set_viewing_key(
@@ -1009,18 +1013,6 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
         &lb_staking,
         "viewing_key".to_owned(),
     )?;
-
-    let (claim_rewards_txns, count) = staking_contract::query_txn_history(
-        &app,
-        &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
-        None,
-        None,
-        QueryTxnType::ClaimRewards,
-    )?;
-
-    println!("claim_rewards_txns: {:?}", claim_rewards_txns);
 
     snip20::set_viewing_key_exec(
         &mut app,
@@ -1037,7 +1029,231 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
         SHADE,
         "viewing_key".to_owned(),
     )?;
-    // assert_eq!(balance.u128(), 0);
+
+    assert_eq!(balance.u128(), 0);
+
+    //ERROR when staker try to claim rewards again:
+
+    let error = staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking);
+
+    assert_eq!(
+        error.unwrap_err(),
+        StdError::generic_err(
+            "Generic error: You have already claimed rewards for the latest epoch.",
+        )
+    );
+
+    //staked all:
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 50);
+
+    app.set_time(timestamp);
+
+    staking_contract::unstaking(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_staking,
+        ids.clone(),
+        balances.clone(),
+    )?;
+
+    //mint tokens and adding more rewards
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        DEPOSIT_AMOUNT.into(),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        DEPOSIT_AMOUNT.into(),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 13,
+        })?),
+    )?;
+
+    //unstake all:
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //13->14
+    staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+
+    let balance = snip20::balance_query(
+        &app,
+        &lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(balance.u128(), 0);
+
+    let balance = snip20::balance_query(
+        &app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(balance.u128(), DEPOSIT_AMOUNT + DEPOSIT_AMOUNT);
+
+    Ok(())
+}
+
+#[test]
+pub fn claim_expired_rewards() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let x_bins = 20;
+    let y_bins = 20;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.lb_pair.contract)?;
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.lb_pair.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    let mut ids = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances.push(balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    staking_contract::update_config(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        None,
+        None,
+        Some(200),
+        Some(5),
+    )?;
+
+    // TODO: add rewards and end round
+    //Added the reward tokens for next 10 rounds
+    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
+    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let reward_tokens = vec![shade_token, silk_token];
+
+    staking_contract::register_reward_tokens(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        reward_tokens.clone(),
+    )?;
+
+    //mint tokens
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        DEPOSIT_AMOUNT.into(),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        DEPOSIT_AMOUNT.into(),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 10,
+        })?),
+    )?;
+
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //1
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //2
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //3
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //4
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //5
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //6
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //7
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //8
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //9
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?; //10
+
+    staking_contract::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+
+    staking_contract::set_viewing_key(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_staking,
+        "viewing_key".to_owned(),
+    )?;
+
+    snip20::set_viewing_key_exec(
+        &mut app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    let balance = snip20::balance_query(
+        &app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert!(balance.u128() > 0);
+
+    let (claim_rewards_txns, count) = staking_contract::query_txn_history(
+        &app,
+        &lb_staking,
+        addrs.batman(),
+        "viewing_key".to_owned(),
+        None,
+        None,
+        QueryTxnType::ClaimRewards,
+    )?;
+
+    assert_eq!(claim_rewards_txns.len(), 1);
+    assert_eq!(count, 1);
 
     Ok(())
 }
