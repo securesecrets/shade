@@ -329,22 +329,12 @@ fn test_swap_liquidity() -> Result<(), anyhow::Error> {
         true,
     )?;
 
-    println!(
-        "amount_in {:?}, amount_out_left {:?}, fee {:?}",
-        amount_in, amount_out_left, fee
-    );
-
     let (amount_out, amount_in_left, fee) = lb_pair::swap_out_query(
         &app,
         &lb_pair_contract_info.clone().into(),
         Uint128::from(10_000_000u128),
         true,
     )?;
-
-    println!(
-        "amount_out {:?}, amount_in_left {:?}, fee {:?}",
-        amount_out, amount_in_left, fee
-    );
 
     //make swap and check balances
 

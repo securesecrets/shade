@@ -472,10 +472,7 @@ fn try_swap(
                         .u256_to_uint256(),
                         false => Uint256::from(feeu128),
                     };
-                    println!(
-                        "swap_value_uint256: {:?}, id: {:?}",
-                        swap_value_uint256, active_id
-                    );
+
                     reward_stats.cumm_value += swap_value_uint256;
                     let mut fee_map_tree = FEE_MAP_TREE.update(
                         deps.storage,

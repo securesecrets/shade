@@ -9,7 +9,6 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use ethnum::U256;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -27,8 +26,6 @@ use shade_protocol::{
     liquidity_book::lb_pair::{RemoveLiquidity, RewardsDistributionAlgorithm},
     multi_test::App,
 };
-
-use crate::multitests::test_helper::*;
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000;
 pub const ACTIVE_ID: u32 = ID_ONE;
@@ -3213,7 +3210,6 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
             .iter()
             .all(|&x| x == _distribution.weightages[0])
     );
-    println!("_distribution {:?}", _distribution);
 
     //making a swap for token y hence the bin id moves to the right
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);

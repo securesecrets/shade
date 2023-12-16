@@ -158,7 +158,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     };
 
     // ASSERT SWAPSIMULATION
-    let (total_fee_amount, lp_fee_amount, shade_dao_fee_amount, result, price) =
+    let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, result, price) =
         router::query_swap_simulation(
             &app,
             &router,
@@ -393,7 +393,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         },
         amount: Uint128::new(SWAP_AMOUNT),
     };
-    let (total_fee_amount, lp_fee_amount, shade_dao_fee_amount, result, price) =
+    let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, _result, price) =
         router::query_swap_simulation(
             &app,
             &router,

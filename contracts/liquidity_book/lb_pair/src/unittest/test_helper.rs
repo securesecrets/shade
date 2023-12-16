@@ -446,11 +446,6 @@ pub fn assert_approx_eq_rel(a: u128, b: u128, max_value_delta: u128) {
     let delta = if a > b { a - b } else { b - a };
     if delta > max_value_delta {
         // Log the error (you could replace these println! statements with actual logging)
-        println!("Error: a ~= b not satisfied [uint]");
-        println!("    Expected: {}", b);
-        println!("      Actual: {}", a);
-        println!(" Max  Delta: {}", max_value_delta);
-        println!("      Delta: {}", delta);
 
         // Fail the assertion (you can replace this with custom error handling if desired)
         panic!("Approximate equality check failed.");
