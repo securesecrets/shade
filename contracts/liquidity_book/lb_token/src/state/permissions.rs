@@ -2,8 +2,10 @@ use super::*;
 
 use cosmwasm_std::{to_binary, Addr, StdError, StdResult, Storage};
 
-use secret_toolkit::storage::AppendStore;
-use shade_protocol::lb_libraries::lb_token::permissions::PermissionKey;
+use shade_protocol::{
+    lb_libraries::lb_token::permissions::PermissionKey,
+    s_toolkit::storage::AppendStore,
+};
 
 pub static PERMISSION_ID_STORE: AppendStore<PermissionKey> = AppendStore::new(PREFIX_PERMISSION_ID);
 

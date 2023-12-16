@@ -83,6 +83,9 @@ use crate::{
         store_stake,
         store_unstake,
         EPOCH_STORE,
+        EXPIRED_AT_LOGGER,
+        EXPIRED_AT_LOGGER_MAP,
+        LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID,
         REWARD_TOKENS,
         REWARD_TOKEN_INFO,
         STAKERS,
@@ -117,6 +120,7 @@ pub fn instantiate(
         epoch_durations: msg.epoch_duration,
         expiry_durations: msg.expiry_duration,
         tx_id: 0,
+        recover_funds_receiver: msg.recover_funds_receiver,
     };
 
     let now = env.block.time.seconds();
@@ -155,6 +159,8 @@ pub fn instantiate(
         store_empty_reward_set(deps.storage)?;
     }
     STATE.save(deps.storage, &state)?;
+    LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID.save(deps.storage, &None)?;
+    EXPIRED_AT_LOGGER.save(deps.storage, &vec![])?;
 
     Ok(response
         .add_messages(messages)
@@ -204,7 +210,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 epoch_duration,
                 expiry_duration,
             ),
-            ExecuteMsg::RecoverFunds { .. } => todo!(), //TODO
+            ExecuteMsg::RecoverFunds { .. } => try_recover_funds(deps, env, info),
             ExecuteMsg::EndEpoch {
                 rewards_distribution,
             } => try_end_epoch(deps, env, info, rewards_distribution),
@@ -656,7 +662,26 @@ pub fn try_end_epoch(
     epoch_obj.reward_tokens = Some(reward_tokens);
 
     if let Some(expiry_duration) = state.expiry_durations {
-        epoch_obj.expired_at = Some(state.epoch_index + expiry_duration);
+        let expired_at = state.epoch_index + expiry_duration;
+        epoch_obj.expired_at = Some(expired_at);
+        EXPIRED_AT_LOGGER.update(deps.storage, |mut list| -> StdResult<Vec<u64>> {
+            if !list.contains(&expired_at) {
+                list.push(expired_at);
+            }
+            Ok(list)
+        })?;
+        EXPIRED_AT_LOGGER_MAP.update(
+            deps.storage,
+            expired_at,
+            |logger| -> StdResult<Vec<u64>> {
+                if let Some(mut l) = logger {
+                    l.push(state.epoch_index);
+                    Ok(l)
+                } else {
+                    Ok(vec![state.epoch_index])
+                }
+            },
+        )?;
     }
 
     EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
@@ -715,17 +740,18 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
     let ending_epoch = state.epoch_index;
 
     for round_epoch in starting_epoch..ending_epoch {
-        let epoch_info = EPOCH_STORE.load(deps.storage, round_epoch)?;
+        let mut epoch_info = EPOCH_STORE.load(deps.storage, round_epoch)?;
 
-        // Skip epochs with no reward tokens or expired rewards
-        if epoch_info
+        // Check if the epoch has expired or has no reward tokens
+        let is_expired = epoch_info
+            .expired_at
+            .map_or(false, |expired_at| expired_at <= state.epoch_index);
+        let has_no_reward_tokens = epoch_info
             .reward_tokens
             .as_ref()
-            .map_or(true, Vec::is_empty)
-            || epoch_info
-                .expired_at
-                .map_or(false, |expired_at| expired_at <= state.epoch_index)
-        {
+            .map_or(true, Vec::is_empty);
+
+        if is_expired || has_no_reward_tokens {
             continue;
         }
 
@@ -737,35 +763,39 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
                 .iter()
                 .zip(rewards_distribution.weightages.iter())
             {
-                // println!("id: {} weightage: {}", id, weightage);
-                let staker_liq_snap =
+                let (staker_liq_snap, is_calculated) =
                     finding_user_liquidity(deps.storage, &info, &staker, round_epoch, *id)?;
+                if is_calculated {
+                    STAKERS_LIQUIDITY_SNAPSHOT.save(
+                        deps.storage,
+                        (&info.sender, round_epoch, *id),
+                        &staker_liq_snap,
+                    )?;
+                }
                 if staker_liq_snap.liquidity.is_zero() {
                     continue;
                 }
-                STAKERS_LIQUIDITY_SNAPSHOT.save(
-                    deps.storage,
-                    (&info.sender, round_epoch, *id),
-                    &staker_liq_snap,
-                )?;
 
-                let total_liquidity_snap = finding_total_liquidity(deps.storage, round_epoch, *id)?;
+                let (total_liquidity_snap, is_calculated) =
+                    finding_total_liquidity(deps.storage, round_epoch, *id)?;
+
+                if is_calculated {
+                    TOTAL_LIQUIDITY_SNAPSHOT.save(
+                        deps.storage,
+                        (round_epoch, *id),
+                        &total_liquidity_snap,
+                    )?;
+                }
 
                 if total_liquidity_snap.liquidity.is_zero() {
                     continue;
                 }
 
-                TOTAL_LIQUIDITY_SNAPSHOT.save(
-                    deps.storage,
-                    (round_epoch, *id),
-                    &total_liquidity_snap,
-                )?;
-
                 // Calculate and distribute rewards
-                if let Some(reward_tokens) = &epoch_info.reward_tokens {
-                    for x in reward_tokens.iter() {
+                if let Some(reward_tokens) = &mut epoch_info.reward_tokens {
+                    for r_t in reward_tokens.iter_mut() {
                         let total_bin_rewards = Uint256::from(
-                            x.reward_per_epoch
+                            r_t.reward_per_epoch
                                 .multiply_ratio(*weightage, rewards_distribution.denominator),
                         );
 
@@ -777,10 +807,11 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
                                 )
                                 .to_string(),
                         )?;
+                        r_t.claimed_rewards += staker_rewards;
 
                         let token_key = TokenKey {
-                            address: x.token.address.clone(),
-                            code_hash: x.token.code_hash.clone(),
+                            address: r_t.token.address.clone(),
+                            code_hash: r_t.token.code_hash.clone(),
                         };
 
                         let entry = rewards_accumulator
@@ -793,6 +824,7 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
                 }
             }
         }
+        EPOCH_STORE.save(deps.storage, round_epoch, &epoch_info)?;
     }
 
     let mut rewards_by_epoch: HashMap<u64, Vec<RewardToken>> = HashMap::new();
@@ -950,6 +982,8 @@ pub fn try_add_rewards(
             reward_per_epoch,
             start,
             end,
+            total_rewards: amount,
+            claimed_rewards: Uint128::zero(),
         };
 
         REWARD_TOKEN_INFO.update(
@@ -1015,6 +1049,65 @@ fn try_revoke_permit(
     );
 
     Ok(Response::new())
+}
+
+fn try_recover_funds(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResult<Response> {
+    let state = STATE.load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::StakingAdmin,
+        info.sender.to_string(),
+        &state.admin_auth.into(),
+    )?;
+    let mut messages = Vec::new();
+
+    let mut sorted_epochs = EXPIRED_AT_LOGGER.load(deps.storage)?;
+    sorted_epochs.sort();
+
+    // Find the first epoch that is greater than the current state epoch_index
+    let first_future_epoch = sorted_epochs
+        .iter()
+        .find(|&&epoch| epoch > state.epoch_index);
+
+    for &expired_epoch in sorted_epochs.iter() {
+        if Some(&expired_epoch) == first_future_epoch {
+            break;
+        }
+
+        let epoch_ids = EXPIRED_AT_LOGGER_MAP.load(deps.storage, expired_epoch)?;
+
+        for &epoch_id in &epoch_ids {
+            if let Some(reward_tokens) = EPOCH_STORE.load(deps.storage, epoch_id)?.reward_tokens {
+                for reward in reward_tokens {
+                    if reward.reward_per_epoch > reward.claimed_rewards {
+                        let amount = reward.reward_per_epoch.sub(reward.claimed_rewards);
+                        messages.push(
+                            Snip20ExecuteMsg::Send {
+                                recipient: state.recover_funds_receiver.to_string(),
+                                recipient_code_hash: None,
+                                amount,
+                                msg: None,
+                                memo: None,
+                                padding: None,
+                            }
+                            .to_cosmos_msg(&reward.token, vec![])?,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // Update EXPIRED_AT_LOGGER with future epochs only
+    if let Some(&last_future_epoch) = first_future_epoch {
+        let future_epochs: Vec<u64> = sorted_epochs
+            .into_iter()
+            .filter(|&epoch| epoch > last_future_epoch)
+            .collect();
+        EXPIRED_AT_LOGGER.save(deps.storage, &future_epochs)?;
+    }
+
+    Ok(Response::new().add_messages(messages))
 }
 
 #[entry_point]

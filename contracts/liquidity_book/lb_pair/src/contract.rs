@@ -220,6 +220,10 @@ pub fn instantiate(
         staking_contract: msg.staking_contract_implementation,
         token_x_symbol,
         token_y_symbol,
+        epoch_index: msg.epoch_staking_index,
+        epoch_duration: msg.epoch_staking_duration,
+        expiry_duration: msg.expiry_staking_duration,
+        recover_funds_receiver: msg.recover_staking_funds_receiver,
     })?;
 
     response = response.add_messages(messages);
@@ -2553,9 +2557,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                     admin_auth: state.admin_auth.into(),
                     query_auth: None,
                     first_reward_token: None,
-                    epoch_index: 1,      //TODO: Set this
-                    epoch_duration: 100, //TODO: Set this
-                    expiry_duration: None,
+                    epoch_index: emp_storage.epoch_index,
+                    epoch_duration: emp_storage.epoch_duration,
+                    expiry_duration: emp_storage.expiry_duration,
+                    recover_funds_receiver: emp_storage.recover_funds_receiver,
                 };
 
                 response = response.add_submessage(SubMsg::reply_on_success(

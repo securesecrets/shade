@@ -252,6 +252,10 @@ pub fn setup(
             rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
         ),
+        1,
+        100,
+        None,
+        addrs.admin(),
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());

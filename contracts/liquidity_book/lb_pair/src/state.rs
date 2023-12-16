@@ -88,35 +88,8 @@ pub struct NextTokenKey {
     pub staking_contract: ContractInstantiationInfo,
     pub token_x_symbol: String,
     pub token_y_symbol: String,
+    pub epoch_index: u64,
+    pub epoch_duration: u64,
+    pub expiry_duration: Option<u64>,
+    pub recover_funds_receiver: Addr,
 }
-
-// NOTE: These types are not used, since we are encoding the values into a U256.
-
-// #[cw_serde]
-// #[derive(Default)]
-// pub struct PairParameters {
-//     pub base_factor: u16,
-//     pub filter_period: u16,
-//     pub decay_period: u16,
-//     pub reduction_factor: u16,
-//     pub variable_fee_control: u32,
-//     pub protocol_share: u16,
-//     pub max_volatility_accumulator: u32,
-//     pub volatility_accumulator: u32,
-//     pub volatility_reference: u32,
-//     pub index_reference: u32,
-//     pub time_of_last_update: u64,
-//     pub oracle_id: u16,
-//     pub active_id: u32,
-// }
-
-// #[cw_serde]
-// #[derive(Default)]
-// pub struct Oracle {
-//     pub oracle_length: u16,
-//     pub cumulative_id: u64,
-//     pub cumulative_volatility_accumulator: u64,
-//     pub cumulative_bin_crossed: u64,
-//     pub sample_lifetime: u8,
-//     pub sample_creation_timestamp: u64,
-// }

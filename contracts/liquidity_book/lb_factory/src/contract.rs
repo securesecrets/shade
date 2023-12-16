@@ -76,6 +76,10 @@ pub fn instantiate(
         total_reward_bins: msg.total_reward_bins,
         rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
         staking_contract_implementation: ContractInstantiationInfo::default(),
+        epoch_staking_index: msg.epoch_staking_index,
+        epoch_staking_duration: msg.epoch_staking_duration,
+        expiry_staking_duration: msg.expiry_staking_duration,
+        recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -419,6 +423,10 @@ fn try_create_lb_pair(
                 total_reward_bins: Some(config.total_reward_bins),
                 rewards_distribution_algorithm: config.rewards_distribution_algorithm,
                 staking_contract_implementation: config.staking_contract_implementation,
+                epoch_staking_index: config.epoch_staking_index,
+                epoch_staking_duration: config.epoch_staking_duration,
+                expiry_staking_duration: config.expiry_staking_duration,
+                recover_staking_funds_receiver: config.recover_staking_funds_receiver,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],

@@ -34,6 +34,11 @@ pub const TOTAL_LIQUIDITY_SNAPSHOT: Map<(u64, u32), TotalLiquiditySnapshot, Binc
     Map::new("total_liquidity_snapshot");
 pub static TX_ID_STORE: AppendStore<u64> = AppendStore::new(b"txids");
 pub const TX_STORE: Map<u64, Tx> = Map::new("tx_store");
+pub const LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID: Item<Option<u64>> =
+    Item::new("last_claimed_expired_rewards_epoch_id");
+
+pub const EXPIRED_AT_LOGGER: Item<Vec<u64>> = Item::new("expired_at");
+pub const EXPIRED_AT_LOGGER_MAP: Map<u64, Vec<u64>> = Map::new("expired_at_map");
 
 pub fn store_stake(
     storage: &mut dyn Storage,

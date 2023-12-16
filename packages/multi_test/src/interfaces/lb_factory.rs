@@ -23,6 +23,10 @@ pub fn init(
     admin_auth: RawContract,
     total_reward_bins: u32,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+    epoch_staking_index: u64,
+    epoch_staking_duration: u64,
+    expiry_staking_duration: Option<u64>,
+    recover_staking_funds_receiver: Addr,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
         match (lb_factory::InstantiateMsg {
@@ -33,6 +37,10 @@ pub fn init(
             total_reward_bins,
             rewards_distribution_algorithm: rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
+            recover_staking_funds_receiver,
         }
         .test_init(
             LbFactory::default(),

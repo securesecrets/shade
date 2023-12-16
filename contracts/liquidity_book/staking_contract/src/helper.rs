@@ -156,14 +156,14 @@ pub fn finding_user_liquidity(
     staker_info: &StakerInfo,
     epoch_index: u64,
     bin_id: u32,
-) -> StdResult<(StakerLiquiditySnapshot)> {
+) -> StdResult<(StakerLiquiditySnapshot, bool)> {
     let mut legacy_bal: Uint256 = Uint256::zero();
     let mut staker_liq_snap = STAKERS_LIQUIDITY_SNAPSHOT
         .load(storage, (&info.sender, epoch_index, bin_id))
         .unwrap_or_default();
 
     if !staker_liq_snap.liquidity.is_zero() {
-        Ok(staker_liq_snap)
+        Ok((staker_liq_snap, false))
     } else {
         let mut finding_liq_round: u64 = if let Some(rn) = epoch_index.checked_sub(1) {
             rn
@@ -194,9 +194,8 @@ pub fn finding_user_liquidity(
 
         staker_liq_snap.liquidity = legacy_bal;
         staker_liq_snap.amount_delegated = legacy_bal;
-        // user_liquidity_snapshot_stats_helper_store(storage, round_index, sender, staker_liq_snap)?;
 
-        Ok(staker_liq_snap)
+        Ok((staker_liq_snap, true))
     }
 }
 
@@ -204,7 +203,7 @@ pub fn finding_total_liquidity(
     storage: &dyn Storage,
     epoch_index: u64,
     bin_id: u32,
-) -> StdResult<TotalLiquiditySnapshot> {
+) -> StdResult<(TotalLiquiditySnapshot, bool)> {
     let mut legacy_bal: Uint256 = Uint256::zero();
     let mut total_liq_snap = TOTAL_LIQUIDITY_SNAPSHOT
         .load(storage, (epoch_index, bin_id))
@@ -212,7 +211,7 @@ pub fn finding_total_liquidity(
     let total_liq = TOTAL_LIQUIDITY.load(storage, bin_id).unwrap_or_default();
 
     if !total_liq_snap.liquidity.is_zero() {
-        Ok(total_liq_snap)
+        Ok((total_liq_snap, false))
     } else {
         let mut finding_liq_round: u64 = if let Some(rn) = epoch_index.checked_sub(1) {
             rn
@@ -222,7 +221,7 @@ pub fn finding_total_liquidity(
         let start = if total_liq.last_deposited.is_some() {
             total_liq.last_deposited.unwrap()
         } else {
-            return Ok(total_liq_snap);
+            return Ok((total_liq_snap, false));
         };
         while finding_liq_round >= start {
             let staker_liq_snap_prev_round = TOTAL_LIQUIDITY_SNAPSHOT
@@ -243,7 +242,7 @@ pub fn finding_total_liquidity(
         total_liq_snap.liquidity = legacy_bal;
         total_liq_snap.amount_delegated = legacy_bal;
 
-        Ok(total_liq_snap)
+        Ok((total_liq_snap, true))
     }
 }
 

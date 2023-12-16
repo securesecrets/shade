@@ -24,6 +24,10 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub total_reward_bins: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    pub epoch_staking_index: u64,
+    pub epoch_staking_duration: u64,
+    pub expiry_staking_duration: Option<u64>,
+    pub recover_staking_funds_receiver: Addr,
 }
 
 impl InstantiateCallback for InstantiateMsg {

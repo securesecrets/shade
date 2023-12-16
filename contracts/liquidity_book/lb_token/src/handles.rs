@@ -15,36 +15,62 @@ use cosmwasm_std::{
     Storage,
     Uint256,
 };
-use secret_toolkit::{
-    crypto::sha_256,
-    permit::RevokedPermits,
-    utils::space_pad,
-    viewing_key::{ViewingKey, ViewingKeyStore},
-};
 
 use crate::{
     receiver::Snip1155ReceiveMsg,
     state::{
-        balances_r, balances_w, blockinfo_w, contr_conf_r, contr_conf_w, get_receiver_hash,
+        balances_r,
+        balances_w,
+        blockinfo_w,
+        contr_conf_r,
+        contr_conf_w,
+        get_receiver_hash,
         permissions::{may_load_any_permission, new_permission, update_permission},
-        set_receiver_hash, tkn_info_r, tkn_info_w, tkn_tot_supply_r, tkn_tot_supply_w,
+        set_receiver_hash,
+        tkn_info_r,
+        tkn_info_w,
+        tkn_tot_supply_r,
+        tkn_tot_supply_w,
         txhistory::{
-            append_new_owner, may_get_current_owner, store_burn, store_mint, store_transfer,
+            append_new_owner,
+            may_get_current_owner,
+            store_burn,
+            store_mint,
+            store_transfer,
         },
-        PREFIX_REVOKED_PERMITS, RESPONSE_BLOCK_SIZE,
+        PREFIX_REVOKED_PERMITS,
+        RESPONSE_BLOCK_SIZE,
     },
 };
 
-use shade_protocol::lb_libraries::lb_token::{
-    expiration::Expiration,
-    metadata::Metadata,
-    permissions::Permission,
-    state_structs::{
-        ContractConfig, CurateTokenId, StoredTokenInfo, TknConfig, TokenAmount, TokenInfoMsg,
+use shade_protocol::{
+    lb_libraries::lb_token::{
+        expiration::Expiration,
+        metadata::Metadata,
+        permissions::Permission,
+        s_toolkit::{
+            crypto::sha_256,
+            permit::RevokedPermits,
+            utils::space_pad,
+            viewing_key::{ViewingKey, ViewingKeyStore},
+        },
+        state_structs::{
+            ContractConfig,
+            CurateTokenId,
+            StoredTokenInfo,
+            TknConfig,
+            TokenAmount,
+            TokenInfoMsg,
+        },
     },
-};
-use shade_protocol::liquidity_book::lb_token::{
-    ExecuteAnswer, ExecuteMsg, InstantiateMsg, ResponseStatus::Success, SendAction, TransferAction,
+    liquidity_book::lb_token::{
+        ExecuteAnswer,
+        ExecuteMsg,
+        InstantiateMsg,
+        ResponseStatus::Success,
+        SendAction,
+        TransferAction,
+    },
 };
 /////////////////////////////////////////////////////////////////////////////////
 // Init
@@ -164,20 +190,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             msg,
             memo,
             padding: _,
-        } => try_send(
-            deps,
-            env,
-            info,
-            SendAction {
-                token_id,
-                from,
-                recipient,
-                recipient_code_hash,
-                amount,
-                msg,
-                memo,
-            },
-        ),
+        } => try_send(deps, env, info, SendAction {
+            token_id,
+            from,
+            recipient,
+            recipient_code_hash,
+            amount,
+            msg,
+            memo,
+        }),
         ExecuteMsg::BatchSend {
             actions,
             padding: _,
@@ -397,7 +418,7 @@ fn try_burn_tokens(
 
         if token_info_op.is_none() {
             return Err(StdError::generic_err(
-                "token_id does not exist. Cannot burn non-existent `token_ids`. Use `curate_token_ids` to create tokens on new `token_ids`"
+                "token_id does not exist. Cannot burn non-existent `token_ids`. Use `curate_token_ids` to create tokens on new `token_ids`",
             ));
         }
 
@@ -462,7 +483,7 @@ fn try_change_metadata(
             return Err(StdError::generic_err(format!(
                 "token_id {} does not exist",
                 token_id
-            )))
+            )));
         }
         Some(i) => i.token_config.flatten(),
     };
@@ -486,7 +507,7 @@ fn try_change_metadata(
             return Err(StdError::generic_err(format!(
                 "unable to change the metadata for token_id {}",
                 token_id
-            )))
+            )));
         }
         true => {
             let mut tkn_info = tkn_info_op.unwrap();
@@ -1212,14 +1233,14 @@ fn impl_transfer(
                 return Err(StdError::generic_err(format!(
                     "Allowance has expired: {}",
                     perm.trfer_allowance_exp
-                )))
+                )));
             }
             // not enough allowance to transfer amount
             Some(perm) if perm.trfer_allowance_perm < amount => {
                 return Err(StdError::generic_err(format!(
                     "Insufficient transfer allowance: {}",
                     perm.trfer_allowance_perm
-                )))
+                )));
             }
             // success, so need to reduce allowance
             Some(mut perm) if perm.trfer_allowance_perm >= amount => {
@@ -1246,7 +1267,7 @@ fn impl_transfer(
         true => {
             return Err(StdError::generic_err(
                 "These tokens do not exist or you have no permission to transfer",
-            ))
+            ));
         }
         false => (),
     }
@@ -1366,7 +1387,7 @@ fn exec_change_balance(
                 Err(_e) => {
                     return Err(StdError::generic_err(
                         "total supply exceeds max allowed of 2^128",
-                    ))
+                    ));
                 }
             };
             tkn_tot_supply_w(storage).save(token_info.token_id.as_bytes(), &new_amount)?;

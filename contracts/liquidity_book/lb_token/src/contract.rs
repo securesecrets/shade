@@ -20,12 +20,6 @@ use cosmwasm_std::{
     Timestamp,
     Uint256,
 };
-use secret_toolkit::{
-    crypto::sha_256,
-    permit::RevokedPermits,
-    utils::space_pad,
-    viewing_key::{ViewingKey, ViewingKeyStore},
-};
 
 use crate::state::{
     balances_r,
@@ -58,7 +52,6 @@ use crate::state::{
     RESPONSE_BLOCK_SIZE,
 };
 
-use secret_toolkit::permit::{validate, Permit, TokenPermissions};
 use shade_protocol::{
     lb_libraries::lb_token::{
         expiration::Expiration,
@@ -82,6 +75,12 @@ use shade_protocol::{
         SendAction,
         Snip1155ReceiveMsg,
         TransferAction,
+    },
+    s_toolkit::{
+        crypto::sha_256,
+        permit::{validate, Permit, RevokedPermits, TokenPermissions},
+        utils::space_pad,
+        viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };
 /////////////////////////////////////////////////////////////////////////////////

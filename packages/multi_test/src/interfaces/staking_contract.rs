@@ -78,6 +78,13 @@ pub fn claim_rewards(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> 
     }
 }
 
+pub fn recover_funds(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> StdResult<()> {
+    match (ExecuteMsg::RecoverFunds {}.test_exec(lb_staking, app, Addr::unchecked(sender), &[])) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
 pub fn register_reward_tokens(
     app: &mut App,
     sender: &str,

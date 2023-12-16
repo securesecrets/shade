@@ -57,6 +57,10 @@ pub struct Config {
     pub admin_auth: Contract,
     pub total_reward_bins: u32,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    pub epoch_staking_index: u64,
+    pub epoch_staking_duration: u64,
+    pub expiry_staking_duration: Option<u64>,
+    pub recover_staking_funds_receiver: Addr,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextPairKey> {

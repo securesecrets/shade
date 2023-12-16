@@ -14,10 +14,6 @@ use cosmwasm_std::{
     Timestamp,
     Uint256,
 };
-use secret_toolkit::{
-    permit::{validate, Permit, TokenPermissions},
-    viewing_key::{ViewingKey, ViewingKeyStore},
-};
 
 use crate::state::{
     balances_r,
@@ -37,6 +33,10 @@ use shade_protocol::{
         state_structs::OwnerBalance,
     },
     liquidity_book::lb_token::{QueryAnswer, QueryMsg, QueryWithPermit},
+    s_toolkit::{
+        permit::{validate, Permit, TokenPermissions},
+        viewing_key::{ViewingKey, ViewingKeyStore},
+    },
 };
 /////////////////////////////////////////////////////////////////////////////////
 // Queries

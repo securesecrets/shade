@@ -61,6 +61,7 @@ pub struct InstantiateMsg {
     pub epoch_duration: u64,
     pub expiry_duration: Option<u64>,
     pub first_reward_token: Option<RewardTokenCreate>,
+    pub recover_funds_receiver: Addr,
 }
 
 #[cw_serde]
@@ -82,12 +83,7 @@ pub enum ExecuteMsg {
         epoch_duration: Option<u64>,
         expiry_duration: Option<u64>,
     },
-    RecoverFunds {
-        token: TokenType,
-        amount: Uint128,
-        to: String,
-        msg: Option<Binary>,
-    },
+    RecoverFunds {},
     CreateViewingKey {
         entropy: String,
     },
@@ -189,6 +185,8 @@ pub struct RewardTokenInfo {
     pub reward_per_epoch: Uint128,
     pub start: u64,
     pub end: u64,
+    pub total_rewards: Uint128,
+    pub claimed_rewards: Uint128,
 }
 
 /// Manages the global state of the staking contract.
@@ -202,6 +200,7 @@ pub struct State {
     pub epoch_durations: u64,
     pub expiry_durations: Option<u64>,
     pub tx_id: u64,
+    pub recover_funds_receiver: Addr,
 }
 
 #[cw_serde]
