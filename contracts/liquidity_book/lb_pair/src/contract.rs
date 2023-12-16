@@ -2760,6 +2760,41 @@ fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binar
     .map_err(Error::CwErr)
 }
 
+fn query_bin_tree(deps: Deps, id: u32) -> Result<Binary> {
+    let bin_tree = BIN_TREE.load(deps.storage)?;
+
+    // let response = BinTreeResponse { total_supply };
+    to_binary(&bin_tree).map_err(Error::CwErr)
+}
+
+fn query_bin_map(deps: Deps, id: u32) -> Result<Binary> {
+    // TODO - iterate over bin tree to get all non-empty bins
+    // foreach bin id, load data from the bin_map
+    let tree = BIN_TREE.load(deps.storage)?;
+
+    let first_non_empty_bin = tree.find_first_right(id);
+    let mut ids = Vec::<u32>::default();
+
+    let mut id = first_non_empty_bin.clone();
+    while id != first_non_empty_bin {
+        id = tree.find_first_right(id);
+        ids.push(id);
+    }
+
+    let stuff = ids.into_iter()
+        .map(|id| (id, BIN_MAP.load(deps.storage, id).map_err(Error::CwErr).unwrap()))
+        .collect::<Vec<(u32, Bytes32)>>();
+
+    println!("{stuff:#?}");
+    
+    // let response = BinMapResponse { bin_map };
+    // to_binary(&response).map_err(Error::CwErr)
+
+    todo!()
+}
+
+// query all bins, query some bins, query one bin
+
 #[shd_entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     match (msg.id, msg.result) {
