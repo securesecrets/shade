@@ -7,7 +7,7 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-use lending_utils::{interest::ValidatedInterest, token::Token};
+use lending_utils::{interest::ValidatedInterest, token::Token, ViewingKey};
 
 pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
@@ -49,7 +49,7 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const VIEWING_KEY: Item<ViewingKey> = Item::new("viewing_key");
 
 pub mod debt {
     use super::*;

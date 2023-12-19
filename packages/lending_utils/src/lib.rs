@@ -5,3 +5,15 @@ pub mod interest;
 pub mod parse_reply;
 pub mod price;
 pub mod token;
+
+#[cosmwasm_schema::cw_serde]
+pub struct ViewingKey {
+    pub key: String,
+    pub address: String,
+}
+
+#[cosmwasm_schema::cw_serde]
+pub enum Authentication {
+    ViewingKey(ViewingKey),
+    Permit(shade_protocol::contract_interfaces::query_auth::QueryPermit),
+}

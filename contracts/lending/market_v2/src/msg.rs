@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
-    contract_interfaces::query_auth::QueryPermit,
     utils::{asset::Contract, Query},
 };
 
 use lending_utils::{
     interest::Interest,
+    Authentication,
     {coin::Coin, token::Token},
 };
 
@@ -94,12 +94,6 @@ pub enum CreditAgencyExecuteMsg {
 
 #[cw_serde]
 pub struct AuthPermit {}
-
-#[cw_serde]
-pub enum Authentication {
-    ViewingKey { key: String, address: String },
-    Permit(QueryPermit),
-}
 
 #[cw_serde]
 #[derive(QueryResponses)]

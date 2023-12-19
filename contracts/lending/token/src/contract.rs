@@ -14,7 +14,7 @@ use shade_protocol::{
 use crate::{
     error::ContractError,
     msg::{
-        AuthPermit, Authentication, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse,
+        AuthPermit, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse,
         InstantiateMsg, MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
     },
     state::{
@@ -23,12 +23,12 @@ use crate::{
         WITHDRAW_ADJUSTMENT,
     },
 };
-use lending_utils::amount::{base_to_token, token_to_base};
+use lending_utils::{amount::{base_to_token, token_to_base}, Authentication, ViewingKey};
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -55,7 +55,7 @@ pub fn instantiate(
     CONTROLLER.save(deps.storage, &msg.controller.into_valid(deps.api)?)?;
     MULTIPLIER.save(deps.storage, &Decimal::from_ratio(1u128, 100_000u128))?;
 
-    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
+    VIEWING_KEY.save(deps.storage, &ViewingKey { key: msg.viewing_key, address: env.contract.address.to_string() })?;
 
     Ok(Response::new())
 }
@@ -407,10 +407,11 @@ pub fn distribute(
 
     let withdrawable: u128 = distribution.withdrawable_total.into();
 
+    let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let balance = snip20::helpers::balance_query(
         &deps.querier,
-        env.contract.address.clone(),
-        VIEWING_KEY.load(deps.storage)?,
+        Addr::unchecked(viewing_key.address.clone()),
+        viewing_key.key,
         &distribution.denom.clone(),
     )?
     .u128();
@@ -544,10 +545,11 @@ pub fn query_distributed_funds(deps: Deps) -> StdResult<FundsResponse> {
 /// Handler for `QueryMsg::UndistributedFunds`
 pub fn query_undistributed_funds(deps: Deps, env: Env) -> StdResult<FundsResponse> {
     let distribution = DISTRIBUTION.load(deps.storage)?;
+    let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let balance = snip20::helpers::balance_query(
         &deps.querier,
-        env.contract.address,
-        VIEWING_KEY.load(deps.storage)?,
+        Addr::unchecked(viewing_key.address.clone()),
+        viewing_key.key,
         &distribution.denom.clone(),
     )?;
     Ok(FundsResponse {
@@ -573,11 +575,11 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
 
 pub fn authenticate(deps: Deps, auth: Authentication, account: Addr) -> StdResult<()> {
     match auth {
-        Authentication::ViewingKey { key, address } => {
-            let address = deps.api.addr_validate(&address)?;
+        Authentication::ViewingKey(vk) => {
+            let address = deps.api.addr_validate(&vk.address)?;
             if !authenticate_vk(
                 address.clone(),
-                key,
+                vk.key,
                 &deps.querier,
                 &QUERY_AUTH.load(deps.storage)?,
             )? {
