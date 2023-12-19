@@ -30,12 +30,6 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     CreateMarket(MarketConfig),
-    /// Tries to perform liquidation on passed account using collateral's denom. The native tokens
-    /// sent along with this message define the debt market.
-    Liquidate {
-        account: String,
-        collateral_denom: Token,
-    },
     /// Ensures a given account has entered a market. Meant to be called by a specific
     /// market contract - so the sender of the msg would be the market. The store is treated as a set.
     EnterMarket {
@@ -56,6 +50,8 @@ pub enum ExecuteMsg {
         max_collateral: Coin,
         /// How much of the loan is trying to be repaid
         amount_to_repay: Coin,
+        /// How much more of collateral will be used in swap then the estimated amount.
+        estimate_multiplier: Option<Decimal>,
     },
     /// Handles contract's logics that involves receiving Snip20 tokens.
     Receive(Snip20ReceiveMsg),
@@ -78,6 +74,8 @@ pub enum ExecuteMsg {
 
 #[cw_serde]
 pub enum ReceiveMsg {
+    /// Tries to perform liquidation on passed account using collateral's denom. The snip20 tokens
+    /// sent along with this message define the debt market.
     Liquidate {
         account: String,
         collateral_denom: Token,

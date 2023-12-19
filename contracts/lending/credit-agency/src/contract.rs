@@ -1,4 +1,5 @@
 #[cfg(not(feature = "library"))]
+use shade_protocol::c_std::shd_entry_point;
 use shade_protocol::{
     c_std::{
         to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
@@ -21,13 +22,13 @@ use lending_utils::token::Token;
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: Messageinfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     todo!();
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -37,49 +38,31 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        CreateMarket(market_cfg) => execute::create_market(deps, env, info, market_cfg),
-        Liquidate {
-            account,
-            collateral_denom,
-        } => {
-            let account = deps.api.addr_validate(&account)?;
-
-            // Assert that only one native denom was sent.
-            if info.funds.is_empty() || info.funds.len() != 1 {
-                return Err(ContractError::LiquidationOnlyOneDenomRequired {});
-            }
-
-            let coin = utils::coin::Coin::new(
-                info.funds[0].amount.u128(),
-                Token::Native(info.funds[0].denom.clone()),
-            );
-
-            execute::liquidate(deps, info.sender, account, coin, collateral_denom)
-        }
+        CreateMarket(market_cfg) => todo!(), // execute::create_market(deps, env, info, market_cfg),
         EnterMarket { account } => {
             let account = deps.api.addr_validate(&account)?;
-            execute::enter_market(deps, info, account)
+            todo!() //execute::enter_market(deps, info, account)
         }
         ExitMarket { market } => {
             let market = deps.api.addr_validate(&market)?;
-            execute::exit_market(deps, info, market)
+            todo!() //execute::exit_market(deps, info, market)
         }
         RepayWithCollateral {
             max_collateral,
             amount_to_repay,
             estimate_multiplier,
-        } => execute::repay_with_collateral(
-            deps,
-            info.sender,
-            max_collateral,
-            amount_to_repay,
-            estimate_multiplier,
-        ),
-        Receive(msg) => execute::receive_snip20_message(deps, env, info, msg),
-        AdjustMarketId { new_market_id } => restricted::adjust_market_id(deps, info, new_market_id),
-        AdjustTokenId { new_token_id } => restricted::adjust_token_id(deps, info, new_token_id),
+        } => todo!(), // execute::repay_with_collateral(
+        //     deps,
+        //     info.sender,
+        //     max_collateral,
+        //     amount_to_repay,
+        //     estimate_multiplier,
+        // ),
+        Receive(msg) => todo!(), //execute::receive_snip20_message(deps, env, info, msg),
+        AdjustMarketId { new_market_id } => todo!(), //restricted::adjust_market_id(deps, info, new_market_id),
+        AdjustTokenId { new_token_id } => todo!(), //restricted::adjust_token_id(deps, info, new_token_id),
         AdjustCommonToken { new_common_token } => {
-            restricted::adjust_common_token(deps, info, new_common_token)
+            todo!() //restricted::adjust_common_token(deps, info, new_common_token)
         }
     }
 }
