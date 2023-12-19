@@ -66,3 +66,36 @@ pub fn execute(
         }
     }
 }
+
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    use QueryMsg::*;
+
+    let res = match msg {
+        Configuration {} => to_binary(todo!() /*&CONFIG.load(deps.storage)?*/)?,
+        Market { market_token } => {
+            to_binary(todo!() /*&query::market(deps, &market_token)?*/)?
+        }
+        ListMarkets { start_after, limit } => {
+            to_binary(
+                todo!(), /*&query::list_markets(deps, start_after, limit)?*/
+            )?
+        }
+        TotalCreditLine { account } => {
+            to_binary(todo!() /*&query::total_credit_line(deps, account)?*/)?
+        }
+        ListEnteredMarkets {
+            account,
+            start_after,
+            limit,
+        } => to_binary(
+            todo!(), /*&query::entered_markets(deps, account, start_after, limit)?*/
+        )?,
+        IsOnMarket { account, market } => to_binary(
+            todo!(), /*&query::is_on_market(deps, account, market)?*/
+        )?,
+        Liquidation { account } => to_binary(todo!() /*&query::liquidation(deps, account)?*/)?,
+    };
+
+    Ok(res)
+}
