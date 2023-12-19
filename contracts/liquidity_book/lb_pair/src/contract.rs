@@ -1823,7 +1823,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
             id,
             page,
             page_size,
-        } => query_all_bins_reserves(deps, page, page_size, id),
+        } => query_all_bins_reserves(deps, env, page, page_size, id),
         QueryMsg::GetUpdatedBinAtHeight { height } => query_updated_bins_at_height(deps, height),
         QueryMsg::GetUpdatedBinAtMultipleHeights { heights } => {
             query_updated_bins_at_multiple_heights(deps, heights)
@@ -2113,6 +2113,7 @@ fn query_active_id(deps: Deps) -> Result<Binary> {
 /// * `bin_reserve_y` - The reserve of token Y in the bin
 fn query_all_bins_reserves(
     deps: Deps,
+    env: Env,
     page: Option<u32>,
     page_size: Option<u32>,
     id: Option<u32>,
@@ -2155,6 +2156,7 @@ fn query_all_bins_reserves(
     let response = AllBinsResponse {
         reserves: bin_responses,
         last_id: id,
+        last_block_height: env.block.height,
     };
     to_binary(&response).map_err(Error::CwErr)
 }

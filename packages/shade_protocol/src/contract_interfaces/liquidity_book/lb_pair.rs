@@ -322,6 +322,7 @@ pub struct BinsResponse(pub Vec<BinResponse>);
 pub struct AllBinsResponse {
     pub reserves: Vec<BinResponse>,
     pub last_id: u32,
+    pub last_block_height: u64,
 }
 
 #[cw_serde]
