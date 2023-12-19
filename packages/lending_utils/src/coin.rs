@@ -1,6 +1,9 @@
+use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
+use thiserror::Error;
+
 use std::{convert::From, ops::Mul};
 
 use crate::token::Token;
@@ -59,8 +62,11 @@ pub fn coin_cw20(amount: u128, info: ContractInfo) -> Coin {
     Coin::new(amount, Token::new_cw20(info))
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CoinError {
+    #[error(
+       "Operation {operation} is not allowed, because denoms does not match: {denom1:?} {denom2:?}"
+    )]
     IncorrectDenoms {
         operation: String,
         denom1: Token,

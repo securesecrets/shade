@@ -49,7 +49,6 @@ impl Token {
         }
     }
 
-
     /// Checks i token is cw20
     pub fn is_cw20(&self) -> bool {
         matches!(self, Token::Cw20(_))

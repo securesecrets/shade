@@ -1,4 +1,4 @@
-#! https://github.com/CosmWasm/cw-utils/blob/3d9c9dd64080d441b2484e036eb75a602526384f/src/parse_reply.rs
+#! https: //github.com/CosmWasm/cw-utils/blob/3d9c9dd64080d441b2484e036eb75a602526384f/src/parse_reply.rs
 
 use thiserror::Error;
 
