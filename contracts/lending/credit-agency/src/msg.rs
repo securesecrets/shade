@@ -110,3 +110,69 @@ pub struct MarketConfig {
     /// Defines the portion of borrower interest that is converted into reserves (0 <= x <= 1)
     pub reserve_factor: Decimal,
 }
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    /// Returns current configuration
+    #[returns(crate::state::Config)]
+    Configuration {},
+    /// Queries a market address by market token
+    #[returns(MarketResponse)]
+    Market { market_token: Token },
+    /// List all base assets and the addresses of markets handling them.
+    /// Pagination by base asset
+    #[returns(ListMarketsResponse)]
+    ListMarkets {
+        start_after: Option<Token>,
+        limit: Option<u32>,
+    },
+    /// Queries all markets for credit lines for particular account
+    /// and returns sum of all of them.
+    #[returns(utils::credit_line::CreditLineResponse)]
+    TotalCreditLine { account: String },
+    /// Lists all markets which address entered. Pagination by market contract address. Mostly for
+    /// verification purposes, but may be useful to verify if there are some obsolete markets to
+    /// leave.
+    #[returns(ListEnteredMarketsResponse)]
+    ListEnteredMarkets {
+        account: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    /// Checks if account is a member of particular market. Useful to ensure if the account is
+    /// included in market before leaving it (to not waste tokens on obsolete call).
+    #[returns(IsOnMarketResponse)]
+    IsOnMarket { account: String, market: String },
+    /// Checks if the given account is liquidatable and returns the necessary information to do so.
+    #[returns(LiquidationResponse)]
+    Liquidation { account: String },
+}
+
+#[cw_serde]
+pub struct MarketResponse {
+    pub market_token: Token,
+    pub market: Addr,
+}
+
+#[cw_serde]
+pub struct ListMarketsResponse {
+    pub markets: Vec<MarketResponse>,
+}
+
+#[cw_serde]
+pub struct ListEnteredMarketsResponse {
+    pub markets: Vec<Addr>,
+}
+
+#[cw_serde]
+pub struct IsOnMarketResponse {
+    pub participating: bool,
+}
+
+#[cw_serde]
+pub struct LiquidationResponse {
+    pub can_liquidate: bool,
+    pub debt: Vec<(Addr, Coin)>,
+    pub collateral: Vec<(Addr, Coin)>,
+}
