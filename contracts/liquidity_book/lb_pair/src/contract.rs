@@ -64,7 +64,7 @@ use shade_protocol::{
     utils::asset::RawContract,
     Contract,
 };
-use std::{collections::HashMap, ops::Sub};
+use std::{collections::HashMap, ops::Sub, vec};
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const INSTANTIATE_STAKING_CONTRACT_REPLY_ID: u64 = 2u64;
@@ -162,7 +162,7 @@ pub fn instantiate(
 
     match msg.total_reward_bins {
         Some(t_r_b) => {
-            if { t_r_b == U24::MAX } {
+            if t_r_b == U24::MAX {
                 return Err(Error::InvalidInput {});
             }
         }
@@ -392,6 +392,7 @@ fn try_swap(
     let token_x = state.token_x;
     let token_y = state.token_y;
 
+    let mut ids = Vec::new();
     let reserves = state.reserves;
     let mut protocol_fees = state.protocol_fees;
     let mut total_fees: [u8; 32] = [0; 32];
@@ -474,10 +475,10 @@ fn try_swap(
                     };
 
                     reward_stats.cumm_value += swap_value_uint256;
-                    let mut fee_map_tree = FEE_MAP_TREE.update(
+                    FEE_MAP_TREE.update(
                         deps.storage,
                         state.rewards_epoch_id,
-                        |mut fee_tree| -> Result<_> {
+                        |fee_tree| -> Result<_> {
                             Ok(match fee_tree {
                                 Some(mut t) => {
                                     t.add(active_id);
@@ -486,9 +487,9 @@ fn try_swap(
                                 None => panic!("Fee tree not initialized"),
                             })
                         },
-                    );
+                    )?;
 
-                    FEE_MAP.update(deps.storage, active_id, |mut cumm_fee| -> Result<_> {
+                    FEE_MAP.update(deps.storage, active_id, |cumm_fee| -> Result<_> {
                         let updated_cumm_fee = match cumm_fee {
                             Some(f) => f + swap_value_uint256,
                             None => swap_value_uint256,
@@ -518,6 +519,7 @@ fn try_swap(
                         .add(amounts_in_with_fees) // actually amount in wihtout fees
                         .sub(amounts_out_of_bin),
                 )?;
+                ids.push(active_id);
             }
         }
 
@@ -574,6 +576,16 @@ fn try_swap(
             messages.push(message);
         }
     }
+
+    BIN_RESERVES_UPDATED.update(deps.storage, env.block.height, |x| -> StdResult<Vec<u32>> {
+        if let Some(mut y) = x {
+            y.extend(ids);
+            Ok(y)
+        } else {
+            Ok(ids)
+        }
+    })?;
+    BIN_RESERVES_UPDATED_LOG.push(deps.storage, &env.block.height)?;
 
     Ok(Response::new()
         .add_messages(messages)
@@ -662,7 +674,7 @@ pub fn try_add_liquidity(
 }
 
 pub fn add_liquidity_internal(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     config: &State,
@@ -700,9 +712,9 @@ pub fn add_liquidity_internal(
         };
     }
 
-    let (amounts_deposited, amounts_left, liquidity_minted, response) = mint(
-        deps,
-        env,
+    let (amounts_deposited, amounts_left, _liquidity_minted, response) = mint(
+        &mut deps,
+        &env,
         info.clone(),
         config,
         info.sender.clone(),
@@ -730,13 +742,23 @@ pub fn add_liquidity_internal(
     let _amount_x_left = Uint128::from(amounts_left.decode_x());
     let _amount_y_left = Uint128::from(amounts_left.decode_y());
 
-    let liq_minted: Vec<Uint256> = liquidity_minted
-        .iter()
-        .map(|&liq| liq.u256_to_uint256())
-        .collect();
+    // let liq_minted: Vec<Uint256> = liquidity_minted
+    //     .iter()
+    //     .map(|&liq| liq.u256_to_uint256())
+    //     .collect();
 
-    let _deposit_ids_string = serialize_or_err(&deposit_ids)?;
-    let _liquidity_minted_string = serialize_or_err(&liq_minted)?;
+    // let _deposit_ids_string = serialize_or_err(&deposit_ids)?;
+    BIN_RESERVES_UPDATED.update(deps.storage, env.block.height, |x| -> StdResult<Vec<u32>> {
+        if let Some(mut y) = x {
+            y.extend(deposit_ids);
+            Ok(y)
+        } else {
+            Ok(deposit_ids)
+        }
+    })?;
+    BIN_RESERVES_UPDATED_LOG.push(deps.storage, &env.block.height)?;
+
+    // let _liquidity_minted_string = serialize_or_err(&liq_minted)?;
 
     // response = response
     //     .add_attribute("amount_x_added", amount_x_added)
@@ -829,8 +851,8 @@ fn calculate_id(
 /// * `liquidity_minted` - The amounts of LB tokens minted for each bin
 #[allow(clippy::too_many_arguments)]
 fn mint(
-    mut deps: DepsMut,
-    env: Env,
+    mut deps: &mut DepsMut,
+    env: &Env,
     info: MessageInfo,
     config: &State,
     to: Addr,
@@ -1228,7 +1250,7 @@ pub fn remove_liquidity(
 /// * `amounts` - The amounts of token X and token Y received by the user
 fn burn(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     ids: Vec<u32>,
     amounts_to_burn: Vec<Uint256>,
@@ -1330,6 +1352,16 @@ fn burn(
         state.reserves = state.reserves.sub(amounts_out);
         Ok(state)
     })?;
+
+    BIN_RESERVES_UPDATED.update(deps.storage, env.block.height, |x| -> StdResult<Vec<u32>> {
+        if let Some(mut y) = x {
+            y.extend(ids);
+            Ok(y)
+        } else {
+            Ok(ids)
+        }
+    })?;
+    BIN_RESERVES_UPDATED_LOG.push(deps.storage, &env.block.height)?;
 
     if let Some(msgs) = raw_msgs {
         messages.extend(msgs)
@@ -1785,7 +1817,27 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetBinStep {} => query_bin_step(deps),
         QueryMsg::GetReserves {} => query_reserves(deps),
         QueryMsg::GetActiveId {} => query_active_id(deps),
-        QueryMsg::GetBin { id } => query_bin(deps, id),
+        QueryMsg::GetBinReserves { id } => query_bin_reserves(deps, id),
+        QueryMsg::GetBinsReserves { ids } => query_bins_reserves(deps, ids),
+        QueryMsg::GetAllBinsReserves {
+            id,
+            page,
+            page_size,
+        } => query_all_bins_reserves(deps, page, page_size, id),
+        QueryMsg::GetUpdatedBinAtHeight { height } => query_updated_bins_at_height(deps, height),
+        QueryMsg::GetUpdatedBinAtMultipleHeights { heights } => {
+            query_updated_bins_at_multiple_heights(deps, heights)
+        }
+        QueryMsg::GetUpdatedBinAfterHeight {
+            height,
+            page,
+            page_size,
+        } => query_updated_bins_after_height(deps, height, page, page_size),
+
+        QueryMsg::GetBinUpdatingHeights { page, page_size } => {
+            query_bins_updating_heights(deps, page, page_size)
+        }
+
         QueryMsg::GetNextNonEmptyBin { swap_for_y, id } => {
             query_next_non_empty_bin(deps, swap_for_y, id)
         }
@@ -1847,17 +1899,14 @@ fn query_pair_info(deps: Deps) -> Result<Binary> {
                 denom: 1_000_000_000_000_000_000,
             },
             shade_dao_fee: Fee {
-                // TODO set this
                 nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
                 denom: 1_000_000_000_000_000_000,
             },
             stable_lp_fee: Fee {
-                // TODO set this
                 nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
                 denom: 1_000_000_000_000_000_000,
             },
             stable_shade_dao_fee: Fee {
-                // TODO set this
                 nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
                 denom: 1_000_000_000_000_000_000,
             },
@@ -2062,13 +2111,175 @@ fn query_active_id(deps: Deps) -> Result<Binary> {
 ///
 /// * `bin_reserve_x` - The reserve of token X in the bin
 /// * `bin_reserve_y` - The reserve of token Y in the bin
-fn query_bin(deps: Deps, id: u32) -> Result<Binary> {
+fn query_all_bins_reserves(
+    deps: Deps,
+    page: Option<u32>,
+    page_size: Option<u32>,
+    id: Option<u32>,
+) -> Result<Binary> {
+    let page = page.unwrap_or(0);
+    let page_size = page_size.unwrap_or(10);
+
+    let mut id = id.unwrap_or(0u32);
+    let mut bin_responses = Vec::new();
+    let tree = BIN_TREE.load(deps.storage)?;
+    let total = if page > 0 {
+        page * page_size
+    } else {
+        page_size
+    };
+
+    let mut counter: u32 = 0;
+
+    loop {
+        let next_id = tree.find_first_left(id);
+        id = next_id;
+
+        if next_id == 0 || next_id == U24::MAX {
+            break;
+        }
+
+        let (bin_reserve_x, bin_reserve_y) =
+            BIN_MAP.load(deps.storage, id).unwrap_or_default().decode();
+        bin_responses.push(BinResponse {
+            bin_reserve_x,
+            bin_reserve_y,
+            bin_id: id,
+        });
+        counter += 1;
+
+        if counter == total {
+            break;
+        }
+    }
+    let response = AllBinsResponse {
+        reserves: bin_responses,
+        last_id: id,
+    };
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+/// Returns the reserves of many bins.
+///
+/// # Arguments
+///
+/// * `id` - The id of the bin
+///
+/// # Returns
+///
+/// * `bin_reserve_x` - The reserve of token X in the bin
+/// * `bin_reserve_y` - The reserve of token Y in the bin
+fn query_bins_reserves(deps: Deps, ids: Vec<u32>) -> Result<Binary> {
+    let mut bin_responses = Vec::new();
+    for id in ids {
+        let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
+        let (bin_reserve_x, bin_reserve_y) = bin.decode();
+        bin_responses.push(BinResponse {
+            bin_reserve_x,
+            bin_reserve_y,
+            bin_id: id,
+        });
+    }
+
+    to_binary(&bin_responses).map_err(Error::CwErr)
+}
+
+fn query_updated_bins_at_height(deps: Deps, height: u64) -> Result<Binary> {
+    let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
+
+    let response: UpdatedBinsAtHeightResponse = UpdatedBinsAtHeightResponse { height, ids };
+
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+fn query_updated_bins_at_multiple_heights(deps: Deps, heights: Vec<u64>) -> Result<Binary> {
+    let mut updates = Vec::new();
+    for height in heights {
+        let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
+        updates.push(UpdatedBinsAtHeightResponse { height, ids });
+    }
+
+    let response: UpdatedBinsAtMultipleHeightResponse =
+        UpdatedBinsAtMultipleHeightResponse(updates);
+
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+fn query_bins_updating_heights(
+    deps: Deps,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Result<Binary> {
+    let page = page.unwrap_or(0);
+    let page_size = page_size.unwrap_or(10);
+    let txs: StdResult<Vec<u64>> = BIN_RESERVES_UPDATED_LOG
+        .iter(deps.storage)?
+        .rev()
+        .skip((page * page_size) as usize)
+        .take(page_size as usize)
+        .collect();
+
+    let response = BinUpdatingHeightsResponse(txs?);
+
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+fn query_updated_bins_after_height(
+    deps: Deps,
+    height: u64,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Result<Binary> {
+    let page = page.unwrap_or(0);
+    let page_size = page_size.unwrap_or(10);
+
+    let heights: StdResult<Vec<u64>> = BIN_RESERVES_UPDATED_LOG
+        .iter(deps.storage)?
+        .rev()
+        .skip((page * page_size) as usize)
+        .take_while(|result| match result {
+            Ok(h) => {
+                if &height >= h {
+                    false
+                } else {
+                    true
+                }
+            }
+            Err(_) => todo!(),
+        })
+        .take(page_size as usize)
+        .collect();
+
+    let mut updates = Vec::new();
+    for height in heights? {
+        let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
+        updates.push(UpdatedBinsAtHeightResponse { height, ids });
+    }
+
+    let response = UpdatedBinsAfterHeightResponse(updates);
+
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+/// Returns the bins changed after that block height
+///
+/// # Arguments
+///
+/// * `id` - The id of the bin
+///
+/// # Returns
+///
+/// * `bin_reserve_x` - The reserve of token X in the bin
+/// * `bin_reserve_y` - The reserve of token Y in the bin
+
+fn query_bin_reserves(deps: Deps, id: u32) -> Result<Binary> {
     let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
     let (bin_reserve_x, bin_reserve_y) = bin.decode();
 
     let response = BinResponse {
         bin_reserve_x,
         bin_reserve_y,
+        bin_id: id,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -2433,7 +2644,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
     let mut amounts_in_left = Bytes32::encode_alt(amount_in, swap_for_y);
     let mut amounts_out = [0u8; 32];
     let _fee = 0u128;
-    let mut fee = 0u128;
+    let mut _fee = 0u128;
     let mut total_fees: [u8; 32] = [0; 32];
     let mut lp_fees: [u8; 32] = [0; 32];
     let mut shade_dao_fees: [u8; 32] = [0; 32];

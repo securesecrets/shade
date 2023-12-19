@@ -134,7 +134,8 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -217,7 +218,8 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     let mut total: Vec<U256> = vec![U256::ZERO; total_bins as usize];
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -404,7 +406,8 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -539,7 +542,8 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -683,7 +687,8 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);

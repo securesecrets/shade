@@ -1519,7 +1519,8 @@ fn query_id_balance() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -1586,7 +1587,8 @@ fn query_balance() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -1668,7 +1670,8 @@ fn query_all_balance() -> Result<(), anyhow::Error> {
 
     for owner_balance in balances {
         let id = owner_balance.token_id.parse().unwrap();
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);

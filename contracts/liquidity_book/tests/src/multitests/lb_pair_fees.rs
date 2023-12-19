@@ -2832,7 +2832,8 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -2994,7 +2995,8 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -3162,7 +3164,8 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         None,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);

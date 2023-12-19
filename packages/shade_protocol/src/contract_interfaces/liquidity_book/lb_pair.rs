@@ -165,7 +165,33 @@ pub enum QueryMsg {
     #[returns(ActiveIdResponse)]
     GetActiveId {},
     #[returns(BinResponse)]
-    GetBin { id: u32 },
+    GetBinReserves { id: u32 },
+    #[returns(BinsResponse)]
+    GetBinsReserves { ids: Vec<u32> },
+    #[returns(AllBinsResponse)]
+    GetAllBinsReserves {
+        id: Option<u32>,
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+    #[returns(UpdatedBinsAtHeightResponse)]
+    GetUpdatedBinAtHeight { height: u64 },
+    #[returns(UpdatedBinsAtMultipleHeightResponse)]
+    GetUpdatedBinAtMultipleHeights { heights: Vec<u64> },
+
+    #[returns(UpdatedBinsAfterHeightResponse)]
+    GetUpdatedBinAfterHeight {
+        height: u64,
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+
+    #[returns(BinUpdatingHeightsResponse)]
+    GetBinUpdatingHeights {
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+
     #[returns(NextNonEmptyBinResponse)]
     GetNextNonEmptyBin { swap_for_y: bool, id: u32 },
     #[returns(ProtocolFeesResponse)]
@@ -270,8 +296,32 @@ pub struct ActiveIdResponse {
 
 #[cw_serde]
 pub struct BinResponse {
+    pub bin_id: u32,
     pub bin_reserve_x: u128,
     pub bin_reserve_y: u128,
+}
+
+#[cw_serde]
+pub struct UpdatedBinsAtHeightResponse {
+    pub height: u64,
+    pub ids: Vec<u32>,
+}
+
+#[cw_serde]
+pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
+
+#[cw_serde]
+pub struct UpdatedBinsAfterHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
+#[cw_serde]
+pub struct BinUpdatingHeightsResponse(pub Vec<u64>);
+
+#[cw_serde]
+pub struct BinsResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct AllBinsResponse {
+    pub reserves: Vec<BinResponse>,
+    pub last_id: u32,
 }
 
 #[cw_serde]

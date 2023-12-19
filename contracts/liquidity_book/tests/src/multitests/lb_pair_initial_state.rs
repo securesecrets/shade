@@ -122,7 +122,8 @@ pub fn test_fuzz_query_bin() -> Result<(), anyhow::Error> {
 
     let id = generate_random(0, U24::MAX);
 
-    let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+    let (reserves_x, reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
 
     assert_eq!(reserves_x, 0u128);
     assert_eq!(reserves_y, 0u128);

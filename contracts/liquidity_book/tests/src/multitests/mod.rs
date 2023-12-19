@@ -5,6 +5,9 @@ pub mod lb_factory;
 pub mod lb_pair_initial_state;
 
 #[cfg(test)]
+pub mod lb_pair_queries;
+
+#[cfg(test)]
 mod lb_pair_liquidity;
 
 #[cfg(test)]

@@ -152,7 +152,8 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
 
         match id.cmp(&ACTIVE_ID) {
             Ordering::Less => {
@@ -289,7 +290,8 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
 
         match id.cmp(&ACTIVE_ID) {
             Ordering::Less => {

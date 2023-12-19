@@ -26,9 +26,11 @@ pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats")
 pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution"); //?
 pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); //?
 pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
-
 pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo, Bincode2> =
     Item::new("staking_contract_impl");
+pub const BIN_RESERVES_UPDATED: Map<u64, Vec<u32>, Bincode2> = Map::new("bins_reserves_updated");
+pub const BIN_RESERVES_UPDATED_LOG: AppendStore<u64, Bincode2> =
+    AppendStore::new("bins_reserves_updated_log"); //?
 
 #[cw_serde]
 pub struct RewardStats {

@@ -4,10 +4,12 @@ use shade_protocol::{
     contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
+        BinResponse,
         LiquidityParameters,
         RemoveLiquidity,
         RewardsDistribution,
         RewardsDistributionAlgorithm,
+        UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
     swap::core::TokenType,
@@ -241,13 +243,14 @@ pub fn query_staking_contract(app: &App, lb_pair: &ContractInfo) -> StdResult<Co
     Ok(staking_contract)
 }
 
-pub fn bin_query(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {
-    let res = lb_pair::QueryMsg::GetBin { id }.test_query(lb_pair, app)?;
+pub fn bin_query(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128, u32)> {
+    let res = lb_pair::QueryMsg::GetBinReserves { id }.test_query(lb_pair, app)?;
     let lb_pair::BinResponse {
         bin_reserve_x,
         bin_reserve_y,
+        bin_id,
     } = res;
-    Ok((bin_reserve_x, bin_reserve_y))
+    Ok((bin_reserve_x, bin_reserve_y, bin_id))
 }
 
 pub fn swap_in_query(
@@ -373,6 +376,56 @@ pub fn query_active_id(app: &App, lb_pair: &ContractInfo) -> StdResult<u32> {
     Ok(active_id)
 }
 
+pub fn query_all_bins_updated(
+    app: &App,
+    lb_pair: &ContractInfo,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<Vec<u64>> {
+    let res =
+        lb_pair::QueryMsg::GetBinUpdatingHeights { page, page_size }.test_query(lb_pair, app)?;
+    let lb_pair::BinUpdatingHeightsResponse(heights) = res;
+    Ok(heights)
+}
+
+pub fn query_updated_bins_at_height(
+    app: &App,
+    lb_pair: &ContractInfo,
+    height: u64,
+) -> StdResult<(u64, Vec<u32>)> {
+    let res = lb_pair::QueryMsg::GetUpdatedBinAtHeight { height }.test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAtHeightResponse { height, ids } = res;
+    Ok((height, ids))
+}
+
+pub fn query_updated_bins_at_multiple_heights(
+    app: &App,
+    lb_pair: &ContractInfo,
+    heights: Vec<u64>,
+) -> StdResult<Vec<UpdatedBinsAtHeightResponse>> {
+    let res =
+        lb_pair::QueryMsg::GetUpdatedBinAtMultipleHeights { heights }.test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAtMultipleHeightResponse(v) = res;
+    Ok(v)
+}
+
+pub fn query_updated_bins_after_multiple_heights(
+    app: &App,
+    lb_pair: &ContractInfo,
+    height: u64,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<Vec<UpdatedBinsAtHeightResponse>> {
+    let res = lb_pair::QueryMsg::GetUpdatedBinAfterHeight {
+        height,
+        page,
+        page_size,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAfterHeightResponse(v) = res;
+    Ok(v)
+}
+
 pub fn query_rewards_distribution(
     app: &App,
     lb_pair: &ContractInfo,
@@ -383,13 +436,45 @@ pub fn query_rewards_distribution(
     Ok(distribution)
 }
 
-pub fn query_bin(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {
-    let res = lb_pair::QueryMsg::GetBin { id }.test_query(lb_pair, app)?;
+pub fn query_bin_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    id: u32,
+) -> StdResult<(u128, u128, u32)> {
+    let res = lb_pair::QueryMsg::GetBinReserves { id }.test_query(lb_pair, app)?;
     let lb_pair::BinResponse {
         bin_reserve_x,
         bin_reserve_y,
+        bin_id,
     } = res;
-    Ok((bin_reserve_x, bin_reserve_y))
+    Ok((bin_reserve_x, bin_reserve_y, bin_id))
+}
+
+pub fn query_bins_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    ids: Vec<u32>,
+) -> StdResult<(Vec<BinResponse>)> {
+    let res = lb_pair::QueryMsg::GetBinsReserves { ids }.test_query(lb_pair, app)?;
+    let lb_pair::BinsResponse(reserves) = res;
+    Ok(reserves)
+}
+
+pub fn query_all_bins_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    id: Option<u32>,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<(Vec<BinResponse>, u32)> {
+    let res = lb_pair::QueryMsg::GetAllBinsReserves {
+        id,
+        page,
+        page_size,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::AllBinsResponse { reserves, last_id } = res;
+    Ok((reserves, last_id))
 }
 
 pub fn query_next_non_empty_bin(

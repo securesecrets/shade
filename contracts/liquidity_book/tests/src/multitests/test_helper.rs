@@ -379,6 +379,19 @@ pub fn setup(
     Ok((app, lb_factory, deployed_contracts))
 }
 
+pub fn roll_blockchain(app: &mut App, blocks: Option<u64>) {
+    app.set_block(BlockInfo {
+        height: app.block_info().height + blocks.unwrap_or(1),
+        time: Timestamp::from_seconds(
+            parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string())
+                .unwrap()
+                .timestamp() as u64,
+        ),
+        chain_id: "chain_id".to_string(),
+        random: None,
+    });
+}
+
 pub fn extract_contract_info(
     deployed_contracts: &DeployedContracts,
     symbol: &str,
