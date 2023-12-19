@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, Decimal, Uint128},
-    contraact_interfaces::snip20::Snip20ReceiveMsg,
+    contract_interfaces::snip20::Snip20ReceiveMsg,
 };
 
 use lending_utils::{coin::Coin, interest::Interest, token::Token};
@@ -129,7 +129,7 @@ pub enum QueryMsg {
     },
     /// Queries all markets for credit lines for particular account
     /// and returns sum of all of them.
-    #[returns(utils::credit_line::CreditLineResponse)]
+    #[returns(lending_utils::credit_line::CreditLineResponse)]
     TotalCreditLine { account: String },
     /// Lists all markets which address entered. Pagination by market contract address. Mostly for
     /// verification purposes, but may be useful to verify if there are some obsolete markets to

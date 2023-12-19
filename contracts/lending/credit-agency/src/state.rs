@@ -7,6 +7,8 @@ use shade_protocol::{
 
 use lending_utils::token::Token;
 
+use std::collections::BTreeSet;
+
 #[cw_serde]
 pub struct Config {
     /// The address that controls the credit agency and can set up markets
