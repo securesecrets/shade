@@ -1832,7 +1832,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
             height,
             page,
             page_size,
-        } => query_updated_bins_after_height(deps, height, page, page_size),
+        } => query_updated_bins_after_height(deps, env, height, page, page_size),
 
         QueryMsg::GetBinUpdatingHeights { page, page_size } => {
             query_bins_updating_heights(deps, page, page_size)
@@ -2156,7 +2156,7 @@ fn query_all_bins_reserves(
     let response = AllBinsResponse {
         reserves: bin_responses,
         last_id: id,
-        last_block_height: env.block.height,
+        current_block_height: env.block.height,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -2189,20 +2189,102 @@ fn query_bins_reserves(deps: Deps, ids: Vec<u32>) -> Result<Binary> {
 fn query_updated_bins_at_height(deps: Deps, height: u64) -> Result<Binary> {
     let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
 
-    let response: UpdatedBinsAtHeightResponse = UpdatedBinsAtHeightResponse { height, ids };
+    let mut bin_responses = Vec::new();
+
+    for id in ids {
+        let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
+        let (bin_reserve_x, bin_reserve_y) = bin.decode();
+        bin_responses.push(BinResponse {
+            bin_reserve_x,
+            bin_reserve_y,
+            bin_id: id,
+        });
+    }
+
+    let response: UpdatedBinsAtHeightResponse = UpdatedBinsAtHeightResponse(bin_responses);
 
     to_binary(&response).map_err(Error::CwErr)
 }
 
+use std::collections::HashSet;
+
 fn query_updated_bins_at_multiple_heights(deps: Deps, heights: Vec<u64>) -> Result<Binary> {
-    let mut updates = Vec::new();
+    let mut bin_responses = Vec::new();
+    let mut processed_ids = HashSet::new();
+
     for height in heights {
         let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
-        updates.push(UpdatedBinsAtHeightResponse { height, ids });
+
+        for id in ids {
+            // Check if the id has already been processed
+            if processed_ids.insert(id) {
+                let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
+                let (bin_reserve_x, bin_reserve_y) = bin.decode();
+                bin_responses.push(BinResponse {
+                    bin_reserve_x,
+                    bin_reserve_y,
+                    bin_id: id,
+                });
+            }
+        }
     }
 
     let response: UpdatedBinsAtMultipleHeightResponse =
-        UpdatedBinsAtMultipleHeightResponse(updates);
+        UpdatedBinsAtMultipleHeightResponse(bin_responses);
+
+    to_binary(&response).map_err(Error::CwErr)
+}
+
+fn query_updated_bins_after_height(
+    deps: Deps,
+    env: Env,
+    height: u64,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> Result<Binary> {
+    let page = page.unwrap_or(0);
+    let page_size = page_size.unwrap_or(10);
+    let mut processed_ids = HashSet::new();
+
+    let heights: StdResult<Vec<u64>> = BIN_RESERVES_UPDATED_LOG
+        .iter(deps.storage)?
+        .rev()
+        .skip((page * page_size) as usize)
+        .take_while(|result| match result {
+            Ok(h) => {
+                if &height >= h {
+                    false
+                } else {
+                    true
+                }
+            }
+            Err(_) => todo!(),
+        })
+        .take(page_size as usize)
+        .collect();
+
+    let mut bin_responses = Vec::new();
+
+    for height in heights? {
+        let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
+
+        for id in ids {
+            if processed_ids.insert(id) {
+                let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
+                let (bin_reserve_x, bin_reserve_y) = bin.decode();
+                bin_responses.push(BinResponse {
+                    bin_reserve_x,
+                    bin_reserve_y,
+                    bin_id: id,
+                });
+            }
+        }
+    }
+
+    let response = UpdatedBinsAfterHeightResponse {
+        bins: bin_responses,
+        current_block_height: env.block.height,
+    };
 
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -2222,43 +2304,6 @@ fn query_bins_updating_heights(
         .collect();
 
     let response = BinUpdatingHeightsResponse(txs?);
-
-    to_binary(&response).map_err(Error::CwErr)
-}
-
-fn query_updated_bins_after_height(
-    deps: Deps,
-    height: u64,
-    page: Option<u32>,
-    page_size: Option<u32>,
-) -> Result<Binary> {
-    let page = page.unwrap_or(0);
-    let page_size = page_size.unwrap_or(10);
-
-    let heights: StdResult<Vec<u64>> = BIN_RESERVES_UPDATED_LOG
-        .iter(deps.storage)?
-        .rev()
-        .skip((page * page_size) as usize)
-        .take_while(|result| match result {
-            Ok(h) => {
-                if &height >= h {
-                    false
-                } else {
-                    true
-                }
-            }
-            Err(_) => todo!(),
-        })
-        .take(page_size as usize)
-        .collect();
-
-    let mut updates = Vec::new();
-    for height in heights? {
-        let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
-        updates.push(UpdatedBinsAtHeightResponse { height, ids });
-    }
-
-    let response = UpdatedBinsAfterHeightResponse(updates);
 
     to_binary(&response).map_err(Error::CwErr)
 }

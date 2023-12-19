@@ -302,16 +302,16 @@ pub struct BinResponse {
 }
 
 #[cw_serde]
-pub struct UpdatedBinsAtHeightResponse {
-    pub height: u64,
-    pub ids: Vec<u32>,
+pub struct UpdatedBinsAtHeightResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct UpdatedBinsAfterHeightResponse {
+    pub bins: Vec<BinResponse>,
+    pub current_block_height: u64,
 }
-
-#[cw_serde]
-pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
-
-#[cw_serde]
-pub struct UpdatedBinsAfterHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
 #[cw_serde]
 pub struct BinUpdatingHeightsResponse(pub Vec<u64>);
 
@@ -322,7 +322,7 @@ pub struct BinsResponse(pub Vec<BinResponse>);
 pub struct AllBinsResponse {
     pub reserves: Vec<BinResponse>,
     pub last_id: u32,
-    pub last_block_height: u64,
+    pub current_block_height: u64,
 }
 
 #[cw_serde]

@@ -329,8 +329,7 @@ pub fn test_query_bins_reserves() -> Result<(), anyhow::Error> {
 
         assert!(balance > Uint256::MIN, "test_sample_mint::9");
     }
-    println!("ids: {:?}", ids);
-    println!("reserves: {:?}", reserves);
+
     Ok(())
 }
 
@@ -352,14 +351,14 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
         ids.push(id);
     }
 
-    let (multiple_reserves, last_id) =
+    let (multiple_reserves, last_id, _) =
         lb_pair::query_all_bins_reserves(&app, &lb_pair.lb_pair.contract, None, None, Some(5))?;
 
     //checking pagination
     assert_eq!(last_id, ids[4]);
     assert_eq!(multiple_reserves.len(), 5);
 
-    let (multiple_reserves, last_id) = lb_pair::query_all_bins_reserves(
+    let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
         &lb_pair.lb_pair.contract,
         Some(last_id),
@@ -371,7 +370,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
     assert_eq!(last_id, ids[9]);
     assert_eq!(multiple_reserves.len(), 5);
 
-    let (multiple_reserves, last_id) = lb_pair::query_all_bins_reserves(
+    let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
         &lb_pair.lb_pair.contract,
         Some(last_id),
@@ -383,7 +382,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
     assert_eq!(last_id, ids[14]);
     assert_eq!(multiple_reserves.len(), 5);
 
-    let (multiple_reserves, last_id) = lb_pair::query_all_bins_reserves(
+    let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
         &lb_pair.lb_pair.contract,
         Some(last_id),
@@ -395,7 +394,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
     assert_eq!(last_id, 0);
     assert_eq!(multiple_reserves.len(), 4);
 
-    let (multiple_reserves, last_id) =
+    let (multiple_reserves, last_id, _) =
         lb_pair::query_all_bins_reserves(&app, &lb_pair.lb_pair.contract, None, None, Some(50))?;
     assert_eq!(last_id, 0);
 
@@ -646,12 +645,15 @@ pub fn test_query_update_at_height() -> Result<(), anyhow::Error> {
 
     let height = heights[0];
 
-    let (query_height, mut query_ids) =
+    let bin_responses =
         lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?;
+    let mut bin_ids: Vec<u32> = bin_responses
+        .into_iter()
+        .map(|response| response.bin_id)
+        .collect();
+    bin_ids.sort();
 
-    assert_eq!(query_height, height);
-
-    assert_eq!(query_ids.sort(), ids.sort());
+    assert_eq!(bin_ids, ids);
 
     Ok(())
 }
@@ -687,12 +689,13 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
 
     let height = heights[0];
 
-    let (query_height, mut query_ids) =
-        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?;
+    let mut query_ids: Vec<u32> =
+        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?
+            .into_iter()
+            .map(|x| x.bin_id)
+            .collect();
 
-    assert_eq!(query_height, height);
-
-    assert_eq!(query_ids.sort(), ids.sort());
+    assert_eq!(query_ids, ids);
 
     roll_blockchain(&mut app, None);
 
@@ -717,16 +720,15 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
     heights.sort();
     assert_eq!(heights.len(), 50);
     //user have all the heights now
-    let updated_bins = lb_pair::query_updated_bins_at_multiple_heights(
+    let updated_bins: Vec<u32> = lb_pair::query_updated_bins_at_multiple_heights(
         &app,
         &lb_pair.lb_pair.contract,
         heights.clone(),
-    )?;
-
-    for (updated_bin, h) in updated_bins.iter().zip(heights) {
-        assert_eq!(updated_bin.height, h);
-        assert_eq!(updated_bin.ids, ids);
-    }
+    )?
+    .into_iter()
+    .map(|x| x.bin_id)
+    .collect();
+    assert_eq!(updated_bins, ids);
 
     Ok(())
 }
@@ -762,12 +764,13 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
 
     let height = heights[0];
 
-    let (query_height, mut query_ids) =
-        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?;
+    let query_ids: Vec<u32> =
+        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?
+            .into_iter()
+            .map(|x| x.bin_id)
+            .collect();
 
-    assert_eq!(query_height, height);
-
-    assert_eq!(query_ids.sort(), ids.sort());
+    assert_eq!(query_ids, ids);
 
     for _ in 0..49 {
         roll_blockchain(&mut app, None);
@@ -790,7 +793,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
     heights.sort();
     assert_eq!(heights.len(), 50);
     //user have all the heights now
-    let updated_bins = lb_pair::query_updated_bins_after_multiple_heights(
+    let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
         &lb_pair.lb_pair.contract,
         heights[0],
@@ -798,9 +801,9 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
         Some(10),
     )?;
 
-    assert_eq!(updated_bins.len(), 10);
+    assert_eq!(updated_bins.len(), 19); //All the bins changed
 
-    let updated_bins = lb_pair::query_updated_bins_after_multiple_heights(
+    let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
         &lb_pair.lb_pair.contract,
         heights[0],
@@ -808,9 +811,9 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
         Some(20),
     )?;
 
-    assert_eq!(updated_bins.len(), 20);
+    assert_eq!(updated_bins.len(), 19);
 
-    let updated_bins = lb_pair::query_updated_bins_after_multiple_heights(
+    let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
         &lb_pair.lb_pair.contract,
         heights[0],
@@ -818,7 +821,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
         Some(100),
     )?;
 
-    assert_eq!(updated_bins.len(), 49);
+    assert_eq!(updated_bins.len(), 19);
 
     Ok(())
 }

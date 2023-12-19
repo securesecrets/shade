@@ -392,20 +392,21 @@ pub fn query_updated_bins_at_height(
     app: &App,
     lb_pair: &ContractInfo,
     height: u64,
-) -> StdResult<(u64, Vec<u32>)> {
+) -> StdResult<Vec<BinResponse>> {
     let res = lb_pair::QueryMsg::GetUpdatedBinAtHeight { height }.test_query(lb_pair, app)?;
-    let lb_pair::UpdatedBinsAtHeightResponse { height, ids } = res;
-    Ok((height, ids))
+    let lb_pair::UpdatedBinsAtHeightResponse(bins) = res;
+    Ok(bins)
 }
 
 pub fn query_updated_bins_at_multiple_heights(
     app: &App,
     lb_pair: &ContractInfo,
     heights: Vec<u64>,
-) -> StdResult<Vec<UpdatedBinsAtHeightResponse>> {
+) -> StdResult<Vec<BinResponse>> {
     let res =
         lb_pair::QueryMsg::GetUpdatedBinAtMultipleHeights { heights }.test_query(lb_pair, app)?;
     let lb_pair::UpdatedBinsAtMultipleHeightResponse(v) = res;
+
     Ok(v)
 }
 
@@ -415,15 +416,18 @@ pub fn query_updated_bins_after_multiple_heights(
     height: u64,
     page: Option<u32>,
     page_size: Option<u32>,
-) -> StdResult<Vec<UpdatedBinsAtHeightResponse>> {
+) -> StdResult<(Vec<BinResponse>, u64)> {
     let res = lb_pair::QueryMsg::GetUpdatedBinAfterHeight {
         height,
         page,
         page_size,
     }
     .test_query(lb_pair, app)?;
-    let lb_pair::UpdatedBinsAfterHeightResponse(v) = res;
-    Ok(v)
+    let lb_pair::UpdatedBinsAfterHeightResponse {
+        bins,
+        current_block_height,
+    } = res;
+    Ok((bins, current_block_height))
 }
 
 pub fn query_rewards_distribution(
@@ -466,15 +470,19 @@ pub fn query_all_bins_reserves(
     id: Option<u32>,
     page: Option<u32>,
     page_size: Option<u32>,
-) -> StdResult<(Vec<BinResponse>, u32)> {
+) -> StdResult<(Vec<BinResponse>, u32, u64)> {
     let res = lb_pair::QueryMsg::GetAllBinsReserves {
         id,
         page,
         page_size,
     }
     .test_query(lb_pair, app)?;
-    let lb_pair::AllBinsResponse { reserves, last_id } = res;
-    Ok((reserves, last_id))
+    let lb_pair::AllBinsResponse {
+        reserves,
+        last_id,
+        current_block_height,
+    } = res;
+    Ok((reserves, last_id, current_block_height))
 }
 
 pub fn query_next_non_empty_bin(

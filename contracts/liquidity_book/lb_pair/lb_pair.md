@@ -30,6 +30,8 @@ pub struct BinResponse {
 }
 ```
 
+`BinResponse` is used multiple times across the responses
+
 After obtaining the database of all the bins, it's necessary to maintain and check the changes made in the reserves. This allows for updating specific bins instead of all 'heights'.
 
 ### Queries for Fetching heights at which Bins updated
@@ -61,15 +63,13 @@ GetUpdatedBinAtMultipleHeights { heights: Vec<u64> },
 to receive:
 
 ```rust
-pub struct UpdatedBinsAtHeightResponse {
-    pub height: u64,
-    pub ids: Vec<u32>,
-}
-pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
+pub struct UpdatedBinsAtHeightResponse(pub Vec<BinResponse>);
+
+pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<BinResponse>);
 
 ```
 
-Update `last_update_height` to the last index of `Vec<UpdatedBinsAtHeightResponse>`.
+Update `last_update_height` to the last index of `Vec<BinResponse>`.
 Then, query heights again, focusing only on `heights` > `last_updated_height`.
 
 
@@ -87,11 +87,10 @@ GetUpdatedBinAfterHeight {
 ```
 to receive:
 ```rust
-pub struct UpdatedBinsAtHeightResponse {
-    pub height: u64,
-    pub ids: Vec<u32>,
+pub struct UpdatedBinsAfterHeightResponse {
+    pub bins: Vec<BinResponse>,
+    pub current_block_height: u64,
 }
-pub struct UpdatedBinsAfterHeightResponse(pub Vec<UpdatedBinsAtHeightResponse>);
 ```
 
 Using the response, the admin updates all the bin reserves and stores the `height` in the vector as `last_updated_height`. Then, send that height to `GetUpdatedBinAfterHeight` to get `GetUpdatedBinAfterHeight`, thus continuing the loop.
