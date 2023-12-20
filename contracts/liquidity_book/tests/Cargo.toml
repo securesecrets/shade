@@ -18,7 +18,7 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl","liquidity_book"] }
 schemars = "0.8.16"
 serde = { version = "1.0" }
 serde-json-wasm = { version = "1.0"}

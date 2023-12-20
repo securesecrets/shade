@@ -90,7 +90,7 @@ impl fmt::Debug for U24 {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::{Add, Sub};
+    use std::ops::{Add, Div, Mul, Sub};
 
     use super::U24;
 
@@ -124,5 +124,71 @@ mod tests {
         let b = U24::new(0xAAAAAA).unwrap();
         let diff = a.sub(b);
         assert!(diff.is_none());
+    }
+
+    #[test]
+    fn test_u24_new_within_bounds() {
+        let a = U24::new(0x123456).unwrap();
+        assert_eq!(a.value(), 0x123456);
+    }
+
+    #[test]
+    fn test_u24_new_out_of_bounds() {
+        let a = U24::new(0x1000000);
+        assert!(a.is_none());
+    }
+
+    #[test]
+    fn test_u24_mul() {
+        let a = U24::new(0x000100).unwrap();
+        let b = U24::new(0x000010).unwrap();
+        let product = a.mul(b).unwrap();
+        assert_eq!(product.value(), 0x001000);
+    }
+
+    #[test]
+    fn test_u24_mul_overflow() {
+        let a = U24::new(0x010000).unwrap();
+        let b = U24::new(0x010000).unwrap();
+        let product = a.mul(b);
+        assert!(product.is_none());
+    }
+
+    #[test]
+    fn test_u24_div() {
+        let a = U24::new(0x001000).unwrap();
+        let b = U24::new(0x000010).unwrap();
+        let quotient = a.div(b).unwrap();
+        assert_eq!(quotient.value(), 0x000100);
+    }
+
+    #[test]
+    fn test_u24_div_by_zero() {
+        let a = U24::new(0x001000).unwrap();
+        let b = U24::new(0x000000).unwrap();
+        let quotient = a.div(b);
+        assert!(quotient.is_none());
+    }
+
+    #[test]
+    fn test_u24_eq() {
+        let a = U24::new(0x000100).unwrap();
+        let b = U24::new(0x000100).unwrap();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_u24_neq() {
+        let a = U24::new(0x000100).unwrap();
+        let b = U24::new(0x000101).unwrap();
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_u24_cmp() {
+        let a = U24::new(0x000100).unwrap();
+        let b = U24::new(0x000101).unwrap();
+        assert!(a < b);
+        assert!(b > a);
     }
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     c_std::{to_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg},
-    lb_libraries::lb_token::{
+    liquidity_book::lb_libraries::lb_token::{
         expiration::Expiration,
         metadata::Metadata,
         permissions::{Permission, PermissionKey},

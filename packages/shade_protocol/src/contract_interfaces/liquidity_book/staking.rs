@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::liquidity_book::lb_libraries::types::ContractInstantiationInfo;
 use cosmwasm_schema::QueryResponses;
 use secret_toolkit::permit::Permit;
 
@@ -19,7 +20,6 @@ use crate::{
         WasmMsg,
     },
     cosmwasm_schema::cw_serde,
-    lb_libraries::types::ContractInstantiationInfo,
     snip20::Snip20ReceiveMsg,
     swap::core::TokenType,
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},

@@ -6,13 +6,13 @@
 use cosmwasm_schema::cw_serde;
 use ethnum::U256;
 
-use crate::lb_libraries::types::Bytes32;
+use crate::liquidity_book::lb_libraries::types::Bytes32;
 
 use super::packed_u128_math::PackedUint128Math;
 
 pub const PRECISION: u64 = 1_000_000_000_000_000_000; // 1e18
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum LiquidityConfigurationsError {
     #[error("Liquidity Configurations Error: Distribution must be less than PRECISION")]
     InvalidConfig,
@@ -131,5 +131,72 @@ mod tests {
         let expected_amounts = Bytes32::encode(0, 0);
 
         assert_eq!(result, (expected_amounts, 0));
+    }
+
+    #[test]
+    fn test_new_valid_config() {
+        let lc = LiquidityConfigurations::new(500_000_000_000_000_000, 500_000_000_000_000_000, 1);
+        assert!(lc.is_ok());
+    }
+
+    #[test]
+    fn test_new_invalid_config_x() {
+        let lc = LiquidityConfigurations::new(PRECISION + 1, 500_000_000_000_000_000, 1);
+        assert_eq!(lc, Err(LiquidityConfigurationsError::InvalidConfig));
+    }
+
+    #[test]
+    fn test_new_invalid_config_y() {
+        let lc = LiquidityConfigurations::new(500_000_000_000_000_000, PRECISION + 1, 1);
+        assert_eq!(lc, Err(LiquidityConfigurationsError::InvalidConfig));
+    }
+
+    #[test]
+    fn test_update_distribution_valid() {
+        let mut lc =
+            LiquidityConfigurations::new(300_000_000_000_000_000, 300_000_000_000_000_000, 1)
+                .unwrap();
+        let result = lc.update_distribution(400_000_000_000_000_000, 400_000_000_000_000_000);
+        assert!(result.is_ok());
+        assert_eq!(lc.distribution_x, 400_000_000_000_000_000);
+        assert_eq!(lc.distribution_y, 400_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_update_distribution_invalid_x() {
+        let mut lc =
+            LiquidityConfigurations::new(300_000_000_000_000_000, 300_000_000_000_000_000, 1)
+                .unwrap();
+        let result = lc.update_distribution(PRECISION + 1, 400_000_000_000_000_000);
+        assert_eq!(result, Err(LiquidityConfigurationsError::InvalidConfig));
+    }
+
+    #[test]
+    fn test_update_distribution_invalid_y() {
+        let mut lc =
+            LiquidityConfigurations::new(300_000_000_000_000_000, 300_000_000_000_000_000, 1)
+                .unwrap();
+        let result = lc.update_distribution(400_000_000_000_000_000, PRECISION + 1);
+        assert_eq!(result, Err(LiquidityConfigurationsError::InvalidConfig));
+    }
+    #[test]
+    fn test_equality() {
+        let config1 = LiquidityConfigurations::new(100, 200, 1).unwrap();
+        let config2 = LiquidityConfigurations::new(100, 200, 1).unwrap();
+        assert_eq!(config1, config2);
+    }
+
+    #[test]
+    fn test_debug_format() {
+        let config = LiquidityConfigurations::new(100, 200, 1).unwrap();
+        let debug_string = format!("{:?}", config);
+        assert!(!debug_string.is_empty());
+    }
+
+    #[test]
+    fn test_clone() {
+        let config = LiquidityConfigurations::new(100, 200, 1).unwrap();
+        let cloned_config = config.clone();
+        assert_eq!(config, cloned_config);
     }
 }

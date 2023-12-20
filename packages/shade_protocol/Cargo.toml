@@ -23,8 +23,11 @@ required-features = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
+
 [features]
-default = ["utils"]
+default = ["utils", "liquidity_book"]
+
 
 # Utils
 utils = ["chrono"]

@@ -565,14 +565,10 @@ impl BinHelper {
 mod tests {
     use super::*;
 
+    use super::super::{math::encoded_sample::EncodedSample, types::StaticFeeParameters};
     use crate::c_std::StdResult;
     use ethnum::U256;
-    use super::super::{
-        math::encoded_sample::EncodedSample,
-        types::StaticFeeParameters,
-    };
     use std::str::FromStr;
-
 
     fn assert_approxeq_abs(a: U256, b: U256, max_diff: U256, msg: &str) {
         let diff = if a > b { a - b } else { b - a };
@@ -690,6 +686,47 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_get_shares_and_effective_amounts_in_delta_liquidity_adjustment() {
+        // Assume these constants based on your SCALE and SCALE_OFFSET values
+        let scale = U256::from(SCALE);
+        let scale_offset = U256::from(SCALE_OFFSET);
+
+        // Sample input values to trigger the condition
+        let bin_reserves = Bytes32::encode(1000, 2000); // bin reserves
+        let price = U256::from(10u128); // price
+        let total_supply = U256::from(10000u128); // total supply
+        let user_liquidity = U256::from(1000u128); // user liquidity
+        let bin_liquidity = U256::from(5000u128); // bin liquidity
+        let shares =
+            U256x256Math::mul_div_round_down(user_liquidity, total_supply, bin_liquidity).unwrap();
+        let effective_liquidity =
+            U256x256Math::mul_div_round_up(shares, bin_liquidity, total_supply).unwrap();
+
+        // Adjusting amounts_in to ensure delta_liquidity calculation triggers the specific condition
+        let mut amounts_in = Bytes32::encode(500, 1000);
+        if user_liquidity > effective_liquidity {
+            let delta_liquidity = user_liquidity - effective_liquidity;
+            amounts_in = Bytes32::encode(
+                500,
+                1000 + ((delta_liquidity >> scale_offset.as_u32()).as_u128()),
+            );
+        }
+
+        // Execute the method
+        let result = BinHelper::get_shares_and_effective_amounts_in(
+            bin_reserves,
+            amounts_in,
+            price,
+            total_supply,
+        )
+        .unwrap();
+
+        // Assertions
+        assert!(result.1.decode_y() == 1000);
+        assert!(result.1.decode_x() == 500);
     }
 
     #[test]
@@ -961,5 +998,58 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_verify_amounts_with_flawed_factor_id_less_than_active_id() {
+        let amounts = Bytes32::encode(1, 0); // Right-side 128 bits greater than zero
+        let active_id = 2;
+        let id = 1;
+        let result = BinHelper::verify_amounts(amounts, active_id, id);
+
+        match result {
+            Err(BinError::CompositionFactorFlawed(error_id)) => assert_eq!(error_id, id),
+            _ => panic!("Expected CompositionFactorFlawed error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_amounts_with_flawed_factor_id_greater_than_active_id() {
+        let amounts = U256::from(u128::MAX) + U256::ONE; // Greater than u128::MAX
+        let active_id = 1;
+        let id = 2;
+        let result = BinHelper::verify_amounts(amounts.to_le_bytes(), active_id, id);
+
+        match result {
+            Err(BinError::CompositionFactorFlawed(error_id)) => assert_eq!(error_id, id),
+            _ => panic!("Expected CompositionFactorFlawed error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_amounts_valid_case_id_less_than_active_id() {
+        let amounts = Bytes32::encode(0, 0); // Right-side 128 bits are zero
+        let active_id = 2;
+        let id = 1;
+        let result = BinHelper::verify_amounts(amounts, active_id, id);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_amounts_valid_case_id_greater_than_active_id() {
+        let amounts = U256::from(u128::MAX).to_le_bytes(); // Not greater than u128::MAX
+        let active_id = 1;
+        let id = 2;
+        let result = BinHelper::verify_amounts(amounts, active_id, id);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_amounts_valid_case_id_equals_active_id() {
+        let amounts = Bytes32::encode(0, 0); // Any value is fine, as id == active_id
+        let active_id = 1;
+        let id = 1;
+        let result = BinHelper::verify_amounts(amounts, active_id, id);
+        assert!(result.is_ok());
     }
 }
