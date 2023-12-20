@@ -27,7 +27,29 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    todo!();
+    let default_estimate_multiplier = if msg.default_estimate_multiplier >= Decimal::one() {
+        msg.default_estimate_multiplier
+    } else {
+        return Err(ContractError::InvalidEstimateMultiplier {});
+    };
+
+    // TODO: should we validate Tokens?
+    let cfg = Config {
+        gov_contract: msg.gov_contract,
+        lend_market_id: msg.lending_market_id,
+        lend_token_id: msg.lending_token_id,
+        reward_token: msg.reward_token,
+        common_token: msg.common_token,
+        liquidation_price: msg.liquidation_price,
+        borrow_limit_ratio: msg.borrow_limit_ratio,
+        default_estimate_multiplier,
+    };
+    CONFIG.save(deps.storage, &cfg)?;
+    NEXT_REPLY_ID.save(deps.storage, &0)?;
+
+    Ok(Response::new()
+        .add_attribute("method", "instantiate")
+        .add_attribute("owner", info.sender))
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]

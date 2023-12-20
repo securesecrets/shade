@@ -2,6 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, Decimal, Uint128},
     contract_interfaces::snip20::Snip20ReceiveMsg,
+    utils::asset::Contract,
 };
 
 use lending_utils::{coin::Coin, interest::Interest, token::Token};
@@ -9,7 +10,7 @@ use lending_utils::{coin::Coin, interest::Interest, token::Token};
 #[cw_serde]
 pub struct InstantiateMsg {
     /// The address that controls the credit agency and can set up markets
-    pub gov_contract: String,
+    pub gov_contract: Contract,
     /// The CodeId of the lending-market contract
     pub lending_market_id: u64,
     /// The CodeId of the lending-token contract
@@ -25,6 +26,9 @@ pub struct InstantiateMsg {
     /// This is used to prevent borrowers from being liquidated (almost) immediately after borrowing,
     /// because they maxed out their credit limit.
     pub borrow_limit_ratio: Decimal,
+    /// How much more of collateral will be used in swap then the estimated amount during
+    /// swap_withdraw_from
+    pub default_estimate_multiplier: Decimal,
 }
 
 #[cw_serde]
