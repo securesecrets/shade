@@ -14,24 +14,30 @@ use cosmwasm_std::{
     Timestamp,
     Uint256,
 };
-use secret_toolkit::{
-    permit::{validate, Permit, TokenPermissions},
-    viewing_key::{ViewingKey, ViewingKeyStore},
-};
 
 use crate::state::{
-    balances_r, blockinfo_r, contr_conf_r, get_receiver_hash,
+    balances_r,
+    blockinfo_r,
+    contr_conf_r,
+    get_receiver_hash,
     permissions::{list_owner_permission_keys, may_load_any_permission},
-    tkn_info_r, tkn_tot_supply_r,
+    tkn_info_r,
+    tkn_tot_supply_r,
     txhistory::{get_txs, may_get_current_owner},
     PREFIX_REVOKED_PERMITS,
 };
 
-use shade_protocol::lb_libraries::lb_token::{
-    permissions::{Permission, PermissionKey},
-    state_structs::OwnerBalance,
+use shade_protocol::{
+    lb_libraries::lb_token::{
+        permissions::{Permission, PermissionKey},
+        state_structs::OwnerBalance,
+    },
+    liquidity_book::lb_token::{QueryAnswer, QueryMsg, QueryWithPermit},
+    s_toolkit::{
+        permit::{validate, Permit, TokenPermissions},
+        viewing_key::{ViewingKey, ViewingKeyStore},
+    },
 };
-use shade_protocol::liquidity_book::lb_token::{QueryAnswer, QueryMsg, QueryWithPermit};
 /////////////////////////////////////////////////////////////////////////////////
 // Queries
 /////////////////////////////////////////////////////////////////////////////////
@@ -94,7 +100,9 @@ fn permit_queries(deps: Deps, permit: Permit, query: QueryWithPermit) -> Result<
             if account != owner.as_str() && account != allowed_address.as_str() {
                 return Err(StdError::generic_err(format!(
                     "Cannot query permission. Requires permit for either owner {:?} or viewer||spender {:?}, got permit for {:?}",
-                    owner.as_str(), allowed_address.as_str(), account.as_str()
+                    owner.as_str(),
+                    allowed_address.as_str(),
+                    account.as_str()
                 )));
             }
 
@@ -243,7 +251,7 @@ fn query_token_id_private_info(deps: Deps, viewer: &Addr, token_id: String) -> S
             None => {
                 return Err(StdError::generic_err(
                     "you do have have permission to view private token info",
-                ))
+                ));
             }
             Some(perm) => {
                 let block: BlockInfo =
@@ -296,7 +304,7 @@ fn query_balance(deps: Deps, owner: &Addr, viewer: &Addr, token_id: String) -> S
             None => {
                 return Err(StdError::generic_err(
                     "you do have have permission to view balance",
-                ))
+                ));
             }
             Some(perm) => {
                 let block: BlockInfo =

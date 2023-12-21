@@ -4,13 +4,16 @@ use shade_protocol::{
     contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
+        BinResponse,
+        ContractStatus,
         LiquidityParameters,
         RemoveLiquidity,
         RewardsDistribution,
         RewardsDistributionAlgorithm,
+        UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
-    swap::core::TokenType,
+    swap::core::{TokenAmount, TokenType},
     utils::{
         asset::{Contract, RawContract},
         ExecuteCallback,
@@ -30,6 +33,7 @@ pub fn init(
     pair_parameters: StaticFeeParameters,
     active_id: u32,
     lb_token_implementation: ContractInstantiationInfo,
+    staking_contract_implementation: ContractInstantiationInfo,
     viewing_key: String,
     pair_name: String,
     entropy: String,
@@ -37,6 +41,10 @@ pub fn init(
     admin_auth: RawContract,
     total_reward_bins: u32,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+    epoch_staking_index: u64,
+    epoch_staking_duration: u64,
+    expiry_staking_duration: Option<u64>,
+    recover_staking_funds_receiver: Addr,
 ) -> StdResult<Contract> {
     let lb_pair = Contract::from(
         match (lb_pair::InstantiateMsg {
@@ -54,6 +62,11 @@ pub fn init(
             total_reward_bins: Some(total_reward_bins),
             rewards_distribution_algorithm: rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+            staking_contract_implementation,
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
+            recover_staking_funds_receiver,
         }
         .test_init(
             LbPair::default(),
@@ -69,6 +82,23 @@ pub fn init(
     Ok(lb_pair)
 }
 
+pub fn set_contract_status(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    contract_status: ContractStatus,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::SetContractStatus { contract_status }.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
 pub fn add_liquidity(
     app: &mut App,
     sender: &str,
@@ -80,6 +110,22 @@ pub fn add_liquidity(
     }
     .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
     {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+pub fn increase_oracle_length(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    new_length: u16,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::IncreaseOracleLength { new_length }.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
@@ -115,6 +161,25 @@ pub fn remove_liquidity(
     {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+pub fn swap_native(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    to: Option<String>,
+    offer: TokenAmount,
+) -> StdResult<()> {
+    match (&lb_pair::ExecuteMsg::SwapTokens {
+        expected_return: None,
+        to,
+        padding: None,
+        offer,
+    }
+    .test_exec(&lb_pair, app, Addr::unchecked(sender), &[]))
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
 
@@ -217,19 +282,34 @@ pub fn set_static_fee_parameters(
     }
 }
 
-pub fn lb_token_query(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+pub fn query_total_supply(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<Uint256> {
+    let res = lb_pair::QueryMsg::TotalSupply { id }.test_query(lb_pair, app)?;
+    let lb_pair::TotalSupplyResponse { total_supply } = res;
+    Ok(total_supply)
+}
+
+pub fn query_lb_token(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
     let res = lb_pair::QueryMsg::GetLbToken {}.test_query(lb_pair, app)?;
-    let lb_pair::LbTokenResponse { lb_token } = res;
+    let lb_pair::LbTokenResponse { contract: lb_token } = res;
     Ok(lb_token)
 }
 
-pub fn bin_query(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {
-    let res = lb_pair::QueryMsg::GetBin { id }.test_query(lb_pair, app)?;
+pub fn query_staking_contract(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+    let res = lb_pair::QueryMsg::GetStakingContract {}.test_query(lb_pair, app)?;
+    let lb_pair::StakingResponse {
+        contract: staking_contract,
+    } = res;
+    Ok(staking_contract)
+}
+
+pub fn bin_query(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128, u32)> {
+    let res = lb_pair::QueryMsg::GetBinReserves { id }.test_query(lb_pair, app)?;
     let lb_pair::BinResponse {
         bin_reserve_x,
         bin_reserve_y,
+        bin_id,
     } = res;
-    Ok((bin_reserve_x, bin_reserve_y))
+    Ok((bin_reserve_x, bin_reserve_y, bin_id))
 }
 
 pub fn swap_in_query(
@@ -322,6 +402,12 @@ pub fn query_factory(app: &App, lb_pair: &ContractInfo) -> StdResult<Addr> {
     Ok(factory)
 }
 
+pub fn query_tokens(app: &App, lb_pair: &ContractInfo) -> StdResult<(TokenType, TokenType)> {
+    let res = lb_pair::QueryMsg::GetTokens {}.test_query(lb_pair, app)?;
+    let lb_pair::TokensResponse { token_x, token_y } = res;
+    Ok((token_x, token_y))
+}
+
 pub fn query_token_x(app: &App, lb_pair: &ContractInfo) -> StdResult<TokenType> {
     let res = lb_pair::QueryMsg::GetTokenX {}.test_query(lb_pair, app)?;
     let lb_pair::TokenXResponse { token_x } = res;
@@ -355,6 +441,60 @@ pub fn query_active_id(app: &App, lb_pair: &ContractInfo) -> StdResult<u32> {
     Ok(active_id)
 }
 
+pub fn query_all_bins_updated(
+    app: &App,
+    lb_pair: &ContractInfo,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<Vec<u64>> {
+    let res =
+        lb_pair::QueryMsg::GetBinUpdatingHeights { page, page_size }.test_query(lb_pair, app)?;
+    let lb_pair::BinUpdatingHeightsResponse(heights) = res;
+    Ok(heights)
+}
+
+pub fn query_updated_bins_at_height(
+    app: &App,
+    lb_pair: &ContractInfo,
+    height: u64,
+) -> StdResult<Vec<BinResponse>> {
+    let res = lb_pair::QueryMsg::GetUpdatedBinAtHeight { height }.test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAtHeightResponse(bins) = res;
+    Ok(bins)
+}
+
+pub fn query_updated_bins_at_multiple_heights(
+    app: &App,
+    lb_pair: &ContractInfo,
+    heights: Vec<u64>,
+) -> StdResult<Vec<BinResponse>> {
+    let res =
+        lb_pair::QueryMsg::GetUpdatedBinAtMultipleHeights { heights }.test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAtMultipleHeightResponse(v) = res;
+
+    Ok(v)
+}
+
+pub fn query_updated_bins_after_multiple_heights(
+    app: &App,
+    lb_pair: &ContractInfo,
+    height: u64,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<(Vec<BinResponse>, u64)> {
+    let res = lb_pair::QueryMsg::GetUpdatedBinAfterHeight {
+        height,
+        page,
+        page_size,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::UpdatedBinsAfterHeightResponse {
+        bins,
+        current_block_height,
+    } = res;
+    Ok((bins, current_block_height))
+}
+
 pub fn query_rewards_distribution(
     app: &App,
     lb_pair: &ContractInfo,
@@ -365,13 +505,49 @@ pub fn query_rewards_distribution(
     Ok(distribution)
 }
 
-pub fn query_bin(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<(u128, u128)> {
-    let res = lb_pair::QueryMsg::GetBin { id }.test_query(lb_pair, app)?;
+pub fn query_bin_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    id: u32,
+) -> StdResult<(u128, u128, u32)> {
+    let res = lb_pair::QueryMsg::GetBinReserves { id }.test_query(lb_pair, app)?;
     let lb_pair::BinResponse {
         bin_reserve_x,
         bin_reserve_y,
+        bin_id,
     } = res;
-    Ok((bin_reserve_x, bin_reserve_y))
+    Ok((bin_reserve_x, bin_reserve_y, bin_id))
+}
+
+pub fn query_bins_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    ids: Vec<u32>,
+) -> StdResult<(Vec<BinResponse>)> {
+    let res = lb_pair::QueryMsg::GetBinsReserves { ids }.test_query(lb_pair, app)?;
+    let lb_pair::BinsResponse(reserves) = res;
+    Ok(reserves)
+}
+
+pub fn query_all_bins_reserves(
+    app: &App,
+    lb_pair: &ContractInfo,
+    id: Option<u32>,
+    page: Option<u32>,
+    page_size: Option<u32>,
+) -> StdResult<(Vec<BinResponse>, u32, u64)> {
+    let res = lb_pair::QueryMsg::GetAllBinsReserves {
+        id,
+        page,
+        page_size,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::AllBinsResponse {
+        reserves,
+        last_id,
+        current_block_height,
+    } = res;
+    Ok((reserves, last_id, current_block_height))
 }
 
 pub fn query_next_non_empty_bin(

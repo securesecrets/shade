@@ -1,11 +1,13 @@
 use super::lb_pair::{self, RewardsDistributionAlgorithm};
 use crate::{
-    c_std::Addr,
-    cosmwasm_schema::{cw_serde, QueryResponses},
+    contract_interfaces::swap::core::TokenType,
     lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    swap::core::TokenType,
-    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
+    utils::asset::RawContract,
 };
+
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
 #[cw_serde]
@@ -13,9 +15,12 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
-    pub flash_loan_fee: u8,
     pub total_reward_bins: u32,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    pub epoch_staking_index: u64,
+    pub epoch_staking_duration: u64,
+    pub expiry_staking_duration: Option<u64>,
+    pub recover_staking_funds_receiver: Addr,
 }
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
@@ -25,11 +30,15 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum ExecuteMsg {
     #[serde(rename = "set_lb_pair_implementation")]
     SetLBPairImplementation {
-        lb_pair_implementation: ContractInstantiationInfo,
+        implementation: ContractInstantiationInfo,
     },
     #[serde(rename = "set_lb_token_implementation")]
     SetLBTokenImplementation {
-        lb_token_implementation: ContractInstantiationInfo,
+        implementation: ContractInstantiationInfo,
+    },
+    #[serde(rename = "set_staking_contract_implementation")]
+    SetStakingContractImplementation {
+        implementation: ContractInstantiationInfo,
     },
     #[serde(rename = "create_lb_pair")]
     CreateLBPair {
@@ -59,6 +68,7 @@ pub enum ExecuteMsg {
         protocol_share: u16,
         // u24
         max_volatility_accumulator: u32,
+        total_reward_bins: u32,
         is_open: bool,
     },
     SetPresetOpenState {
@@ -85,9 +95,7 @@ pub enum ExecuteMsg {
     SetFeeRecipient {
         fee_recipient: Addr,
     },
-    SetFlashLoanFee {
-        flash_loan_fee: u8,
-    },
+
     AddQuoteAsset {
         asset: TokenType,
     },
@@ -110,10 +118,6 @@ pub enum QueryMsg {
     GetMinBinStep {},
     #[returns(FeeRecipientResponse)]
     GetFeeRecipient {},
-    #[returns(MaxFlashLoanFeeResponse)]
-    GetMaxFlashLoanFee {},
-    #[returns(FlashLoanFeeResponse)]
-    GetFlashLoanFee {},
     #[returns(LBPairImplementationResponse)]
     #[serde(rename = "get_lb_pair_implementation")]
     GetLBPairImplementation {},
@@ -166,16 +170,6 @@ pub struct MinBinStepResponse {
 #[cw_serde]
 pub struct FeeRecipientResponse {
     pub fee_recipient: Addr,
-}
-
-#[cw_serde]
-pub struct MaxFlashLoanFeeResponse {
-    pub max_fee: u8,
-}
-
-#[cw_serde]
-pub struct FlashLoanFeeResponse {
-    pub flash_loan_fee: u8,
 }
 
 #[cw_serde]

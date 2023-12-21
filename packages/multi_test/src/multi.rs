@@ -44,6 +44,12 @@ pub mod lb_token {
     multi_derive::implement_multi!(LbToken, lb_token);
 }
 
+#[cfg(feature = "staking_contract")]
+pub mod staking_contract {
+    use staking_contract;
+    multi_derive::implement_multi!(StakingContract, staking_contract);
+}
+
 #[cfg(feature = "liability_mint")]
 pub mod liability_mint {
     use liability_mint;

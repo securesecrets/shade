@@ -9,7 +9,6 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use ethnum::U256;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory,
@@ -27,8 +26,6 @@ use shade_protocol::{
     liquidity_book::lb_pair::{RemoveLiquidity, RewardsDistributionAlgorithm},
     multi_test::App,
 };
-
-use crate::multitests::test_helper::*;
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000;
 pub const ACTIVE_ID: u32 = ID_ONE;
@@ -66,7 +63,7 @@ pub fn lb_pair_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -216,7 +213,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
     let token_y = extract_contract_info(&deployed_contracts, SILK)?;
 
-    let total_bins = get_total_bins(10, 10) as u32;
+    let total_bins = get_total_bins(10u32, 10u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
 
@@ -2271,7 +2268,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2492,7 +2489,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2501,7 +2498,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         "viewing_key".to_owned(),
     )?;
 
-    let deposit_ratio = (generate_random(1u128, DEPOSIT_AMOUNT));
+    let deposit_ratio = generate_random(1u128, DEPOSIT_AMOUNT);
 
     let amount_x = Uint128::from(((deposit_ratio) * 10000_0000) / 40000); // 25_000_000 satoshi
     let amount_y = Uint128::from((deposit_ratio) * 1000_000); // 10_000 silk
@@ -2634,7 +2631,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2780,7 +2777,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2835,7 +2832,8 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -2942,7 +2940,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2997,7 +2995,8 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -3102,7 +3101,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -3165,7 +3164,8 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         None,
     )?;
 
-    let (_, bin_reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let (_, bin_reserves_y, _) =
+        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -3213,7 +3213,6 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
             .iter()
             .all(|&x| x == _distribution.weightages[0])
     );
-    println!("_distribution {:?}", _distribution);
 
     //making a swap for token y hence the bin id moves to the right
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);

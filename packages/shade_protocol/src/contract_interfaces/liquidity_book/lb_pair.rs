@@ -1,7 +1,13 @@
+use std::fmt::{Debug, Display};
+
 use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
-    lb_libraries::types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+    liquidity_book::lb_libraries::types::{
+        Bytes32,
+        ContractInstantiationInfo,
+        StaticFeeParameters,
+    },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
@@ -17,12 +23,17 @@ pub struct InstantiateMsg {
     pub pair_parameters: StaticFeeParameters,
     pub active_id: u32,
     pub lb_token_implementation: ContractInstantiationInfo,
+    pub staking_contract_implementation: ContractInstantiationInfo,
     pub viewing_key: String,
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
     pub admin_auth: RawContract,
     pub total_reward_bins: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    pub epoch_staking_index: u64,
+    pub epoch_staking_duration: u64,
+    pub expiry_staking_duration: Option<u64>,
+    pub recover_staking_funds_receiver: Addr,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -45,8 +56,6 @@ pub enum ExecuteMsg {
     RemoveLiquidity {
         remove_liquidity_params: RemoveLiquidity,
     },
-
-    FlashLoan {},
 
     // Burn {
     //     from: Addr,
@@ -73,6 +82,21 @@ pub enum ExecuteMsg {
         distribution: Option<RewardsDistributionAlgorithm>,
         base_rewards_bins: Option<u32>,
     },
+    SetContractStatus {
+        contract_status: ContractStatus,
+    },
+}
+
+#[cw_serde]
+pub enum ContractStatus {
+    Active,         // allows all operations
+    FreezeAll,      // blocks everything except admin-protected config changes
+    LpWithdrawOnly, // blocks everything except LP withdraws and admin-protected config changes
+}
+impl Display for ContractStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
 }
 
 #[cw_serde]
@@ -134,6 +158,8 @@ pub struct MintResponse {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(StakingResponse)]
+    GetStakingContract {},
     #[returns(LbTokenResponse)]
     GetLbToken {},
     #[returns(GetPairInfoResponse)]
@@ -158,7 +184,33 @@ pub enum QueryMsg {
     #[returns(ActiveIdResponse)]
     GetActiveId {},
     #[returns(BinResponse)]
-    GetBin { id: u32 },
+    GetBinReserves { id: u32 },
+    #[returns(BinsResponse)]
+    GetBinsReserves { ids: Vec<u32> },
+    #[returns(AllBinsResponse)]
+    GetAllBinsReserves {
+        id: Option<u32>,
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+    #[returns(UpdatedBinsAtHeightResponse)]
+    GetUpdatedBinAtHeight { height: u64 },
+    #[returns(UpdatedBinsAtMultipleHeightResponse)]
+    GetUpdatedBinAtMultipleHeights { heights: Vec<u64> },
+
+    #[returns(UpdatedBinsAfterHeightResponse)]
+    GetUpdatedBinAfterHeight {
+        height: u64,
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+
+    #[returns(BinUpdatingHeightsResponse)]
+    GetBinUpdatingHeights {
+        page: Option<u32>,
+        page_size: Option<u32>,
+    },
+
     #[returns(NextNonEmptyBinResponse)]
     GetNextNonEmptyBin { swap_for_y: bool, id: u32 },
     #[returns(ProtocolFeesResponse)]
@@ -195,8 +247,13 @@ impl Query for QueryMsg {
 }
 
 #[cw_serde]
+pub struct StakingResponse {
+    pub contract: ContractInfo,
+}
+
+#[cw_serde]
 pub struct LbTokenResponse {
-    pub lb_token: ContractInfo,
+    pub contract: ContractInfo,
 }
 #[cw_serde]
 pub struct GetPairInfoResponse {
@@ -258,8 +315,33 @@ pub struct ActiveIdResponse {
 
 #[cw_serde]
 pub struct BinResponse {
+    pub bin_id: u32,
     pub bin_reserve_x: u128,
     pub bin_reserve_y: u128,
+}
+
+#[cw_serde]
+pub struct UpdatedBinsAtHeightResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct UpdatedBinsAfterHeightResponse {
+    pub bins: Vec<BinResponse>,
+    pub current_block_height: u64,
+}
+#[cw_serde]
+pub struct BinUpdatingHeightsResponse(pub Vec<u64>);
+
+#[cw_serde]
+pub struct BinsResponse(pub Vec<BinResponse>);
+
+#[cw_serde]
+pub struct AllBinsResponse {
+    pub reserves: Vec<BinResponse>,
+    pub last_id: u32,
+    pub current_block_height: u64,
 }
 
 #[cw_serde]

@@ -19,20 +19,26 @@ pub fn init(
     app: &mut App,
     sender: &str,
     fee_recipient: Addr,
-    flash_loan_fee: u8,
     admin_auth: RawContract,
     total_reward_bins: u32,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+    epoch_staking_index: u64,
+    epoch_staking_duration: u64,
+    expiry_staking_duration: Option<u64>,
+    recover_staking_funds_receiver: Addr,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
         match (lb_factory::InstantiateMsg {
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
-            flash_loan_fee,
             admin_auth,
             total_reward_bins,
             rewards_distribution_algorithm: rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
+            recover_staking_funds_receiver,
         }
         .test_init(
             LbFactory::default(),
@@ -56,7 +62,7 @@ pub fn set_lb_pair_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBPairImplementation {
-        lb_pair_implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractInstantiationInfo { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -73,7 +79,24 @@ pub fn set_lb_token_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBTokenImplementation {
-        lb_token_implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractInstantiationInfo { id, code_hash },
+    }
+    .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
+    {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn set_staking_contract_implementation(
+    app: &mut App,
+    sender: &str,
+    lb_factory: &ContractInfo,
+    id: u64,
+    code_hash: String,
+) -> StdResult<()> {
+    match (lb_factory::ExecuteMsg::SetStakingContractImplementation {
+        implementation: ContractInstantiationInfo { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -95,6 +118,7 @@ pub fn set_pair_preset(
     protocol_share: u16,
     max_volatility_accumulator: u32,
     is_open: bool,
+    total_reward_bins: u32,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetPairPreset {
         bin_step,
@@ -106,6 +130,7 @@ pub fn set_pair_preset(
         protocol_share,
         max_volatility_accumulator,
         is_open,
+        total_reward_bins,
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -289,13 +314,6 @@ pub fn force_decay(
     }
 }
 
-pub fn query_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    match (lb_factory::QueryMsg::GetFlashLoanFee {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::FlashLoanFeeResponse { flash_loan_fee }) => Ok(flash_loan_fee),
-        Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}
-
 pub fn query_lb_pair_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
@@ -330,13 +348,6 @@ pub fn query_min_bin_step(app: &mut App, lb_factory: &ContractInfo) -> StdResult
 pub fn query_fee_recipient(app: &mut App, lb_factory: &ContractInfo) -> StdResult<Addr> {
     match (lb_factory::QueryMsg::GetFeeRecipient {}.test_query(lb_factory, app)) {
         Ok(lb_factory::FeeRecipientResponse { fee_recipient }) => Ok(fee_recipient),
-        Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}
-
-pub fn query_max_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    match (lb_factory::QueryMsg::GetMaxFlashLoanFee {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::MaxFlashLoanFeeResponse { max_fee }) => Ok(max_fee),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }

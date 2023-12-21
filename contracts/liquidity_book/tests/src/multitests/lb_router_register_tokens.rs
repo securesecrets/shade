@@ -1,6 +1,6 @@
 use anyhow::Ok;
 use serial_test::serial;
-use cosmwasm_std::Addr;
+use shade_protocol::c_std::Addr;
 
 use crate::multitests::test_helper::{SHADE, SILK};
 

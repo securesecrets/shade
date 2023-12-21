@@ -497,7 +497,7 @@ impl PairParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lb_libraries::types::StaticFeeParameters;
+    use crate::liquidity_book::lb_libraries::types::StaticFeeParameters;
     use cosmwasm_std::testing::mock_env;
 
     static MAX_STATIC_FEE_PARAMETER: StaticFeeParameters = StaticFeeParameters {

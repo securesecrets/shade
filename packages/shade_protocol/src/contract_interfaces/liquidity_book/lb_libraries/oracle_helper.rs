@@ -332,7 +332,7 @@ impl Oracle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lb_libraries::math::encoded_sample::MASK_UINT20;
+    use crate::liquidity_book::lb_libraries::math::encoded_sample::MASK_UINT20;
     use std::collections::HashMap;
 
     // Helper function to bound a value within a range

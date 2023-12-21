@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use cosmwasm_std::{StdError, StdResult, Storage};
 
-use secret_toolkit::serialization::{Json, Serde};
+use shade_protocol::s_toolkit::serialization::{Json, Serde};
 
 // /////////////////////////////////////////////////////////////////////////////////
 // // Save and load functions

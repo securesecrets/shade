@@ -17,6 +17,8 @@ snip20 = ["dep:snip20"]
 lb_factory = ["dep:lb_factory"]
 lb_pair = ["dep:lb_pair"]
 lb_token = ["dep:lb_token"]
+staking_contract = ["dep:staking_contract"]
+
 router = ["dep:router"]
 #liability_mint = ["dep:liability_mint"]
 #mint = ["dep:mint"]
@@ -45,6 +47,8 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 lb_factory = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_factory", optional = true}
 lb_pair = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_pair", optional = true }
 lb_token = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_token", optional = true }
+
+staking_contract = { version = "0.1.0", path = "../../contracts/liquidity_book/staking_contract", optional = true }
 router = { version = "0.1.0", path = "../../contracts/liquidity_book/router", optional = true }
 #liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }

@@ -20,48 +20,38 @@ use cosmwasm_std::{
     Timestamp,
     Uint256,
 };
-use secret_toolkit::{
-    crypto::sha_256,
-    permit::RevokedPermits,
-    utils::space_pad,
-    viewing_key::{ViewingKey, ViewingKeyStore},
-};
 
-use crate::{
-    receiver::Snip1155ReceiveMsg,
-    state::{
-        balances_r,
-        balances_w,
-        blockinfo_r,
-        blockinfo_w,
-        contr_conf_r,
-        contr_conf_w,
-        get_receiver_hash,
-        permissions::{
-            list_owner_permission_keys,
-            may_load_any_permission,
-            new_permission,
-            update_permission,
-        },
-        set_receiver_hash,
-        tkn_info_r,
-        tkn_info_w,
-        tkn_tot_supply_r,
-        tkn_tot_supply_w,
-        txhistory::{
-            append_new_owner,
-            get_txs,
-            may_get_current_owner,
-            store_burn,
-            store_mint,
-            store_transfer,
-        },
-        PREFIX_REVOKED_PERMITS,
-        RESPONSE_BLOCK_SIZE,
+use crate::state::{
+    balances_r,
+    balances_w,
+    blockinfo_r,
+    blockinfo_w,
+    contr_conf_r,
+    contr_conf_w,
+    get_receiver_hash,
+    permissions::{
+        list_owner_permission_keys,
+        may_load_any_permission,
+        new_permission,
+        update_permission,
     },
+    set_receiver_hash,
+    tkn_info_r,
+    tkn_info_w,
+    tkn_tot_supply_r,
+    tkn_tot_supply_w,
+    txhistory::{
+        append_new_owner,
+        get_txs,
+        may_get_current_owner,
+        store_burn,
+        store_mint,
+        store_transfer,
+    },
+    PREFIX_REVOKED_PERMITS,
+    RESPONSE_BLOCK_SIZE,
 };
 
-use secret_toolkit::permit::{validate, Permit, TokenPermissions};
 use shade_protocol::{
     lb_libraries::lb_token::{
         expiration::Expiration,
@@ -83,7 +73,14 @@ use shade_protocol::{
         InstantiateMsg,
         ResponseStatus::Success,
         SendAction,
+        Snip1155ReceiveMsg,
         TransferAction,
+    },
+    s_toolkit::{
+        crypto::sha_256,
+        permit::{validate, Permit, RevokedPermits, TokenPermissions},
+        utils::space_pad,
+        viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };
 /////////////////////////////////////////////////////////////////////////////////
@@ -1798,10 +1795,13 @@ fn query_all_balances(
             .may_load(to_binary(account).unwrap().as_slice())
             .unwrap();
         if let Some(i) = amount {
-            balances.push(OwnerBalance {
-                token_id,
-                amount: i,
-            })
+            // LB change
+            if !i.is_zero() {
+                balances.push(OwnerBalance {
+                    token_id,
+                    amount: i,
+                })
+            }
         }
     }
 

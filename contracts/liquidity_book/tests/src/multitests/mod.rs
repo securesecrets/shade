@@ -5,7 +5,13 @@ pub mod lb_factory;
 pub mod lb_pair_initial_state;
 
 #[cfg(test)]
+pub mod lb_pair_queries;
+
+#[cfg(test)]
 mod lb_pair_liquidity;
+
+#[cfg(test)]
+mod lb_pair_trivial;
 
 #[cfg(test)]
 mod lb_pair_fees;
@@ -21,5 +27,8 @@ mod lb_router_register_tokens;
 
 #[cfg(test)]
 mod lb_router_integration;
+
+#[cfg(test)]
+mod staking_contract;
 
 pub mod test_helper;

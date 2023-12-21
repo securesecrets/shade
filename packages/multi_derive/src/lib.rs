@@ -8,9 +8,11 @@
 #[macro_export]
 macro_rules! implement_multi {
     ($x:ident, $s:ident) => {
-        use shade_protocol::c_std::{Addr, ContractInfo, Empty, Env};
-        use shade_protocol::multi_test::{Contract, ContractWrapper};
-        use shade_protocol::utils::callback::MultiTestable;
+        use shade_protocol::{
+            c_std::{Addr, ContractInfo, Empty, Env},
+            multi_test::{Contract, ContractWrapper},
+            utils::callback::MultiTestable,
+        };
 
         pub struct $x {
             info: ContractInfo,
@@ -47,9 +49,11 @@ macro_rules! implement_multi {
 #[macro_export]
 macro_rules! implement_multi_with_reply {
     ($x:ident, $s:ident) => {
-        use shade_protocol::c_std::{Addr, ContractInfo, Empty, Env};
-        use shade_protocol::multi_test::{Contract, ContractWrapper};
-        use shade_protocol::utils::callback::MultiTestable;
+        use shade_protocol::{
+            c_std::{Addr, ContractInfo, Empty, Env},
+            multi_test::{Contract, ContractWrapper},
+            utils::callback::MultiTestable,
+        };
 
         pub struct $x {
             info: ContractInfo,

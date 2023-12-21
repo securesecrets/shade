@@ -5,7 +5,12 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_token::LbToken},
+    multi::{
+        admin::init_admin_auth,
+        lb_pair::LbPair,
+        lb_token::LbToken,
+        staking_contract::StakingContract,
+    },
 };
 use shade_protocol::{
     c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
@@ -30,6 +35,8 @@ pub const DEFAULT_PROTOCOL_SHARE: u16 = 1_000;
 pub const DEFAULT_MAX_VOLATILITY_ACCUMULATOR: u32 = 350_000;
 pub const DEFAULT_OPEN_STATE: bool = false;
 pub const DEFAULT_FLASHLOAN_FEE: u128 = 800_000_000_000_000;
+
+pub const DEFAULT_TOTAL_REWARD_BINS: u32 = 10;
 
 pub const SHADE: &str = "SHD";
 pub const SSCRT: &str = "SSCRT";
@@ -240,16 +247,20 @@ pub fn setup(
         &mut app,
         addrs.admin().as_str(),
         addrs.joker(),
-        0,
         admin_contract.into(),
         10,
         Some(
             rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
         ),
+        1,
+        100,
+        None,
+        addrs.admin(),
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
+    let staking_contract = app.store_code(StakingContract::default().contract());
 
     lb_factory::set_lb_pair_implementation(
         &mut app,
@@ -267,6 +278,14 @@ pub fn setup(
         lb_token_stored_code.code_hash,
     )?;
 
+    lb_factory::set_staking_contract_implementation(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        staking_contract.code_id,
+        staking_contract.code_hash,
+    )?;
+
     lb_factory::set_pair_preset(
         &mut app,
         addrs.admin().as_str(),
@@ -280,6 +299,7 @@ pub fn setup(
         DEFAULT_PROTOCOL_SHARE,
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
+        DEFAULT_TOTAL_REWARD_BINS,
     )?;
 
     // add quote asset
@@ -361,6 +381,19 @@ pub fn setup(
     Ok((app, lb_factory, deployed_contracts))
 }
 
+pub fn roll_blockchain(app: &mut App, blocks: Option<u64>) {
+    app.set_block(BlockInfo {
+        height: app.block_info().height + blocks.unwrap_or(1),
+        time: Timestamp::from_seconds(
+            parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string())
+                .unwrap()
+                .timestamp() as u64,
+        ),
+        chain_id: "chain_id".to_string(),
+        random: None,
+    });
+}
+
 pub fn extract_contract_info(
     deployed_contracts: &DeployedContracts,
     symbol: &str,
@@ -386,7 +419,7 @@ fn safe64_divide(numerator: u128, denominator: u64) -> u64 {
     (numerator / denominator as u128) as u64
 }
 
-pub fn get_id(active_id: u32, i: u32, nb_bin_y: u8) -> u32 {
+pub fn get_id(active_id: u32, i: u32, nb_bin_y: u32) -> u32 {
     let mut id: u32 = active_id + i;
 
     if nb_bin_y > 0 {
@@ -396,7 +429,7 @@ pub fn get_id(active_id: u32, i: u32, nb_bin_y: u8) -> u32 {
     safe24(id)
 }
 
-pub fn get_total_bins(nb_bin_x: u8, nb_bin_y: u8) -> u8 {
+pub fn get_total_bins(nb_bin_x: u32, nb_bin_y: u32) -> u32 {
     if nb_bin_x > 0 && nb_bin_y > 0 {
         return nb_bin_x + nb_bin_y - 1; // Convert to u256
     }
@@ -440,8 +473,8 @@ pub fn liquidity_parameters_generator(
     token_y: ContractInfo,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
 ) -> StdResult<LiquidityParameters> {
     liquidity_parameters_generator_custom(
         // Assuming lbPair has methods to get tokenX and tokenY
@@ -467,8 +500,8 @@ pub fn liquidity_parameters_generator_custom(
     token_y: ContractInfo,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
     bin_step: u16,
 ) -> StdResult<LiquidityParameters> {
     let total = get_total_bins(nb_bins_x, nb_bins_y);
@@ -539,8 +572,8 @@ pub fn liquidity_parameters_generator_with_native(
     token_y: TokenType,
     amount_x: Uint128,
     amount_y: Uint128,
-    nb_bins_x: u8,
-    nb_bins_y: u8,
+    nb_bins_x: u32,
+    nb_bins_y: u32,
 ) -> StdResult<LiquidityParameters> {
     let total = get_total_bins(nb_bins_x, nb_bins_y);
 

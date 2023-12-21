@@ -1,5 +1,5 @@
-use std::ops::{Add, Mul};
 use serial_test::serial;
+use std::ops::{Add, Mul};
 
 use crate::multitests::test_helper::*;
 
@@ -12,10 +12,10 @@ use super::test_helper::{
     ID_ONE,
 };
 use anyhow::Ok;
-use cosmwasm_std::{ContractInfo, StdError, Uint128, Uint256};
 use ethnum::U256;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
+    c_std::{ContractInfo, StdError, Uint128, Uint256},
     lb_libraries::{
         constants::SCALE_OFFSET,
         math::uint256_to_u256::ConvertU256,
@@ -62,7 +62,7 @@ pub fn init_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::lb_token_query(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -130,11 +130,12 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -205,7 +206,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
         nb_bins_x,
         nb_bins_y,
     )?;
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     lb_pair::add_liquidity(
         &mut app,
@@ -217,7 +218,8 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     let mut total: Vec<U256> = vec![U256::ZERO; total_bins as usize];
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -321,7 +323,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
 
     for i in 0..total_bins {
@@ -400,11 +402,12 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
         }
     }
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -479,7 +482,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
 
@@ -519,7 +522,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
     assert_eq!(reserves_x, 0u128);
     assert_eq!(reserves_y, 0u128);
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
@@ -535,11 +538,12 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         assert_eq!(balance, Uint256::zero());
     }
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
@@ -613,7 +617,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
         liquidity_parameters,
     )?;
 
-    let total_bins = get_total_bins(nb_bins_x, nb_bins_y) as u32;
+    let total_bins = get_total_bins(nb_bins_x as u32, nb_bins_y as u32) as u32;
     let mut balances = vec![Uint256::zero(); total_bins as usize];
     let mut half_balances = vec![Uint256::zero(); total_bins as usize];
     let mut ids = vec![0u32; total_bins as usize];
@@ -683,7 +687,8 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
 
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
-        let (reserves_x, reserves_y) = lb_pair::query_bin(&app, &lb_pair.lb_pair.contract, id)?;
+        let (reserves_x, reserves_y, _) =
+            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
         let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);

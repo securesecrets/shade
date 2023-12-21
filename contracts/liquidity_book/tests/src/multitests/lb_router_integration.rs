@@ -1,6 +1,5 @@
 use anyhow::Ok;
 use serial_test::serial;
-use cosmwasm_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128};
 use shade_multi_test::interfaces::{
     lb_factory,
     lb_pair,
@@ -8,9 +7,12 @@ use shade_multi_test::interfaces::{
     snip20,
     utils::SupportedContracts,
 };
-use shade_protocol::swap::{
-    core::{TokenAmount, TokenType},
-    router::{Hop, InvokeMsg},
+use shade_protocol::{
+    c_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128},
+    swap::{
+        core::{TokenAmount, TokenType},
+        router::{Hop, InvokeMsg},
+    },
 };
 
 use super::lb_pair_fees::DEPOSIT_AMOUNT;
@@ -156,7 +158,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     };
 
     // ASSERT SWAPSIMULATION
-    let (total_fee_amount, lp_fee_amount, shade_dao_fee_amount, result, price) =
+    let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, result, price) =
         router::query_swap_simulation(
             &app,
             &router,
@@ -280,6 +282,16 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     assert_eq!(batman_balance, Uint128::from(SWAP_AMOUNT));
 
+    // add quote_asset:
+    lb_factory::add_quote_asset(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        TokenType::NativeToken {
+            denom: "uscrt".to_string(),
+        },
+    )?;
+
     //     20. CREATE another AMM pair between a native token(SSCRT) and a SNIP20 token(SILK)
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let token_x = token_type_native_generator("uscrt".to_string())?;
@@ -305,7 +317,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
-        &lb_factory.into(),
+        &lb_factory.clone().into(),
         token_x.clone(),
         token_y.clone(),
     )?;
@@ -391,7 +403,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         },
         amount: Uint128::new(SWAP_AMOUNT),
     };
-    let (total_fee_amount, lp_fee_amount, shade_dao_fee_amount, result, price) =
+    let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, _result, price) =
         router::query_swap_simulation(
             &app,
             &router,
@@ -517,6 +529,29 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             denom: "uscrt".to_string(),
         },
     });
+
+    //     20. CREATE another AMM pair between a native token(SSCRT) and a SNIP20 token(SILK)
+    let shade = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_x = token_type_snip20_generator(&shade)?;
+    let token_y = token_type_native_generator("uscrt".to_string())?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ID_ONE,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+
+    //     21. LIST the AMM pairs and ASSERT there are now 2 AMM pairs.
+    let number_of_pairs =
+        lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
+
+    assert_eq!(number_of_pairs, starting_number_of_pairs + 3);
 
     Ok(())
 }

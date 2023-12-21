@@ -8,7 +8,7 @@ use ethnum::U256;
 use std::collections::HashMap;
 
 use super::{bit_math::BitMath, u24::U24};
-use crate::lb_libraries::types::Bytes32;
+use crate::liquidity_book::lb_libraries::types::Bytes32;
 
 // TODO - This module is likely inefficient because we don't have bit ops for Bytes32.
 //      - Other libraries could benefit from Bytes32 bit ops also...

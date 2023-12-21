@@ -243,9 +243,7 @@ pub mod tests {
         );
 
         match result {
-            Ok(info) => {
-                println!("{:?}", info.messages);
-            }
+            Ok(info) => {}
             Err(err) => {
                 let _test = err.to_string();
                 assert_eq!(StdError::generic_err("No matching token in pair"), err);
@@ -585,101 +583,96 @@ pub mod tests {
                         contract_addr,
                         code_hash: _,
                         msg: _,
-                    } => {
-                        println!("{}", contract_addr);
-                        match contract_addr.as_str() {
-                            FACTORY_ADDRESS => QuerierResult::Ok(ContractResult::Ok(
-                                to_binary(&FactoryQueryResponse::GetConfig {
-                                    pair_contract: ContractInstantiationInfo {
-                                        code_hash: "".to_string(),
-                                        id: 1,
-                                    },
-                                    amm_settings: AMMSettings {
-                                        lp_fee: Fee::new(28, 10000),
-                                        shade_dao_fee: Fee::new(2, 10000),
-                                        stable_lp_fee: Fee::new(28, 10000),
-                                        stable_shade_dao_fee: Fee::new(2, 10000),
-                                        shade_dao_address: Contract {
-                                            address: Addr::unchecked(String::from("DAO")),
-                                            code_hash: "".to_string(),
-                                        },
-                                    },
-                                    lp_token_contract: ContractInstantiationInfo {
-                                        code_hash: "".to_string(),
-                                        id: 1,
-                                    },
-                                    authenticator: None,
-                                    admin_auth: Contract {
-                                        address: Addr::unchecked("admin_auth".to_string()),
+                    } => match contract_addr.as_str() {
+                        FACTORY_ADDRESS => QuerierResult::Ok(ContractResult::Ok(
+                            to_binary(&FactoryQueryResponse::GetConfig {
+                                pair_contract: ContractInstantiationInfo {
+                                    code_hash: "".to_string(),
+                                    id: 1,
+                                },
+                                amm_settings: AMMSettings {
+                                    lp_fee: Fee::new(28, 10000),
+                                    shade_dao_fee: Fee::new(2, 10000),
+                                    stable_lp_fee: Fee::new(28, 10000),
+                                    stable_shade_dao_fee: Fee::new(2, 10000),
+                                    shade_dao_address: Contract {
+                                        address: Addr::unchecked(String::from("DAO")),
                                         code_hash: "".to_string(),
                                     },
-                                })
-                                .unwrap(),
-                            )),
-                            "admin_auth" => QuerierResult::Ok(ContractResult::Ok(
-                                to_binary(&ValidateAdminPermissionResponse {
-                                    has_permission: true,
-                                })
-                                .unwrap(),
-                            )),
-                            PAIR_CONTRACT_1 => QuerierResult::Ok(ContractResult::Ok(
-                                to_binary(&AMMPairQueryMsgResponse::GetPairInfo {
-                                    liquidity_token: Contract {
-                                        address: Addr::unchecked("asd"),
-                                        code_hash: "".to_string(),
+                                },
+                                lp_token_contract: ContractInstantiationInfo {
+                                    code_hash: "".to_string(),
+                                    id: 1,
+                                },
+                                authenticator: None,
+                                admin_auth: Contract {
+                                    address: Addr::unchecked("admin_auth".to_string()),
+                                    code_hash: "".to_string(),
+                                },
+                            })
+                            .unwrap(),
+                        )),
+                        "admin_auth" => QuerierResult::Ok(ContractResult::Ok(
+                            to_binary(&ValidateAdminPermissionResponse {
+                                has_permission: true,
+                            })
+                            .unwrap(),
+                        )),
+                        PAIR_CONTRACT_1 => QuerierResult::Ok(ContractResult::Ok(
+                            to_binary(&AMMPairQueryMsgResponse::GetPairInfo {
+                                liquidity_token: Contract {
+                                    address: Addr::unchecked("asd"),
+                                    code_hash: "".to_string(),
+                                },
+                                factory: Some(Contract {
+                                    address: Addr::unchecked("asd"),
+                                    code_hash: "".to_string(),
+                                }),
+                                pair: TokenPair(
+                                    TokenType::CustomToken {
+                                        contract_addr: Addr::unchecked(CUSTOM_TOKEN_1.to_string()),
+                                        token_code_hash: "hash".into(),
                                     },
-                                    factory: Some(Contract {
-                                        address: Addr::unchecked("asd"),
-                                        code_hash: "".to_string(),
-                                    }),
-                                    pair: TokenPair(
-                                        TokenType::CustomToken {
-                                            contract_addr: Addr::unchecked(
-                                                CUSTOM_TOKEN_1.to_string(),
-                                            ),
-                                            token_code_hash: "hash".into(),
-                                        },
-                                        TokenType::NativeToken {
-                                            denom: "denom".into(),
-                                        },
-                                        false,
-                                    ),
-                                    amount_0: Uint128::new(100),
-                                    amount_1: Uint128::new(101),
-                                    total_liquidity: Uint128::new(100),
-                                    contract_version: 1,
-                                    fee_info: FeeInfo {
-                                        shade_dao_address: Addr::unchecked("".to_string()),
-                                        lp_fee: Fee {
-                                            nom: 2u64,
-                                            denom: 100u64,
-                                        },
-                                        shade_dao_fee: Fee {
-                                            nom: 2u64,
-                                            denom: 100u64,
-                                        },
-                                        stable_lp_fee: Fee {
-                                            nom: 2u64,
-                                            denom: 100u64,
-                                        },
-                                        stable_shade_dao_fee: Fee {
-                                            nom: 2u64,
-                                            denom: 100u64,
-                                        },
+                                    TokenType::NativeToken {
+                                        denom: "denom".into(),
                                     },
-                                    stable_info: None,
-                                })
-                                .unwrap(),
-                            )),
-                            CUSTOM_TOKEN_1 => QuerierResult::Ok(ContractResult::Ok(
-                                to_binary(&IntBalanceResponse {
-                                    balance: Balance(Uint128::new(100)),
-                                })
-                                .unwrap(),
-                            )),
-                            _ => unimplemented!(),
-                        }
-                    }
+                                    false,
+                                ),
+                                amount_0: Uint128::new(100),
+                                amount_1: Uint128::new(101),
+                                total_liquidity: Uint128::new(100),
+                                contract_version: 1,
+                                fee_info: FeeInfo {
+                                    shade_dao_address: Addr::unchecked("".to_string()),
+                                    lp_fee: Fee {
+                                        nom: 2u64,
+                                        denom: 100u64,
+                                    },
+                                    shade_dao_fee: Fee {
+                                        nom: 2u64,
+                                        denom: 100u64,
+                                    },
+                                    stable_lp_fee: Fee {
+                                        nom: 2u64,
+                                        denom: 100u64,
+                                    },
+                                    stable_shade_dao_fee: Fee {
+                                        nom: 2u64,
+                                        denom: 100u64,
+                                    },
+                                },
+                                stable_info: None,
+                            })
+                            .unwrap(),
+                        )),
+                        CUSTOM_TOKEN_1 => QuerierResult::Ok(ContractResult::Ok(
+                            to_binary(&IntBalanceResponse {
+                                balance: Balance(Uint128::new(100)),
+                            })
+                            .unwrap(),
+                        )),
+                        _ => unimplemented!(),
+                    },
                     _ => unimplemented!(),
                 },
                 _ => unimplemented!(),
