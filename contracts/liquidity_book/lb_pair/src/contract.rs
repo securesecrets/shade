@@ -160,14 +160,12 @@ pub fn instantiate(
         }
     }
 
-    match msg.total_reward_bins {
-        Some(t_r_b) => {
-            if t_r_b == U24::MAX {
-                return Err(Error::InvalidInput {});
-            }
+    if let Some(t_r_b) = msg.total_reward_bins {
+        if t_r_b >= U24::MAX {
+            return Err(Error::InvalidInput {});
         }
-        None => {}
     }
+
     let state = State {
         creator: info.sender,
         factory: msg.factory,
@@ -203,9 +201,8 @@ pub fn instantiate(
         samples: HashMap::<u16, OracleSample>::new(),
     };
 
-    CONFIG.save(deps.storage, &state)?;
+    STATE.save(deps.storage, &state)?;
     ORACLE.save(deps.storage, &oracle)?;
-    CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
@@ -234,16 +231,21 @@ pub fn instantiate(
 }
 
 /////////////// EXECUTE ///////////////
+/// TODO: a query for contract status
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response> {
     let contract_status = CONTRACT_STATUS.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
+
     match contract_status {
         ContractStatus::FreezeAll => match msg {
             ExecuteMsg::AddLiquidity { .. }
             | ExecuteMsg::SwapTokens { .. }
+            | ExecuteMsg::RemoveLiquidity { .. }
             | ExecuteMsg::Receive(..) => {
                 return Err(Error::TransactionBlock());
             }
+
             _ => {}
         },
         ContractStatus::LpWithdrawOnly => match msg {
@@ -266,7 +268,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             expected_return: _,
             padding: _,
         } => {
-            let config = CONFIG.load(deps.storage)?;
             if !offer.token.is_native_token() {
                 return Err(Error::UseReceiveInterface);
             }
@@ -285,8 +286,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
             try_swap(deps, env, info, swap_for_y, checked_to, offer.amount)
         }
-        //TODO: Flash loan
-        ExecuteMsg::FlashLoan {} => todo!(),
         ExecuteMsg::AddLiquidity {
             liquidity_parameters,
         } => try_add_liquidity(deps, env, info, liquidity_parameters),
@@ -323,6 +322,19 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             distribution,
             base_rewards_bins,
         } => try_reset_rewards_config(deps, env, info, distribution, base_rewards_bins),
+
+        ExecuteMsg::SetContractStatus { contract_status } => {
+            let state = STATE.load(deps.storage)?;
+            validate_admin(
+                &deps.querier,
+                AdminPermissions::ShadeSwapAdmin,
+                &info.sender,
+                &state.admin_auth,
+            )?;
+
+            CONTRACT_STATUS.save(deps.storage, &contract_status)?;
+            Ok(Response::default().add_attribute("new_status", contract_status.to_string()))
+        }
     }
 }
 
@@ -387,7 +399,7 @@ fn try_swap(
     to: Addr,
     amounts_received: Uint128, //Will get this parameter from router contract
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
     let token_x = state.token_x;
     let token_y = state.token_y;
@@ -413,9 +425,7 @@ fn try_swap(
 
     let mut params = state.pair_parameters;
     let bin_step = state.bin_step;
-    let mut reward_stats = REWARDS_STATS_STORE
-        .load(deps.storage, state.rewards_epoch_id)
-        .unwrap();
+    let mut reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
 
     let mut active_id = params.get_active_id();
 
@@ -546,7 +556,7 @@ fn try_swap(
     let mut oracle = ORACLE.load(deps.storage)?;
     oracle.update(&env.block.time, params, active_id)?;
 
-    CONFIG.update(deps.storage, |mut state| {
+    STATE.update(deps.storage, |mut state| {
         state.last_swap_timestamp = env.block.time;
         state.protocol_fees = protocol_fees;
         // TODO - map the error to a StdError
@@ -610,31 +620,6 @@ fn try_swap(
         })?))
 }
 
-/// Flash loan tokens from the pool to a receiver contract and execute a callback function.
-///
-/// The receiver contract is expected to return the tokens plus a fee to this contract.
-/// The fee is calculated as a percentage of the amount borrowed, and is the same for both tokens.
-///
-/// # Arguments
-///
-/// * `receiver` - The contract that will receive the tokens and execute the callback function
-/// * `amounts` - The encoded amounts of token X and token Y to flash loan
-/// * `data` - Any data that will be passed to the callback function
-///
-/// # Requirements
-///
-/// * `receiver` must implement the ILBFlashLoanCallback interface
-fn try_flash_loan(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _receiver: ContractInfo,
-    _amounts: Bytes32,
-    _data: Binary,
-) -> Result<Response> {
-    todo!()
-}
-
 pub fn try_add_liquidity(
     deps: DepsMut,
     env: Env,
@@ -654,7 +639,7 @@ pub fn try_add_liquidity(
             current_timestamp: env.block.time.seconds(),
         });
     }
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let response = Response::new();
     // 1.2- Checking token order
     if liquidity_parameters.token_x != config.token_x
@@ -684,7 +669,7 @@ pub fn add_liquidity_internal(
     match_lengths(liquidity_parameters)?;
     check_ids_bounds(liquidity_parameters)?;
 
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
 
     // TODO - we are initializing the vector of empty values, and populating them in a
     //        loop later. I think this could be refactored.
@@ -862,7 +847,7 @@ fn mint(
     amount_received_y: Uint128,
     mut response: Response,
 ) -> Result<(Bytes32, Bytes32, Vec<U256>, Response)> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
 
     let _token_x = state.token_x;
     let _token_y = state.token_y;
@@ -894,7 +879,7 @@ fn mint(
         &mut messages,
     )?;
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
+    STATE.update(deps.storage, |mut state| -> StdResult<_> {
         state.reserves = state.reserves.add(amounts_received.sub(amounts_left)); //Total liquidity of pool
         Ok(state)
     })?;
@@ -968,7 +953,7 @@ fn _mint_bins(
     mint_arrays: &mut MintArrays,
     messages: &mut Vec<CosmosMsg>,
 ) -> Result<Bytes32> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let active_id = pair_parameters.get_active_id();
 
     let mut amounts_left = amounts_received;
@@ -1047,7 +1032,7 @@ fn _update_bin(
     mut parameters: PairParameters,
 ) -> Result<(U256, Bytes32, Bytes32)> {
     let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, bin_step)?;
     let total_supply = _query_total_supply(
         deps.as_ref(),
@@ -1089,7 +1074,7 @@ fn _update_bin(
 
             if protocol_c_fees != [0u8; 32] {
                 let _amounts_in_to_bin = amounts_in_to_bin.sub(protocol_c_fees);
-                CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
+                STATE.update(deps.storage, |mut state| -> StdResult<_> {
                     state.protocol_fees = state.protocol_fees.add(protocol_c_fees);
                     Ok(state)
                 })?;
@@ -1097,7 +1082,7 @@ fn _update_bin(
 
             let mut oracle = ORACLE.load(deps.storage)?;
             parameters = oracle.update(time, parameters, id)?;
-            CONFIG.update(deps.storage, |mut state| -> StdResult<_> {
+            STATE.update(deps.storage, |mut state| -> StdResult<_> {
                 state.pair_parameters = parameters;
                 Ok(state)
             })?;
@@ -1133,7 +1118,7 @@ fn _query_total_supply(deps: Deps, id: u32, code_hash: String, address: Addr) ->
 
     let total_supply_uint256 = match res {
         lb_token::QueryAnswer::IdTotalBalance { amount } => amount,
-        _ => todo!(),
+        _ => panic!("{}", format!("Wrong response for lb_token")),
     };
 
     Ok(total_supply_uint256.uint256_to_u256())
@@ -1162,7 +1147,7 @@ pub fn try_remove_liquidity(
     info: MessageInfo,
     remove_liquidity_params: RemoveLiquidity,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
 
     let is_wrong_order = config.token_x != remove_liquidity_params.token_x;
 
@@ -1255,7 +1240,7 @@ fn burn(
     ids: Vec<u32>,
     amounts_to_burn: Vec<Uint256>,
 ) -> Result<(Vec<[u8; 32]>, Response)> {
-    let mut config = CONFIG.load(deps.storage)?;
+    let mut config = STATE.load(deps.storage)?;
 
     let token_x = config.token_x;
     let token_y = config.token_y;
@@ -1348,7 +1333,7 @@ fn burn(
 
     let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender);
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
+    STATE.update(deps.storage, |mut state| -> StdResult<State> {
         state.reserves = state.reserves.sub(amounts_out);
         Ok(state)
     })?;
@@ -1372,7 +1357,7 @@ fn burn(
 
 /// Collect the protocol fees from the pool.
 fn try_collect_protocol_fees(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     // only_protocol_fee_recipient(&info.sender, &state.factory.address)?;
 
     let token_x = state.token_x;
@@ -1391,7 +1376,7 @@ fn try_collect_protocol_fees(deps: DepsMut, _env: Env, info: MessageInfo) -> Res
 
     if U256::from_le_bytes(collected_protocol_fees) != U256::ZERO {
         // This is setting the protocol fees to the smallest possible values
-        CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
+        STATE.update(deps.storage, |mut state| -> StdResult<State> {
             state.protocol_fees = ones;
             state.reserves = state.reserves.sub(collected_protocol_fees);
             Ok(state)
@@ -1435,7 +1420,7 @@ fn try_increase_oracle_length(
     info: MessageInfo,
     new_length: u16,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -1488,7 +1473,7 @@ fn try_set_static_fee_parameters(
     protocol_share: u16,
     max_volatility_accumulator: u32,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     only_factory(&info.sender, &state.factory.address)?;
 
     let mut params = state.pair_parameters;
@@ -1508,7 +1493,7 @@ fn try_set_static_fee_parameters(
         return Err(Error::MaxTotalFeeExceeded {});
     }
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
+    STATE.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
         Ok(state)
     })?;
@@ -1520,14 +1505,14 @@ fn try_set_static_fee_parameters(
 ///
 /// Can only be called by the factory.
 fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     only_factory(&info.sender, &state.factory.address)?;
 
     let mut params = state.pair_parameters;
     params.update_id_reference();
     params.update_volatility_reference()?;
 
-    CONFIG.update(deps.storage, |mut state| -> StdResult<State> {
+    STATE.update(deps.storage, |mut state| -> StdResult<State> {
         state.pair_parameters = params;
         Ok(state)
     })?;
@@ -1541,7 +1526,7 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Respon
 }
 
 fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response> {
-    let mut state = CONFIG.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -1575,7 +1560,7 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
     let toggle = state.toggle_distributions_algorithm;
     state.last_swap_timestamp = env.block.time;
     state.toggle_distributions_algorithm = false;
-    CONFIG.save(deps.storage, &state)?;
+    STATE.save(deps.storage, &state)?;
 
     let mut distribution_algorithm = &reward_stats.rewards_distribution_algorithm;
     if toggle {
@@ -1713,7 +1698,7 @@ fn try_reset_rewards_config(
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
     base_reward_bins: Option<u32>,
 ) -> Result<Response> {
-    let mut state = CONFIG.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -1742,7 +1727,7 @@ fn try_reset_rewards_config(
         None => {}
     }
 
-    CONFIG.save(deps.storage, &state)?;
+    STATE.save(deps.storage, &state)?;
 
     Ok(Response::default())
 }
@@ -1768,7 +1753,7 @@ fn receiver_callback(
 ) -> Result<Response> {
     let msg = msg.ok_or(Error::ReceiverMsgEmpty)?;
 
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
 
     let response;
     match from_binary(&msg)? {
@@ -1872,7 +1857,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
 // TODO - Revisit if this function is necessary. It seems like something that might belong in the
 //        lb-factory contract. It should at least have it's own interface and not use amm_pair's.
 fn query_pair_info(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
 
     let (reserve_x, reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
@@ -1925,7 +1910,7 @@ fn query_swap_simulation(
     offer: shade_protocol::swap::core::TokenAmount,
     exclude_fee: Option<bool>,
 ) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
 
     let (reserve_x, reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
@@ -1969,7 +1954,7 @@ fn query_swap_simulation(
 ///
 /// * `factory` - The Liquidity Book Factory
 fn query_factory(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let factory = state.factory.address;
 
     let response = FactoryResponse { factory };
@@ -1982,7 +1967,7 @@ fn query_factory(deps: Deps) -> Result<Binary> {
 ///
 /// * `factory` - The Liquidity Book Factory
 fn query_lb_token(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let lb_token = state.lb_token;
 
     let response = LbTokenResponse { contract: lb_token };
@@ -1995,7 +1980,7 @@ fn query_lb_token(deps: Deps) -> Result<Binary> {
 ///
 /// * `factory` - The Liquidity Book Factory
 fn query_staking(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let staking_contract = state.staking_contract;
 
     let response = StakingResponse {
@@ -2010,7 +1995,7 @@ fn query_staking(deps: Deps) -> Result<Binary> {
 ///
 /// * `token_x` - The address of the token X
 fn query_tokens(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
 
     let response = TokensResponse {
         token_x: state.token_x,
@@ -2025,7 +2010,7 @@ fn query_tokens(deps: Deps) -> Result<Binary> {
 ///
 /// * `token_x` - The address of the token X
 fn query_token_x(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let token_x = state.token_x;
 
     let response = TokenXResponse { token_x };
@@ -2038,7 +2023,7 @@ fn query_token_x(deps: Deps) -> Result<Binary> {
 ///
 /// * `token_y` - The address of the token Y
 fn query_token_y(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let token_y = state.token_y;
 
     let response = TokenYResponse { token_y };
@@ -2054,7 +2039,7 @@ fn query_token_y(deps: Deps) -> Result<Binary> {
 ///
 /// * `bin_step` - The bin step of the Liquidity Book Pair, in 10_000th
 fn query_bin_step(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let bin_step = state.bin_step;
 
     let response = BinStepResponse { bin_step };
@@ -2070,7 +2055,7 @@ fn query_bin_step(deps: Deps) -> Result<Binary> {
 /// * `reserve_x` - The reserve of token X
 /// * `reserve_y` - The reserve of token Y
 fn query_reserves(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let (mut reserve_x, mut reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
@@ -2094,7 +2079,7 @@ fn query_reserves(deps: Deps) -> Result<Binary> {
 ///
 /// * `active_id` - The active id of the Liquidity Book Pair
 fn query_active_id(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let active_id = state.pair_parameters.get_active_id();
 
     let response = ActiveIdResponse { active_id };
@@ -2372,7 +2357,7 @@ fn _get_next_non_empty_bin(tree: &TreeUint24, swap_for_y: bool, id: u32) -> u32 
 /// * `protocol_fee_x` - The protocol fees of token X
 /// * `protocol_fee_y` - The protocol fees of token Y
 fn query_protocol_fees(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
     let response = ProtocolFeesResponse {
@@ -2394,7 +2379,7 @@ fn query_protocol_fees(deps: Deps) -> Result<Binary> {
 /// * `protocol_share` - The protocol share for the static fee
 /// * `max_volatility_accumulator` - The maximum volatility accumulator for the static fee
 fn query_static_fee_params(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
 
     let base_factor = params.get_base_factor();
@@ -2426,7 +2411,7 @@ fn query_static_fee_params(deps: Deps) -> Result<Binary> {
 /// * `id_reference` - The id reference for the variable fee
 /// * `time_of_last_update` - The time of last update for the variable fee
 fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
 
     let volatility_accumulator = params.get_volatility_accumulator();
@@ -2453,7 +2438,7 @@ fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
 /// * `last_updated` - The last updated timestamp of the oracle
 /// * `first_timestamp` - The first timestamp of the oracle, i.e. the timestamp of the oldest sample
 fn query_oracle_params(deps: Deps) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let oracle = ORACLE.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -2507,7 +2492,7 @@ fn query_oracle_params(deps: Deps) -> Result<Binary> {
 /// * `cumulative_volatility` - The cumulative volatility of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_bin_crossed` - The cumulative bin crossed of the Liquidity Book Pair at the given timestamp
 fn query_oracle_sample_at(deps: Deps, env: Env, look_up_timestamp: u64) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let oracle = ORACLE.load(deps.storage)?;
     let mut params = state.pair_parameters;
 
@@ -2557,7 +2542,7 @@ fn query_oracle_sample_at(deps: Deps, env: Env, look_up_timestamp: u64) -> Resul
 ///
 /// * `price` - The price corresponding to this id
 fn query_price_from_id(deps: Deps, id: u32) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, state.bin_step)?.u256_to_uint256();
 
     let response = PriceFromIdResponse { price };
@@ -2576,7 +2561,7 @@ fn query_price_from_id(deps: Deps, id: u32) -> Result<Binary> {
 ///
 /// * `id` - The id of the bin corresponding to this price
 fn query_id_from_price(deps: Deps, price: Uint256) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let price = price.uint256_to_u256();
     let id = PriceHelper::get_id_from_price(price, state.bin_step)?;
 
@@ -2601,7 +2586,7 @@ fn query_id_from_price(deps: Deps, price: Uint256) -> Result<Binary> {
 /// * `amount_out_left` - The amount of token Y or X that cannot be swapped out
 /// * `fee` - The fee of the swap
 fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
     let mut amount_in = 0u128;
@@ -2685,7 +2670,7 @@ fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -> Re
 /// * `amount_out` - The amount of token Y or X that can be swapped out
 /// * `fee` - The fee of the swap
 fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
     let mut amounts_in_left = Bytes32::encode_alt(amount_in, swap_for_y);
@@ -2763,7 +2748,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
 ///
 /// * `factory` - The Liquidity Book Factory
 fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     let _factory = state.factory.address;
 
     let total_supply =
@@ -2775,7 +2760,7 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
 fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binary> {
     let (epoch_id) = match epoch_id {
         Some(id) => id,
-        None => CONFIG.load(deps.storage)?.rewards_epoch_id - 1,
+        None => STATE.load(deps.storage)?.rewards_epoch_id - 1,
     };
 
     to_binary(&RewardsDistributionResponse {
@@ -2794,14 +2779,14 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
                 let emp_storage = ephemeral_storage_r(deps.storage).load()?;
-                let mut state = CONFIG.load(deps.storage)?;
+                let mut state = STATE.load(deps.storage)?;
 
                 state.lb_token = ContractInfo {
                     address: contract_address,
                     code_hash: emp_storage.lb_token_code_hash,
                 };
 
-                CONFIG.save(deps.storage, &state)?;
+                STATE.save(deps.storage, &state)?;
 
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
@@ -2811,7 +2796,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                     lb_token: state.lb_token.to_owned().into(),
                     admin_auth: state.admin_auth.into(),
                     query_auth: None,
-                    first_reward_token: None,
                     epoch_index: emp_storage.epoch_index,
                     epoch_duration: emp_storage.epoch_duration,
                     expiry_duration: emp_storage.expiry_duration,
@@ -2845,14 +2829,14 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
                 let emp_storage = ephemeral_storage_r(deps.storage).load()?;
-                let mut state = CONFIG.load(deps.storage)?;
+                let mut state = STATE.load(deps.storage)?;
 
                 state.staking_contract = ContractInfo {
                     address: contract_address,
                     code_hash: emp_storage.staking_contract.code_hash,
                 };
 
-                CONFIG.save(deps.storage, &state)?;
+                STATE.save(deps.storage, &state)?;
 
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());

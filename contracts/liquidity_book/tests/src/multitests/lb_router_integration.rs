@@ -282,6 +282,16 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     assert_eq!(batman_balance, Uint128::from(SWAP_AMOUNT));
 
+    // add quote_asset:
+    lb_factory::add_quote_asset(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        TokenType::NativeToken {
+            denom: "uscrt".to_string(),
+        },
+    )?;
+
     //     20. CREATE another AMM pair between a native token(SSCRT) and a SNIP20 token(SILK)
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let token_x = token_type_native_generator("uscrt".to_string())?;
@@ -307,7 +317,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     let all_pairs = lb_factory::query_all_lb_pairs(
         &mut app,
-        &lb_factory.into(),
+        &lb_factory.clone().into(),
         token_x.clone(),
         token_y.clone(),
     )?;
@@ -519,6 +529,29 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             denom: "uscrt".to_string(),
         },
     });
+
+    //     20. CREATE another AMM pair between a native token(SSCRT) and a SNIP20 token(SILK)
+    let shade = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_x = token_type_snip20_generator(&shade)?;
+    let token_y = token_type_native_generator("uscrt".to_string())?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ID_ONE,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+
+    //     21. LIST the AMM pairs and ASSERT there are now 2 AMM pairs.
+    let number_of_pairs =
+        lb_factory::query_number_of_lb_pairs(&mut app, &lb_factory.clone().into())?;
+
+    assert_eq!(number_of_pairs, starting_number_of_pairs + 3);
 
     Ok(())
 }

@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display};
+
 use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
@@ -55,8 +57,6 @@ pub enum ExecuteMsg {
         remove_liquidity_params: RemoveLiquidity,
     },
 
-    FlashLoan {},
-
     // Burn {
     //     from: Addr,
     //     to: Addr,
@@ -82,6 +82,21 @@ pub enum ExecuteMsg {
         distribution: Option<RewardsDistributionAlgorithm>,
         base_rewards_bins: Option<u32>,
     },
+    SetContractStatus {
+        contract_status: ContractStatus,
+    },
+}
+
+#[cw_serde]
+pub enum ContractStatus {
+    Active,         // allows all operations
+    FreezeAll,      // blocks everything except admin-protected config changes
+    LpWithdrawOnly, // blocks everything except LP withdraws and admin-protected config changes
+}
+impl Display for ContractStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
 }
 
 #[cw_serde]

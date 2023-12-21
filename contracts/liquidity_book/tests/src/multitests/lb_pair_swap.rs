@@ -298,6 +298,70 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
 
 #[test]
 #[serial]
+pub fn test_fuzz_swap_out_for_y_send_someone() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
+
+    let amount_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
+
+    let (amount_out, amount_in_left, _fee) =
+        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_in, true)?;
+
+    assert!(amount_out > Uint128::zero());
+    assert_eq!(amount_in_left, Uint128::zero());
+
+    let tokens_to_mint = vec![(SHADE, amount_in)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+
+    lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.joker().to_string()),
+        token_x,
+        amount_in,
+    )?;
+
+    let shd_balance = snip20::balance_query(
+        &app,
+        addrs.batman().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+    assert_eq!(shd_balance, Uint128::zero());
+
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.joker().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_owned(),
+    )?;
+
+    let silk_balance = snip20::balance_query(
+        &app,
+        addrs.joker().as_str(),
+        &deployed_contracts,
+        SILK,
+        "viewing_key".to_owned(),
+    )?;
+    assert_eq!(silk_balance, amount_out);
+
+    Ok(())
+}
+
+#[test]
+#[serial]
 pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
@@ -529,5 +593,64 @@ pub fn test_revert_swap_out_of_liquidity() -> Result<(), anyhow::Error> {
             msg: "Not enough liquidity!".to_string()
         })
     );
+    Ok(())
+}
+
+#[test]
+#[serial]
+fn test_revert_zero_bin_reserves() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let shade = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_x = token_type_snip20_generator(&shade)?;
+    let token_y = token_type_snip20_generator(&silk)?;
+
+    lb_factory::create_lb_pair(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_factory.clone().into(),
+        DEFAULT_BIN_STEP,
+        ACTIVE_ID,
+        token_x.clone(),
+        token_y.clone(),
+        "viewing_key".to_string(),
+        "entropy".to_string(),
+    )?;
+
+    let all_pairs =
+        lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
+    let lb_pair = all_pairs[0].clone();
+    // Simulate transferring 2e18 tokens to the LB pair contract
+    let token_amount = Uint128::from(2 * DEPOSIT_AMOUNT);
+    let tokens_to_mint = vec![(SHADE, token_amount)];
+
+    mint_token_helper(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        addrs.batman().into_string(),
+        tokens_to_mint.clone(),
+    )?;
+
+    let token_x = &extract_contract_info(&deployed_contracts, SHADE)?;
+
+    let result = lb_pair::swap_snip_20(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_pair.lb_pair.contract,
+        Some(addrs.batman().to_string()),
+        token_x,
+        token_amount,
+    );
+    // Check for the expected error
+    assert_eq!(
+        result,
+        Err(StdError::GenericErr {
+            msg: format!("could not get bin reserves for active id: {}", ACTIVE_ID).to_string()
+        })
+    );
+
     Ok(())
 }

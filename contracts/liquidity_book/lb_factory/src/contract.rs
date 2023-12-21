@@ -55,21 +55,13 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response> {
-    if msg.flash_loan_fee > _MAX_FLASHLOAN_FEE {
-        return Err(Error::FlashLoanFeeAboveMax {
-            fee: msg.flash_loan_fee,
-            max_fee: _MAX_FLASHLOAN_FEE,
-        });
-    }
-
-    let config = Config {
+    let config = State {
         contract_info: ContractInfo {
             address: env.contract.address,
             code_hash: env.contract.code_hash,
         },
         owner: msg.owner.unwrap_or_else(|| info.sender.clone()),
         fee_recipient: msg.fee_recipient,
-        flash_loan_fee: msg.flash_loan_fee,
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
@@ -82,7 +74,7 @@ pub fn instantiate(
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
     };
 
-    CONFIG.save(deps.storage, &config)?;
+    STATE.save(deps.storage, &config)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
 
     Ok(Response::default())
@@ -147,6 +139,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             protocol_share,
             max_volatility_accumulator,
             is_open,
+            total_reward_bins,
         } => try_set_pair_preset(
             deps,
             env,
@@ -160,6 +153,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             protocol_share,
             max_volatility_accumulator,
             is_open,
+            total_reward_bins,
         ),
         ExecuteMsg::SetPresetOpenState { bin_step, is_open } => {
             try_set_preset_open_state(deps, env, info, bin_step, is_open)
@@ -194,9 +188,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ExecuteMsg::SetFeeRecipient { fee_recipient } => {
             try_set_fee_recipient(deps, env, info, fee_recipient)
         }
-        ExecuteMsg::SetFlashLoanFee { flash_loan_fee } => {
-            try_set_flash_loan_fee(deps, env, info, flash_loan_fee)
-        }
+
         ExecuteMsg::AddQuoteAsset { asset } => try_add_quote_asset(deps, env, info, asset),
         ExecuteMsg::RemoveQuoteAsset { asset } => try_remove_quote_asset(deps, env, info, asset),
         ExecuteMsg::ForceDecay { pair } => try_force_decay(deps, env, info, pair),
@@ -214,7 +206,7 @@ fn try_set_lb_pair_implementation(
     info: MessageInfo,
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -229,7 +221,7 @@ fn try_set_lb_pair_implementation(
         });
     }
 
-    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+    STATE.update(deps.storage, |mut config| -> StdResult<_> {
         config.lb_pair_implementation = new_lb_pair_implementation;
         Ok(config)
     })?;
@@ -248,7 +240,7 @@ fn try_set_lb_token_implementation(
     info: MessageInfo,
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -263,7 +255,7 @@ fn try_set_lb_token_implementation(
         });
     }
 
-    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+    STATE.update(deps.storage, |mut config| -> StdResult<_> {
         config.lb_token_implementation = new_lb_token_implementation;
         Ok(config)
     })?;
@@ -282,7 +274,7 @@ fn try_set_staking_contract_implementation(
     info: MessageInfo,
     new_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -297,7 +289,7 @@ fn try_set_staking_contract_implementation(
         });
     }
 
-    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+    STATE.update(deps.storage, |mut config| -> StdResult<_> {
         config.staking_contract_implementation = new_implementation;
         Ok(config)
     })?;
@@ -328,7 +320,7 @@ fn try_create_lb_pair(
     viewing_key: String,
     entropy: String,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
 
     if !PRESETS.has(deps.storage, bin_step) {
         return Err(Error::BinStepHasNoPreset { bin_step });
@@ -349,7 +341,7 @@ fn try_create_lb_pair(
     if !QUOTE_ASSET_WHITELIST
         .iter(deps.storage)?
         .any(|result| match result {
-            Ok(t) => t.eq(&token_y),
+            Ok(t) => t.eq(&token_y) || t.eq(&token_x),
             Err(_) => false, // Handle the error case as needed
         })
     {
@@ -542,8 +534,9 @@ fn try_set_pair_preset(
     protocol_share: u16,
     max_volatility_accumulator: u32,
     is_open: bool,
+    total_reward_bins: u32,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -572,6 +565,10 @@ fn try_set_pair_preset(
 
     PRESETS.save(deps.storage, bin_step, &preset)?;
 
+    state.total_reward_bins = total_reward_bins;
+
+    STATE.save(deps.storage, &state)?;
+
     Ok(Response::default().add_attribute_plaintext("set preset", bin_step.to_string()))
 }
 
@@ -588,7 +585,7 @@ fn try_set_preset_open_state(
     bin_step: u16,
     is_open: bool,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -626,7 +623,7 @@ fn try_remove_preset(
     info: MessageInfo,
     bin_step: u16,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -671,7 +668,7 @@ fn try_set_fee_parameters_on_pair(
     protocol_share: u16,
     max_volatility_accumulator: u32,
 ) -> Result<Response> {
-    let state = CONFIG.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -717,7 +714,7 @@ fn try_set_fee_recipient(
     info: MessageInfo,
     fee_recipient: Addr,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -732,7 +729,7 @@ fn try_set_fee_recipient(
         });
     }
 
-    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+    STATE.update(deps.storage, |mut config| -> StdResult<_> {
         config.fee_recipient = fee_recipient.clone();
         Ok(config)
     })?;
@@ -740,48 +737,6 @@ fn try_set_fee_recipient(
     Ok(Response::default()
         .add_attribute_plaintext("old fee recipient", old_fee_recipient.as_str())
         .add_attribute_plaintext("new fee recipient", fee_recipient.as_str()))
-}
-
-/// Function to set the flash loan fee
-///
-/// # Arguments
-///
-/// * `flash_loan_fee` - The value of the fee for flash loan
-fn try_set_flash_loan_fee(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    flash_loan_fee: u8,
-) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
-    validate_admin(
-        &deps.querier,
-        AdminPermissions::LiquidityBookAdmin,
-        info.sender.to_string(),
-        &config.admin_auth,
-    )?;
-    let old_flash_loan_fee = config.flash_loan_fee;
-
-    if old_flash_loan_fee == flash_loan_fee {
-        return Err(Error::SameFlashLoanFee {
-            fee: flash_loan_fee,
-        });
-    }
-    if flash_loan_fee > _MAX_FLASHLOAN_FEE {
-        return Err(Error::FlashLoanFeeAboveMax {
-            fee: flash_loan_fee,
-            max_fee: _MAX_FLASHLOAN_FEE,
-        });
-    }
-
-    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
-        config.flash_loan_fee = flash_loan_fee;
-        Ok(config)
-    })?;
-
-    Ok(Response::default()
-        .add_attribute_plaintext("old flash loan fee", old_flash_loan_fee.to_string())
-        .add_attribute_plaintext("new flash loan fee", flash_loan_fee.to_string()))
 }
 
 /// Function to add an asset to the whitelist of quote assets
@@ -795,7 +750,7 @@ fn try_add_quote_asset(
     info: MessageInfo,
     quote_asset: TokenType,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -831,7 +786,7 @@ fn try_remove_quote_asset(
     info: MessageInfo,
     asset: TokenType,
 ) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -865,7 +820,7 @@ fn try_remove_quote_asset(
 }
 
 fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -898,20 +853,11 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) ->
     Ok(response)
 }
 
-fn only_owner(sender: &Addr, owner: &Addr) -> Result<()> {
-    if sender != owner {
-        return Err(Error::OnlyOwner);
-    }
-    Ok(())
-}
-
 #[shd_entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetMinBinStep {} => query_min_bin_step(deps),
         QueryMsg::GetFeeRecipient {} => query_fee_recipient(deps),
-        QueryMsg::GetMaxFlashLoanFee {} => query_max_flash_loan_fee(deps),
-        QueryMsg::GetFlashLoanFee {} => query_flash_loan_fee(deps),
         QueryMsg::GetLBPairImplementation {} => query_lb_pair_implementation(deps),
         QueryMsg::GetLBTokenImplementation {} => query_lb_token_implementation(deps),
         QueryMsg::GetNumberOfLBPairs {} => query_number_of_lb_pairs(deps),
@@ -949,34 +895,9 @@ fn query_min_bin_step(_deps: Deps) -> Result<Binary> {
 ///
 /// * `fee_recipient` - The address of the fee recipient.
 fn query_fee_recipient(deps: Deps) -> Result<Binary> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let response = FeeRecipientResponse {
         fee_recipient: config.fee_recipient,
-    };
-    to_binary(&response).map_err(Error::CwErr)
-}
-
-/// Returns the maximum fee percentage for flash loans.
-///
-/// # Returns
-///
-/// * `max_fee` - The maximum fee percentage for flash loans.
-fn query_max_flash_loan_fee(_deps: Deps) -> Result<Binary> {
-    let response = MaxFlashLoanFeeResponse {
-        max_fee: _MAX_FLASHLOAN_FEE,
-    };
-    to_binary(&response).map_err(Error::CwErr)
-}
-
-/// Returns the fee percentage for flash loans.
-///
-/// # Returns
-///
-/// * `flash_loan_fee` - The fee percentage for flash loans.
-fn query_flash_loan_fee(deps: Deps) -> Result<Binary> {
-    let config = CONFIG.load(deps.storage)?;
-    let response = FlashLoanFeeResponse {
-        flash_loan_fee: config.flash_loan_fee,
     };
     to_binary(&response).map_err(Error::CwErr)
 }
@@ -987,7 +908,7 @@ fn query_flash_loan_fee(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_pair_implementation` - The code ID and hash of the LBPair implementation.
 fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let response = LBPairImplementationResponse {
         lb_pair_implementation: config.lb_pair_implementation,
     };
@@ -1000,7 +921,7 @@ fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_token_implementation` - The code ID and hash of the LBToken implementation.
 fn query_lb_token_implementation(deps: Deps) -> Result<Binary> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = STATE.load(deps.storage)?;
     let response = LBTokenImplementationResponse {
         lb_token_implementation: config.lb_token_implementation,
     };

@@ -60,7 +60,6 @@ pub struct InstantiateMsg {
     pub epoch_index: u64,
     pub epoch_duration: u64,
     pub expiry_duration: Option<u64>,
-    pub first_reward_token: Option<RewardTokenCreate>,
     pub recover_funds_receiver: Addr,
 }
 

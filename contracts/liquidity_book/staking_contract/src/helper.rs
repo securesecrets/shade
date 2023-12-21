@@ -1,20 +1,9 @@
 use shade_protocol::{
     c_std::{
-        entry_point,
-        from_binary,
-        to_binary,
         Addr,
-        Attribute,
-        BankMsg,
-        Binary,
-        Coin,
         ContractInfo,
         CosmosMsg,
-        Deps,
-        DepsMut,
-        Env,
         MessageInfo,
-        Response,
         StdError,
         StdResult,
         Storage,
@@ -22,29 +11,22 @@ use shade_protocol::{
         Uint256,
     },
     liquidity_book::staking::{
-        EpochInfo,
         QueryTxnType,
-        RewardTokenInfo,
         StakerInfo,
         StakerLiquiditySnapshot,
         State,
         TotalLiquiditySnapshot,
         Tx,
     },
-    query_auth::QueryPermit,
-    secret_storage_plus::ItemStorage,
-    snip20::helpers::{register_receive, set_viewing_key_msg, token_info},
+    snip20::helpers::{register_receive, set_viewing_key_msg},
     Contract,
-    BLOCK_SIZE,
 };
 use std::hash::{Hash, Hasher};
 
 use crate::{
     contract::SHADE_STAKING_VIEWING_KEY,
     state::{
-        EPOCH_STORE,
         REWARD_TOKENS,
-        REWARD_TOKEN_INFO,
         STAKERS,
         STAKERS_LIQUIDITY_SNAPSHOT,
         TOTAL_LIQUIDITY,

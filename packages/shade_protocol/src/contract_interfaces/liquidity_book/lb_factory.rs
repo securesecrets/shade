@@ -15,7 +15,6 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
-    pub flash_loan_fee: u8,
     pub total_reward_bins: u32,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,
@@ -69,6 +68,7 @@ pub enum ExecuteMsg {
         protocol_share: u16,
         // u24
         max_volatility_accumulator: u32,
+        total_reward_bins: u32,
         is_open: bool,
     },
     SetPresetOpenState {
@@ -95,9 +95,7 @@ pub enum ExecuteMsg {
     SetFeeRecipient {
         fee_recipient: Addr,
     },
-    SetFlashLoanFee {
-        flash_loan_fee: u8,
-    },
+
     AddQuoteAsset {
         asset: TokenType,
     },
@@ -120,10 +118,6 @@ pub enum QueryMsg {
     GetMinBinStep {},
     #[returns(FeeRecipientResponse)]
     GetFeeRecipient {},
-    #[returns(MaxFlashLoanFeeResponse)]
-    GetMaxFlashLoanFee {},
-    #[returns(FlashLoanFeeResponse)]
-    GetFlashLoanFee {},
     #[returns(LBPairImplementationResponse)]
     #[serde(rename = "get_lb_pair_implementation")]
     GetLBPairImplementation {},
@@ -176,16 +170,6 @@ pub struct MinBinStepResponse {
 #[cw_serde]
 pub struct FeeRecipientResponse {
     pub fee_recipient: Addr,
-}
-
-#[cw_serde]
-pub struct MaxFlashLoanFeeResponse {
-    pub max_fee: u8,
-}
-
-#[cw_serde]
-pub struct FlashLoanFeeResponse {
-    pub flash_loan_fee: u8,
 }
 
 #[cw_serde]

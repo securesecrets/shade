@@ -12,7 +12,7 @@ use shade_protocol::{
 };
 
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
-pub const CONFIG: Item<Config> = Item::new("config");
+pub const STATE: Item<State> = Item::new("state");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 // pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");
@@ -46,11 +46,10 @@ pub enum ContractStatus {
 }
 
 #[cw_serde]
-pub struct Config {
+pub struct State {
     pub contract_info: ContractInfo,
     pub owner: Addr,
     pub fee_recipient: Addr,
-    pub flash_loan_fee: u8,
     pub lb_pair_implementation: ContractInstantiationInfo,
     pub lb_token_implementation: ContractInstantiationInfo,
     pub staking_contract_implementation: ContractInstantiationInfo,

@@ -11,6 +11,9 @@ pub mod lb_pair_queries;
 mod lb_pair_liquidity;
 
 #[cfg(test)]
+mod lb_pair_trivial;
+
+#[cfg(test)]
 mod lb_pair_fees;
 
 #[cfg(test)]

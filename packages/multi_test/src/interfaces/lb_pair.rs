@@ -5,6 +5,7 @@ use shade_protocol::{
     lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
         BinResponse,
+        ContractStatus,
         LiquidityParameters,
         RemoveLiquidity,
         RewardsDistribution,
@@ -12,7 +13,7 @@ use shade_protocol::{
         UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
-    swap::core::TokenType,
+    swap::core::{TokenAmount, TokenType},
     utils::{
         asset::{Contract, RawContract},
         ExecuteCallback,
@@ -81,6 +82,23 @@ pub fn init(
     Ok(lb_pair)
 }
 
+pub fn set_contract_status(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    contract_status: ContractStatus,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::SetContractStatus { contract_status }.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
 pub fn add_liquidity(
     app: &mut App,
     sender: &str,
@@ -92,6 +110,22 @@ pub fn add_liquidity(
     }
     .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
     {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+pub fn increase_oracle_length(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    new_length: u16,
+) -> StdResult<()> {
+    match (lb_pair::ExecuteMsg::IncreaseOracleLength { new_length }.test_exec(
+        lb_pair,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
@@ -127,6 +161,25 @@ pub fn remove_liquidity(
     {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+pub fn swap_native(
+    app: &mut App,
+    sender: &str,
+    lb_pair: &ContractInfo,
+    to: Option<String>,
+    offer: TokenAmount,
+) -> StdResult<()> {
+    match (&lb_pair::ExecuteMsg::SwapTokens {
+        expected_return: None,
+        to,
+        padding: None,
+        offer,
+    }
+    .test_exec(&lb_pair, app, Addr::unchecked(sender), &[]))
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
 
@@ -227,6 +280,12 @@ pub fn set_static_fee_parameters(
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
+}
+
+pub fn query_total_supply(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<Uint256> {
+    let res = lb_pair::QueryMsg::TotalSupply { id }.test_query(lb_pair, app)?;
+    let lb_pair::TotalSupplyResponse { total_supply } = res;
+    Ok(total_supply)
 }
 
 pub fn query_lb_token(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
@@ -341,6 +400,12 @@ pub fn query_factory(app: &App, lb_pair: &ContractInfo) -> StdResult<Addr> {
     let res = lb_pair::QueryMsg::GetFactory {}.test_query(lb_pair, app)?;
     let lb_pair::FactoryResponse { factory } = res;
     Ok(factory)
+}
+
+pub fn query_tokens(app: &App, lb_pair: &ContractInfo) -> StdResult<(TokenType, TokenType)> {
+    let res = lb_pair::QueryMsg::GetTokens {}.test_query(lb_pair, app)?;
+    let lb_pair::TokensResponse { token_x, token_y } = res;
+    Ok((token_x, token_y))
 }
 
 pub fn query_token_x(app: &App, lb_pair: &ContractInfo) -> StdResult<TokenType> {

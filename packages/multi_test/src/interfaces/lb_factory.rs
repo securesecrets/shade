@@ -19,7 +19,6 @@ pub fn init(
     app: &mut App,
     sender: &str,
     fee_recipient: Addr,
-    flash_loan_fee: u8,
     admin_auth: RawContract,
     total_reward_bins: u32,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
@@ -32,7 +31,6 @@ pub fn init(
         match (lb_factory::InstantiateMsg {
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
-            flash_loan_fee,
             admin_auth,
             total_reward_bins,
             rewards_distribution_algorithm: rewards_distribution_algorithm
@@ -120,6 +118,7 @@ pub fn set_pair_preset(
     protocol_share: u16,
     max_volatility_accumulator: u32,
     is_open: bool,
+    total_reward_bins: u32,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetPairPreset {
         bin_step,
@@ -131,6 +130,7 @@ pub fn set_pair_preset(
         protocol_share,
         max_volatility_accumulator,
         is_open,
+        total_reward_bins,
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -314,13 +314,6 @@ pub fn force_decay(
     }
 }
 
-pub fn query_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    match (lb_factory::QueryMsg::GetFlashLoanFee {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::FlashLoanFeeResponse { flash_loan_fee }) => Ok(flash_loan_fee),
-        Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}
-
 pub fn query_lb_pair_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
@@ -355,13 +348,6 @@ pub fn query_min_bin_step(app: &mut App, lb_factory: &ContractInfo) -> StdResult
 pub fn query_fee_recipient(app: &mut App, lb_factory: &ContractInfo) -> StdResult<Addr> {
     match (lb_factory::QueryMsg::GetFeeRecipient {}.test_query(lb_factory, app)) {
         Ok(lb_factory::FeeRecipientResponse { fee_recipient }) => Ok(fee_recipient),
-        Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}
-
-pub fn query_max_flash_loan_fee(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u8> {
-    match (lb_factory::QueryMsg::GetMaxFlashLoanFee {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::MaxFlashLoanFeeResponse { max_fee }) => Ok(max_fee),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }

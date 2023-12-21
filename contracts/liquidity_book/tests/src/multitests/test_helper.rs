@@ -36,6 +36,8 @@ pub const DEFAULT_MAX_VOLATILITY_ACCUMULATOR: u32 = 350_000;
 pub const DEFAULT_OPEN_STATE: bool = false;
 pub const DEFAULT_FLASHLOAN_FEE: u128 = 800_000_000_000_000;
 
+pub const DEFAULT_TOTAL_REWARD_BINS: u32 = 10;
+
 pub const SHADE: &str = "SHD";
 pub const SSCRT: &str = "SSCRT";
 pub const SILK: &str = "SILK";
@@ -245,7 +247,6 @@ pub fn setup(
         &mut app,
         addrs.admin().as_str(),
         addrs.joker(),
-        0,
         admin_contract.into(),
         10,
         Some(
@@ -298,6 +299,7 @@ pub fn setup(
         DEFAULT_PROTOCOL_SHARE,
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
+        DEFAULT_TOTAL_REWARD_BINS,
     )?;
 
     // add quote asset

@@ -482,6 +482,36 @@ pub fn test_query_all_bins_updated_add_liquidity() -> Result<(), anyhow::Error> 
 
 #[test]
 #[serial]
+pub fn test_query_total_supply() -> Result<(), anyhow::Error> {
+    let (app, _lb_factory, _deployed_contracts, lb_pair, _lb_tokenn) = lb_pair_setup()?;
+
+    let supply = lb_pair::query_total_supply(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+
+    assert!(supply > Uint256::zero());
+
+    Ok(())
+}
+
+#[test]
+#[serial]
+pub fn test_query_tokens() -> Result<(), anyhow::Error> {
+    let (app, _lb_factory, deployed_contracts, lb_pair, _lb_tokenn) = lb_pair_setup()?;
+
+    let silk = extract_contract_info(&deployed_contracts, SILK)?;
+    let shade = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_x = token_type_snip20_generator(&silk)?;
+    let token_y = token_type_snip20_generator(&shade)?;
+
+    let (t_x, t_y) = lb_pair::query_tokens(&app, &lb_pair.lb_pair.contract)?;
+
+    assert_eq!(t_x, token_x);
+    assert_eq!(t_y, token_y);
+
+    Ok(())
+}
+
+#[test]
+#[serial]
 pub fn test_query_all_bins_updated_swap() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;

@@ -4,7 +4,6 @@ use shade_protocol::{
     liquidity_book::staking::{
         EpochInfo,
         Reward,
-        RewardToken,
         RewardTokenInfo,
         StakerInfo,
         StakerLiquidity,

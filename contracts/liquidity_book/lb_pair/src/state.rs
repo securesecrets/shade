@@ -8,16 +8,16 @@ use shade_protocol::{
         types::{Bytes32, ContractInstantiationInfo},
         viewing_keys::ViewingKey,
     },
-    liquidity_book::lb_pair::{RewardsDistribution, RewardsDistributionAlgorithm},
+    liquidity_book::lb_pair::{ContractStatus, RewardsDistribution, RewardsDistributionAlgorithm},
     secret_storage_plus::{AppendStore, Bincode2, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
     swap::core::TokenType,
     Contract,
 };
 
-pub const CONFIG: Item<State, Bincode2> = Item::new("config");
+pub const STATE: Item<State, Bincode2> = Item::new("state");
 pub const CONTRACT_STATUS: Item<ContractStatus, Bincode2> = Item::new("contract_status");
-pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins"); //?
+pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //?
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
 pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
@@ -46,13 +46,6 @@ pub struct FeeLog {
     pub bin_id: u32,
     pub timestamp: Timestamp,
     pub last_rewards_epoch_id: u64,
-}
-
-#[cw_serde]
-pub enum ContractStatus {
-    Active,         // allows all operations
-    FreezeAll,      // blocks everything except admin-protected config changes
-    LpWithdrawOnly, // blocks everything except LP withdraws and admin-protected config changes
 }
 
 #[cw_serde]
