@@ -2,6 +2,12 @@
 
 !! **Contracts must be compiled and placed in the `wasm` directory.**
 
+Run tests with
+
+```sh
+npx ts-node integration.ts
+```
+
 ## LBFactory
 
 ### Minimum Viable Tests
