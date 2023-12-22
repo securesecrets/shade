@@ -2,11 +2,15 @@
 
 !! **Contracts must be compiled and placed in the `wasm` directory.**
 
-Run tests with
+Run with
 
 ```sh
 npx ts-node integration.ts
 ```
+
+For pulsar-3, create a `.env` file and uncomment the section near the beginning of `integration.ts`.
+
+# (old notes from hackathon days)
 
 ## LBFactory
 
