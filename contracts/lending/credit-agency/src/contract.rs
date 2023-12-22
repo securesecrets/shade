@@ -181,6 +181,102 @@ mod execute {
             .add_attribute("sender", info.sender)
             .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
     }
+
+    fn create_repay_to_submessage(
+        coin: utils::coin::Coin,
+        debt_market: Addr,
+        account: Addr,
+    ) -> StdResult<SubMsg> {
+        match coin.denom {
+            Token::Native(_) => {
+                let msg = to_binary(&wynd_lend_market::msg::ExecuteMsg::RepayTo {
+                    account: account.to_string(),
+                })?;
+                Ok(SubMsg::new(WasmMsg::Execute {
+                    contract_addr: debt_market.to_string(),
+                    msg,
+                    funds: vec![coin.try_into().unwrap()],
+                }))
+            }
+            Token::Cw20(_) => {
+                let repay_to_msg: Binary = to_binary(&MarketRepayTo {
+                    account: account.to_string(),
+                })?;
+
+                let msg = to_binary(&Cw20ExecuteMsg::Send {
+                    contract: debt_market.to_string(),
+                    amount: coin.amount,
+                    msg: repay_to_msg,
+                })
+                .unwrap();
+
+                Ok(SubMsg::new(WasmMsg::Execute {
+                    contract_addr: coin.denom.denom(),
+                    msg,
+                    funds: vec![],
+                }))
+            }
+        }
+    }
+
+    /// Liquidate implements the liquidation logic for both native and cw20 tokens.
+    pub fn liquidate(
+        deps: DepsMut,
+        sender: Addr,
+        // Account to liquidate.
+        account: Addr,
+        // Native or cw20 tokens sent along with the tx.
+        coins: utils::coin::Coin,
+        collateral_denom: Token,
+    ) -> Result<Response, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
+
+        // assert that given account actually has more debt then credit
+        let total_credit_line = query::total_credit_line(deps.as_ref(), account.to_string())?;
+        let total_credit_line = total_credit_line.validate(&cfg.common_token)?;
+        if total_credit_line.debt <= total_credit_line.credit_line {
+            return Err(ContractError::LiquidationNotAllowed {});
+        }
+
+        // Count debt and repay it. This requires that market returns error if repaying more then balance.
+        let debt_market = query::market(deps.as_ref(), &coins.denom)?.market;
+
+        let repay_to_msg =
+            create_repay_to_submessage(coins.clone(), debt_market.clone(), account.clone())?;
+
+        // find price rate of collateral denom
+        let price_response: PriceRate = deps.querier.query_wasm_smart(
+            debt_market.to_string(),
+            &MarketQueryMsg::PriceMarketLocalPerCommon {},
+        )?;
+
+        // find market with wanted collateral_denom
+        let collateral_market = query::market(deps.as_ref(), &collateral_denom)?.market;
+
+        // transfer claimed amount as reward
+        let msg = to_binary(&wynd_lend_market::msg::ExecuteMsg::TransferFrom {
+            source: account.to_string(),
+            destination: sender.to_string(),
+            // transfer repaid amount represented as amount of common tokens, which is
+            // calculated into collateral_denom's amount later in the market
+            amount: coin_times_price_rate(&coins, &price_response)?.amount,
+            liquidation_price: cfg.liquidation_price,
+        })?;
+        let transfer_from_msg = SubMsg::new(WasmMsg::Execute {
+            contract_addr: collateral_market.to_string(),
+            msg,
+            funds: vec![],
+        });
+
+        Ok(Response::new()
+            .add_attribute("action", "liquidate")
+            .add_attribute("liquidator", sender)
+            .add_attribute("account", account)
+            .add_attribute("collateral_denom", collateral_denom.denom())
+            .add_submessage(repay_to_msg)
+            .add_submessage(transfer_from_msg))
+    }
+
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
