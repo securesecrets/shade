@@ -110,77 +110,77 @@ mod execute {
         state::Config as MarketConfiguration,
     };
 
-    // pub fn create_market(
-    //     deps: DepsMut,
-    //     env: Env,
-    //     info: MessageInfo,
-    //     market_cfg: MarketConfig,
-    // ) -> Result<Response, ContractError> {
-    //     let market_token = market_cfg.market_token;
+    pub fn create_market(
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        market_cfg: MarketConfig,
+    ) -> Result<Response, ContractError> {
+        let market_token = market_cfg.market_token;
 
-    //     let cfg = CONFIG.load(deps.storage)?;
+        let cfg = CONFIG.load(deps.storage)?;
 
-    //     // Only governance contract can instantiate a market.
-    //     ensure_eq!(
-    //         info.sender,
-    //         cfg.gov_contract,
-    //         ContractError::Unauthorized {}
-    //     );
+        // Only governance contract can instantiate a market.
+        ensure_eq!(
+            info.sender,
+            cfg.gov_contract.address,
+            ContractError::Unauthorized {}
+        );
 
-    //     // Collateral ratio must be lower then liquidation price, otherwise
-    //     // liquidation could decrese debt less then it decreases potential credit.
-    //     if market_cfg.collateral_ratio >= cfg.liquidation_price {
-    //         // TODO: shouldn't we use also a margin? Collateral ration should be 90% of liquidation price.
-    //         return Err(ContractError::MarketCfgCollateralFailure {});
-    //     }
+        // Collateral ratio must be lower then liquidation price, otherwise
+        // liquidation could decrese debt less then it decreases potential credit.
+        if market_cfg.collateral_ratio >= cfg.liquidation_price {
+            // TODO: shouldn't we use also a margin? Collateral ration should be 90% of liquidation price.
+            return Err(ContractError::MarketCfgCollateralFailure {});
+        }
 
-    //     if let Some(state) = MARKETS.may_load(deps.storage, &market_token)? {
-    //         use MarketState::*;
+        if let Some(state) = MARKETS.may_load(deps.storage, &market_token)? {
+            use MarketState::*;
 
-    //         let err = match state {
-    //             Instantiating => ContractError::MarketCreating(market_token.denom()),
-    //             Ready(_) => ContractError::MarketAlreadyExists(market_token.denom()),
-    //         };
-    //         return Err(err);
-    //     }
-    //     MARKETS.save(deps.storage, &market_token, &MarketState::Instantiating)?;
+            let err = match state {
+                Instantiating => ContractError::MarketCreating(market_token.denom()),
+                Ready(_) => ContractError::MarketAlreadyExists(market_token.denom()),
+            };
+            return Err(err);
+        }
+        MARKETS.save(deps.storage, &market_token, &MarketState::Instantiating)?;
 
-    //     let reply_id =
-    //         NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
-    //     REPLY_IDS.save(deps.storage, reply_id, &market_token)?;
+        let reply_id =
+            NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
+        REPLY_IDS.save(deps.storage, reply_id, &market_token)?;
 
-    //     let market_msg = wynd_lend_market::msg::InstantiateMsg {
-    //         // Fields required for the wynd_lend-token instantiation.
-    //         name: market_cfg.name,
-    //         symbol: market_cfg.symbol,
-    //         decimals: market_cfg.decimals,
-    //         distributed_token: cfg.reward_token,
-    //         token_id: cfg.wynd_lend_token_id,
+        let market_msg = wynd_lend_market::msg::InstantiateMsg {
+            // Fields required for the wynd_lend-token instantiation.
+            name: market_cfg.name,
+            symbol: market_cfg.symbol,
+            decimals: market_cfg.decimals,
+            distributed_token: cfg.reward_token,
+            token_id: cfg.lend_token_id,
 
-    //         market_token: market_token.clone(),
-    //         market_cap: market_cfg.market_cap,
-    //         interest_rate: market_cfg.interest_rate,
-    //         interest_charge_period: market_cfg.interest_charge_period,
-    //         common_token: cfg.common_token,
-    //         collateral_ratio: market_cfg.collateral_ratio,
-    //         price_oracle: market_cfg.price_oracle,
-    //         reserve_factor: market_cfg.reserve_factor,
-    //         gov_contract: cfg.gov_contract.to_string(),
-    //         borrow_limit_ratio: cfg.borrow_limit_ratio,
-    //     };
-    //     let market_instantiate = WasmMsg::Instantiate {
-    //         admin: Some(env.contract.address.to_string()),
-    //         code_id: cfg.lending_market_id,
-    //         msg: to_binary(&market_msg)?,
-    //         funds: vec![],
-    //         label: format!("market_contract_{}", market_token),
-    //     };
+            market_token: market_token.clone(),
+            market_cap: market_cfg.market_cap,
+            interest_rate: market_cfg.interest_rate,
+            interest_charge_period: market_cfg.interest_charge_period,
+            common_token: cfg.common_token,
+            collateral_ratio: market_cfg.collateral_ratio,
+            price_oracle: market_cfg.price_oracle,
+            reserve_factor: market_cfg.reserve_factor,
+            gov_contract: cfg.gov_contract.address.to_string(),
+            borrow_limit_ratio: cfg.borrow_limit_ratio,
+        };
+        let market_instantiate = WasmMsg::Instantiate {
+            admin: Some(env.contract.address.to_string()),
+            code_id: cfg.lend_market_id,
+            msg: to_binary(&market_msg)?,
+            funds: vec![],
+            label: format!("market_contract_{}", market_token),
+        };
 
-    //     Ok(Response::new()
-    //         .add_attribute("action", "create_market")
-    //         .add_attribute("sender", info.sender)
-    //         .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
-    // }
+        Ok(Response::new()
+            .add_attribute("action", "create_market")
+            .add_attribute("sender", info.sender)
+            .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
