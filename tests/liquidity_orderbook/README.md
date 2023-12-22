@@ -2,10 +2,11 @@
 
 !! **Contracts must be compiled and placed in the `wasm` directory.**
 
-Run with
+From `/tests/liquidity_orderbook/` (this directory):
 
 ```sh
-npx ts-node integration.ts
+npm install
+npm start
 ```
 
 For pulsar-3, create a `.env` file and uncomment the section near the beginning of `integration.ts`.

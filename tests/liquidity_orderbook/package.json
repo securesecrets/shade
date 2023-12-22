@@ -1,4 +1,9 @@
 {
+  "name": "liquidity-orderbook-integration-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "ts-node integration.ts"
+  },
   "devDependencies": {
     "@types/node": "^20.10.5",
     "axios": "^1.6.2",
