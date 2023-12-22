@@ -94,18 +94,18 @@ pub fn execute(
 mod execute {
     use super::*;
 
-    use shade_protocol::c_std::{ensure_eq, from_binary, StdError, StdResult, SubMsg, WasmMsg};
-    use utils::{
+    use lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
         price::{coin_times_price_rate, PriceRate},
     };
+    use shade_protocol::c_std::{ensure_eq, from_binary, StdError, StdResult, SubMsg, WasmMsg};
 
     use crate::{
         msg::{MarketConfig, ReceiveMsg},
         state::{MarketState, ENTERED_MARKETS, MARKETS, REPLY_IDS},
     };
-    use lending_market::{
+    use lend_market::{
         msg::{ExecuteMsg as MarketExecuteMsg, QueryMsg as MarketQueryMsg},
         state::Config as MarketConfiguration,
     };
@@ -181,7 +181,6 @@ mod execute {
     //         .add_attribute("sender", info.sender)
     //         .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
     // }
-
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
@@ -208,10 +207,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 }
 
 mod query {
-    use shade_protocol::{
-        c_std::{Order, StdResult},
-        secret_storage_plus::Bound,
-    };
+    use shade_protocol::c_std::StdResult;
 
     use lend_market::msg::{QueryMsg as MarketQueryMsg, TokensBalanceResponse};
     use lending_utils::{
@@ -257,9 +253,9 @@ mod query {
         limit: Option<u32>,
     ) -> Result<ListMarketsResponse, ContractError> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-        let start = start_after.as_ref().map(Bound::exclusive);
-
         todo!();
+        // let start = start_after.as_ref().map(Bound::exclusive);
+
         // let markets: StdResult<Vec<_>> = MARKETS
         //     .range(deps.storage, start, None, Order::Ascending)
         //     .map(|m| {
