@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use std::{convert::From, ops::Mul};
+use std::{convert::From, ops::Mul, cmp::Ordering};
 
 use crate::token::Token;
 
@@ -55,6 +55,18 @@ impl Coin {
                 denom2: rhs.denom,
             })
         }
+    }
+}
+
+impl PartialOrd for Coin {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.amount.cmp(&other.amount))
+    }
+}
+
+impl Ord for Coin {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.amount.cmp(&other.amount)
     }
 }
 

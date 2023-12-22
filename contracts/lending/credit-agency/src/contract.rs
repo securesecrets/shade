@@ -91,6 +91,99 @@ pub fn execute(
     }
 }
 
+mod execute {
+    use super::*;
+
+    use shade_protocol::c_std::{ensure_eq, from_binary, StdError, StdResult, SubMsg, WasmMsg};
+    use utils::{
+        coin::Coin,
+        credit_line::{CreditLineResponse, CreditLineValues},
+        price::{coin_times_price_rate, PriceRate},
+    };
+
+    use crate::{
+        msg::{MarketConfig, ReceiveMsg},
+        state::{MarketState, ENTERED_MARKETS, MARKETS, REPLY_IDS},
+    };
+    use lending_market::{
+        msg::{ExecuteMsg as MarketExecuteMsg, QueryMsg as MarketQueryMsg},
+        state::Config as MarketConfiguration,
+    };
+
+    // pub fn create_market(
+    //     deps: DepsMut,
+    //     env: Env,
+    //     info: MessageInfo,
+    //     market_cfg: MarketConfig,
+    // ) -> Result<Response, ContractError> {
+    //     let market_token = market_cfg.market_token;
+
+    //     let cfg = CONFIG.load(deps.storage)?;
+
+    //     // Only governance contract can instantiate a market.
+    //     ensure_eq!(
+    //         info.sender,
+    //         cfg.gov_contract,
+    //         ContractError::Unauthorized {}
+    //     );
+
+    //     // Collateral ratio must be lower then liquidation price, otherwise
+    //     // liquidation could decrese debt less then it decreases potential credit.
+    //     if market_cfg.collateral_ratio >= cfg.liquidation_price {
+    //         // TODO: shouldn't we use also a margin? Collateral ration should be 90% of liquidation price.
+    //         return Err(ContractError::MarketCfgCollateralFailure {});
+    //     }
+
+    //     if let Some(state) = MARKETS.may_load(deps.storage, &market_token)? {
+    //         use MarketState::*;
+
+    //         let err = match state {
+    //             Instantiating => ContractError::MarketCreating(market_token.denom()),
+    //             Ready(_) => ContractError::MarketAlreadyExists(market_token.denom()),
+    //         };
+    //         return Err(err);
+    //     }
+    //     MARKETS.save(deps.storage, &market_token, &MarketState::Instantiating)?;
+
+    //     let reply_id =
+    //         NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
+    //     REPLY_IDS.save(deps.storage, reply_id, &market_token)?;
+
+    //     let market_msg = wynd_lend_market::msg::InstantiateMsg {
+    //         // Fields required for the wynd_lend-token instantiation.
+    //         name: market_cfg.name,
+    //         symbol: market_cfg.symbol,
+    //         decimals: market_cfg.decimals,
+    //         distributed_token: cfg.reward_token,
+    //         token_id: cfg.wynd_lend_token_id,
+
+    //         market_token: market_token.clone(),
+    //         market_cap: market_cfg.market_cap,
+    //         interest_rate: market_cfg.interest_rate,
+    //         interest_charge_period: market_cfg.interest_charge_period,
+    //         common_token: cfg.common_token,
+    //         collateral_ratio: market_cfg.collateral_ratio,
+    //         price_oracle: market_cfg.price_oracle,
+    //         reserve_factor: market_cfg.reserve_factor,
+    //         gov_contract: cfg.gov_contract.to_string(),
+    //         borrow_limit_ratio: cfg.borrow_limit_ratio,
+    //     };
+    //     let market_instantiate = WasmMsg::Instantiate {
+    //         admin: Some(env.contract.address.to_string()),
+    //         code_id: cfg.lending_market_id,
+    //         msg: to_binary(&market_msg)?,
+    //         funds: vec![],
+    //         label: format!("market_contract_{}", market_token),
+    //     };
+
+    //     Ok(Response::new()
+    //         .add_attribute("action", "create_market")
+    //         .add_attribute("sender", info.sender)
+    //         .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
+    // }
+
+}
+
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     use QueryMsg::*;
@@ -139,18 +232,19 @@ mod query {
     /// Returns the address of the market associated to the given `market_token`. Returns an error
     /// if the market does not exists or is being created.
     pub fn market(deps: Deps, market_token: &Token) -> Result<MarketResponse, ContractError> {
-        let state = MARKETS
-            .may_load(deps.storage, market_token)?
-            .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
+        todo!();
+        // let state = MARKETS
+        //     .may_load(deps.storage, market_token)?
+        //     .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
 
-        let addr = state
-            .to_addr()
-            .ok_or_else(|| ContractError::MarketCreating(market_token.denom()))?;
+        // let addr = state
+        //     .to_addr()
+        //     .ok_or_else(|| ContractError::MarketCreating(market_token.denom()))?;
 
-        Ok(MarketResponse {
-            market_token: market_token.to_owned(),
-            market: addr,
-        })
+        // Ok(MarketResponse {
+        //     market_token: market_token.to_owned(),
+        //     market: addr,
+        // })
     }
 
     // settings for pagination
@@ -165,23 +259,24 @@ mod query {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start = start_after.as_ref().map(Bound::exclusive);
 
-        let markets: StdResult<Vec<_>> = MARKETS
-            .range(deps.storage, start, None, Order::Ascending)
-            .map(|m| {
-                let (market_token, market) = m?;
+        todo!();
+        // let markets: StdResult<Vec<_>> = MARKETS
+        //     .range(deps.storage, start, None, Order::Ascending)
+        //     .map(|m| {
+        //         let (market_token, market) = m?;
 
-                let result = market.to_addr().map(|addr| MarketResponse {
-                    market_token,
-                    market: addr,
-                });
+        //         let result = market.to_addr().map(|addr| MarketResponse {
+        //             market_token,
+        //             market: addr,
+        //         });
 
-                Ok(result)
-            })
-            .filter_map(|m| m.transpose())
-            .take(limit)
-            .collect();
+        //         Ok(result)
+        //     })
+        //     .filter_map(|m| m.transpose())
+        //     .take(limit)
+        //     .collect();
 
-        Ok(ListMarketsResponse { markets: markets? })
+        // Ok(ListMarketsResponse { markets: markets? })
     }
 
     /// Handler for `QueryMsg::TotalCreditLine`
@@ -195,22 +290,23 @@ mod query {
             .may_load(deps.storage, &Addr::unchecked(&account))?
             .unwrap_or_default();
 
-        let total_credit_line: CreditLineValues = markets
-            .into_iter()
-            .map(|market| {
-                let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
-                    market,
-                    &MarketQueryMsg::CreditLine {
-                        account: deps.api.addr_validate(&account)?,
-                    },
-                )?;
-                let price_response = price_response.validate(&common_token.clone())?;
-                Ok(price_response)
-            })
-            .collect::<Result<Vec<CreditLineValues>, ContractError>>()?
-            .iter()
-            .sum();
-        Ok(total_credit_line.make_response(common_token))
+        todo!()
+        // let total_credit_line: CreditLineValues = markets
+        //     .into_iter()
+        //     .map(|market| {
+        //         let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
+        //             market,
+        //             &MarketQueryMsg::CreditLine {
+        //                 account: deps.api.addr_validate(&account)?,
+        //             },
+        //         )?;
+        //         let price_response = price_response.validate(&common_token.clone())?;
+        //         Ok(price_response)
+        //     })
+        //     .collect::<Result<Vec<CreditLineValues>, ContractError>>()?
+        //     .iter()
+        //     .sum();
+        // Ok(total_credit_line.make_response(common_token))
     }
 
     pub fn entered_markets(
@@ -267,37 +363,38 @@ mod query {
             .may_load(deps.storage, &account_addr)?
             .unwrap_or_default();
 
-        let market_data: Result<Vec<_>, _> = markets
-            .into_iter()
-            .map(|market| -> Result<(Addr, Coin, Coin), ContractError> {
-                let token_balances: TokensBalanceResponse = deps.querier.query_wasm_smart(
-                    &market,
-                    &MarketQueryMsg::TokensBalance {
-                        account: deps.api.addr_validate(&account)?,
-                    },
-                )?;
+        todo!();
+        // let market_data: Result<Vec<_>, _> = markets
+        //     .into_iter()
+        //     .map(|market| -> Result<(Addr, Coin, Coin), ContractError> {
+        //         let token_balances: TokensBalanceResponse = deps.querier.query_wasm_smart(
+        //             &market,
+        //             &MarketQueryMsg::TokensBalance {
+        //                 account: deps.api.addr_validate(&account)?,
+        //             },
+        //         )?;
 
-                Ok((market, token_balances.collateral, token_balances.debt))
-            })
-            .collect();
-        let market_data = market_data?;
+        //         Ok((market, token_balances.collateral, token_balances.debt))
+        //     })
+        //     .collect();
+        // let market_data = market_data?;
 
-        let collateral: Vec<_> = market_data
-            .iter()
-            .filter(|(_, collateral, _)| !collateral.amount.is_zero())
-            .cloned()
-            .map(|(market, collateral, _)| (market, collateral))
-            .collect();
-        let debt: Vec<_> = market_data
-            .into_iter()
-            .filter(|(_, _, debt)| !debt.amount.is_zero())
-            .map(|(market, _, debt)| (market, debt))
-            .collect();
+        // let collateral: Vec<_> = market_data
+        //     .iter()
+        //     .filter(|(_, collateral, _)| !collateral.amount.is_zero())
+        //     .cloned()
+        //     .map(|(market, collateral, _)| (market, collateral))
+        //     .collect();
+        // let debt: Vec<_> = market_data
+        //     .into_iter()
+        //     .filter(|(_, _, debt)| !debt.amount.is_zero())
+        //     .map(|(market, _, debt)| (market, debt))
+        //     .collect();
 
-        Ok(LiquidationResponse {
-            can_liquidate,
-            debt,
-            collateral,
-        })
+        // Ok(LiquidationResponse {
+        //     can_liquidate,
+        //     debt,
+        //     collateral,
+        // })
     }
 }
