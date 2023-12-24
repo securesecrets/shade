@@ -1,21 +1,32 @@
-use std::str::FromStr;
-
-use ethnum::U256;
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
-    lb_libraries::{
-        math::uint256_to_u256::ConvertU256,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation, StaticFeeParameters},
+    lb_libraries::types::{
+        ContractInstantiationInfo,
+        LBPair,
+        LBPairInformation,
+        StaticFeeParameters,
     },
-    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution},
+    liquidity_book::lb_pair::{
+        LiquidityParameters,
+        RemoveLiquidity,
+        RewardsDistribution,
+        TokenPair,
+    },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::asset::RawContract,
+    Contract,
 };
 
 pub const BIN_STEP: u16 = 100u16;
 pub const ACTIVE_ID: u32 = 8_388_608u32;
-
+pub const DEFAULT_BASE_FACTOR: u16 = 5_000;
+pub const DEFAULT_FILTER_PERIOD: u16 = 30;
+pub const DEFAULT_DECAY_PERIOD: u16 = 600;
+pub const DEFAULT_REDUCTION_FACTOR: u16 = 5_000;
+pub const DEFAULT_VARIABLE_FEE_CONTROL: u32 = 40_000;
+pub const DEFAULT_PROTOCOL_SHARE: u16 = 1_000;
+pub const DEFAULT_MAX_VOLATILITY_ACCUMULATOR: u32 = 350_000;
 pub trait VariousAddr {
     fn owner() -> Self;
     fn admin() -> Self;
@@ -105,6 +116,16 @@ impl ExampleData for RawContract {
     }
 }
 
+impl ExampleData for Contract {
+    fn example() -> Self {
+        Contract {
+            address: Addr::contract(),
+            code_hash: "0123456789ABCDEF".to_string(),
+        }
+        .clone()
+    }
+}
+
 impl ExampleData for StaticFeeParameters {
     fn example() -> Self {
         StaticFeeParameters {
@@ -183,6 +204,36 @@ impl ExampleData for Snip20ReceiveMsg {
             amount: Uint128::from(100u128),
             memo: None,
             msg: Some(to_binary(&"base64 encoded string").unwrap()),
+        }
+    }
+}
+
+impl ExampleData for RewardsDistribution {
+    fn example() -> Self {
+        RewardsDistribution {
+            ids: vec![
+                ACTIVE_ID - 4,
+                ACTIVE_ID - 3,
+                ACTIVE_ID - 2,
+                ACTIVE_ID - 1,
+                ACTIVE_ID,
+                ACTIVE_ID + 1,
+                ACTIVE_ID + 2,
+                ACTIVE_ID + 3,
+                ACTIVE_ID + 4,
+                ACTIVE_ID + 5,
+            ],
+            weightages: vec![1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+            denominator: 10000,
+        }
+    }
+}
+
+impl ExampleData for TokenPair {
+    fn example() -> Self {
+        TokenPair {
+            token_0: TokenType::example(),
+            token_1: TokenType::example(),
         }
     }
 }

@@ -1,25 +1,38 @@
-use std::str::FromStr;
-
-use ethnum::U256;
+use serde_json::from_str;
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
-    lb_libraries::{
-        math::uint256_to_u256::ConvertU256,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation, StaticFeeParameters},
+    lb_libraries::types::{
+        ContractInstantiationInfo,
+        LBPair,
+        LBPairInformation,
+        StaticFeeParameters,
     },
-    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution},
+    liquidity_book::{
+        lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution, TokenPair},
+        lb_token::Snip1155ReceiveMsg,
+    },
+    s_toolkit::permit::{Permit, PermitParams, TokenPermissions},
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::asset::RawContract,
+    Contract,
 };
 
 pub const BIN_STEP: u16 = 100u16;
 pub const ACTIVE_ID: u32 = 8_388_608u32;
-
+pub const DEFAULT_BASE_FACTOR: u16 = 5_000;
+pub const DEFAULT_FILTER_PERIOD: u16 = 30;
+pub const DEFAULT_DECAY_PERIOD: u16 = 600;
+pub const DEFAULT_REDUCTION_FACTOR: u16 = 5_000;
+pub const DEFAULT_VARIABLE_FEE_CONTROL: u32 = 40_000;
+pub const DEFAULT_PROTOCOL_SHARE: u16 = 1_000;
+pub const DEFAULT_MAX_VOLATILITY_ACCUMULATOR: u32 = 350_000;
 pub trait VariousAddr {
     fn owner() -> Self;
     fn admin() -> Self;
     fn sender() -> Self;
+    fn staker() -> Self;
+
     fn recipient() -> Self;
     fn funds_recipient() -> Self;
     fn contract() -> Self;
@@ -36,6 +49,10 @@ impl VariousAddr for Addr {
 
     fn sender() -> Self {
         Addr::unchecked("secret1...sender")
+    }
+
+    fn staker() -> Self {
+        Addr::unchecked("secret1...staker")
     }
 
     fn recipient() -> Self {
@@ -99,6 +116,16 @@ impl ExampleData for RawContract {
     fn example() -> Self {
         RawContract {
             address: Addr::contract().to_string(),
+            code_hash: "0123456789ABCDEF".to_string(),
+        }
+        .clone()
+    }
+}
+
+impl ExampleData for Contract {
+    fn example() -> Self {
+        Contract {
+            address: Addr::contract(),
             code_hash: "0123456789ABCDEF".to_string(),
         }
         .clone()
@@ -184,5 +211,71 @@ impl ExampleData for Snip20ReceiveMsg {
             memo: None,
             msg: Some(to_binary(&"base64 encoded string").unwrap()),
         }
+    }
+}
+
+impl ExampleData for Snip1155ReceiveMsg {
+    fn example() -> Self {
+        Snip1155ReceiveMsg {
+            sender: Addr::sender(),
+            token_id: ACTIVE_ID.to_string(),
+            from: Addr::sender(),
+            amount: Uint256::default(),
+            memo: None,
+            msg: None,
+        }
+    }
+}
+
+impl ExampleData for RewardsDistribution {
+    fn example() -> Self {
+        RewardsDistribution {
+            ids: vec![
+                ACTIVE_ID - 4,
+                ACTIVE_ID - 3,
+                ACTIVE_ID - 2,
+                ACTIVE_ID - 1,
+                ACTIVE_ID,
+                ACTIVE_ID + 1,
+                ACTIVE_ID + 2,
+                ACTIVE_ID + 3,
+                ACTIVE_ID + 4,
+                ACTIVE_ID + 5,
+            ],
+            weightages: vec![1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+            denominator: 10000,
+        }
+    }
+}
+
+impl ExampleData for TokenPair {
+    fn example() -> Self {
+        TokenPair {
+            token_0: TokenType::example(),
+            token_1: TokenType::example(),
+        }
+    }
+}
+
+impl ExampleData for Permit<TokenPermissions> {
+    fn example() -> Self {
+        let json_str = r#"{
+              "params": {
+                  "permit_name": "Staking Query Permit",
+                  "allowed_tokens": ["Staking Contract Permit"],
+                  "chain_id": "secret-4",
+                  "permissions": ["balance"]
+              },
+              "signature": {
+                  "pub_key": {
+                      "type": "tendermint/PubKeySecp256k1",
+                      "value": "A5rpObgtxcUaEWK8lNj5plnc8a506yUTx9wswBguk5nl"
+                  },
+                  "signature": "y3QPwoSIPNlsMPDzoJfwgLxreSiHttrWfxXMusjavgR7F91tipEbDALAVe8XmPLX/f3GJBbA+nUQvkcT58B1SA=="
+              }
+          }"#;
+
+        let permit: Permit<TokenPermissions> = from_str(json_str).expect("Failed to parse JSON");
+        permit
     }
 }

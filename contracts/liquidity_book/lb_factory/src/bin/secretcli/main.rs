@@ -41,19 +41,6 @@ macro_rules! print_execute_messages {
     };
 }
 
-macro_rules! print_query_messages {
-    ($file:ident, $($var:ident),+ $(,)?) => {
-        $(
-            writeln!($file,
-                "### {}\n\n```sh\nsecretcli query compute query secret1foobar '{}'\n```",
-                stringify!($var),
-                serde_json::to_string_pretty(&$var).unwrap()
-            )?;
-            writeln!($file, "\n")?;
-        )+
-    };
-}
-
 macro_rules! print_query_messages_with_responses {
       ($file:ident, $(($cmd:ident, $resp:ident)),+ $(,)?) => {
           $(
