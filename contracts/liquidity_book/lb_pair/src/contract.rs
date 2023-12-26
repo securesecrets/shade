@@ -29,7 +29,7 @@ use shade_protocol::{
         WasmMsg,
     },
     contract_interfaces::{
-        liquidity_book::{lb_pair::*, lb_token, staking},
+        liquidity_book::{lb_pair::*, lb_staking, lb_token},
         swap::{
             amm_pair::{
                 FeeInfo,
@@ -61,7 +61,6 @@ use shade_protocol::{
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
     snip20,
-    utils::asset::RawContract,
     Contract,
 };
 use std::{collections::HashMap, ops::Sub, vec};
@@ -1586,7 +1585,7 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
     }
 
     //distribution algorithm
-    let res = staking::ExecuteMsg::EndEpoch {
+    let res = lb_staking::ExecuteMsg::EndEpoch {
         rewards_distribution: distribution,
     }
     .to_cosmos_msg(
@@ -2791,7 +2790,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
 
-                let instantiate_token_msg = staking::InstantiateMsg {
+                let instantiate_token_msg = lb_staking::InstantiateMsg {
                     amm_pair: env.contract.address.to_string(),
                     lb_token: state.lb_token.to_owned().into(),
                     admin_auth: state.admin_auth.into(),

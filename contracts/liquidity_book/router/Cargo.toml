@@ -15,9 +15,14 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-default = []
+[[example]]
+name = "schema"
+path = "schema/schema.rs"  # Adjust the path according to your project structure
 
+
+[features]
+default = ["schema"]
+schema = []
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
 snafu = { version = "0.7.1" }
@@ -30,5 +35,5 @@ cosmwasm-schema = "1.5"
 serde_json = "1"
 
 [dev-dependencies]
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", features=["iterator"] }
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4" }
 serial_test = "2.0.0"

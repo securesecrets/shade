@@ -33,7 +33,7 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "admin",
   "lb_pair",
   "lb_token",
-  "staking_contract",
+  "lb_staking",
   "snip20",
   "router",
   "lb_factory"

@@ -11,11 +11,21 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
+[[example]]
+name = "schema"
+path = "schema/schema.rs"  # Adjust the path according to your project structure
+
+
 [features]
-default = []
+default = ["schema"]
+schema = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+
+
+
 
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }

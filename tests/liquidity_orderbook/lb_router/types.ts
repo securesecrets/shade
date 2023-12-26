@@ -1,90 +1,124 @@
-import { TokenType } from "../lb_factory/types";
-import { ContractInfo } from "../lb_pair";
-
-export interface InstantiateMsg {
-  factory: ContractInfo,
-  admins?: string[],
+export type ExecuteMsg =
+  | {
+      receive: Snip20ReceiveMsg;
+    }
+  | {
+      swap_tokens_for_exact: {
+        expected_return?: Uint128 | null;
+        offer: TokenAmount;
+        padding?: string | null;
+        path: Hop[];
+        recipient?: string | null;
+      };
+    }
+  | {
+      register_s_n_i_p20_token: {
+        oracle_key?: string | null;
+        padding?: string | null;
+        token_addr: string;
+        token_code_hash: string;
+      };
+    }
+  | {
+      recover_funds: {
+        amount: Uint128;
+        msg?: Binary | null;
+        padding?: string | null;
+        to: string;
+        token: TokenType;
+      };
+    }
+  | {
+      set_config: {
+        admin_auth?: Contract | null;
+        padding?: string | null;
+      };
+    };
+export type Uint128 = string;
+export type Binary = string;
+export type TokenType =
+  | {
+      custom_token: {
+        contract_addr: Addr;
+        token_code_hash: string;
+        [k: string]: unknown;
+      };
+    }
+  | {
+      native_token: {
+        denom: string;
+        [k: string]: unknown;
+      };
+    };
+export type Addr = string;
+export interface Snip20ReceiveMsg {
+  amount: Uint128;
+  from: string;
+  memo?: string | null;
+  msg?: Binary | null;
+  sender: string;
 }
-
-export interface CreateLBPairMsg {
-  create_lb_pair: {
-    token_x: TokenType;
-    token_y: TokenType;
-    active_id: number;
-    bin_step: number;
-  }
-}
-
-export interface SwapTokensForExactMsg {
-  swap_tokens_for_exact: {
-    offer: TokenAmount;
-    expected_return?: number;
-    path: Hop[];
-    recipient?: string;
-  }
-}
-
 export interface TokenAmount {
-  token: TokenType,
-  amount: string,
+  amount: Uint128;
+  token: TokenType;
+  [k: string]: unknown;
 }
-
 export interface Hop {
-  addr: string,
-  code_hash: string,
+  addr: string;
+  code_hash: string;
 }
-
-
-export interface GetFactoryQuery {
-  get_factory: {};
+export interface Contract {
+  address: Addr;
+  code_hash: string;
 }
-
-export interface GetPriceFromIdQuery {
-  get_price_from_id: {
-    id: number;
+export interface InitMsg {
+  admin_auth: Contract;
+  airdrop_address?: Contract | null;
+  entropy: Binary;
+  prng_seed: Binary;
+}
+export type InvokeMsg = {
+  swap_tokens_for_exact: {
+    expected_return?: Uint128 | null;
+    path: Hop[];
+    recipient?: string | null;
   };
+};
+export type QueryMsgResponse =
+  | {
+      swap_simulation: {
+        lp_fee_amount: Uint128;
+        price: string;
+        result: SwapResult;
+        shade_dao_fee_amount: Uint128;
+        total_fee_amount: Uint128;
+      };
+    }
+  | {
+      get_config: {
+        admin_auth: Contract;
+        airdrop_address?: Contract | null;
+      };
+    }
+  | {
+      registered_tokens: {
+        tokens: Addr[];
+      };
+    };
+export interface SwapResult {
+  return_amount: Uint128;
 }
-
-export interface GetIdFromPriceQuery {
-  get_id_from_price: {
-    price: string;
-  };
-}
-
-export interface GetSwapInQuery {
-  get_swap_in: {
-    amount_out: string;
-    swap_for_y: boolean;
-  };
-}
-
-export interface GetSwapOutQuery {
-  get_swap_out: {
-    amount_in: string;
-    swap_for_y: boolean;
-  };
-}
-
-export interface FactoryResponse {
-  factory: string;
-}
-
-export interface PriceFromIdResponse {
-  price: string;
-}
-
-export interface IdFromPriceResponse {
-  id: number;
-}
-
-export interface SwapInResponse {
-  amount_in: string;
-  amount_out_left: string;
-  fee: string;
-}
-
-export interface SwapOutResponse {
-  amount_in_left: string;
-  amount_out: string;
-  fee: string;
-}
+export type QueryMsg =
+  | {
+      swap_simulation: {
+        exclude_fee?: boolean | null;
+        offer: TokenAmount;
+        path: Hop[];
+      };
+    }
+  | {
+      get_config: {};
+    }
+  | {
+      registered_tokens: {};
+    };

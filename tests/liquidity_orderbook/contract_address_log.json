@@ -1,0 +1,30 @@
+{
+  "TokenX": {
+    "custom_token": {
+      "contract_addr": "secret18pm9tvyhmj4vqtp2c3tanlng570yltrsjf69yj",
+      "token_code_hash": "0bbaa17a6bd4533f5dc3eae14bfd1152891edaabcc0d767f611bb70437b3a159"
+    }
+  },
+  "TokenY": {
+    "custom_token": {
+      "contract_addr": "secret1lcy0lfsrlrcwyp80a80n60upz7kf8ypz722qz8",
+      "token_code_hash": "0bbaa17a6bd4533f5dc3eae14bfd1152891edaabcc0d767f611bb70437b3a159"
+    }
+  },
+  "LBFactory": {
+    "address": "secret1nrdzgyvrjmwf0q4pfsmaqdpk8cd2gme82kzul7",
+    "hash": "4d72bba63029e097ce89e0702e9e9d8243160aa7078df9c51468c3126264d9dd"
+  },
+  "Router": {
+    "address": "secret1et78ej40x6tnptuctwg0n9l64py2cjafjje82z",
+    "hash": "d5aad5986f96246e7d287d20805aebe3a0bb5d008b95ee0990dccd8d54fca359"
+  },
+  "LBPair": {
+    "codeId": 4,
+    "hash": "1fc9e5ca93e9fa6f9fc06f160bbaab3aa8c13864ff6d7665bd395f9b1c11e267"
+  },
+  "LBToken": {
+    "codeId": 5,
+    "hash": "30a559dec66b8c084e1d460b70536e475d19834bbe55ad0b160a917f647ba796"
+  }
+}

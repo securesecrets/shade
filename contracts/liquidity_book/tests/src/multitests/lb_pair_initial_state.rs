@@ -5,6 +5,7 @@ use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts
 use shade_protocol::{
     c_std::{ContractInfo, StdError::GenericErr, Uint128, Uint256},
     lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
+    liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     multi_test::App,
 };
 use std::str::FromStr;
@@ -463,6 +464,10 @@ pub fn test_invalid_reward_bins_error() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         U24::MAX + 1,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;

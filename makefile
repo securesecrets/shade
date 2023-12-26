@@ -19,16 +19,29 @@ CONTRACTS = \
 		mock_stkd_derivative basic_staking snip20_migration stkd_scrt \
 		snip20_derivative
 
+
+LIQUIDITY_BOOK_CONTRACTS = \
+		lb_factory lb_pair lb_token router  lb_staking\
+
 PACKAGES = shade_protocol contract_harness cosmwasm_math_compat 
 
 release: setup
 	${build-release}
 	@$(MAKE) compress_all
 
+
+release_liquidity_book: setup
+	${build-release}
+	@$(MAKE) compress_all_lb
+
 dao: treasury treasury_manager scrt_staking
 
 compress_all: setup
 	@$(MAKE) $(addprefix compress-,$(CONTRACTS))
+
+
+compress_all_lb: setup
+	@$(MAKE) $(addprefix compress-,$(LIQUIDITY_BOOK_CONTRACTS))
 
 compress-snip20_staking: setup
 	$(call opt_and_compress,snip20_staking,spip_stkd_0)

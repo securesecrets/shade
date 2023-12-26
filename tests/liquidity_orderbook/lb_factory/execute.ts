@@ -1,22 +1,23 @@
 import { SecretNetworkClient } from "secretjs";
-import * as LBFactory from "./types"
-import { logGasToFile, logToFile } from "../integration";
+import { logGasToFile } from "../helper";
+import * as LBFactory from "./types";
 
 export async function executeSetLBPairImplementation(
   client: SecretNetworkClient,
   contractHashFactory: string,
   contractAddressFactory: string,
   codeIdPair: number,
-  contractHashPair: string,
+  contractHashPair: string
 ) {
-  const msg: LBFactory.SetLBPairImplementationMsg = {
+  console.log(codeIdPair, contractHashPair);
+  const msg: LBFactory.ExecuteMsg = {
     set_lb_pair_implementation: {
-      lb_pair_implementation: {
-          id: codeIdPair,
-          code_hash: contractHashPair,
-      }
-    }
-  }
+      implementation: {
+        id: codeIdPair,
+        code_hash: contractHashPair,
+      },
+    },
+  };
   const tx = await client.tx.compute.executeContract(
     {
       sender: client.address,
@@ -30,11 +31,11 @@ export async function executeSetLBPairImplementation(
     }
   );
 
+  console.log(tx);
+
   if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-    );
-  };
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
   console.log(`SetLBPairImplementation TX used ${tx.gasUsed} gas`);
@@ -46,16 +47,16 @@ export async function executeSetLBTokenImplementation(
   contractHashFactory: string,
   contractAddressFactory: string,
   codeIdToken: number,
-  contractHashToken: string,
+  contractHashToken: string
 ) {
-  const msg: LBFactory.SetLBTokenImplementationMsg = {
+  const msg: LBFactory.ExecuteMsg = {
     set_lb_token_implementation: {
-      lb_token_implementation: {
-          id: codeIdToken,
-          code_hash: contractHashToken,
-      }
-    }
-  }
+      implementation: {
+        id: codeIdToken,
+        code_hash: contractHashToken,
+      },
+    },
+  };
   const tx = await client.tx.compute.executeContract(
     {
       sender: client.address,
@@ -70,10 +71,8 @@ export async function executeSetLBTokenImplementation(
   );
 
   if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-    );
-  };
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
   console.log(`SetLBTokenImplementation TX used ${tx.gasUsed} gas`);
@@ -88,27 +87,29 @@ export async function executeCreateLBPair(
   contractAddressTokenA: string,
   contractHashTokenB: string,
   contractAddressTokenB: string,
-  active_id: number,  // 8388607 is the middle bin
-  bin_step: number,   // 100 represents a 1% bin step
+  active_id: number, // 8388607 is the middle bin
+  bin_step: number // 100 represents a 1% bin step
 ) {
-  const msg: LBFactory.CreateLBPairMsg = {
+  const msg: LBFactory.ExecuteMsg = {
     create_lb_pair: {
       token_x: {
         custom_token: {
           contract_addr: contractAddressTokenA,
           token_code_hash: contractHashTokenA,
-        }
+        },
       },
       token_y: {
         custom_token: {
           contract_addr: contractAddressTokenB,
           token_code_hash: contractHashTokenB,
-        }
+        },
       },
       active_id: active_id,
       bin_step: bin_step,
-    }
-  }
+      entropy: "",
+      viewing_key: "",
+    },
+  };
 
   const tx = await client.tx.compute.executeContract(
     {
@@ -124,10 +125,8 @@ export async function executeCreateLBPair(
   );
 
   if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-    );
-  };
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
   console.log(`CreateLBPair TX used ${tx.gasUsed} gas`);
@@ -146,10 +145,10 @@ export async function executeSetPreset(
   variable_fee_control: number,
   protocol_share: number,
   max_volatility_accumulator: number,
-  is_open: boolean,
+  is_open: boolean
 ) {
-  const msg: LBFactory.SetPresetMsg = {
-    set_preset: {
+  const msg: LBFactory.ExecuteMsg = {
+    set_pair_preset: {
       // TODO: figure out approprate values to use
       bin_step,
       base_factor,
@@ -160,8 +159,12 @@ export async function executeSetPreset(
       protocol_share,
       max_volatility_accumulator,
       is_open,
-    }
-  }
+      epoch_staking_duration: 10,
+      epoch_staking_index: 1,
+      rewards_distribution_algorithm: "time_based_rewards",
+      total_reward_bins: 100,
+    },
+  };
 
   const tx = await client.tx.compute.executeContract(
     {
@@ -177,10 +180,8 @@ export async function executeSetPreset(
   );
 
   if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-    );
-  };
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
   console.log(`SetPreset TX used ${tx.gasUsed} gas`);
@@ -192,18 +193,18 @@ export async function executeAddQuoteAsset(
   contractHashFactory: string,
   contractAddressFactory: string,
   contractHashQuoteAsset: string,
-  contractAddressQuoteAsset: string,
+  contractAddressQuoteAsset: string
 ) {
-  const msg: LBFactory.AddQuoteAssetMsg = {
+  const msg: LBFactory.ExecuteMsg = {
     add_quote_asset: {
       asset: {
         custom_token: {
           contract_addr: contractAddressQuoteAsset,
           token_code_hash: contractHashQuoteAsset,
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  };
 
   const tx = await client.tx.compute.executeContract(
     {
@@ -219,10 +220,8 @@ export async function executeAddQuoteAsset(
   );
 
   if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-    );
-  };
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
   console.log(`AddQuoteAsset TX used ${tx.gasUsed} gas`);

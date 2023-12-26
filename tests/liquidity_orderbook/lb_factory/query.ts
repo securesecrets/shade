@@ -1,27 +1,26 @@
 import { SecretNetworkClient } from "secretjs";
-import * as LBFactory from "./types"
+import * as LBFactory from "./types";
 import { TokenType } from "./types";
 
-const getLBPairImplementationQuery: LBFactory.GetLBPairImplementationQuery = {
-  get_lb_pair_implementation: {}
-}
+const getLBPairImplementationQuery: LBFactory.QueryMsg = {
+  get_lb_pair_implementation: {},
+};
 
-const getLBTokenImplementationQuery: LBFactory.GetLBTokenImplementationQuery = {
-  get_lb_token_implementation: {}
-}
+const getLBTokenImplementationQuery: LBFactory.QueryMsg = {
+  get_lb_token_implementation: {},
+};
 
-const getPresetQuery: LBFactory.GetPresetQuery = {
+const getPresetQuery: LBFactory.QueryMsg = {
   get_preset: {
     bin_step: 100,
-  }
-}
+  },
+};
 
 export async function queryLBPairImplementation(
   client: SecretNetworkClient,
   contractHash: string,
-  contractAddress: string,
+  contractAddress: string
 ): Promise<LBFactory.LBPairImplementationResponse> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -35,9 +34,8 @@ export async function queryLBPairImplementation(
 export async function queryLBTokenImplementation(
   client: SecretNetworkClient,
   contractHash: string,
-  contractAddress: string,
+  contractAddress: string
 ): Promise<LBFactory.LBTokenImplementationResponse> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -51,9 +49,8 @@ export async function queryLBTokenImplementation(
 export async function queryPreset(
   client: SecretNetworkClient,
   contractHash: string,
-  contractAddress: string,
+  contractAddress: string
 ): Promise<LBFactory.PresetResponse> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -70,16 +67,15 @@ export async function queryLBPairInformation(
   contractAddress: string,
   tokenX: TokenType,
   tokenY: TokenType,
-  bin_step: number,
+  bin_step: number
 ): Promise<LBFactory.LBPairInformationResponse> {
-
-  const getAllLBPairsQuery: LBFactory.GetLBPairInformationQuery = {
+  const getAllLBPairsQuery: LBFactory.QueryMsg = {
     get_lb_pair_information: {
-      token_a: tokenX,
-      token_b: tokenY,
+      token_x: tokenX,
+      token_y: tokenY,
       bin_step: bin_step,
-    }
-  }
+    },
+  };
 
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,

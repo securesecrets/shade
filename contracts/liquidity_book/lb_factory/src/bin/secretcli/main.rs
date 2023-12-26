@@ -71,11 +71,7 @@ fn main() -> io::Result<()> {
         admin_auth: RawContract::example(),
         owner: Some(Addr::owner()),
         fee_recipient: Addr::recipient(),
-        total_reward_bins: 10,
-        rewards_distribution_algorithm: RewardsDistributionAlgorithm::TimeBasedRewards,
-        epoch_staking_index: 1,
-        epoch_staking_duration: 100,
-        expiry_staking_duration: None,
+
         recover_staking_funds_receiver: Addr::funds_recipient(),
     };
 
@@ -113,7 +109,11 @@ fn main() -> io::Result<()> {
         protocol_share: 100,
         max_volatility_accumulator: 100,
         is_open: true,
-        total_reward_bins: 0,
+        total_reward_bins: 10,
+        rewards_distribution_algorithm: RewardsDistributionAlgorithm::TimeBasedRewards,
+        epoch_staking_index: 1,
+        epoch_staking_duration: 100,
+        expiry_staking_duration: None,
     };
 
     let set_preset_open_state = ExecuteMsg::SetPresetOpenState {

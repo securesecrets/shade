@@ -1,9 +1,0 @@
-# FOR LIQUIDITY BOOK DEVELOPMENT ONLY
-
-[alias]
-lb = "clippy --lib -p lb_factory -p lb_pair -p lb_tests -p router"
-lbfix = "clippy --fix --lib -p lb_factory -p lb_pair -p lb_tests -p router"
-lbfmt = "fmt -p lb_factory lb_pair lb_tests router"
-
-[build]
-rustflags = ["-A", "unused_variables"]
