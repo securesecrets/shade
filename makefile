@@ -23,6 +23,8 @@ CONTRACTS = \
 LIQUIDITY_BOOK_CONTRACTS = \
 		lb_factory lb_pair lb_token router  lb_staking\
 
+LB_PAIR =  lb_pair \
+
 PACKAGES = shade_protocol contract_harness cosmwasm_math_compat 
 
 release: setup
@@ -34,6 +36,10 @@ release_liquidity_book: setup
 	${build-release}
 	@$(MAKE) compress_all_lb
 
+release_lb_pair: setup
+	${build-release}
+	@$(MAKE) compress_lb_pair
+
 dao: treasury treasury_manager scrt_staking
 
 compress_all: setup
@@ -42,6 +48,9 @@ compress_all: setup
 
 compress_all_lb: setup
 	@$(MAKE) $(addprefix compress-,$(LIQUIDITY_BOOK_CONTRACTS))
+
+compress_lb_pair: setup
+	@$(MAKE) $(addprefix compress-,$(LB_PAIR))	
 
 compress-snip20_staking: setup
 	$(call opt_and_compress,snip20_staking,spip_stkd_0)

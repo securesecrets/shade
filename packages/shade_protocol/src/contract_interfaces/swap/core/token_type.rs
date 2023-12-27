@@ -1,25 +1,36 @@
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Coin, ContractInfo, CosmosMsg, Deps, MessageInfo, StdError,
-    StdResult, Uint128, Uint256, WasmMsg,
+    to_binary,
+    Addr,
+    BankMsg,
+    Coin,
+    ContractInfo,
+    CosmosMsg,
+    Deps,
+    MessageInfo,
+    StdError,
+    StdResult,
+    Uint128,
+    Uint256,
+    WasmMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 // use shade_oracles::querier::{query_price, query_prices};
 use crate::{
-    Contract,
     snip20::{
         helpers::{balance_query, token_info},
-        ExecuteMsg::Send,
-        ExecuteMsg::TransferFrom,
+        ExecuteMsg::{Send, TransferFrom},
     },
     swap::amm_pair,
     utils::ExecuteCallback,
+    Contract,
 };
 
 use super::TokenAmount;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[serde(untagged)]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
@@ -84,13 +95,10 @@ impl TokenType {
                 contract_addr,
                 token_code_hash,
                 ..
-            } => Ok(token_info(
-                &deps.querier,
-                &Contract {
-                    address: contract_addr.clone(),
-                    code_hash: token_code_hash.clone(),
-                },
-            )?
+            } => Ok(token_info(&deps.querier, &Contract {
+                address: contract_addr.clone(),
+                code_hash: token_code_hash.clone(),
+            })?
             .decimals),
             TokenType::NativeToken { denom } => match denom.as_str() {
                 "uscrt" => Ok(6),
@@ -114,12 +122,14 @@ impl TokenType {
             TokenType::CustomToken { .. } => false,
         }
     }
+
     pub fn unique_key(&self) -> String {
         match self {
             TokenType::NativeToken { denom, .. } => denom.to_string(),
             TokenType::CustomToken { contract_addr, .. } => contract_addr.to_string(),
         }
     }
+
     pub fn is_custom_token(&self) -> bool {
         match self {
             TokenType::NativeToken { .. } => false,
@@ -138,14 +148,18 @@ impl TokenType {
                     if amount == coin.amount {
                         Ok(())
                     } else {
-                        Err(StdError::generic_err("Native token balance mismatch between the argument and the transferred"))
+                        Err(StdError::generic_err(
+                            "Native token balance mismatch between the argument and the transferred",
+                        ))
                     }
                 }
                 None => {
                     if amount.is_zero() {
                         Ok(())
                     } else {
-                        Err(StdError::generic_err("Native token balance mismatch between the argument and the transferred"))
+                        Err(StdError::generic_err(
+                            "Native token balance mismatch between the argument and the transferred",
+                        ))
                     }
                 }
             };
@@ -208,11 +222,7 @@ impl TokenType {
         }
     }
 
-    pub fn create_send_msg(
-        &self,
-        recipient: String,
-        amount: Uint128,
-    ) -> StdResult<CosmosMsg> {
+    pub fn create_send_msg(&self, recipient: String, amount: Uint128) -> StdResult<CosmosMsg> {
         let msg = match self {
             TokenType::CustomToken {
                 contract_addr,
@@ -258,7 +268,7 @@ impl TokenType {
 }
 
 // New Methods from LB
-impl TokenType{
+impl TokenType {
     pub fn address(&self) -> Addr {
         match self {
             TokenType::NativeToken { .. } => panic!("Doesn't work for native tokens"),
@@ -294,10 +304,11 @@ impl TokenType{
                         recipient_code_hash: None,
                         memo: None,
                     };
-                    let contract: ContractInfo = ContractInfo { address: self.address(), code_hash: self.code_hash() };
-                    let cosmos_msg = msg
-                        .to_cosmos_msg(&contract, vec![])
-                        .unwrap();
+                    let contract: ContractInfo = ContractInfo {
+                        address: self.address(),
+                        code_hash: self.code_hash(),
+                    };
+                    let cosmos_msg = msg.to_cosmos_msg(&contract, vec![]).unwrap();
 
                     Some(cosmos_msg)
                 }
@@ -334,10 +345,11 @@ impl TokenType{
                         padding: None,
                         memo: None,
                     };
-                    let contract: ContractInfo = ContractInfo { address: self.address(), code_hash: self.code_hash() };
-                    let cosmos_msg = msg
-                        .to_cosmos_msg(&contract, vec![])
-                        .unwrap();
+                    let contract: ContractInfo = ContractInfo {
+                        address: self.address(),
+                        code_hash: self.code_hash(),
+                    };
+                    let cosmos_msg = msg.to_cosmos_msg(&contract, vec![]).unwrap();
 
                     Some(cosmos_msg)
                 }
@@ -354,5 +366,4 @@ impl TokenType{
             None
         }
     }
-
 }

@@ -1,52 +1,53 @@
 import { SecretNetworkClient } from "secretjs";
-import * as LBToken from './types'
+import * as LBToken from "./types";
 
 const nameQuery: LBToken.NameQuery = {
-  "name": {}
+  name: {},
 };
 
 const symbolQuery: LBToken.SymbolQuery = {
-  "symbol": {}
+  symbol: {},
 };
 
 const decimalsQuery: LBToken.DecimalsQuery = {
-  "decimals": {}
+  decimals: {},
 };
 
 const totalSupplyQuery: LBToken.TotalSupplyQuery = {
-  "totalSupply": {
-    "id": 8388608
-  }
+  totalSupply: {
+    id: 8388608,
+  },
 };
 
 const balanceOfQuery: LBToken.BalanceOfQuery = {
-  "balanceOf": {
-    "owner": "secret1mz0cdjxk72mnqfuy4v6y9c6",
-    "id": 123
-  }
+  balanceOf: {
+    owner: "secret1mz0cdjxk72mnqfuy4v6y9c6",
+    id: 123,
+  },
 };
 
 const balanceOfBatchQuery: LBToken.BalanceOfBatchQuery = {
-  "balanceOfBatch": {
-    "owners": ["secret1mz0cdjxk72mnqfuy4v6y9c6", "secret1mf7tzqxzvqhpv7m62ccq3gq"],
-    "ids": [1, 2, 3]
-  }
+  balanceOfBatch: {
+    owners: [
+      "secret1mz0cdjxk72mnqfuy4v6y9c6",
+      "secret1mf7tzqxzvqhpv7m62ccq3gq",
+    ],
+    ids: [1, 2, 3],
+  },
 };
 
 const isApprovedForAllQuery: LBToken.IsApprovedForAllQuery = {
-  "isApprovedForAll": {
-    "owner": "secret1mz0cdjxk72mnqfuy4v6y9c6",
-    "spender": "secret1mf7tzqxzvqhpv7m62ccq3gq"
-  }
+  isApprovedForAll: {
+    owner: "secret1mz0cdjxk72mnqfuy4v6y9c6",
+    spender: "secret1mf7tzqxzvqhpv7m62ccq3gq",
+  },
 };
-
 
 export async function queryName(
   client: SecretNetworkClient,
   contractHash: string,
   contractAddress: string
 ): Promise<string> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -68,7 +69,6 @@ export async function querySymbol(
   contractHash: string,
   contractAddress: string
 ): Promise<string> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -90,7 +90,6 @@ export async function queryDecimals(
   contractHash: string,
   contractAddress: string
 ): Promise<number> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,
@@ -112,7 +111,6 @@ export async function queryTotalSupply(
   contractHash: string,
   contractAddress: string
 ): Promise<string> {
-
   const response = (await client.query.compute.queryContract({
     contract_address: contractAddress,
     code_hash: contractHash,

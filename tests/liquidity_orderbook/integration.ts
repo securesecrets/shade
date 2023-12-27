@@ -15,9 +15,17 @@ import {
 } from "./helper";
 import {
   TokenType,
+  executeAddQuoteAsset,
+  executeCreateLBPair,
   executeSetLBPairImplementation,
   executeSetLBTokenImplementation,
+  executeSetPreset,
 } from "./lb_factory";
+import {
+  queryLBPairImplementation,
+  queryLBTokenImplementation,
+  queryPreset,
+} from "./lb_factory/query";
 
 async function test_configure_factory(
   client: SecretNetworkClient,
@@ -41,11 +49,11 @@ async function test_configure_factory(
   );
   await sleep();
 
-  // await queryLBPairImplementation(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory
-  // );
+  await queryLBPairImplementation(
+    client,
+    contractHashFactory,
+    contractAddressFactory
+  );
 
   await executeSetLBTokenImplementation(
     client,
@@ -56,96 +64,81 @@ async function test_configure_factory(
   );
   await sleep();
 
-  // await queryLBTokenImplementation(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory
-  // );
+  await queryLBTokenImplementation(
+    client,
+    contractHashFactory,
+    contractAddressFactory
+  );
 
-  // const bin_step: number = 100;
-  // const base_factor: number = 5000;
-  // const filter_period = 30;
-  // const decay_period = 600;
-  // const reduction_factor = 5000;
-  // const variable_fee_control = 40000;
-  // const protocol_share = 1000;
-  // const max_volatility_accumulator = 350000;
-  // const is_open = true;
+  const base_factor: number = 5000;
+  const filter_period = 30;
+  const decay_period = 600;
+  const reduction_factor = 5000;
+  const variable_fee_control = 40000;
+  const protocol_share = 1000;
+  const max_volatility_accumulator = 350000;
+  const is_open = true;
+  const epoch_staking_duration = 10;
+  const epoch_staking_index = 1;
+  const rewards_distribution_algorithm = "time_based_rewards";
+  const total_reward_bins = 100;
 
-  // await executeSetPreset(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   bin_step,
-  //   base_factor,
-  //   filter_period,
-  //   decay_period,
-  //   reduction_factor,
-  //   variable_fee_control,
-  //   protocol_share,
-  //   max_volatility_accumulator,
-  //   is_open
-  // );
-  // await sleep();
+  let bins_steps = [100];
 
-  // await executeSetPreset(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   50,
-  //   base_factor,
-  //   filter_period,
-  //   decay_period,
-  //   reduction_factor,
-  //   variable_fee_control,
-  //   protocol_share,
-  //   max_volatility_accumulator,
-  //   is_open
-  // );
-  // await sleep();
+  for (const bin_step of bins_steps) {
+    await executeSetPreset(
+      client,
+      contractHashFactory,
+      contractAddressFactory,
+      bin_step,
+      base_factor,
+      filter_period,
+      decay_period,
+      reduction_factor,
+      variable_fee_control,
+      protocol_share,
+      max_volatility_accumulator,
+      is_open,
+      epoch_staking_duration,
+      epoch_staking_index,
+      rewards_distribution_algorithm,
+      total_reward_bins
+    );
+    await sleep();
+  }
 
-  // await executeSetPreset(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   25,
-  //   base_factor,
-  //   filter_period,
-  //   decay_period,
-  //   reduction_factor,
-  //   variable_fee_control,
-  //   protocol_share,
-  //   max_volatility_accumulator,
-  //   is_open
-  // );
-  // await sleep();
+  // TOKENY
 
-  // // TOKENY
-  // await executeAddQuoteAsset(
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   tokenY.custom_token.token_code_hash,
-  //   tokenY.custom_token.contract_addr
-  // );
-  // await sleep();
+  await sleep();
 
-  // await queryPreset(client, contractHashFactory, contractAddressFactory);
+  if ("custom_token" in tokenY) {
+    await executeAddQuoteAsset(
+      client,
+      contractHashFactory,
+      contractAddressFactory,
+      tokenY.custom_token.token_code_hash,
+      tokenY.custom_token.contract_addr
+    );
+  }
+  await queryPreset(client, contractHashFactory, contractAddressFactory);
 
-  // const active_id = 8388608;
+  const active_id = 8388608;
 
-  // await executeCreateLBPairUsingRouter(
-  //   client,
-  //   contractHashRouter,
-  //   contractAddressRouter,
-  //   tokenX.custom_token.token_code_hash,
-  //   tokenX.custom_token.contract_addr,
-  //   tokenY.custom_token.token_code_hash,
-  //   tokenY.custom_token.contract_addr,
-  //   active_id,
-  //   bin_step
-  // );
-  // await sleep();
+  if ("custom_token" in tokenX && "custom_token" in tokenY) {
+    const bin_step = 100;
+    await executeCreateLBPair(
+      client,
+      contractHashFactory,
+      contractAddressFactory,
+      tokenX.custom_token.token_code_hash,
+      tokenX.custom_token.contract_addr,
+      tokenY.custom_token.token_code_hash,
+      tokenY.custom_token.contract_addr,
+      active_id,
+      bin_step
+    );
+  }
+  await sleep();
 }
 
 // async function test_liquidity(

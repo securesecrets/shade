@@ -41,11 +41,21 @@ export function logGasToFile(message: string) {
 
 export const initializeClient = async (endpoint: string, chainId: string) => {
   let wallet: Wallet;
+
+  const contractFilePath = path.join(__dirname, "contract_address_log.json");
+  const contractsData = readContractAddresses(contractFilePath);
+
   if (mnemonic) {
     wallet = new Wallet(mnemonic);
+  } else if (contractsData["Mnemonic"]) {
+    let m = contractsData["Mnemonic"];
+    wallet = new Wallet(m);
   } else {
     wallet = new Wallet();
+    contractsData["Mnemonic"] = wallet.mnemonic;
+    writeContractAddresses(contractFilePath, contractsData);
   }
+
   const accAddress = wallet.address;
   const client = new SecretNetworkClient({
     // Create a client to interact with the network
@@ -328,6 +338,7 @@ export const initializeSnip20Contract = async (
 // }
 
 import path from "path";
+import { initializeAdminAuth } from "./admin_auth/instantiate";
 
 // Function to read contract addresses from the file
 function readContractAddresses(filePath: string) {
@@ -363,6 +374,8 @@ export async function initializeAndUploadContract() {
 
   let tokenX: any,
     tokenY: any,
+    contractHashAdminAuth: any,
+    contractAddressAdminAuth: any,
     contractHashFactory: any,
     contractAddressFactory: any,
     contractHashRouter: any,
@@ -395,13 +408,32 @@ export async function initializeAndUploadContract() {
   // Assuming the contractsData object and other required variables are already defined
 
   // Factory Contract
+  if (!isContractInitialized(contractsData, "AdminAuth")) {
+    [contractHashAdminAuth, contractAddressAdminAuth] =
+      await initializeAdminAuth(
+        client,
+        build + "admin.wasm",
+        client.address,
+        ""
+      );
+    contractsData["AdminAuth"] = {
+      address: contractAddressFactory,
+      hash: contractHashFactory,
+    };
+    writeContractAddresses(contractFilePath, contractsData);
+    await sleep();
+  } else {
+    contractHashFactory = contractsData["AdminAuth"].hash;
+  }
+
+  // Factory Contract
   if (!isContractInitialized(contractsData, "LBFactory")) {
     [contractHashFactory, contractAddressFactory] =
       await initializeFactoryContract(
         client,
         build + "lb_factory.wasm",
-        client.address,
-        ""
+        contractAddressAdminAuth,
+        contractHashAdminAuth
       );
     contractsData["LBFactory"] = {
       address: contractAddressFactory,

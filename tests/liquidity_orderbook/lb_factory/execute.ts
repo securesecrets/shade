@@ -145,7 +145,11 @@ export async function executeSetPreset(
   variable_fee_control: number,
   protocol_share: number,
   max_volatility_accumulator: number,
-  is_open: boolean
+  is_open: boolean,
+  epoch_staking_duration: number,
+  epoch_staking_index: number,
+  rewards_distribution_algorithm: LBFactory.RewardsDistributionAlgorithm,
+  total_reward_bins: number
 ) {
   const msg: LBFactory.ExecuteMsg = {
     set_pair_preset: {
@@ -159,10 +163,10 @@ export async function executeSetPreset(
       protocol_share,
       max_volatility_accumulator,
       is_open,
-      epoch_staking_duration: 10,
-      epoch_staking_index: 1,
-      rewards_distribution_algorithm: "time_based_rewards",
-      total_reward_bins: 100,
+      epoch_staking_duration,
+      epoch_staking_index,
+      rewards_distribution_algorithm,
+      total_reward_bins,
     },
   };
 
@@ -184,6 +188,7 @@ export async function executeSetPreset(
   }
 
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
+  console.log(`Preset Set for bin_step ${bin_step}`);
   console.log(`SetPreset TX used ${tx.gasUsed} gas`);
   logGasToFile(`SetPreset TX used ${tx.gasUsed} gas`);
 }
