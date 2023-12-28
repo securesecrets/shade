@@ -18,7 +18,7 @@ export const initializeTokenContract = async (
       builder: "",
     },
     {
-      gasLimit: 4_000_000,
+      gasLimit: 5_000_000,
     }
   );
 

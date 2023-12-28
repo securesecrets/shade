@@ -1,32 +1,35 @@
 {
-  "Mnemonic": "piece discover silly music super face solution pattern dish wise weekend eyebrow piece dinosaur defy mansion title motion problem badge crisp hip biology dad",
   "TokenX": {
     "custom_token": {
-      "contract_addr": "secret1qr5dhlsys669wmfau44xpm0s5apjkdwfmp9raj",
+      "contract_addr": "secret1pg725samju38rkrny5rc47zdk0jlr3cdwzdptc",
       "token_code_hash": "0bbaa17a6bd4533f5dc3eae14bfd1152891edaabcc0d767f611bb70437b3a159"
     }
   },
   "TokenY": {
     "custom_token": {
-      "contract_addr": "secret14vh468kw47w03jc2heuxjljr9lfwafeejzkmjv",
+      "contract_addr": "secret18q0qs2z07ptg6vsjes6ys3gz52qt7py9aqvlzf",
       "token_code_hash": "0bbaa17a6bd4533f5dc3eae14bfd1152891edaabcc0d767f611bb70437b3a159"
     }
   },
   "AdminAuth": {},
   "LBFactory": {
-    "address": "secret13j43wmrq4gzkwavkz65p9yg460nxcp9d99r4mp",
-    "hash": "4d72bba63029e097ce89e0702e9e9d8243160aa7078df9c51468c3126264d9dd"
+    "address": "secret1lal3ukk4wfsz44v8r3eyzgvl58pcz0vzpqu5ws",
+    "hash": "0db90ee73825a5464f487655e030a8e5972f37a3f11536e5172d036a5ff6e96c"
   },
   "Router": {
-    "address": "secret1kyyz42qnclnxkvsdpvljyltszczmsp4j5x32ac",
+    "address": "secret133jhq68qu60v2gejydze3e2jfdjlh9yl5ulkup",
     "hash": "d5aad5986f96246e7d287d20805aebe3a0bb5d008b95ee0990dccd8d54fca359"
   },
   "LBPair": {
-    "codeId": 47,
-    "hash": "17ab0caa6981ec6aaa3b9268af4e16c459637bfde7eb794e3e4591054fabccbd"
+    "codeId": 12,
+    "hash": "22a5386224bcf704e932167579a761ea4000a75eddf14a450df48242a5dac9ef"
   },
   "LBToken": {
-    "codeId": 48,
-    "hash": "30a559dec66b8c084e1d460b70536e475d19834bbe55ad0b160a917f647ba796"
+    "codeId": 13,
+    "hash": "b9d47e3a03c4cac014ae89c591abe8ed6c88efaccda7f3af2853b8ccd6e0e7bf"
+  },
+  "LBStaking": {
+    "codeId": 13,
+    "hash": "b9d47e3a03c4cac014ae89c591abe8ed6c88efaccda7f3af2853b8ccd6e0e7bf"
   }
 }

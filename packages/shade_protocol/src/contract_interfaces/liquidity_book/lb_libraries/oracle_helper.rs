@@ -14,16 +14,16 @@
 
 use std::{cmp::Ordering, collections::HashMap};
 
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
 use ethnum::U256;
-use serde::{Deserialize, Serialize};
 
 use super::{
     math::{encoded_sample::EncodedSample, sample_math::OracleSample, u256x256_math::addmod},
     pair_parameter_helper::PairParameters,
 };
 
-#[derive(Serialize, Deserialize)]
+#[cw_serde]
 pub struct Oracle {
     /// This array represents a fixed-size storage for 65535 samples,
     /// where each sample is a 32-byte (256-bit) value.
@@ -32,7 +32,8 @@ pub struct Oracle {
 
 pub const MAX_SAMPLE_LIFETIME: u8 = 120; //seconds
 
-#[derive(thiserror::Error, Debug)]
+#[cw_serde]
+#[derive(thiserror::Error)]
 pub enum OracleError {
     #[error("Oracle Error: Invalid Oracle ID")]
     InvalidOracleId,

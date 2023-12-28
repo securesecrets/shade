@@ -79,6 +79,46 @@ export async function executeSetLBTokenImplementation(
   logGasToFile(`SetLBTokenImplementation TX used ${tx.gasUsed} gas`);
 }
 
+export async function executeSetLBStakingImplementation(
+  client: SecretNetworkClient,
+  contractHashFactory: string,
+  contractAddressFactory: string,
+  codeIdStaking: number,
+  contractHashStaking: string
+) {
+  console.log(codeIdStaking, contractHashStaking);
+  const msg: LBFactory.ExecuteMsg = {
+    set_staking_contract_implementation: {
+      implementation: {
+        id: codeIdStaking,
+        code_hash: contractHashStaking,
+      },
+    },
+  };
+  const tx = await client.tx.compute.executeContract(
+    {
+      sender: client.address,
+      contract_address: contractAddressFactory,
+      code_hash: contractHashFactory,
+      msg: msg,
+      sent_funds: [],
+    },
+    {
+      gasLimit: 200_000,
+    }
+  );
+
+  console.log(tx);
+
+  if (tx.code !== 0) {
+    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  }
+
+  //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
+  console.log(`SetLBPairImplementation TX used ${tx.gasUsed} gas`);
+  logGasToFile(`SetLBPairImplementation TX used ${tx.gasUsed} gas`);
+}
+
 export async function executeCreateLBPair(
   client: SecretNetworkClient,
   contractHashFactory: string,

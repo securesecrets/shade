@@ -1,15 +1,19 @@
 import axios from "axios";
 import dotenv from "dotenv";
 import fs from "fs";
+import path from "path";
 import { SecretNetworkClient, Wallet } from "secretjs";
+import { initializeAdminAuth } from "./admin_auth/instantiate";
 import { TokenType, initializeFactoryContract } from "./lb_factory";
 import { initializePairContract } from "./lb_pair";
-import { initializeRouterContract } from "./lb_router";
-import { initializeTokenContract } from "./lb_token";
+import { initializeRouterContract } from "./lb_router/instantiate";
+import { initializeTokenContract } from "./lb_token/instantiate";
 
 dotenv.config({ path: ".env" });
 
 const build = "./wasm/";
+// const build_direct_to_target = "../../target/wasm32-unknown-unknown/release/";
+const build_direct_to_target = "./wasm/";
 
 // This helps when deploying to Pulsar. It can be shortened to test on secretdev.
 export const sleep = () => new Promise((resolve) => setTimeout(resolve, 100));
@@ -265,7 +269,7 @@ export const initializeSnip20Contract = async (
   return contractInfo;
 };
 
-// Initialization procedure
+// // Initialization procedure
 // export async function initializeAndUploadContract() {
 //   const client = await initializeClient(endpoint, chainId);
 
@@ -273,72 +277,44 @@ export const initializeSnip20Contract = async (
 //     await fillUpFromFaucet(client, 100_000_000);
 //   }
 
-//   const [tokenX, tokenY] = await initializeSnip20Contract(
-//     client,
-//     build + "snip25.wasm"
-//   );
-//   await sleep();
+//   // const [tokenX, tokenY] = await initializeSnip20Contract(
+//   //   client,
+//   //   build + "snip25.wasm"
+//   // );
+//   // await sleep();
 
-//   const [contractHashFactory, contractAddressFactory] =
-//     await initializeFactoryContract(
-//       client,
-//       build + "lb_factory.wasm",
-//       client.address,
-//       ""
-//     );
-//   await sleep();
+//   // const [contractHashFactory, contractAddressFactory] =
+//   //   await initializeFactoryContract(
+//   //     client,
+//   //     build + "lb_factory.wasm",
+//   //     client.address,
+//   //     ""
+//   //   );
+//   // await sleep();
 
-//   const [contractHashRouter, contractAddressRouter] =
-//     await initializeRouterContract(
-//       client,
-//       build + "router.wasm",
-//       contractHashFactory,
-//       contractAddressFactory
-//     );
-//   await sleep();
+//   // const [contractHashRouter, contractAddressRouter] =
+//   //   await initializeRouterContract(
+//   //     client,
+//   //     build + "router.wasm",
+//   //     contractHashFactory,
+//   //     contractAddressFactory
+//   //   );
+//   // await sleep();
 
 //   const [codeIdPair, contractHashPair] = await initializePairContract(
 //     client,
-//     build + "lb_pair.wasm"
+//     build + "lb_pair.wasm",
+//     "",
+//     ""
 //   );
 //   await sleep();
 
-//   const [codeIdToken, contractHashToken] = await initializeTokenContract(
-//     client,
-//     build + "lb_token.wasm"
-//   );
-//   await sleep();
-
-//   var clientInfo: [
-//     SecretNetworkClient,
-//     string,
-//     string,
-//     string,
-//     string,
-//     number,
-//     string,
-//     number,
-//     string,
-//     TokenType,
-//     TokenType
-//   ] = [
-//     client,
-//     contractHashFactory,
-//     contractAddressFactory,
-//     contractHashRouter,
-//     contractAddressRouter,
-//     codeIdPair,
-//     contractHashPair,
-//     codeIdToken,
-//     contractHashToken,
-//     tokenX,
-//     tokenY,
-//   ];
-//   return clientInfo;
+//   // const [codeIdToken, contractHashToken] = await initializeTokenContract(
+//   //   client,
+//   //   build + "lb_token.wasm"
+//   // );
+//   // await sleep();
 // }
-
-import path from "path";
-import { initializeAdminAuth } from "./admin_auth/instantiate";
 
 // Function to read contract addresses from the file
 function readContractAddresses(filePath: string) {
@@ -365,8 +341,13 @@ function isContractInitialized(
 // Your initialization procedure, modified to use the above functions
 export async function initializeAndUploadContract() {
   const client = await initializeClient(endpoint, chainId);
+  const contractFileReadPath = path.join(
+    __dirname,
+    "contract_address_temp_log.json"
+  );
   const contractFilePath = path.join(__dirname, "contract_address_log.json");
-  const contractsData = readContractAddresses(contractFilePath);
+
+  const contractsData = readContractAddresses(contractFileReadPath);
 
   if (chainId == "secretdev-1") {
     await fillUpFromFaucet(client, 100_000_000);
@@ -383,7 +364,9 @@ export async function initializeAndUploadContract() {
     codeIdPair: any,
     contractHashPair: any,
     codeIdToken: any,
-    contractHashToken: any;
+    contractHashToken: any,
+    codeIdStaking: any,
+    contractHashStaking: any;
 
   if (
     !isContractInitialized(
@@ -431,7 +414,7 @@ export async function initializeAndUploadContract() {
     [contractHashFactory, contractAddressFactory] =
       await initializeFactoryContract(
         client,
-        build + "lb_factory.wasm",
+        build_direct_to_target + "lb_factory.wasm",
         contractAddressAdminAuth,
         contractHashAdminAuth
       );
@@ -451,7 +434,7 @@ export async function initializeAndUploadContract() {
     [contractHashRouter, contractAddressRouter] =
       await initializeRouterContract(
         client,
-        build + "router.wasm",
+        build_direct_to_target + "router.wasm",
         contractHashFactory,
         contractAddressFactory
       );
@@ -470,7 +453,7 @@ export async function initializeAndUploadContract() {
   if (!isContractInitialized(contractsData, "LBPair")) {
     [codeIdPair, contractHashPair] = await initializePairContract(
       client,
-      build + "lb_pair.wasm"
+      build_direct_to_target + "lb_pair.wasm"
     );
     contractsData["LBPair"] = {
       codeId: codeIdPair,
@@ -487,7 +470,7 @@ export async function initializeAndUploadContract() {
   if (!isContractInitialized(contractsData, "LBToken")) {
     [codeIdToken, contractHashToken] = await initializeTokenContract(
       client,
-      build + "lb_token.wasm"
+      build_direct_to_target + "lb_token.wasm"
     );
     contractsData["LBToken"] = {
       codeId: codeIdToken,
@@ -500,6 +483,23 @@ export async function initializeAndUploadContract() {
     contractHashToken = contractsData["LBToken"].hash;
   }
 
+  // Staking Contract
+  if (!isContractInitialized(contractsData, "LBStaking")) {
+    [codeIdStaking, contractHashStaking] = await initializeTokenContract(
+      client,
+      build_direct_to_target + "lb_staking.wasm"
+    );
+    contractsData["LBStaking"] = {
+      codeId: codeIdToken,
+      hash: contractHashToken,
+    };
+    writeContractAddresses(contractFilePath, contractsData);
+    await sleep();
+  } else {
+    codeIdStaking = contractsData["LBStaking"].codeId;
+    contractHashStaking = contractsData["LBStaking"].hash;
+  }
+
   var clientInfo = [
     client,
     contractHashFactory,
@@ -510,10 +510,26 @@ export async function initializeAndUploadContract() {
     contractHashPair,
     codeIdToken,
     contractHashToken,
+    codeIdStaking,
+    contractHashStaking,
     tokenX,
     tokenY,
   ];
   return clientInfo;
+}
+
+// Your initialization procedure, modified to use the above functions
+export async function initializeAndUploadContractDummy() {
+  const client = await initializeClient(endpoint, chainId);
+  const contractFilePath = path.join(__dirname, "contract_address_log.json");
+  const contractsData = readContractAddresses(contractFilePath);
+
+  if (chainId == "secretdev-1") {
+    await fillUpFromFaucet(client, 100_000_000);
+  }
+
+  // Pair Contract
+  await initializePairContract(client, build + "lb_pair.wasm");
 }
 
 export async function runTestFunction(
@@ -528,6 +544,8 @@ export async function runTestFunction(
     contractHashPair: string,
     codeIdToken: number,
     contractHashToken: string,
+    codeIdStaking: number,
+    contractHashStaking: string,
     tokenX: TokenType,
     tokenY: TokenType
   ) => void,
@@ -540,6 +558,8 @@ export async function runTestFunction(
   contractHashPair: string,
   codeIdToken: number,
   contractHashToken: string,
+  codeIdStaking: number,
+  contractHashStaking: string,
   tokenX: TokenType,
   tokenY: TokenType
 ) {
@@ -554,6 +574,8 @@ export async function runTestFunction(
     contractHashPair,
     codeIdToken,
     contractHashToken,
+    codeIdStaking,
+    contractHashStaking,
     tokenX,
     tokenY
   );

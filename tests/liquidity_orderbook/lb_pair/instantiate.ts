@@ -5,8 +5,8 @@ import { logGasToFile, logToFile, sleep } from "../helper";
 export const initializePairContract = async (
   client: SecretNetworkClient,
   contractPath: string
-  // codeIdToken: number,
-  // codeHashToken: string,
+  // codeAddressFactory: string,
+  // codeHashFactory: string
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
   console.log("\nUploading contract");
@@ -52,34 +52,57 @@ export const initializePairContract = async (
 
   console.log(`Pair Contract hash: ${contractCodeHash}`);
 
-  // NOTE: factory will instantiate this
+  // let lb_factory_contract: ContractInfo = {
+  //   address: "factory_lol",
+  //   code_hash: "hash",
+  // };
 
-  // const initMsg: LBPair.InstantiateMsg = {
-  //   factory: "secret1qxxlalvsdjd07p07y3rc5fu6ll8k4tme6e2scc",
-  //   // TODO: populate these with real values
+  // let admin_auth: RawContract = {
+  //   address: "anbc",
+  //   code_hash: "xyz",
+  // };
+
+  // let impl: ContractInstantiationInfo = {
+  //   code_hash: "xyz",
+  //   id: 1,
+  // };
+
+  // let parameter: StaticFeeParameters = {
+  //   base_factor: 0,
+  //   decay_period: 0,
+  //   filter_period: 0,
+  //   max_volatility_accumulator: 0,
+  //   protocol_share: 0,
+  //   reduction_factor: 0,
+  //   variable_fee_control: 0,
+  // };
+  // const initMsg: InstantiateMsg = {
+  //   factory: lb_factory_contract,
   //   token_x: {
-  //     address: "secret1qxxlalvsdjd07p07y3rc5fu6ll8k4tme6e2scc",
-  //     code_hash: "b69957a5c29cb7a64a15c089d9a0aa81e686de650c7a5a7d8644edab251a84d1",
+  //     custom_token: {
+  //       contract_addr: "xyz",
+  //       token_code_hash: "abc",
+  //     },
   //   },
   //   token_y: {
-  //     address: "secret1qxxlalvsdjd07p07y3rc5fu6ll8k4tme6e2scc",
-  //     code_hash: "b69957a5c29cb7a64a15c089d9a0aa81e686de650c7a5a7d8644edab251a84d1",
+  //     custom_token: {
+  //       contract_addr: "lmoa",
+  //       token_code_hash: "lmao",
+  //     },
   //   },
-  //   bin_step: 100,
-  //   pair_parameters: {
-  //     base_factor: 1,
-  //     filter_period: 1,
-  //     decay_period: 1,
-  //     reduction_factor: 1,
-  //     variable_fee_control: 1,
-  //     protocol_share: 1,
-  //     max_volatility_accumulator: 1,
-  //   },
-  //   active_id: 8388607,
-  //   lb_token_implementation: {
-  //     id: codeIdToken,
-  //     code_hash: codeHashToken,
-  //   },
+  //   active_id: 83000,
+  //   admin_auth,
+  //   bin_step: 0,
+  //   entropy: "",
+  //   epoch_staking_duration: 0,
+  //   epoch_staking_index: 0,
+  //   lb_token_implementation: impl,
+  //   pair_parameters: parameter,
+  //   protocol_fee_recipient: "",
+  //   recover_staking_funds_receiver: "",
+  //   rewards_distribution_algorithm: "time_based_rewards",
+  //   staking_contract_implementation: impl,
+  //   viewing_key: "",
   // };
 
   // const contract = await client.tx.compute.instantiateContract(
@@ -88,10 +111,10 @@ export const initializePairContract = async (
   //     code_id: codeId,
   //     init_msg: initMsg,
   //     code_hash: contractCodeHash,
-  //     label: "LBPair" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
+  //     label: "LB_PAIR" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
   //   },
   //   {
-  //     gasLimit: 1000000,
+  //     gasLimit: 200_000,
   //   }
   // );
 
@@ -105,7 +128,10 @@ export const initializePairContract = async (
   //   (log) => log.type === "message" && log.key === "contract_address"
   // )!.value;
 
-  // console.log(`Pair Contract address: ${contractAddress}`);
+  // console.log(`LBPAIR Contract address: ${contractAddress}`);
+  // console.log(`Instantiation used ${contract.gasUsed} gas`);
+
+  logGasToFile(`LBPAIR Upload used ${uploadReceipt.gasUsed} gas`);
 
   logGasToFile(`Pair Upload used ${uploadReceipt.gasUsed} gas`);
 

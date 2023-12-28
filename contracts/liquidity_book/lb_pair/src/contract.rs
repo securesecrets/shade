@@ -80,7 +80,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response> {
-    //Initializing the Token Contract
+    // Initializing the Token Contract
 
     let token_x_symbol = match msg.token_x.clone() {
         TokenType::CustomToken {
@@ -123,8 +123,8 @@ pub fn instantiate(
             code_hash: msg.lb_token_implementation.code_hash.clone(),
             msg: to_binary(&instantiate_token_msg)?,
             label: format!(
-                "{}-{}-Pair-Token-{}",
-                token_x_symbol, token_y_symbol, msg.bin_step
+                "{}-{}-Pair-Token-{}-{}",
+                token_x_symbol, token_y_symbol, msg.bin_step, env.block.height
             ),
             funds: vec![],
             admin: None,
@@ -146,7 +146,7 @@ pub fn instantiate(
     pair_parameters.set_active_id(msg.active_id)?;
     pair_parameters.update_id_reference();
 
-    //RegisterReceiving Token
+    // RegisterReceiving Token
     let mut messages = vec![];
     let viewing_key = ViewingKey::from(msg.viewing_key.as_str());
     for token in [&msg.token_x, &msg.token_y] {
@@ -192,9 +192,6 @@ pub fn instantiate(
         //TODO: set using the setter function and instantiate msg
     };
 
-    // deps.api
-    //     .debug(format!("Contract was initialized by {}", info.sender).as_str());
-
     let tree: TreeUint24 = TreeUint24::new();
     let oracle = Oracle {
         samples: HashMap::<u16, OracleSample>::new(),
@@ -211,7 +208,7 @@ pub fn instantiate(
         rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
     })?;
 
-    ephemeral_storage_w(deps.storage).save(&NextTokenKey {
+    EPHEMERAL_STORAGE.save(deps.storage, &NextTokenKey {
         lb_token_code_hash: msg.lb_token_implementation.code_hash,
         staking_contract: msg.staking_contract_implementation,
         token_x_symbol,
@@ -2776,8 +2773,9 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let contract_address_string = &String::from_utf8(x.to_vec())?;
                 let trimmed_str = contract_address_string.trim_matches('\"');
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
-                // not the best name but it matches the pair key idea
-                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+
+                // // not the best name but it matches the pair key idea
+                let emp_storage = EPHEMERAL_STORAGE.load(deps.storage)?;
                 let mut state = STATE.load(deps.storage)?;
 
                 state.lb_token = ContractInfo {
@@ -2807,8 +2805,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                         code_hash: emp_storage.staking_contract.code_hash.clone(),
                         msg: to_binary(&instantiate_token_msg)?,
                         label: format!(
-                            "{}-{}-Staking-Contract-{}",
-                            emp_storage.token_x_symbol, emp_storage.token_y_symbol, state.bin_step
+                            "{}-{}-Staking-Contract-{}-{}",
+                            emp_storage.token_x_symbol,
+                            emp_storage.token_y_symbol,
+                            state.bin_step,
+                            env.block.height
                         ),
 
                         funds: vec![],
@@ -2827,7 +2828,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let trimmed_str = contract_address_string.trim_matches('\"');
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
-                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+                let emp_storage = EPHEMERAL_STORAGE.load(deps.storage)?;
                 let mut state = STATE.load(deps.storage)?;
 
                 state.staking_contract = ContractInfo {
@@ -2839,7 +2840,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
 
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
-
                 Ok(response)
             }
             None => Err(StdError::generic_err("Unknown reply id")),

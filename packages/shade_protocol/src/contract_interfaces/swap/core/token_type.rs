@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary,
     Addr,
@@ -13,6 +14,7 @@ use cosmwasm_std::{
     Uint256,
     WasmMsg,
 };
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 // use shade_oracles::querier::{query_price, query_prices};
@@ -28,9 +30,7 @@ use crate::{
 
 use super::TokenAmount;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[serde(untagged)]
+#[cw_serde]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
@@ -41,13 +41,13 @@ pub enum TokenType {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct StableTokenData {
     pub oracle_key: String,
     pub decimals: u8,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct StableTokenType {
     pub token: TokenType,
     pub stable_token_data: StableTokenData,

@@ -18,6 +18,7 @@ import {
   executeAddQuoteAsset,
   executeCreateLBPair,
   executeSetLBPairImplementation,
+  executeSetLBStakingImplementation,
   executeSetLBTokenImplementation,
   executeSetPreset,
 } from "./lb_factory";
@@ -37,6 +38,8 @@ async function test_configure_factory(
   contractHashPair: string,
   codeIdToken: number,
   contractHashToken: string,
+  codeIdStaking: number,
+  contractHashStaking: string,
   tokenX: TokenType,
   tokenY: TokenType
 ) {
@@ -61,6 +64,15 @@ async function test_configure_factory(
     contractAddressFactory,
     codeIdToken,
     contractHashToken
+  );
+  await sleep();
+
+  await executeSetLBStakingImplementation(
+    client,
+    contractHashFactory,
+    contractAddressFactory,
+    codeIdStaking,
+    contractHashStaking
   );
   await sleep();
 
@@ -389,10 +401,13 @@ async function test_configure_factory(
     contractHashPair,
     codeIdToken,
     contractHashToken,
+    codeIdStaking,
+    codeHashStaking,
     tokenX,
     tokenY,
   ] = await initializeAndUploadContract();
 
+  // await initializeAndUploadContractDummy();
   sleep();
 
   await runTestFunction(
@@ -406,6 +421,8 @@ async function test_configure_factory(
     contractHashPair,
     codeIdToken,
     contractHashToken,
+    codeIdStaking,
+    codeHashStaking,
     tokenX,
     tokenY
   );

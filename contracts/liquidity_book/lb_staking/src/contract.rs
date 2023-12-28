@@ -83,12 +83,7 @@ pub fn instantiate(
     LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID.save(deps.storage, &None)?;
     EXPIRED_AT_LOGGER.save(deps.storage, &vec![])?;
 
-    Ok(response
-        .add_messages(messages)
-        .add_attributes(vec![Attribute::new(
-            "staking_contract_addr",
-            env.contract.address,
-        )]))
+    Ok(response.add_messages(messages))
 }
 
 #[shd_entry_point]

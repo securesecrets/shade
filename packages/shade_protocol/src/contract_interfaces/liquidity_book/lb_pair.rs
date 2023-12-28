@@ -82,7 +82,6 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-#[serde(untagged)]
 pub enum ContractStatus {
     Active,         // allows all operations
     FreezeAll,      // blocks everything except admin-protected config changes
@@ -95,7 +94,6 @@ impl Display for ContractStatus {
 }
 
 #[cw_serde]
-#[serde(untagged)]
 pub enum RewardsDistributionAlgorithm {
     TimeBasedRewards,
     VolumeBasedRewards,
