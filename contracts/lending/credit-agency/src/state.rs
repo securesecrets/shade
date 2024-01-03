@@ -15,6 +15,7 @@ pub struct Config {
     pub gov_contract: Contract,
     /// The CodeId of the lend-market contract
     pub lend_market_id: u64,
+    pub lend_market_code_hash: String,
     /// The CodeId of the lend-token contract
     pub lend_token_id: u64,
     /// Token which would be distributed as reward token to wynd_lend token holders.

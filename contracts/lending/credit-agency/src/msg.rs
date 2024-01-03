@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
     pub gov_contract: Contract,
     /// The CodeId of the lending-market contract
     pub lending_market_id: u64,
+    pub lending_market_code_hash: String,
     /// The CodeId of the lending-token contract
     pub lending_token_id: u64,
     /// Token which would be distributed as reward token to isotonic token holders.
@@ -155,6 +156,7 @@ pub enum QueryMsg {
 pub struct MarketResponse {
     pub market_token: Token,
     pub market: Addr,
+    pub market_code_hash: String,
 }
 
 #[cw_serde]

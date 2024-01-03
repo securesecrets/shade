@@ -37,6 +37,7 @@ pub fn instantiate(
     let cfg = Config {
         gov_contract: msg.gov_contract,
         lend_market_id: msg.lending_market_id,
+        lend_market_code_hash: msg.lending_market_code_hash,
         lend_token_id: msg.lending_token_id,
         reward_token: msg.reward_token,
         common_token: msg.common_token,
@@ -149,8 +150,8 @@ mod execute {
             NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
         REPLY_IDS.save(deps.storage, reply_id, &market_token)?;
 
-        let market_msg = wynd_lend_market::msg::InstantiateMsg {
-            // Fields required for the wynd_lend-token instantiation.
+        let market_msg = lend_market::msg::InstantiateMsg {
+            // Fields required for the lend-token instantiation.
             name: market_cfg.name,
             symbol: market_cfg.symbol,
             decimals: market_cfg.decimals,
@@ -171,6 +172,7 @@ mod execute {
         let market_instantiate = WasmMsg::Instantiate {
             admin: Some(env.contract.address.to_string()),
             code_id: cfg.lend_market_id,
+            code_hash: cfg.lend_market_code_hash,
             msg: to_binary(&market_msg)?,
             funds: vec![],
             label: format!("market_contract_{}", market_token),
@@ -183,27 +185,17 @@ mod execute {
     }
 
     fn create_repay_to_submessage(
-        coin: utils::coin::Coin,
+        coin: lending_utils::coin::Coin,
         debt_market: Addr,
         account: Addr,
     ) -> StdResult<SubMsg> {
         match coin.denom {
-            Token::Native(_) => {
-                let msg = to_binary(&wynd_lend_market::msg::ExecuteMsg::RepayTo {
-                    account: account.to_string(),
-                })?;
-                Ok(SubMsg::new(WasmMsg::Execute {
-                    contract_addr: debt_market.to_string(),
-                    msg,
-                    funds: vec![coin.try_into().unwrap()],
-                }))
-            }
             Token::Cw20(_) => {
                 let repay_to_msg: Binary = to_binary(&MarketRepayTo {
                     account: account.to_string(),
                 })?;
 
-                let msg = to_binary(&Cw20ExecuteMsg::Send {
+                let msg = to_binary(&snip20::ExecuteMsg::Send {
                     contract: debt_market.to_string(),
                     amount: coin.amount,
                     msg: repay_to_msg,
@@ -226,7 +218,7 @@ mod execute {
         // Account to liquidate.
         account: Addr,
         // Native or cw20 tokens sent along with the tx.
-        coins: utils::coin::Coin,
+        coins: lending_utils::coin::Coin,
         collateral_denom: Token,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -251,10 +243,10 @@ mod execute {
         )?;
 
         // find market with wanted collateral_denom
-        let collateral_market = query::market(deps.as_ref(), &collateral_denom)?.market;
+        let collateral_market = query::market(deps.as_ref(), &collateral_denom)?;
 
         // transfer claimed amount as reward
-        let msg = to_binary(&wynd_lend_market::msg::ExecuteMsg::TransferFrom {
+        let msg = to_binary(&lend_market::msg::ExecuteMsg::TransferFrom {
             source: account.to_string(),
             destination: sender.to_string(),
             // transfer repaid amount represented as amount of common tokens, which is
@@ -263,7 +255,8 @@ mod execute {
             liquidation_price: cfg.liquidation_price,
         })?;
         let transfer_from_msg = SubMsg::new(WasmMsg::Execute {
-            contract_addr: collateral_market.to_string(),
+            contract_addr: collateral_market.market.to_string(),
+            code_hash: collateral_market.code_hash.to_string(),
             msg,
             funds: vec![],
         });
@@ -276,7 +269,6 @@ mod execute {
             .add_submessage(repay_to_msg)
             .add_submessage(transfer_from_msg))
     }
-
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
