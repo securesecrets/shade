@@ -70,7 +70,6 @@ pub fn instantiate(
         credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
-        oracle: msg.oracle.into(),
         query_auth: msg.query_auth.into(),
     };
     CONFIG.save(deps.storage, &cfg)?;
@@ -831,7 +830,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 fn oracle(deps: Deps, symbol: String) -> StdResult<Uint128> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.oracle)?;
+    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.price_oracle)?;
 
     Ok(Uint128::from(answer.rate))
 }

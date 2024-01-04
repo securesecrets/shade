@@ -37,11 +37,9 @@ pub struct Config {
     /// because they maxed out their credit limit.
     pub borrow_limit_ratio: Decimal,
     /// Address of Oracle's contract
-    pub price_oracle: String,
+    pub price_oracle: Contract,
     /// Address of Credit Agency
     pub credit_agency: Contract,
-    /// Address of oracle
-    pub oracle: Contract,
     /// Address of auth query contract
     pub query_auth: Contract,
     pub reserve_factor: Decimal,

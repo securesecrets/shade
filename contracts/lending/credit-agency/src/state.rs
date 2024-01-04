@@ -32,6 +32,8 @@ pub struct Config {
     /// How much more of collateral will be used in swap then the estimated amount during
     /// swap_withdraw_from
     pub default_estimate_multiplier: Decimal,
+    /// Address of auth query contract
+    pub query_auth: Contract,
 }
 
 #[cw_serde]

@@ -36,6 +36,7 @@ pub fn instantiate(
     // TODO: should we validate Tokens?
     let cfg = Config {
         gov_contract: msg.gov_contract,
+        query_auth: msg.query_auth,
         lend_market_id: msg.lending_market_id,
         lend_market_code_hash: msg.lending_market_code_hash,
         lend_token_id: msg.lending_token_id,
@@ -168,6 +169,7 @@ mod execute {
             reserve_factor: market_cfg.reserve_factor,
             gov_contract: cfg.gov_contract.address.to_string(),
             borrow_limit_ratio: cfg.borrow_limit_ratio,
+            query_auth: cfg.query_auth,
         };
         let market_instantiate = WasmMsg::Instantiate {
             admin: Some(env.contract.address.to_string()),
@@ -187,6 +189,7 @@ mod execute {
     fn create_repay_to_submessage(
         coin: lending_utils::coin::Coin,
         debt_market: Addr,
+        debt_market_code_hash: String,
         account: Addr,
     ) -> StdResult<SubMsg> {
         match coin.denom {
@@ -196,14 +199,17 @@ mod execute {
                 })?;
 
                 let msg = to_binary(&snip20::ExecuteMsg::Send {
-                    contract: debt_market.to_string(),
+                    recipient: debt_market.to_string(),
+                    recipient_code_hash: Some(debt_market_code_hash),
                     amount: coin.amount,
-                    msg: repay_to_msg,
+                    msg: Some(repay_to_msg),
                 })
                 .unwrap();
 
                 Ok(SubMsg::new(WasmMsg::Execute {
                     contract_addr: coin.denom.denom(),
+                    // TODO: Add code hash to the coin type
+                    code_hash: "TODO: Add code hash to the coin type".to_owned(),
                     msg,
                     funds: vec![],
                 }))
@@ -231,14 +237,19 @@ mod execute {
         }
 
         // Count debt and repay it. This requires that market returns error if repaying more then balance.
-        let debt_market = query::market(deps.as_ref(), &coins.denom)?.market;
+        let debt_market = query::market(deps.as_ref(), &coins.denom)?;
 
-        let repay_to_msg =
-            create_repay_to_submessage(coins.clone(), debt_market.clone(), account.clone())?;
+        let repay_to_msg = create_repay_to_submessage(
+            coins.clone(),
+            debt_market.market.clone(),
+            debt_market.code_hash.clone(),
+            account.clone(),
+        )?;
 
         // find price rate of collateral denom
         let price_response: PriceRate = deps.querier.query_wasm_smart(
-            debt_market.to_string(),
+            debt_market.market.to_string(),
+            debt_market.code_hash.to_string(),
             &MarketQueryMsg::PriceMarketLocalPerCommon {},
         )?;
 
@@ -247,8 +258,8 @@ mod execute {
 
         // transfer claimed amount as reward
         let msg = to_binary(&lend_market::msg::ExecuteMsg::TransferFrom {
-            source: account.to_string(),
-            destination: sender.to_string(),
+            source: account,
+            destination: sender,
             // transfer repaid amount represented as amount of common tokens, which is
             // calculated into collateral_denom's amount later in the market
             amount: coin_times_price_rate(&coins, &price_response)?.amount,

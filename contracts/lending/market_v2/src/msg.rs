@@ -35,7 +35,7 @@ pub struct InstantiateMsg {
     /// Ratio of how much tokens can be borrowed for one unit, 0 <= x < 1
     pub collateral_ratio: Decimal,
     /// Address of contract to query for price
-    pub price_oracle: String,
+    pub price_oracle: Contract,
     /// Defines the portion of borrower interest that is converted into reserves (0 <= x <= 1)
     pub reserve_factor: Decimal,
     /// Maximum percentage of credit_limit that can be borrowed.
@@ -50,8 +50,6 @@ pub struct InstantiateMsg {
     pub ctoken_code_hash: String,
     // I have no idea what to do with it
     pub credit_agency_code_hash: String,
-    /// Oracle address
-    pub oracle: Contract,
     /// Address of auth query contract
     pub query_auth: Contract,
 }

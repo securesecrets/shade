@@ -11,6 +11,8 @@ use lending_utils::{coin::Coin, interest::Interest, token::Token};
 pub struct InstantiateMsg {
     /// The address that controls the credit agency and can set up markets
     pub gov_contract: Contract,
+    /// Address of query auth contract
+    pub query_auth: Contract,
     /// The CodeId of the lending-market contract
     pub lending_market_id: u64,
     pub lending_market_code_hash: String,
@@ -156,7 +158,7 @@ pub enum QueryMsg {
 pub struct MarketResponse {
     pub market_token: Token,
     pub market: Addr,
-    pub market_code_hash: String,
+    pub code_hash: String,
 }
 
 #[cw_serde]
