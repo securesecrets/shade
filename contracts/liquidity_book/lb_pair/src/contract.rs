@@ -1036,6 +1036,7 @@ fn _update_bin(
         config.lb_token.code_hash,
         config.lb_token.address,
     )?;
+    // println!("id {:?}", id);
 
     let (shares, amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
         bin_reserves,
@@ -1043,6 +1044,7 @@ fn _update_bin(
         price,
         total_supply,
     )?;
+    println!("id {:?}, shares: {:?}", id, shares);
 
     let amounts_in_to_bin = amounts_in;
 

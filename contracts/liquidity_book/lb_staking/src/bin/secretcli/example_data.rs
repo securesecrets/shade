@@ -174,7 +174,7 @@ impl ExampleData for LBPairInformation {
     fn example() -> Self {
         LBPairInformation {
             bin_step: 100,
-            lb_pair: LBPair {
+            info: LBPair {
                 token_x: TokenType::example(),
                 token_y: TokenType::example(),
                 bin_step: 100,

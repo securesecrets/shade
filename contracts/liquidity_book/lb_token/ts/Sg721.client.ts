@@ -6,8 +6,8 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { ExecuteMsg, Addr, Uint256, Binary, Expiration, TokenAmount, TokenIdBalance, Metadata, Extension, Trait, MediaFile, Authentication, TransferAction, SendAction, TknConfig, InstantiateMsg, CurateTokenId, TokenInfoMsg, LbPair, QueryAnswer, TxAction, OwnerBalance, Tx, Permission, PermissionKey, StoredTokenInfo, QueryMsg, TokenPermissions, QueryWithPermit, PermitForTokenPermissions, PermitParamsForTokenPermissions, PermitSignature, PubKey } from "./LbToken.types";
-export interface LbTokenReadOnlyInterface {
+import { ExecuteMsg, Addr, Uint256, Binary, Expiration, TokenAmount, TokenIdBalance, Metadata, Extension, Trait, MediaFile, Authentication, TransferAction, SendAction, TknConfig, InstantiateMsg, CurateTokenId, TokenInfoMsg, LbPair, QueryAnswer, TxAction, OwnerBalance, Tx, Permission, PermissionKey, StoredTokenInfo, QueryMsg, TokenPermissions, QueryWithPermit, PermitForTokenPermissions, PermitParamsForTokenPermissions, PermitSignature, PubKey } from "./Sg721.types";
+export interface Sg721ReadOnlyInterface {
   contractAddress: string;
   tokenContractInfo: () => Promise<TokenContractInfoResponse>;
   idTotalBalance: ({
@@ -97,7 +97,7 @@ export interface LbTokenReadOnlyInterface {
     query: QueryWithPermit;
   }) => Promise<WithPermitResponse>;
 }
-export class LbTokenQueryClient implements LbTokenReadOnlyInterface {
+export class Sg721QueryClient implements Sg721ReadOnlyInterface {
   client: CosmWasmClient;
   contractAddress: string;
 
@@ -287,7 +287,7 @@ export class LbTokenQueryClient implements LbTokenReadOnlyInterface {
     });
   };
 }
-export interface LbTokenInterface extends LbTokenReadOnlyInterface {
+export interface Sg721Interface extends Sg721ReadOnlyInterface {
   contractAddress: string;
   sender: string;
   mintTokens: ({
@@ -426,7 +426,7 @@ export interface LbTokenInterface extends LbTokenReadOnlyInterface {
     padding?: string;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
 }
-export class LbTokenClient extends LbTokenQueryClient implements LbTokenInterface {
+export class Sg721Client extends Sg721QueryClient implements Sg721Interface {
   client: SigningCosmWasmClient;
   sender: string;
   contractAddress: string;

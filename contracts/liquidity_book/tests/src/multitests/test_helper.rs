@@ -791,7 +791,6 @@ pub fn mint_token_helper(
             "viewing_key".to_owned(),
         )?;
     }
-
     Ok(())
 }
 

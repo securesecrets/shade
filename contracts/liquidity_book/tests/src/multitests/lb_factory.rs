@@ -160,11 +160,11 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     // 6. Validate that the returned information matches the expected values (binStep, LBPair address, createdByOwner, ignoredForRouting).
     //SORTED token
     if token_x.unique_key() < token_y.unique_key() {
-        assert_eq!(lb_pair_info.lb_pair.token_x, token_x);
-        assert_eq!(lb_pair_info.lb_pair.token_y, token_y);
+        assert_eq!(lb_pair_info.info.token_x, token_x);
+        assert_eq!(lb_pair_info.info.token_y, token_y);
     } else {
-        assert_eq!(lb_pair_info.lb_pair.token_x, token_y);
-        assert_eq!(lb_pair_info.lb_pair.token_y, token_x);
+        assert_eq!(lb_pair_info.info.token_x, token_y);
+        assert_eq!(lb_pair_info.info.token_y, token_x);
     }
 
     let (
@@ -175,7 +175,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &lb_pair_info.info.contract)?;
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD);
     assert_eq!(decay_period, DEFAULT_DECAY_PERIOD);
@@ -188,7 +188,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &lb_pair_info.info.contract)?;
 
     assert_eq!(volatility_reference, 0);
     assert_eq!(volatility_accumulator, 0);
@@ -740,7 +740,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         old_volatility_reference,
         old_id_reference,
         old_time_of_last_update,
-    ) = lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_variable_fee_params(&app, &all_pairs[0].info.contract)?;
 
     // Set the fees parameters on pair
     lb_factory::set_fees_parameters_on_pair(
@@ -768,7 +768,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &all_pairs[0].info.contract)?;
 
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR * 2);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD * 2);
@@ -782,7 +782,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &all_pairs[0].info.contract)?;
 
     assert_eq!(volatility_accumulator, old_volatility_accumulator);
     assert_eq!(volatility_reference, old_volatility_reference);
@@ -1180,7 +1180,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let all_pairs =
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), sscrt, shd)?;
 
-    let lb_pair = all_pairs[0].clone().lb_pair;
+    let lb_pair = all_pairs[0].clone().info;
 
     // Force decay on the created LBPair
     lb_factory::force_decay(

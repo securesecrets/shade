@@ -108,8 +108,10 @@ impl U256x256Math {
 
         let (prod0, prod1) = Self::_get_mul_prods(x, y)?;
 
+        // println!("prod0: {:?}\n prod1 {:?}", prod0, prod1);
+
         let result = Self::_get_end_of_div_round_down(x, y, denominator, prod0, prod1)?;
-        // println!("result: {:#?}", result);
+        // println!("result: {:?}", result);
 
         Ok(result)
     }
@@ -357,6 +359,7 @@ impl U256x256Math {
         // Handle non-overflow cases, 256 by 256 division
         if prod1 == 0 {
             result = prod0 / denominator;
+            // println!("result {:?}", result);
             Ok(result)
         } else {
             // Make sure the result is less than 2^256. Also prevents denominator == 0
@@ -382,7 +385,7 @@ impl U256x256Math {
 
             // Does not overflow because the denominator cannot be zero at this stage in the function
             let mut lpotdod = denominator & (!denominator + U256::ONE);
-            // println!("lpotdod: {:#?}", lpotdod);
+            // println!("lpotdod 0: {:#?}", lpotdod);
 
             // Divide denominator by lpotdod.
             let denominator = denominator / lpotdod;
@@ -393,11 +396,12 @@ impl U256x256Math {
             // println!("prod0 / lpotdod: {:#?}", prod0);
 
             // Flip lpotdod such that it is 2^256 / lpotdod. If lpotdod is zero, then it becomes one
-            match lpotdod {
-                U256::ONE => lpotdod = U256::ONE,
-                _ => lpotdod = (U256::ZERO.wrapping_sub(lpotdod) / lpotdod).wrapping_add(U256::ONE),
-            }
-            // println!("lpotdod: {:#?}", lpotdod);
+            // match lpotdod {
+            //     U256::ONE => lpotdod = U256::ONE,
+            //     _ => lpotdod = (U256::ZERO.wrapping_sub(lpotdod) / lpotdod).wrapping_add(U256::ONE),
+            // }
+            lpotdod = (U256::ZERO.wrapping_sub(lpotdod) / lpotdod).wrapping_add(U256::ONE);
+            // println!("lpotdod: {:?}", lpotdod);
 
             // Shift in bits from prod1 into prod0
             let prod0 = prod0 | (prod1.wrapping_mul(lpotdod));
@@ -435,7 +439,7 @@ impl U256x256Math {
             // less than 2^256, this is the final result. We don't need to compute the high bits of the result and prod1
             // is no longer required.
             result = prod0.wrapping_mul(inverse);
-            // println!("result: {:#?}", result);
+            // println!("inverse: {:#?}", inverse);
 
             Ok(result)
         }

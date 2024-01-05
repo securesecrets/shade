@@ -1371,6 +1371,11 @@ fn exec_change_balance(
             // if `to` address has no balance yet, initiate zero balance
             None => Uint256::from(0_u64),
         };
+
+        // println!("to_existing_bal {:?}", to_existing_bal);
+
+        // println!("amount {:?}", amount);
+
         let to_new_amount_op = to_existing_bal.checked_add(*amount);
         if to_new_amount_op.is_err() {
             return Err(StdError::generic_err(

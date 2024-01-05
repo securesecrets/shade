@@ -27,7 +27,6 @@ export async function queryLBPairImplementation(
     query: getLBPairImplementationQuery,
   })) as LBFactory.LBPairImplementationResponse;
 
-  console.log(JSON.stringify(response));
   return response;
 }
 
@@ -42,7 +41,6 @@ export async function queryLBTokenImplementation(
     query: getLBTokenImplementationQuery,
   })) as LBFactory.LBTokenImplementationResponse;
 
-  console.log(JSON.stringify(response));
   return response;
 }
 
@@ -57,7 +55,6 @@ export async function queryPreset(
     query: getPresetQuery,
   })) as LBFactory.PresetResponse;
 
-  console.log(JSON.stringify(response));
   return response;
 }
 
@@ -65,10 +62,26 @@ export async function queryLBPairInformation(
   client: SecretNetworkClient,
   contractHash: string,
   contractAddress: string,
-  tokenX: TokenType,
-  tokenY: TokenType,
+  contractHashTokenX: string,
+  contractAddressTokenX: string,
+  contractHashTokenY: string,
+  contractAddressTokenY: string,
   bin_step: number
 ): Promise<LBFactory.LBPairInformationResponse> {
+  let tokenX: TokenType = {
+    custom_token: {
+      contract_addr: contractAddressTokenX,
+      token_code_hash: contractHashTokenX,
+    },
+  };
+
+  let tokenY: TokenType = {
+    custom_token: {
+      contract_addr: contractAddressTokenY,
+      token_code_hash: contractHashTokenY,
+    },
+  };
+
   const getAllLBPairsQuery: LBFactory.QueryMsg = {
     get_lb_pair_information: {
       token_x: tokenX,
@@ -83,6 +96,5 @@ export async function queryLBPairInformation(
     query: getAllLBPairsQuery,
   })) as LBFactory.LBPairInformationResponse;
 
-  console.log(JSON.stringify(response));
   return response;
 }

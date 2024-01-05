@@ -58,7 +58,7 @@ pub fn lb_pair_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -103,7 +103,7 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -123,14 +123,14 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
     lb_pair::set_contract_status(
         &mut app,
         addrs.admin().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         shade_protocol::liquidity_book::lb_pair::ContractStatus::LpWithdrawOnly,
     )?;
 
     let res = lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters.clone(),
     );
 
@@ -146,7 +146,7 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
     lb_pair::set_contract_status(
         &mut app,
         addrs.admin().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         shade_protocol::liquidity_book::lb_pair::ContractStatus::Active,
     )?;
 
@@ -154,7 +154,7 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters.clone(),
     )?;
 
@@ -162,14 +162,14 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
     lb_pair::set_contract_status(
         &mut app,
         addrs.admin().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         shade_protocol::liquidity_book::lb_pair::ContractStatus::FreezeAll,
     )?;
 
     let res = lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters.clone(),
     );
 
@@ -183,7 +183,7 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
     let res: Result<(), cosmwasm_std::StdError> = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_x.into(),
             token_y: token_y.into(),
@@ -226,7 +226,7 @@ pub fn test_native_tokens_error() -> Result<(), anyhow::Error> {
     let res = lb_pair::swap_native(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.joker().to_string()),
         TokenAmount {
             token: TokenType::CustomToken {
@@ -253,21 +253,16 @@ pub fn test_increase_oracle_lenght() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
 
-    app.deps(&lb_pair.lb_pair.contract.address, |storage| {
+    app.deps(&lb_pair.info.contract.address, |storage| {
         assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 0);
     })?;
 
     // update oracle lenght
 
-    lb_pair::increase_oracle_length(
-        &mut app,
-        addrs.admin().as_str(),
-        &lb_pair.lb_pair.contract,
-        20,
-    )?;
+    lb_pair::increase_oracle_length(&mut app, addrs.admin().as_str(), &lb_pair.info.contract, 20)?;
 
     // query_oracle lenght
-    app.deps(&lb_pair.lb_pair.contract.address, |storage| {
+    app.deps(&lb_pair.info.contract.address, |storage| {
         assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 20);
     })?;
 

@@ -29,7 +29,7 @@ export interface LBPairInformation {
   bin_step: number;
   created_by_owner: boolean;
   ignored_for_routing: boolean;
-  lb_pair: LBPair;
+  lb_pair: LBPair; //TODO change this to `info`
 }
 export interface LBPair {
   bin_step: number;

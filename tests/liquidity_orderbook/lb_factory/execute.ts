@@ -9,7 +9,6 @@ export async function executeSetLBPairImplementation(
   codeIdPair: number,
   contractHashPair: string
 ) {
-  console.log(codeIdPair, contractHashPair);
   const msg: LBFactory.ExecuteMsg = {
     set_lb_pair_implementation: {
       implementation: {
@@ -30,8 +29,6 @@ export async function executeSetLBPairImplementation(
       gasLimit: 200_000,
     }
   );
-
-  console.log(tx);
 
   if (tx.code !== 0) {
     throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
@@ -86,7 +83,6 @@ export async function executeSetLBStakingImplementation(
   codeIdStaking: number,
   contractHashStaking: string
 ) {
-  console.log(codeIdStaking, contractHashStaking);
   const msg: LBFactory.ExecuteMsg = {
     set_staking_contract_implementation: {
       implementation: {
@@ -107,8 +103,6 @@ export async function executeSetLBStakingImplementation(
       gasLimit: 200_000,
     }
   );
-
-  console.log(tx);
 
   if (tx.code !== 0) {
     throw new Error(`Failed with the following error:\n ${tx.rawLog}`);

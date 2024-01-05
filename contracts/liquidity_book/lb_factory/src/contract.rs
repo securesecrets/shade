@@ -720,7 +720,7 @@ fn try_set_fee_parameters_on_pair(
             token_y: token_b.unique_key(),
             bin_step,
         })?
-        .lb_pair;
+        .info;
 
     let msg: CosmosMsg = SetStaticFeeParameters {
         base_factor,
@@ -873,7 +873,7 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) ->
             token_y: token_b.unique_key(),
             bin_step: pair.bin_step,
         })?
-        .lb_pair;
+        .info;
 
     let mut response = Response::new();
 
@@ -1056,7 +1056,8 @@ fn query_lb_pair_information(
     token_b: TokenType,
     bin_step: u16,
 ) -> Result<Binary> {
-    let lb_pair_information = _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
+    let lb_pair_information: LBPairInformation =
+        _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
 
     let response = LBPairInformationResponse {
         lb_pair_information,
@@ -1283,7 +1284,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                     (token_a.unique_key(), token_b.unique_key(), bin_step),
                     &LBPairInformation {
                         bin_step: lb_pair_key.bin_step,
-                        lb_pair: lb_pair.clone(),
+                        info: lb_pair.clone(),
                         created_by_owner: lb_pair_key.is_open,
                         ignored_for_routing: false,
                     },

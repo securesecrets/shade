@@ -13,6 +13,7 @@ use shade_protocol::liquidity_book::lb_pair::{
     GetPairInfoResponse,
     IdFromPriceResponse,
     InstantiateMsg,
+    InvokeMsg,
     LbTokenResponse,
     MintResponse,
     // Add other structs as needed
@@ -48,6 +49,7 @@ fn main() {
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
+    export_schema(&schema_for!(InvokeMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
 
     // Add export_schema for each response struct

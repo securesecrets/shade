@@ -4,311 +4,304 @@ dotenv.config({ path: ".env" });
 
 const build = "./wasm/";
 
-import { SecretNetworkClient } from "secretjs";
 import {
+  clientInfo,
   gasStream,
   initializeAndUploadContract,
   logStream,
   logToFile,
-  runTestFunction,
   sleep,
+  test_configure_factory,
 } from "./helper";
 import {
-  TokenType,
-  executeAddQuoteAsset,
-  executeCreateLBPair,
-  executeSetLBPairImplementation,
-  executeSetLBStakingImplementation,
-  executeSetLBTokenImplementation,
-  executeSetPreset,
-} from "./lb_factory";
-import {
-  queryLBPairImplementation,
-  queryLBTokenImplementation,
-  queryPreset,
-} from "./lb_factory/query";
+  executeAddLiquidity,
+  executeRemoveLiquidity,
+  executeSwap,
+  get_id,
+  get_total_bins,
+} from "./lb_pair/execute";
+import { queryReserves } from "./lb_pair/query";
+import { queryBalance } from "./lb_token/query";
 
-async function test_configure_factory(
-  client: SecretNetworkClient,
-  contractHashFactory: string,
-  contractAddressFactory: string,
-  contractHashRouter: string,
-  contractAddressRouter: string,
-  codeIdPair: number,
-  contractHashPair: string,
-  codeIdToken: number,
-  contractHashToken: string,
-  codeIdStaking: number,
-  contractHashStaking: string,
-  tokenX: TokenType,
-  tokenY: TokenType
-) {
-  await executeSetLBPairImplementation(
-    client,
-    contractHashFactory,
-    contractAddressFactory,
-    codeIdPair,
-    contractHashPair
-  );
-  await sleep();
+(async () => {
+  const currentTime = new Date();
+  const currentTimeString = currentTime.toTimeString();
+  logToFile(`Deploy Time: ${currentTimeString}`);
 
-  await queryLBPairImplementation(
-    client,
-    contractHashFactory,
-    contractAddressFactory
-  );
+  //initialize contrats
+  let clientInfo = await initializeAndUploadContract();
+  //set factory and initialize lb_pair
+  //lb_pair initializes lb_token and lb_staking
+  clientInfo = await test_configure_factory(clientInfo);
 
-  await executeSetLBTokenImplementation(
-    client,
-    contractHashFactory,
-    contractAddressFactory,
-    codeIdToken,
-    contractHashToken
-  );
-  await sleep();
+  // await test_liquidity(clientInfo);
 
-  await executeSetLBStakingImplementation(
-    client,
-    contractHashFactory,
-    contractAddressFactory,
-    codeIdStaking,
-    contractHashStaking
-  );
-  await sleep();
+  await test_swaps(clientInfo);
 
-  await queryLBTokenImplementation(
-    client,
-    contractHashFactory,
-    contractAddressFactory
-  );
+  sleep();
 
-  const base_factor: number = 5000;
-  const filter_period = 30;
-  const decay_period = 600;
-  const reduction_factor = 5000;
-  const variable_fee_control = 40000;
-  const protocol_share = 1000;
-  const max_volatility_accumulator = 350000;
-  const is_open = true;
-  const epoch_staking_duration = 10;
-  const epoch_staking_index = 1;
-  const rewards_distribution_algorithm = "time_based_rewards";
-  const total_reward_bins = 100;
+  // await runTestFunction(
+  //   test_liquidity,
+  //   client,
+  //   contractHashFactory,
+  //   contractAddressFactory,
+  //   contractHashRouter,
+  //   contractAddressRouter,
+  //   codeIdPair,
+  //   contractHashPair,
+  //   codeIdToken,
+  //   contractHashToken,
+  //   tokenX,
+  //   tokenY
+  // );
 
-  let bins_steps = [100];
+  logToFile(`\n\n\n`);
+  logStream.end();
+  gasStream.end();
+})();
 
-  for (const bin_step of bins_steps) {
-    await executeSetPreset(
-      client,
-      contractHashFactory,
-      contractAddressFactory,
-      bin_step,
-      base_factor,
-      filter_period,
-      decay_period,
-      reduction_factor,
-      variable_fee_control,
-      protocol_share,
-      max_volatility_accumulator,
-      is_open,
-      epoch_staking_duration,
-      epoch_staking_index,
-      rewards_distribution_algorithm,
-      total_reward_bins
+async function test_liquidity(info: clientInfo) {
+  if ("custom_token" in info.tokenX && "custom_token" in info.tokenY) {
+    // increase allowance for Token X
+    let tx = await info.client.tx.snip20.increaseAllowance(
+      {
+        sender: info.client.address,
+        contract_address: info.tokenX.custom_token.contract_addr,
+        code_hash: info.tokenX.custom_token.token_code_hash,
+        msg: {
+          increase_allowance: {
+            spender: info.contractAddressPair,
+            amount: "340282366920938463463374607431768211454",
+          },
+        },
+      },
+      {
+        gasLimit: 200_000,
+      }
     );
+
+    if (tx.code !== 0) {
+      throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+    }
+
+    console.log(`Increase Token X Allowance TX used ${tx.gasUsed} gas`);
+
     await sleep();
-  }
 
-  // TOKENY
-
-  await sleep();
-
-  if ("custom_token" in tokenY) {
-    await executeAddQuoteAsset(
-      client,
-      contractHashFactory,
-      contractAddressFactory,
-      tokenY.custom_token.token_code_hash,
-      tokenY.custom_token.contract_addr
+    // increase allowance for Token Y
+    let tx2 = await info.client.tx.snip20.increaseAllowance(
+      {
+        sender: info.client.address,
+        contract_address: info.tokenY.custom_token.contract_addr,
+        code_hash: info.tokenY.custom_token.token_code_hash,
+        msg: {
+          increase_allowance: {
+            spender: info.contractAddressPair,
+            amount: "340282366920938463463374607431768211454",
+          },
+        },
+      },
+      {
+        gasLimit: 200_000,
+      }
     );
-  }
-  await queryPreset(client, contractHashFactory, contractAddressFactory);
 
-  const active_id = 8388608;
+    if (tx2.code !== 0) {
+      throw new Error(`Failed with the following error:\n ${tx2.rawLog}`);
+    }
 
-  if ("custom_token" in tokenX && "custom_token" in tokenY) {
+    console.log(`Increase Token Y Allowance TX used ${tx2.gasUsed} gas`);
+
     const bin_step = 100;
-    await executeCreateLBPair(
-      client,
-      contractHashFactory,
-      contractAddressFactory,
-      tokenX.custom_token.token_code_hash,
-      tokenX.custom_token.contract_addr,
-      tokenY.custom_token.token_code_hash,
-      tokenY.custom_token.contract_addr,
-      active_id,
-      bin_step
-    );
+
+    for (let bins = 1; bins <= 100; bins++) {
+      await executeAddLiquidity(
+        info.client,
+        info.contractHashPair,
+        info.contractAddressPair,
+        bin_step,
+        info.tokenX,
+        info.tokenY,
+        100_000_000,
+        100_000_000,
+        bins,
+        bins
+      );
+
+      let total_bins = get_total_bins(bins, bins);
+      let ids: number[] = [];
+      let balances: string[] = [];
+
+      for (let idx = 0; idx < total_bins; idx++) {
+        let id = get_id(2 ** 23, idx, bins);
+
+        ids.push(id);
+
+        let balancetoken = await queryBalance(
+          info.client,
+          info.contractHashToken,
+          info.contractAddressToken,
+          id
+        );
+
+        balances.push(balancetoken);
+      }
+
+      await executeRemoveLiquidity(
+        info.client,
+        info.contractHashPair,
+        info.contractAddressPair,
+        bin_step,
+        info.tokenX,
+        info.tokenY,
+        ids,
+        balances
+      );
+
+      await sleep();
+    }
   }
+  // await queryTotalSupply(info.client, info.contractHashPair, info.contractAddressPair).catch(
+  //   (e) => console.log(e)
+  // );
+  // await sleep();
+
+  // await executeRemoveLiquidity(
+  //   client,
+  //   contractHashPair,
+  //   contractAddressPair,
+  //   bin_step,
+  //   tokenX,
+  //   tokenY
+  // );
   await sleep();
 }
 
-// async function test_liquidity(
-//   client: SecretNetworkClient,
-//   contractHashFactory: string,
-//   contractAddressFactory: string,
-//   contractHashRouter: string,
-//   contractAddressRouter: string,
-//   codeIdPair: number,
-//   contractHashPair: string,
-//   codeIdToken: number,
-//   contractHashToken: string,
-//   tokenX: CustomToken,
-//   tokenY: CustomToken
-// ) {
-//   // const sSCRT: CustomToken = {
-//   //   custom_token: {
-//   //     contract_addr: "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg",
-//   //     token_code_hash: "9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813"
-//   //   }
-//   // }
+async function test_swaps(info: clientInfo) {
+  if ("custom_token" in info.tokenX && "custom_token" in info.tokenY) {
+    // increase allowance for Token X
+    let tx = await info.client.tx.snip20.increaseAllowance(
+      {
+        sender: info.client.address,
+        contract_address: info.tokenX.custom_token.contract_addr,
+        code_hash: info.tokenX.custom_token.token_code_hash,
+        msg: {
+          increase_allowance: {
+            spender: info.contractAddressPair,
+            amount: "340282366920938463463374607431768211454",
+          },
+        },
+      },
+      {
+        gasLimit: 200_000,
+      }
+    );
 
-//   // const SILK: CustomToken = {
-//   //   custom_token: {
-//   //     contract_addr: "secret16xz08fdtkp5m8m6arpfgnehlfl4t86l0p33xg0",
-//   //     token_code_hash: "b6c896d21e46e037a2a1bca1d55af262d7ae4a5a175af055f3939722626b30c3"
-//   //   }
-//   // }
+    if (tx.code !== 0) {
+      throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+    }
 
-//   // TODO: a better way to get and keep the lb_pair contract address
-//   const {
-//     lb_pair_information: {
-//       lb_pair: {
-//         contract: { address: contractAddressPair },
-//       },
-//     },
-//   } = await queryLBPairInformation(
-//     client,
-//     contractHashFactory,
-//     contractAddressFactory,
-//     tokenX,
-//     tokenY,
-//     100
-//   );
+    console.log(`Increase Token X Allowance TX used ${tx.gasUsed} gas`);
 
-//   logToFile(`LB_PAIR_ADDRESS="${contractAddressPair}"`);
+    await sleep();
 
-//   // increase allowance for Token X
-//   let tx = await client.tx.snip20.increaseAllowance(
-//     {
-//       sender: client.address,
-//       contract_address: tokenX.custom_token.contract_addr,
-//       code_hash: tokenX.custom_token.token_code_hash,
-//       msg: {
-//         increase_allowance: {
-//           spender: contractAddressPair,
-//           amount: "340282366920938463463374607431768211454",
-//         },
-//       },
-//     },
-//     {
-//       gasLimit: 200_000,
-//     }
-//   );
+    // increase allowance for Token Y
+    let tx2 = await info.client.tx.snip20.increaseAllowance(
+      {
+        sender: info.client.address,
+        contract_address: info.tokenY.custom_token.contract_addr,
+        code_hash: info.tokenY.custom_token.token_code_hash,
+        msg: {
+          increase_allowance: {
+            spender: info.contractAddressPair,
+            amount: "340282366920938463463374607431768211454",
+          },
+        },
+      },
+      {
+        gasLimit: 200_000,
+      }
+    );
 
-//   if (tx.code !== 0) {
-//     throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
-//   }
+    if (tx2.code !== 0) {
+      throw new Error(`Failed with the following error:\n ${tx2.rawLog}`);
+    }
 
-//   console.log(`Increase Token X Allowance TX used ${tx.gasUsed} gas`);
+    console.log(`Increase Token Y Allowance TX used ${tx2.gasUsed} gas`);
 
-//   await sleep();
+    const bin_step = 100;
+    const amount = 100_000_000;
+    let sum = 0;
 
-//   // increase allowance for Token Y
-//   let tx2 = await client.tx.snip20.increaseAllowance(
-//     {
-//       sender: client.address,
-//       contract_address: tokenY.custom_token.contract_addr,
-//       code_hash: tokenY.custom_token.token_code_hash,
-//       msg: {
-//         increase_allowance: {
-//           spender: contractAddressPair,
-//           amount: "340282366920938463463374607431768211454",
-//         },
-//       },
-//     },
-//     {
-//       gasLimit: 200_000,
-//     }
-//   );
+    sum += amount;
+    await executeAddLiquidity(
+      info.client,
+      info.contractHashPair,
+      info.contractAddressPair,
+      bin_step,
+      info.tokenX,
+      info.tokenY,
+      amount,
+      amount,
+      100,
+      100
+    );
 
-//   if (tx2.code !== 0) {
-//     throw new Error(`Failed with the following error:\n ${tx2.rawLog}`);
-//   }
+    await executeSwap(
+      info.client,
+      info.contractHashPair,
+      info.contractAddressPair,
+      info.tokenX.custom_token.token_code_hash,
+      info.tokenX.custom_token.contract_addr,
+      sum
+    );
 
-//   console.log(`Increase Token Y Allowance TX used ${tx2.gasUsed} gas`);
+    await sleep();
 
-//   const bin_step = 100;
-//   await executeAddLiquidity(
-//     client,
-//     contractHashPair,
-//     contractAddressPair,
-//     bin_step,
-//     tokenX,
-//     tokenY
-//   );
-//   await sleep();
-//   await queryTotalSupply(client, contractHashPair, contractAddressPair).catch(
-//     (e) => console.log(e)
-//   );
-//   await sleep();
+    await executeSwap(
+      info.client,
+      info.contractHashPair,
+      info.contractAddressPair,
+      info.tokenY.custom_token.token_code_hash,
+      info.tokenY.custom_token.contract_addr,
+      sum
+    );
+    await sleep();
+    // await executeSwap(
+    //   info.client,
+    //   info.contractHashPair,
+    //   info.contractAddressPair,
+    //   info.tokenY.custom_token.token_code_hash,
+    //   info.tokenY.custom_token.contract_addr,
+    //   sum
+    // );
 
-//   await executeRemoveLiquidity(
-//     client,
-//     contractHashPair,
-//     contractAddressPair,
-//     bin_step,
-//     tokenX,
-//     tokenY
-//   );
-//   await sleep();
-// }
+    // await sleep();
 
-// async function test_swaps(
-//   client: SecretNetworkClient,
-//   contractHashFactory: string,
-//   contractAddressFactory: string,
-//   contractHashRouter: string,
-//   contractAddressRouter: string,
-//   codeIdPair: number,
-//   contractHashPair: string,
-//   codeIdToken: number,
-//   contractHashToken: string,
-//   tokenX: CustomToken,
-//   tokenY: CustomToken
-// ) {
-//   // TODO: a better way to get and keep the lb_pair contract address
-//   const {
-//     lb_pair_information: {
-//       lb_pair: {
-//         contract: { address: contractAddressPair },
-//       },
-//     },
-//   } = await queryLBPairInformation(
-//     client,
-//     contractHashFactory,
-//     contractAddressFactory,
-//     tokenX,
-//     tokenY,
-//     100
-//   );
+    // await executeSwap(
+    //   info.client,
+    //   info.contractHashPair,
+    //   info.contractAddressPair,
+    //   info.tokenX.custom_token.token_code_hash,
+    //   info.tokenX.custom_token.contract_addr,
+    //   sum
+    // );
+    // await sleep();
 
-//   const swapAmount = "10000000000";
+    let reserves_3 = await queryReserves(
+      info.client,
+      info.contractHashPair,
+      info.contractAddressPair
+    );
+    console.log(`Final Reserves_x: ${reserves_3.reserve_x}`);
+    console.log(`Final Reserves_y: ${reserves_3.reserve_y}`);
 
-//   await executeSwap(client, contractHashPair, contractAddressPair, swapAmount);
-//   await sleep();
-// }
+    await sleep();
+    // }
 
+    await sleep();
+  }
+}
 // async function test_pair_queries(
 //   client: SecretNetworkClient,
 //   contractHashFactory: string,
@@ -385,109 +378,3 @@ async function test_configure_factory(
 // async function test_gas_limits() {
 //   // There is no accurate way to measue gas limits but it is actually very recommended to make sure that the gas that is used by a specific tx makes sense
 // }
-
-(async () => {
-  const currentTime = new Date();
-  const currentTimeString = currentTime.toTimeString();
-  logToFile(`Deploy Time: ${currentTimeString}`);
-
-  const [
-    client,
-    contractHashFactory,
-    contractAddressFactory,
-    contractHashRouter,
-    contractAddressRouter,
-    codeIdPair,
-    contractHashPair,
-    codeIdToken,
-    contractHashToken,
-    codeIdStaking,
-    codeHashStaking,
-    tokenX,
-    tokenY,
-  ] = await initializeAndUploadContract();
-
-  // await initializeAndUploadContractDummy();
-  sleep();
-
-  await runTestFunction(
-    test_configure_factory,
-    client,
-    contractHashFactory,
-    contractAddressFactory,
-    contractHashRouter,
-    contractAddressRouter,
-    codeIdPair,
-    contractHashPair,
-    codeIdToken,
-    contractHashToken,
-    codeIdStaking,
-    codeHashStaking,
-    tokenX,
-    tokenY
-  );
-
-  // await runTestFunction(
-  //   test_liquidity,
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   contractHashRouter,
-  //   contractAddressRouter,
-  //   codeIdPair,
-  //   contractHashPair,
-  //   codeIdToken,
-  //   contractHashToken,
-  //   tokenX,
-  //   tokenY
-  // );
-
-  // await runTestFunction(
-  //   test_pair_queries,
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   contractHashRouter,
-  //   contractAddressRouter,
-  //   codeIdPair,
-  //   contractHashPair,
-  //   codeIdToken,
-  //   contractHashToken,
-  //   tokenX,
-  //   tokenY
-  // );
-
-  // await runTestFunction(
-  //   test_swaps,
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   contractHashRouter,
-  //   contractAddressRouter,
-  //   codeIdPair,
-  //   contractHashPair,
-  //   codeIdToken,
-  //   contractHashToken,
-  //   tokenX,
-  //   tokenY
-  // );
-
-  // await runTestFunction(
-  //   test_token_queries,
-  //   client,
-  //   contractHashFactory,
-  //   contractAddressFactory,
-  //   contractHashRouter,
-  //   contractAddressRouter,
-  //   codeIdPair,
-  //   contractHashPair,
-  //   codeIdToken,
-  //   contractHashToken,
-  //   tokenX,
-  //   tokenY,
-  // );
-
-  logToFile(`\n\n\n`);
-  logStream.end();
-  gasStream.end();
-})();

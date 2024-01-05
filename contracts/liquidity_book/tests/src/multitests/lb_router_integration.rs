@@ -121,7 +121,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        shd_silk_lb_pair.lb_pair.contract.address.to_string(),
+        shd_silk_lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -144,7 +144,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &shd_silk_lb_pair.lb_pair.contract,
+        &shd_silk_lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -164,8 +164,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             &router,
             offer.to_owned(),
             vec![Hop {
-                addr: all_pairs[0].lb_pair.contract.address.to_string(),
-                code_hash: all_pairs[0].lb_pair.contract.code_hash.clone(),
+                addr: all_pairs[0].info.contract.address.to_string(),
+                code_hash: all_pairs[0].info.contract.code_hash.clone(),
             }],
             None,
         )?;
@@ -191,8 +191,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let router_invoke_msg = to_binary(&InvokeMsg::SwapTokensForExact {
         expected_return: Some(Uint128::new(999u128)),
         path: vec![Hop {
-            addr: shd_silk_lb_pair.lb_pair.contract.address.to_string(),
-            code_hash: shd_silk_lb_pair.lb_pair.contract.code_hash.clone(),
+            addr: shd_silk_lb_pair.info.contract.address.to_string(),
+            code_hash: shd_silk_lb_pair.info.contract.code_hash.clone(),
         }],
         recipient: Some(addrs.scare_crow().to_string()),
     })
@@ -234,8 +234,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         offer,
         Some(Uint128::from(999u128)),
         vec![Hop {
-            addr: all_pairs[0].lb_pair.contract.address.to_string(),
-            code_hash: all_pairs[0].lb_pair.contract.code_hash.clone(),
+            addr: all_pairs[0].info.contract.address.to_string(),
+            code_hash: all_pairs[0].info.contract.code_hash.clone(),
         }],
         Some(addrs.scare_crow().to_string()),
     );
@@ -339,7 +339,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.joker().into_string(),
-        scrt_silk_lb_pair.lb_pair.contract.address.to_string(),
+        scrt_silk_lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -372,7 +372,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     lb_pair::add_native_liquidity(
         &mut app,
         addrs.joker().as_str(),
-        &scrt_silk_lb_pair.lb_pair.contract,
+        &scrt_silk_lb_pair.info.contract,
         liquidity_parameters,
         vec![Coin {
             denom: String::from("uscrt"),
@@ -409,8 +409,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
             &router,
             offer,
             vec![Hop {
-                addr: scrt_silk_lb_pair.lb_pair.contract.address.to_string(),
-                code_hash: scrt_silk_lb_pair.lb_pair.contract.code_hash.clone(),
+                addr: scrt_silk_lb_pair.info.contract.address.to_string(),
+                code_hash: scrt_silk_lb_pair.info.contract.code_hash.clone(),
             }],
             None,
         )?;
@@ -426,8 +426,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     let router_invoke_msg = to_binary(&InvokeMsg::SwapTokensForExact {
         expected_return: Some(Uint128::new(999u128)),
         path: vec![Hop {
-            addr: scrt_silk_lb_pair.lb_pair.contract.address.to_string(),
-            code_hash: scrt_silk_lb_pair.lb_pair.contract.code_hash.clone(),
+            addr: scrt_silk_lb_pair.info.contract.address.to_string(),
+            code_hash: scrt_silk_lb_pair.info.contract.code_hash.clone(),
         }],
         recipient: None,
     })
@@ -491,8 +491,8 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         offer,
         Some(Uint128::new(999u128)),
         vec![Hop {
-            addr: scrt_silk_lb_pair.lb_pair.contract.address.to_string(),
-            code_hash: scrt_silk_lb_pair.lb_pair.contract.code_hash.clone(),
+            addr: scrt_silk_lb_pair.info.contract.address.to_string(),
+            code_hash: scrt_silk_lb_pair.info.contract.code_hash.clone(),
         }],
         None,
     )?;

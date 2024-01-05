@@ -2,7 +2,7 @@ import fs from "fs";
 import { SecretNetworkClient } from "secretjs";
 import { logGasToFile, logToFile, sleep } from "../helper";
 
-export const initializeStakingContract = async (
+export const uploadStakingContract = async (
   client: SecretNetworkClient,
   contractPath: string
   // codeIdToken: number,

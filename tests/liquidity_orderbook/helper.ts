@@ -3,11 +3,30 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { SecretNetworkClient, Wallet } from "secretjs";
+import { SetViewingKeyOptions } from "secretjs/dist/extensions/access_control/viewing_key/msgs";
 import { initializeAdminAuth } from "./admin_auth/instantiate";
-import { TokenType, initializeFactoryContract } from "./lb_factory";
-import { initializePairContract } from "./lb_pair";
+import {
+  TokenType,
+  executeAddQuoteAsset,
+  executeCreateLBPair,
+  executeSetLBPairImplementation,
+  executeSetLBStakingImplementation,
+  executeSetLBTokenImplementation,
+  executeSetPreset,
+  initializeFactoryContract,
+} from "./lb_factory";
+import {
+  queryLBPairImplementation,
+  queryLBPairInformation,
+  queryLBTokenImplementation,
+  queryPreset,
+} from "./lb_factory/query";
+import { initializePairContract as uploadPairContract } from "./lb_pair";
+import { queryLbStaking, queryLbToken } from "./lb_pair/query";
 import { initializeRouterContract } from "./lb_router/instantiate";
-import { initializeTokenContract } from "./lb_token/instantiate";
+import { uploadStakingContract } from "./lb_staking/instantiate";
+import { setViewingKey } from "./lb_token/execute";
+import { uploadTokenContract } from "./lb_token/instantiate";
 
 dotenv.config({ path: ".env" });
 
@@ -16,7 +35,7 @@ const build = "./wasm/";
 const build_direct_to_target = "./wasm/";
 
 // This helps when deploying to Pulsar. It can be shortened to test on secretdev.
-export const sleep = () => new Promise((resolve) => setTimeout(resolve, 100));
+export const sleep = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 var mnemonic: string;
 var endpoint: string = "http://localhost:1317";
@@ -168,7 +187,7 @@ export const initializeSnip20Contract = async (
     initial_balances: [
       {
         address: client.address,
-        amount: "340282366920938463463374607431768211453",
+        amount: "340282366920938463463374607431768211454",
       },
     ],
     prng_seed: Buffer.from("kent rocks").toString("base64"),
@@ -205,6 +224,30 @@ export const initializeSnip20Contract = async (
 
   await sleep();
 
+  let set_vk_msg: SetViewingKeyOptions = {
+    set_viewing_key: {
+      key: "viewing_key",
+    },
+  };
+
+  let res1 = await client.tx.snip20.setViewingKey(
+    {
+      sender: client.address,
+      contract_address: contractAddressX,
+      code_hash: contractCodeHash,
+      msg: set_vk_msg,
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (res1.code !== 0) {
+    throw new Error(
+      `Failed to instantiate the contract with the following error ${res1.rawLog}`
+    );
+  }
+
   // second token contract
 
   const init_msg_y = {
@@ -215,7 +258,7 @@ export const initializeSnip20Contract = async (
     initial_balances: [
       {
         address: client.address,
-        amount: "340282366920938463463374607431768211453",
+        amount: "340282366920938463463374607431768211454",
       },
     ],
     prng_seed: Buffer.from("haseeb rocks").toString("base64"),
@@ -251,6 +294,23 @@ export const initializeSnip20Contract = async (
   logToFile(`TOKENY_CODE_HASH="${contractCodeHash}"`);
 
   await sleep();
+  let res = await client.tx.snip20.setViewingKey(
+    {
+      sender: client.address,
+      contract_address: contractAddressY,
+      code_hash: contractCodeHash,
+      msg: set_vk_msg,
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+  if (res.code !== 0) {
+    throw new Error(
+      `Failed to instantiate the contract with the following error ${res.rawLog}`
+    );
+  }
+  await sleep();
 
   var contractInfo: TokenType[] = [
     {
@@ -268,6 +328,13 @@ export const initializeSnip20Contract = async (
   ];
   return contractInfo;
 };
+
+// export interface SetViewingKeyOptions {
+//   set_viewing_key: {
+//     key: string;
+//     padding?: string;
+//   };
+// }
 
 // // Initialization procedure
 // export async function initializeAndUploadContract() {
@@ -451,7 +518,7 @@ export async function initializeAndUploadContract() {
 
   // Pair Contract
   if (!isContractInitialized(contractsData, "LBPair")) {
-    [codeIdPair, contractHashPair] = await initializePairContract(
+    [codeIdPair, contractHashPair] = await uploadPairContract(
       client,
       build_direct_to_target + "lb_pair.wasm"
     );
@@ -468,7 +535,7 @@ export async function initializeAndUploadContract() {
 
   // Token Contract
   if (!isContractInitialized(contractsData, "LBToken")) {
-    [codeIdToken, contractHashToken] = await initializeTokenContract(
+    [codeIdToken, contractHashToken] = await uploadTokenContract(
       client,
       build_direct_to_target + "lb_token.wasm"
     );
@@ -485,7 +552,7 @@ export async function initializeAndUploadContract() {
 
   // Staking Contract
   if (!isContractInitialized(contractsData, "LBStaking")) {
-    [codeIdStaking, contractHashStaking] = await initializeTokenContract(
+    [codeIdStaking, contractHashStaking] = await uploadStakingContract(
       client,
       build_direct_to_target + "lb_staking.wasm"
     );
@@ -515,56 +582,8 @@ export async function initializeAndUploadContract() {
     tokenX,
     tokenY,
   ];
-  return clientInfo;
-}
 
-// Your initialization procedure, modified to use the above functions
-export async function initializeAndUploadContractDummy() {
-  const client = await initializeClient(endpoint, chainId);
-  const contractFilePath = path.join(__dirname, "contract_address_log.json");
-  const contractsData = readContractAddresses(contractFilePath);
-
-  if (chainId == "secretdev-1") {
-    await fillUpFromFaucet(client, 100_000_000);
-  }
-
-  // Pair Contract
-  await initializePairContract(client, build + "lb_pair.wasm");
-}
-
-export async function runTestFunction(
-  tester: (
-    // TODO: combine all these into a single object or something
-    client: SecretNetworkClient,
-    contractHashFactory: string,
-    contractAddressFactory: string,
-    contractHashRouter: string,
-    contractAddressRouter: string,
-    codeIdPair: number,
-    contractHashPair: string,
-    codeIdToken: number,
-    contractHashToken: string,
-    codeIdStaking: number,
-    contractHashStaking: string,
-    tokenX: TokenType,
-    tokenY: TokenType
-  ) => void,
-  client: SecretNetworkClient,
-  contractHashFactory: string,
-  contractAddressFactory: string,
-  contractHashRouter: string,
-  contractAddressRouter: string,
-  codeIdPair: number,
-  contractHashPair: string,
-  codeIdToken: number,
-  contractHashToken: string,
-  codeIdStaking: number,
-  contractHashStaking: string,
-  tokenX: TokenType,
-  tokenY: TokenType
-) {
-  console.log(`Testing ${tester.name}`);
-  await tester(
+  let info: clientInfo = {
     client,
     contractHashFactory,
     contractAddressFactory,
@@ -577,7 +596,214 @@ export async function runTestFunction(
     codeIdStaking,
     contractHashStaking,
     tokenX,
-    tokenY
+    tokenY,
+    contractAddressPair: "",
+    contractAddressToken: "",
+    contractAddressStaking: "",
+  };
+
+  return info;
+}
+
+export async function test_configure_factory(clientInfo: clientInfo) {
+  await executeSetLBPairImplementation(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory,
+    clientInfo.codeIdPair,
+    clientInfo.contractHashPair
   );
+  await sleep();
+
+  await queryLBPairImplementation(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory
+  );
+
+  await executeSetLBTokenImplementation(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory,
+    clientInfo.codeIdToken,
+    clientInfo.contractHashToken
+  );
+  await sleep();
+
+  await executeSetLBStakingImplementation(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory,
+    clientInfo.codeIdStaking,
+    clientInfo.contractHashStaking
+  );
+  await sleep();
+
+  await queryLBTokenImplementation(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory
+  );
+
+  let contractAddressLbPair;
+  let contractAddressLbToken;
+  let contractAddressLbStaking;
+
+  const base_factor: number = 5000;
+  const filter_period = 0;
+  const decay_period = 1;
+  const reduction_factor = 0;
+  const variable_fee_control = 0;
+  const protocol_share = 1000;
+  const max_volatility_accumulator = 350000;
+  const is_open = true;
+  const epoch_staking_duration = 10;
+  const epoch_staking_index = 1;
+  const rewards_distribution_algorithm = "time_based_rewards";
+  const total_reward_bins = 100;
+
+  let bins_steps = [100];
+
+  for (const bin_step of bins_steps) {
+    await executeSetPreset(
+      clientInfo.client,
+      clientInfo.contractHashFactory,
+      clientInfo.contractAddressFactory,
+      bin_step,
+      base_factor,
+      filter_period,
+      decay_period,
+      reduction_factor,
+      variable_fee_control,
+      protocol_share,
+      max_volatility_accumulator,
+      is_open,
+      epoch_staking_duration,
+      epoch_staking_index,
+      rewards_distribution_algorithm,
+      total_reward_bins
+    );
+    await sleep();
+  }
+
+  // TOKENY
+
+  await sleep();
+
+  if ("custom_token" in clientInfo.tokenY) {
+    await executeAddQuoteAsset(
+      clientInfo.client,
+      clientInfo.contractHashFactory,
+      clientInfo.contractAddressFactory,
+      clientInfo.tokenY.custom_token.token_code_hash,
+      clientInfo.tokenY.custom_token.contract_addr
+    );
+  }
+  await queryPreset(
+    clientInfo.client,
+    clientInfo.contractHashFactory,
+    clientInfo.contractAddressFactory
+  );
+
+  const active_id = 8388608;
+
+  if (
+    "custom_token" in clientInfo.tokenX &&
+    "custom_token" in clientInfo.tokenY
+  ) {
+    const bin_step = 100;
+    await executeCreateLBPair(
+      clientInfo.client,
+      clientInfo.contractHashFactory,
+      clientInfo.contractAddressFactory,
+      clientInfo.tokenX.custom_token.token_code_hash,
+      clientInfo.tokenX.custom_token.contract_addr,
+      clientInfo.tokenY.custom_token.token_code_hash,
+      clientInfo.tokenY.custom_token.contract_addr,
+      active_id,
+      bin_step
+    );
+    // query lb_pair from lb_factory
+
+    let lb_pair_info = await queryLBPairInformation(
+      clientInfo.client,
+      clientInfo.contractHashFactory,
+      clientInfo.contractAddressFactory,
+      clientInfo.tokenX.custom_token.token_code_hash,
+      clientInfo.tokenX.custom_token.contract_addr,
+      clientInfo.tokenY.custom_token.token_code_hash,
+      clientInfo.tokenY.custom_token.contract_addr,
+      100
+    );
+
+    clientInfo.contractAddressPair =
+      lb_pair_info.lb_pair_information.lb_pair.contract.address;
+
+    let lb_token_info = await queryLbToken(
+      clientInfo.client,
+      clientInfo.contractHashPair,
+      clientInfo.contractAddressPair
+    );
+    clientInfo.contractAddressToken = lb_token_info.contract.address;
+
+    await setViewingKey(
+      clientInfo.client,
+      clientInfo.contractHashToken,
+      clientInfo.contractAddressToken
+    );
+
+    let lb_staking_info = await queryLbStaking(
+      clientInfo.client,
+      clientInfo.contractHashPair,
+      clientInfo.contractAddressPair
+    );
+
+    clientInfo.contractAddressStaking = lb_staking_info.contract.address;
+  }
+
+  await sleep();
+
+  return clientInfo;
+}
+
+export interface clientInfo {
+  client: SecretNetworkClient;
+  contractHashFactory: string;
+  contractAddressFactory: string;
+  contractHashRouter: string;
+  contractAddressRouter: string;
+  codeIdPair: number;
+  contractAddressPair: string;
+  contractHashPair: string;
+  codeIdToken: number;
+  contractAddressToken: string;
+  contractHashToken: string;
+  codeIdStaking: number;
+  contractHashStaking: string;
+  contractAddressStaking: string;
+  tokenX: TokenType;
+  tokenY: TokenType;
+}
+
+// Your initialization procedure, modified to use the above functions
+// export async function initializeAndUploadContractDummy() {
+//   const client = await initializeClient(endpoint, chainId);
+//   const contractFilePath = path.join(__dirname, "contract_address_log.json");
+//   const contractsData = readContractAddresses(contractFilePath);
+
+//   if (chainId == "secretdev-1") {
+//     await fillUpFromFaucet(client, 100_000_000);
+//   }
+
+//   // Pair Contract
+//   await uploadPairContract(client, build + "lb_pair.wasm");
+// }
+
+export async function runTestFunction(
+  tester: (clientInfo: clientInfo) => void,
+  clientInfo: clientInfo
+) {
+  console.log(`Testing ${tester.name}`);
+  tester(clientInfo);
   console.log(`[\x1b[32m SUCCESS \x1b[0m] ${tester.name}`);
 }

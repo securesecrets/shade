@@ -49,7 +49,7 @@ pub struct LBPair {
 #[cw_serde]
 pub struct LBPairInformation {
     pub bin_step: u16,
-    pub lb_pair: LBPair,
+    pub info: LBPair,
     pub created_by_owner: bool,
     pub ignored_for_routing: bool,
 }
