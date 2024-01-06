@@ -4,29 +4,9 @@ use serde::Serialize;
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary,
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Attribute,
-        Binary,
-        ContractInfo,
-        CosmosMsg,
-        Decimal,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Reply,
-        Response,
-        StdError,
-        StdResult,
-        SubMsg,
-        SubMsgResult,
-        Timestamp,
-        Uint128,
-        Uint256,
-        WasmMsg,
+        from_binary, shd_entry_point, to_binary, Addr, Attribute, Binary, ContractInfo, CosmosMsg,
+        Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg,
+        SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
     },
     contract_interfaces::{
         liquidity_book::{lb_pair::*, lb_staking, lb_token},
@@ -60,8 +40,7 @@ use shade_protocol::{
         types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
-    snip20,
-    Contract,
+    snip20, Contract,
 };
 use std::{collections::HashMap, ops::Sub, vec};
 
@@ -202,22 +181,29 @@ pub fn instantiate(
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
-    REWARDS_STATS_STORE.save(deps.storage, 0, &RewardStats {
-        cumm_value: Uint256::zero(),
-        cumm_value_mul_bin_id: Uint256::zero(),
-        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
-    })?;
+    REWARDS_STATS_STORE.save(
+        deps.storage,
+        0,
+        &RewardStats {
+            cumm_value: Uint256::zero(),
+            cumm_value_mul_bin_id: Uint256::zero(),
+            rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
+        },
+    )?;
 
-    EPHEMERAL_STORAGE.save(deps.storage, &NextTokenKey {
-        lb_token_code_hash: msg.lb_token_implementation.code_hash,
-        staking_contract: msg.staking_contract_implementation,
-        token_x_symbol,
-        token_y_symbol,
-        epoch_index: msg.epoch_staking_index,
-        epoch_duration: msg.epoch_staking_duration,
-        expiry_duration: msg.expiry_staking_duration,
-        recover_funds_receiver: msg.recover_staking_funds_receiver,
-    })?;
+    EPHEMERAL_STORAGE.save(
+        deps.storage,
+        &NextTokenKey {
+            lb_token_code_hash: msg.lb_token_implementation.code_hash,
+            staking_contract: msg.staking_contract_implementation,
+            token_x_symbol,
+            token_y_symbol,
+            epoch_index: msg.epoch_staking_index,
+            epoch_duration: msg.epoch_staking_duration,
+            expiry_duration: msg.expiry_staking_duration,
+            recover_funds_receiver: msg.recover_staking_funds_receiver,
+        },
+    )?;
 
     response = response.add_messages(messages);
 
@@ -313,7 +299,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             max_volatility_accumulator,
         ),
         ExecuteMsg::ForceDecay {} => try_force_decay(deps, env, info),
-        ExecuteMsg::CalculateRewards {} => try_calculate_rewards(deps, env, info),
+        ExecuteMsg::CalculateRewardsDistribution {} => {
+            try_calculate_rewards_distribution(deps, env, info)
+        }
         ExecuteMsg::ResetRewardsConfig {
             distribution,
             base_rewards_bins,
@@ -1515,15 +1503,14 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Respon
         Ok(state)
     })?;
 
-    Ok(Response::default()
-        .add_attribute_plaintext("Id_reference", params.get_id_reference().to_string())
-        .add_attribute_plaintext(
-            "Volatility_reference",
-            params.get_volatility_reference().to_string(),
-        ))
+    Ok(Response::default())
 }
 
-fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response> {
+fn try_calculate_rewards_distribution(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response> {
     let mut state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
@@ -1572,11 +1559,15 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
         };
     }
 
-    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &RewardStats {
-        cumm_value: Uint256::zero(),
-        cumm_value_mul_bin_id: Uint256::zero(),
-        rewards_distribution_algorithm: distribution_algorithm.clone(),
-    })?;
+    REWARDS_STATS_STORE.save(
+        deps.storage,
+        state.rewards_epoch_id,
+        &RewardStats {
+            cumm_value: Uint256::zero(),
+            cumm_value_mul_bin_id: Uint256::zero(),
+            rewards_distribution_algorithm: distribution_algorithm.clone(),
+        },
+    )?;
 
     if distribution_algorithm == &RewardsDistributionAlgorithm::VolumeBasedRewards {
         let tree: TreeUint24 = TreeUint24::new();

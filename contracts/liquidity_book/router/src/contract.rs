@@ -1,5 +1,5 @@
 use crate::{
-    operations::{next_swap, refresh_tokens, swap_tokens_for_exact_tokens},
+    execute::{next_swap, refresh_tokens, swap_tokens_for_exact_tokens},
     query,
     state::{config_r, config_w, registered_tokens_list_r, registered_tokens_list_w, Config},
 };
@@ -7,24 +7,8 @@ use crate::{
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary,
-        shd_entry_point,
-        to_binary,
-        Addr,
-        BankMsg,
-        Binary,
-        Coin,
-        CosmosMsg,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Reply,
-        Response,
-        StdError,
-        StdResult,
-        SubMsgResult,
-        Uint128,
+        from_binary, shd_entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps,
+        DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult, Uint128,
     },
     snip20::helpers::send_msg,
     swap::{
@@ -181,11 +165,13 @@ fn receiver_callback(
                     path,
                     recipient,
                 } => {
-                    let pair_contract_config =
-                        query::pair_contract_config(&deps.querier, Contract {
+                    let pair_contract_config = query::pair_contract_config(
+                        &deps.querier,
+                        Contract {
                             address: deps.api.addr_validate(&path[0].addr.to_string())?,
                             code_hash: path[0].code_hash.clone(),
-                        })?;
+                        },
+                    )?;
 
                     match pair_contract_config {
                         AMMPairQueryReponse::GetPairInfo {

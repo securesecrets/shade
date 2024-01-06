@@ -2,13 +2,7 @@ use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult, Uint256},
     cosmwasm_schema::cw_serde,
     liquidity_book::lb_staking::{
-        ExecuteMsg,
-        Liquidity,
-        OwnerBalance,
-        QueryAnswer,
-        QueryMsg,
-        QueryTxnType,
-        Tx,
+        ExecuteMsg, Liquidity, OwnerBalance, QueryAnswer, QueryMsg, QueryTxnType, Tx,
     },
     multi_test::App,
     utils::{asset::RawContract, ExecuteCallback, Query},
@@ -79,7 +73,12 @@ pub fn claim_rewards(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> 
 }
 
 pub fn recover_funds(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> StdResult<()> {
-    match (ExecuteMsg::RecoverFunds {}.test_exec(lb_staking, app, Addr::unchecked(sender), &[])) {
+    match (ExecuteMsg::RecoverExpiredFunds {}.test_exec(
+        lb_staking,
+        app,
+        Addr::unchecked(sender),
+        &[],
+    )) {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }

@@ -4,22 +4,14 @@ use shade_protocol::{
     contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
-        BinResponse,
-        ContractStatus,
-        LiquidityParameters,
-        RemoveLiquidity,
-        RewardsDistribution,
-        RewardsDistributionAlgorithm,
-        UpdatedBinsAtHeightResponse,
+        BinResponse, ContractStatus, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
+        RewardsDistributionAlgorithm, UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
     utils::{
         asset::{Contract, RawContract},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
+        ExecuteCallback, InstantiateCallback, MultiTestable, Query,
     },
 };
 
@@ -225,7 +217,7 @@ pub fn collect_protocol_fees(app: &mut App, sender: &str, lb_pair: &ContractInfo
 }
 
 pub fn calculate_rewards(app: &mut App, sender: &str, lb_pair: &ContractInfo) -> StdResult<()> {
-    match (lb_pair::ExecuteMsg::CalculateRewards {}.test_exec(
+    match (lb_pair::ExecuteMsg::CalculateRewardsDistribution {}.test_exec(
         lb_pair,
         app,
         Addr::unchecked(sender),

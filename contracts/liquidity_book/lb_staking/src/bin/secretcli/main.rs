@@ -7,12 +7,7 @@ use shade_protocol::{
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            ExecuteMsg,
-            InstantiateMsg,
-            InvokeMsg,
-            QueryAnswer,
-            QueryMsg,
-            QueryTxnType,
+            ExecuteMsg, InstantiateMsg, InvokeMsg, QueryAnswer, QueryMsg, QueryTxnType,
             QueryWithPermit,
         },
         lb_token::Snip1155ReceiveMsg,
@@ -132,7 +127,7 @@ fn main() -> io::Result<()> {
         epoch_duration: Some(100),
         expiry_duration: Some(200),
     };
-    let recover_funds = ExecuteMsg::RecoverFunds {};
+    let recover_funds = ExecuteMsg::RecoverExpiredFunds {};
     let create_viewing_key = ExecuteMsg::CreateViewingKey {
         entropy: "random_entropy".to_string(),
     };

@@ -1,18 +1,9 @@
 use shade_protocol::{
     c_std::{
-        shd_entry_point,
-        Attribute,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdResult,
+        shd_entry_point, Attribute, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
     },
     contract_interfaces::liquidity_book::lb_libraries::viewing_keys::{
-        register_receive,
-        set_viewing_key_msg,
+        register_receive, set_viewing_key_msg,
     },
     liquidity_book::lb_staking::{EpochInfo, ExecuteMsg, InstantiateMsg, QueryMsg, State},
     utils::pad_handle_result,
@@ -20,7 +11,7 @@ use shade_protocol::{
 };
 
 use crate::{
-    handles::*,
+    execute::*,
     helper::store_empty_reward_set,
     query::*,
     state::{EPOCH_STORE, EXPIRED_AT_LOGGER, LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID, STATE},
@@ -52,14 +43,18 @@ pub fn instantiate(
     };
 
     let now = env.block.time.seconds();
-    EPOCH_STORE.save(deps.storage, state.epoch_index, &EpochInfo {
-        rewards_distribution: None,
-        start_time: now,
-        end_time: now + state.epoch_durations,
-        duration: state.epoch_durations,
-        reward_tokens: None,
-        expired_at: None,
-    })?;
+    EPOCH_STORE.save(
+        deps.storage,
+        state.epoch_index,
+        &EpochInfo {
+            rewards_distribution: None,
+            start_time: now,
+            end_time: now + state.epoch_durations,
+            duration: state.epoch_durations,
+            reward_tokens: None,
+            expired_at: None,
+        },
+    )?;
 
     let messages = vec![
         register_receive(
@@ -126,7 +121,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 epoch_duration,
                 expiry_duration,
             ),
-            ExecuteMsg::RecoverFunds { .. } => try_recover_funds(deps, env, info),
+            ExecuteMsg::RecoverExpiredFunds { .. } => try_recover_expired_funds(deps, env, info),
             ExecuteMsg::EndEpoch {
                 rewards_distribution,
             } => try_end_epoch(deps, env, info, rewards_distribution),
@@ -138,6 +133,12 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ExecuteMsg::RevokePermit { permit_name } => {
                 try_revoke_permit(deps, env, info, permit_name)
             }
+            ExecuteMsg::RecoverFunds {
+                token,
+                amount,
+                to,
+                msg,
+            } => try_recover_funds(deps, env, info, token, amount, to, msg),
         },
         BLOCK_SIZE,
     )

@@ -6,18 +6,8 @@ use secret_toolkit::permit::Permit;
 
 use crate::{
     c_std::{
-        to_binary,
-        Addr,
-        Api,
-        Binary,
-        BlockInfo,
-        Coin,
-        ContractInfo,
-        CosmosMsg,
-        StdResult,
-        Uint128,
-        Uint256,
-        WasmMsg,
+        to_binary, Addr, Api, Binary, BlockInfo, Coin, ContractInfo, CosmosMsg, StdResult, Uint128,
+        Uint256, WasmMsg,
     },
     cosmwasm_schema::cw_serde,
     snip20::Snip20ReceiveMsg,
@@ -82,7 +72,13 @@ pub enum ExecuteMsg {
         epoch_duration: Option<u64>,
         expiry_duration: Option<u64>,
     },
-    RecoverFunds {},
+    RecoverFunds {
+        token: TokenType,
+        amount: Uint128,
+        to: String,
+        msg: Option<Binary>,
+    },
+    RecoverExpiredFunds {},
     CreateViewingKey {
         entropy: String,
     },

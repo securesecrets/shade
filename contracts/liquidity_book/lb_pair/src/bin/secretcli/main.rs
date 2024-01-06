@@ -11,10 +11,7 @@ use shade_protocol::{
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
     liquidity_book::lb_pair::{
-        ContractStatus,
-        InvokeMsg,
-        LiquidityParameters,
-        RemoveLiquidity,
+        ContractStatus, InvokeMsg, LiquidityParameters, RemoveLiquidity,
         RewardsDistributionAlgorithm,
     },
     swap::core::{TokenAmount, TokenType},
@@ -164,7 +161,7 @@ fn main() -> io::Result<()> {
 
     let force_decay = ExecuteMsg::ForceDecay {};
 
-    let calculte_rewards = ExecuteMsg::CalculateRewards {};
+    let calculte_rewards = ExecuteMsg::CalculateRewardsDistribution {};
 
     let reset_rewards_config = ExecuteMsg::ResetRewardsConfig {
         distribution: Some(RewardsDistributionAlgorithm::TimeBasedRewards),
