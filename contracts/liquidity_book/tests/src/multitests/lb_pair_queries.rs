@@ -53,7 +53,7 @@ pub fn lb_pair_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -81,7 +81,7 @@ pub fn lb_pair_setup() -> Result<
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -100,7 +100,7 @@ pub fn lb_pair_setup() -> Result<
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -143,7 +143,7 @@ fn mint_and_add_liquidity(
         app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -162,7 +162,7 @@ fn mint_and_add_liquidity(
     lb_pair::add_liquidity(
         app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
     Ok(())
@@ -185,7 +185,7 @@ pub fn test_query_bin_reserves() -> Result<(), anyhow::Error> {
         let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
         ids.push(id);
         let (reserves_x, reserves_y, _bin_id) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
         reserves.push((reserves_x, reserves_y));
         match id.cmp(&ACTIVE_ID) {
             Ordering::Less => {
@@ -266,7 +266,7 @@ pub fn test_query_bins_reserves() -> Result<(), anyhow::Error> {
     }
 
     let multiple_reserves =
-        lb_pair::query_bins_reserves(&app, &lb_pair.lb_pair.contract, ids.clone())?;
+        lb_pair::query_bins_reserves(&app, &lb_pair.info.contract, ids.clone())?;
 
     for (res, id) in multiple_reserves.iter().zip(ids.clone()) {
         let (reserves_x, reserves_y) = (res.bin_reserve_x, res.bin_reserve_y);
@@ -352,7 +352,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
     }
 
     let (multiple_reserves, last_id, _) =
-        lb_pair::query_all_bins_reserves(&app, &lb_pair.lb_pair.contract, None, None, Some(5))?;
+        lb_pair::query_all_bins_reserves(&app, &lb_pair.info.contract, None, None, Some(5))?;
 
     //checking pagination
     assert_eq!(last_id, ids[4]);
@@ -360,7 +360,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
 
     let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(last_id),
         None,
         Some(5),
@@ -372,7 +372,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
 
     let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(last_id),
         None,
         Some(5),
@@ -384,7 +384,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
 
     let (multiple_reserves, last_id, _) = lb_pair::query_all_bins_reserves(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(last_id),
         None,
         Some(5),
@@ -395,7 +395,7 @@ pub fn test_query_all_bins_reserves() -> Result<(), anyhow::Error> {
     assert_eq!(multiple_reserves.len(), 4);
 
     let (multiple_reserves, last_id, _) =
-        lb_pair::query_all_bins_reserves(&app, &lb_pair.lb_pair.contract, None, None, Some(50))?;
+        lb_pair::query_all_bins_reserves(&app, &lb_pair.info.contract, None, None, Some(50))?;
     assert_eq!(last_id, 0);
 
     for res in multiple_reserves.iter() {
@@ -472,7 +472,7 @@ pub fn test_query_all_bins_updated_add_liquidity() -> Result<(), anyhow::Error> 
 
     // add liquidity already made check the ids
 
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
 
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
@@ -485,7 +485,7 @@ pub fn test_query_all_bins_updated_add_liquidity() -> Result<(), anyhow::Error> 
 pub fn test_query_total_supply() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair, _lb_tokenn) = lb_pair_setup()?;
 
-    let supply = lb_pair::query_total_supply(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+    let supply = lb_pair::query_total_supply(&app, &lb_pair.info.contract, ACTIVE_ID)?;
 
     assert!(supply > Uint256::zero());
 
@@ -502,7 +502,7 @@ pub fn test_query_tokens() -> Result<(), anyhow::Error> {
     let token_x = token_type_snip20_generator(&silk)?;
     let token_y = token_type_snip20_generator(&shade)?;
 
-    let (t_x, t_y) = lb_pair::query_tokens(&app, &lb_pair.lb_pair.contract)?;
+    let (t_x, t_y) = lb_pair::query_tokens(&app, &lb_pair.info.contract)?;
 
     assert_eq!(t_x, token_x);
     assert_eq!(t_y, token_y);
@@ -518,7 +518,7 @@ pub fn test_query_all_bins_updated_swap() -> Result<(), anyhow::Error> {
 
     // add liquidity already made check the ids
 
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
 
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
@@ -540,7 +540,7 @@ pub fn test_query_all_bins_updated_swap() -> Result<(), anyhow::Error> {
     let amount_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_in, amount_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_out, true)?;
     assert_eq!(amount_out_left, Uint128::zero());
 
     let tokens_to_mint = vec![(SHADE, amount_in)];
@@ -558,13 +558,13 @@ pub fn test_query_all_bins_updated_swap() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_in,
     )?;
 
-    let mut heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let mut heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
     heights.sort();
 
     assert_eq!(heights.len(), 2);
@@ -585,7 +585,7 @@ pub fn test_query_all_bins_updated_remove_liquidity() -> Result<(), anyhow::Erro
     let token_x = extract_contract_info(&deployed_contracts, SILK)?;
     let token_y = extract_contract_info(&deployed_contracts, SHADE)?;
 
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
 
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
@@ -619,12 +619,12 @@ pub fn test_query_all_bins_updated_remove_liquidity() -> Result<(), anyhow::Erro
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -636,7 +636,7 @@ pub fn test_query_all_bins_updated_remove_liquidity() -> Result<(), anyhow::Erro
             deadline: 99999999999,
         },
     )?;
-    let mut heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let mut heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
     heights.sort();
 
     assert_eq!(heights.len(), 2);
@@ -668,7 +668,7 @@ pub fn test_query_update_at_height() -> Result<(), anyhow::Error> {
     }
 
     // add liquidity already made check the ids
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
     //user have all the heights now
@@ -676,7 +676,7 @@ pub fn test_query_update_at_height() -> Result<(), anyhow::Error> {
     let height = heights[0];
 
     let bin_responses =
-        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?;
+        lb_pair::query_updated_bins_at_height(&app, &lb_pair.info.contract, height)?;
     let mut bin_ids: Vec<u32> = bin_responses
         .into_iter()
         .map(|response| response.bin_id)
@@ -712,7 +712,7 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
     }
 
     // add liquidity already made check the ids
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
     //user have all the heights now
@@ -720,7 +720,7 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
     let height = heights[0];
 
     let mut query_ids: Vec<u32> =
-        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?
+        lb_pair::query_updated_bins_at_height(&app, &lb_pair.info.contract, height)?
             .into_iter()
             .map(|x| x.bin_id)
             .collect();
@@ -746,13 +746,13 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
 
     // add liquidity already made check the ids
     let mut heights =
-        lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, Some(100))?;
+        lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, Some(100))?;
     heights.sort();
     assert_eq!(heights.len(), 50);
     //user have all the heights now
     let updated_bins: Vec<u32> = lb_pair::query_updated_bins_at_multiple_heights(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         heights.clone(),
     )?
     .into_iter()
@@ -787,7 +787,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
     }
 
     // add liquidity already made check the ids
-    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, None)?;
+    let heights = lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, None)?;
     assert_eq!(heights.len(), 1);
     assert_eq!(heights[0], app.block_info().height);
     //user have all the heights now
@@ -795,7 +795,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
     let height = heights[0];
 
     let query_ids: Vec<u32> =
-        lb_pair::query_updated_bins_at_height(&app, &lb_pair.lb_pair.contract, height)?
+        lb_pair::query_updated_bins_at_height(&app, &lb_pair.info.contract, height)?
             .into_iter()
             .map(|x| x.bin_id)
             .collect();
@@ -819,13 +819,13 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
 
     // add liquidity already made check the ids
     let mut heights =
-        lb_pair::query_all_bins_updated(&app, &lb_pair.lb_pair.contract, None, Some(100))?;
+        lb_pair::query_all_bins_updated(&app, &lb_pair.info.contract, None, Some(100))?;
     heights.sort();
     assert_eq!(heights.len(), 50);
     //user have all the heights now
     let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         heights[0],
         Some(0),
         Some(10),
@@ -835,7 +835,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
 
     let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         heights[0],
         Some(0),
         Some(20),
@@ -845,7 +845,7 @@ pub fn test_query_update_after_height() -> Result<(), anyhow::Error> {
 
     let (updated_bins, _) = lb_pair::query_updated_bins_after_multiple_heights(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         heights[0],
         Some(0),
         Some(100),

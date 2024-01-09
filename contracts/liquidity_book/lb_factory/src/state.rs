@@ -1,9 +1,13 @@
 use crate::types::{LBPair, LBPairInformation, NextPairKey};
+use std::collections::HashSet;
 
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Storage},
     cosmwasm_schema::cw_serde,
-    lb_libraries::{pair_parameter_helper::PairParameters, types::ContractInstantiationInfo},
+    lb_libraries::{
+        pair_parameter_helper::PairParameters,
+        types::{ContractInstantiationInfo, TreeUint24},
+    },
     liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     secret_storage_plus::{AppendStore, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
@@ -22,8 +26,13 @@ pub static ALL_LB_PAIRS: AppendStore<LBPair> = AppendStore::new("all_lb_pairs");
 /// The tokens are ordered to save gas, but they can be in the reverse order in the actual pair.
 pub const LB_PAIRS_INFO: Map<(String, String, u16), LBPairInformation> = Map::new("lb_pairs_info");
 
+pub const PRESET_HASHSET: Item<HashSet<u16>> = Item::new("preset_hashset");
+
 /// Map of bin_step to preset, which is an encoded Bytes32 set of pair parameters
 pub const PRESETS: Map<u16, PairParameters> = Map::new("presets");
+
+/// Map of bin_step to preset, which is an encoded Bytes32 set of pair parameters
+pub const STAKING_PRESETS: Map<u16, StakingPreset> = Map::new("stkaing_presets");
 
 // Does it need to store ContractInfo or would Addr be enough?
 // pub static QUOTE_ASSET_WHITELIST: Item<Vec<ContractInfo>> = Item::new(b"quote_asset_whitelist");
@@ -54,12 +63,16 @@ pub struct State {
     pub lb_token_implementation: ContractInstantiationInfo,
     pub staking_contract_implementation: ContractInstantiationInfo,
     pub admin_auth: Contract,
+    pub recover_staking_funds_receiver: Addr,
+}
+
+#[cw_serde]
+pub struct StakingPreset {
     pub total_reward_bins: u32,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,
     pub epoch_staking_duration: u64,
     pub expiry_staking_duration: Option<u64>,
-    pub recover_staking_funds_receiver: Addr,
 }
 
 pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextPairKey> {

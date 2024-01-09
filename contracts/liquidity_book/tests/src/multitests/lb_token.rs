@@ -62,7 +62,7 @@ pub fn init_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -107,7 +107,7 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -126,7 +126,7 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -135,8 +135,8 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
         let (reserves_x, reserves_y, _) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
-        let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
+        let price = lb_pair::query_price_from_id(&app, &lb_pair.info.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
         let expected_balance_y = U256::from(reserves_y);
@@ -191,7 +191,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -211,7 +211,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters.clone(),
     )?;
 
@@ -219,8 +219,8 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
         let (reserves_x, reserves_y, _) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
-        let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
+        let price = lb_pair::query_price_from_id(&app, &lb_pair.info.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
         let expected_balance_y = U256::from(reserves_y);
@@ -245,7 +245,7 @@ pub fn test_mint_twice() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -300,7 +300,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -319,7 +319,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -353,7 +353,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -371,7 +371,7 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -407,8 +407,8 @@ pub fn test_mint_with_different_bins() -> Result<(), anyhow::Error> {
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
         let (reserves_x, reserves_y, _) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
-        let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
+        let price = lb_pair::query_price_from_id(&app, &lb_pair.info.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
         let expected_balance_y = U256::from(reserves_y);
@@ -459,7 +459,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -478,7 +478,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -499,12 +499,12 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -517,7 +517,7 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
         },
     )?;
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     assert_eq!(reserves_x, 0u128);
     assert_eq!(reserves_y, 0u128);
@@ -543,8 +543,8 @@ pub fn test_simple_burn() -> Result<(), anyhow::Error> {
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
         let (reserves_x, reserves_y, _) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
-        let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
+        let price = lb_pair::query_price_from_id(&app, &lb_pair.info.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
         let expected_balance_y = U256::from(reserves_y);
@@ -594,7 +594,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -613,7 +613,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -640,7 +640,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -672,7 +672,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -688,8 +688,8 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, nb_bins_y);
         let (reserves_x, reserves_y, _) =
-            lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, id)?;
-        let price = lb_pair::query_price_from_id(&app, &lb_pair.lb_pair.contract, id)?;
+            lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, id)?;
+        let price = lb_pair::query_price_from_id(&app, &lb_pair.info.contract, id)?;
 
         let expected_balance_x = U256::from(reserves_x);
         let expected_balance_y = U256::from(reserves_y);
@@ -701,7 +701,7 @@ pub fn test_burn_half_twice() -> Result<(), anyhow::Error> {
         assert_eq!(total[i as usize].u256_to_uint256(), Uint256::zero());
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     assert_eq!(reserves_x, 0u128);
     assert_eq!(reserves_y, 0u128);
@@ -736,7 +736,7 @@ pub fn test_revert_mint_zero_tokens() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -755,7 +755,7 @@ pub fn test_revert_mint_zero_tokens() -> Result<(), anyhow::Error> {
     let res = lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     );
 
@@ -797,7 +797,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -815,7 +815,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -826,7 +826,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -851,7 +851,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -875,7 +875,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -900,7 +900,7 @@ pub fn test_revert_burn_empty_array() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -948,7 +948,7 @@ pub fn test_revert_burn_more_than_balance() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -966,7 +966,7 @@ pub fn test_revert_burn_more_than_balance() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -987,7 +987,7 @@ pub fn test_revert_burn_more_than_balance() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1035,7 +1035,7 @@ pub fn test_revert_burn_zero() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -1053,7 +1053,7 @@ pub fn test_revert_burn_zero() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -1065,7 +1065,7 @@ pub fn test_revert_burn_zero() -> Result<(), anyhow::Error> {
     let res = lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,

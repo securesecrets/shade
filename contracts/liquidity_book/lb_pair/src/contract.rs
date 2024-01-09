@@ -4,32 +4,12 @@ use serde::Serialize;
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary,
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Attribute,
-        Binary,
-        ContractInfo,
-        CosmosMsg,
-        Decimal,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Reply,
-        Response,
-        StdError,
-        StdResult,
-        SubMsg,
-        SubMsgResult,
-        Timestamp,
-        Uint128,
-        Uint256,
-        WasmMsg,
+        from_binary, shd_entry_point, to_binary, Addr, Attribute, Binary, ContractInfo, CosmosMsg,
+        Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg,
+        SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
     },
     contract_interfaces::{
-        liquidity_book::{lb_pair::*, lb_token, staking},
+        liquidity_book::{lb_pair::*, lb_staking, lb_token},
         swap::{
             amm_pair::{
                 FeeInfo,
@@ -60,9 +40,7 @@ use shade_protocol::{
         types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
-    snip20,
-    utils::asset::RawContract,
-    Contract,
+    snip20, Contract,
 };
 use std::{collections::HashMap, ops::Sub, vec};
 
@@ -81,7 +59,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response> {
-    //Initializing the Token Contract
+    // Initializing the Token Contract
 
     let token_x_symbol = match msg.token_x.clone() {
         TokenType::CustomToken {
@@ -124,8 +102,8 @@ pub fn instantiate(
             code_hash: msg.lb_token_implementation.code_hash.clone(),
             msg: to_binary(&instantiate_token_msg)?,
             label: format!(
-                "{}-{}-Pair-Token-{}",
-                token_x_symbol, token_y_symbol, msg.bin_step
+                "{}-{}-Pair-Token-{}-{}",
+                token_x_symbol, token_y_symbol, msg.bin_step, env.block.height
             ),
             funds: vec![],
             admin: None,
@@ -147,7 +125,7 @@ pub fn instantiate(
     pair_parameters.set_active_id(msg.active_id)?;
     pair_parameters.update_id_reference();
 
-    //RegisterReceiving Token
+    // RegisterReceiving Token
     let mut messages = vec![];
     let viewing_key = ViewingKey::from(msg.viewing_key.as_str());
     for token in [&msg.token_x, &msg.token_y] {
@@ -193,9 +171,6 @@ pub fn instantiate(
         //TODO: set using the setter function and instantiate msg
     };
 
-    // deps.api
-    //     .debug(format!("Contract was initialized by {}", info.sender).as_str());
-
     let tree: TreeUint24 = TreeUint24::new();
     let oracle = Oracle {
         samples: HashMap::<u16, OracleSample>::new(),
@@ -206,22 +181,29 @@ pub fn instantiate(
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
-    REWARDS_STATS_STORE.save(deps.storage, 0, &RewardStats {
-        cumm_value: Uint256::zero(),
-        cumm_value_mul_bin_id: Uint256::zero(),
-        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
-    })?;
+    REWARDS_STATS_STORE.save(
+        deps.storage,
+        0,
+        &RewardStats {
+            cumm_value: Uint256::zero(),
+            cumm_value_mul_bin_id: Uint256::zero(),
+            rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
+        },
+    )?;
 
-    ephemeral_storage_w(deps.storage).save(&NextTokenKey {
-        lb_token_code_hash: msg.lb_token_implementation.code_hash,
-        staking_contract: msg.staking_contract_implementation,
-        token_x_symbol,
-        token_y_symbol,
-        epoch_index: msg.epoch_staking_index,
-        epoch_duration: msg.epoch_staking_duration,
-        expiry_duration: msg.expiry_staking_duration,
-        recover_funds_receiver: msg.recover_staking_funds_receiver,
-    })?;
+    EPHEMERAL_STORAGE.save(
+        deps.storage,
+        &NextTokenKey {
+            lb_token_code_hash: msg.lb_token_implementation.code_hash,
+            staking_contract: msg.staking_contract_implementation,
+            token_x_symbol,
+            token_y_symbol,
+            epoch_index: msg.epoch_staking_index,
+            epoch_duration: msg.epoch_staking_duration,
+            expiry_duration: msg.expiry_staking_duration,
+            recover_funds_receiver: msg.recover_staking_funds_receiver,
+        },
+    )?;
 
     response = response.add_messages(messages);
 
@@ -317,7 +299,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             max_volatility_accumulator,
         ),
         ExecuteMsg::ForceDecay {} => try_force_decay(deps, env, info),
-        ExecuteMsg::CalculateRewards {} => try_calculate_rewards(deps, env, info),
+        ExecuteMsg::CalculateRewardsDistribution {} => {
+            try_calculate_rewards_distribution(deps, env, info)
+        }
         ExecuteMsg::ResetRewardsConfig {
             distribution,
             base_rewards_bins,
@@ -1040,6 +1024,7 @@ fn _update_bin(
         config.lb_token.code_hash,
         config.lb_token.address,
     )?;
+    // println!("id {:?}", id);
 
     let (shares, amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
         bin_reserves,
@@ -1047,6 +1032,7 @@ fn _update_bin(
         price,
         total_supply,
     )?;
+    println!("id {:?}, shares: {:?}", id, shares);
 
     let amounts_in_to_bin = amounts_in;
 
@@ -1517,15 +1503,14 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Respon
         Ok(state)
     })?;
 
-    Ok(Response::default()
-        .add_attribute_plaintext("Id_reference", params.get_id_reference().to_string())
-        .add_attribute_plaintext(
-            "Volatility_reference",
-            params.get_volatility_reference().to_string(),
-        ))
+    Ok(Response::default())
 }
 
-fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response> {
+fn try_calculate_rewards_distribution(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response> {
     let mut state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
@@ -1574,11 +1559,15 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
         };
     }
 
-    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &RewardStats {
-        cumm_value: Uint256::zero(),
-        cumm_value_mul_bin_id: Uint256::zero(),
-        rewards_distribution_algorithm: distribution_algorithm.clone(),
-    })?;
+    REWARDS_STATS_STORE.save(
+        deps.storage,
+        state.rewards_epoch_id,
+        &RewardStats {
+            cumm_value: Uint256::zero(),
+            cumm_value_mul_bin_id: Uint256::zero(),
+            rewards_distribution_algorithm: distribution_algorithm.clone(),
+        },
+    )?;
 
     if distribution_algorithm == &RewardsDistributionAlgorithm::VolumeBasedRewards {
         let tree: TreeUint24 = TreeUint24::new();
@@ -1586,7 +1575,7 @@ fn try_calculate_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
     }
 
     //distribution algorithm
-    let res = staking::ExecuteMsg::EndEpoch {
+    let res = lb_staking::ExecuteMsg::EndEpoch {
         rewards_distribution: distribution,
     }
     .to_cosmos_msg(
@@ -2777,8 +2766,9 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let contract_address_string = &String::from_utf8(x.to_vec())?;
                 let trimmed_str = contract_address_string.trim_matches('\"');
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
-                // not the best name but it matches the pair key idea
-                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+
+                // // not the best name but it matches the pair key idea
+                let emp_storage = EPHEMERAL_STORAGE.load(deps.storage)?;
                 let mut state = STATE.load(deps.storage)?;
 
                 state.lb_token = ContractInfo {
@@ -2791,7 +2781,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
 
-                let instantiate_token_msg = staking::InstantiateMsg {
+                let instantiate_token_msg = lb_staking::InstantiateMsg {
                     amm_pair: env.contract.address.to_string(),
                     lb_token: state.lb_token.to_owned().into(),
                     admin_auth: state.admin_auth.into(),
@@ -2808,8 +2798,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                         code_hash: emp_storage.staking_contract.code_hash.clone(),
                         msg: to_binary(&instantiate_token_msg)?,
                         label: format!(
-                            "{}-{}-Staking-Contract-{}",
-                            emp_storage.token_x_symbol, emp_storage.token_y_symbol, state.bin_step
+                            "{}-{}-Staking-Contract-{}-{}",
+                            emp_storage.token_x_symbol,
+                            emp_storage.token_y_symbol,
+                            state.bin_step,
+                            env.block.height
                         ),
 
                         funds: vec![],
@@ -2828,7 +2821,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
                 let trimmed_str = contract_address_string.trim_matches('\"');
                 let contract_address = deps.api.addr_validate(trimmed_str)?;
                 // not the best name but it matches the pair key idea
-                let emp_storage = ephemeral_storage_r(deps.storage).load()?;
+                let emp_storage = EPHEMERAL_STORAGE.load(deps.storage)?;
                 let mut state = STATE.load(deps.storage)?;
 
                 state.staking_contract = ContractInfo {
@@ -2840,7 +2833,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
 
                 let mut response = Response::new();
                 response.data = Some(env.contract.address.to_string().as_bytes().into());
-
                 Ok(response)
             }
             None => Err(StdError::generic_err("Unknown reply id")),

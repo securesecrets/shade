@@ -1,0 +1,16 @@
+AdminAuth Upload used 1271006 gas
+AdminAuth Instantiation used 42308 gas
+Factory Upload used 2434542 gas
+Factory Instantiation used 53189 gas
+Router Upload used 2869912 gas
+Router Instantiation used 45132 gas
+LBPAIR Upload used 5203922 gas
+Pair Upload used 5203922 gas
+Token Upload used 3348904 gas
+Staking Upload used 3963058 gas
+SetLBPairImplementation TX used 61961 gas
+SetLBTokenImplementation TX used 62433 gas
+SetLBPairImplementation TX used 62975 gas
+SetPreset TX used 68502 gas
+AddQuoteAsset TX used 60509 gas
+CreateLBPair TX used 482315 gas

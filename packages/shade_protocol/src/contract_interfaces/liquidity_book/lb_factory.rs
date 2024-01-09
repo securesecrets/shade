@@ -15,11 +15,6 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
-    pub total_reward_bins: u32,
-    pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
-    pub epoch_staking_index: u64,
-    pub epoch_staking_duration: u64,
-    pub expiry_staking_duration: Option<u64>,
     pub recover_staking_funds_receiver: Addr,
 }
 impl InstantiateCallback for InstantiateMsg {
@@ -69,6 +64,10 @@ pub enum ExecuteMsg {
         // u24
         max_volatility_accumulator: u32,
         total_reward_bins: u32,
+        rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+        epoch_staking_index: u64,
+        epoch_staking_duration: u64,
+        expiry_staking_duration: Option<u64>,
         is_open: bool,
     },
     SetPresetOpenState {

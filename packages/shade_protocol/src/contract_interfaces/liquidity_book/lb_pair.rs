@@ -4,9 +4,7 @@ use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     liquidity_book::lb_libraries::types::{
-        Bytes32,
-        ContractInstantiationInfo,
-        StaticFeeParameters,
+        Bytes32, ContractInstantiationInfo, StaticFeeParameters,
     },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
@@ -57,12 +55,6 @@ pub enum ExecuteMsg {
         remove_liquidity_params: RemoveLiquidity,
     },
 
-    // Burn {
-    //     from: Addr,
-    //     to: Addr,
-    //     ids: Vec<u32>,
-    //     amounts_to_burn: Vec<Uint256>,
-    // },
     CollectProtocolFees {},
     IncreaseOracleLength {
         new_length: u16,
@@ -77,7 +69,7 @@ pub enum ExecuteMsg {
         max_volatility_accumulator: u32,
     },
     ForceDecay {},
-    CalculateRewards {},
+    CalculateRewardsDistribution {},
     ResetRewardsConfig {
         distribution: Option<RewardsDistributionAlgorithm>,
         base_rewards_bins: Option<u32>,
@@ -257,23 +249,23 @@ pub struct LbTokenResponse {
 }
 #[cw_serde]
 pub struct GetPairInfoResponse {
-    pub liquidity_token: Contract,
-    pub factory: Option<Contract>,
+    pub liquidity_token: ContractInfo,
+    pub factory: Option<ContractInfo>,
     pub pair: TokenPair,
     pub amount_0: Uint128,
     pub amount_1: Uint128,
-    pub total_liquidity: Uint128,
+    pub total_liquidity: Uint256,
     pub contract_version: u32,
     pub fee_info: FeeInfo,
     pub stable_info: Option<StablePairInfoResponse>,
 }
 #[cw_serde]
 pub struct SwapSimulationResponse {
-    total_fee_amount: Uint128,
-    lp_fee_amount: Uint128,
-    shade_dao_fee_amount: Uint128,
-    result: SwapResult,
-    price: String,
+    pub total_fee_amount: Uint128,
+    pub lp_fee_amount: Uint128,
+    pub shade_dao_fee_amount: Uint128,
+    pub result: SwapResult,
+    pub price: String,
 }
 // We define a custom struct for each query response
 #[cw_serde]

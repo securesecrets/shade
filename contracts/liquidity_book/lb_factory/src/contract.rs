@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     prelude::*,
     state::*,
@@ -17,7 +19,6 @@ use shade_protocol::{
         DepsMut,
         Env,
         MessageInfo,
-        Order::Ascending,
         Reply,
         Response,
         StdError,
@@ -34,7 +35,10 @@ use shade_protocol::{
     },
     liquidity_book::{
         lb_factory::*,
-        lb_pair::ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+        lb_pair::{
+            ExecuteMsg::{ForceDecay as LbPairForceDecay, SetStaticFeeParameters},
+            RewardsDistributionAlgorithm,
+        },
     },
     swap::core::TokenType,
     utils::callback::ExecuteCallback,
@@ -65,16 +69,12 @@ pub fn instantiate(
         lb_pair_implementation: ContractInstantiationInfo::default(),
         lb_token_implementation: ContractInstantiationInfo::default(),
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
-        total_reward_bins: msg.total_reward_bins,
-        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
         staking_contract_implementation: ContractInstantiationInfo::default(),
-        epoch_staking_index: msg.epoch_staking_index,
-        epoch_staking_duration: msg.epoch_staking_duration,
-        expiry_staking_duration: msg.expiry_staking_duration,
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
     };
 
     STATE.save(deps.storage, &config)?;
+    PRESET_HASHSET.save(deps.storage, &HashSet::new())?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
 
     Ok(Response::default())
@@ -140,6 +140,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             max_volatility_accumulator,
             is_open,
             total_reward_bins,
+            rewards_distribution_algorithm,
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
         } => try_set_pair_preset(
             deps,
             env,
@@ -154,6 +158,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             max_volatility_accumulator,
             is_open,
             total_reward_bins,
+            rewards_distribution_algorithm,
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
         ),
         ExecuteMsg::SetPresetOpenState { bin_step, is_open } => {
             try_set_preset_open_state(deps, env, info, bin_step, is_open)
@@ -356,6 +364,10 @@ fn try_create_lb_pair(
         });
     }
 
+    let config = STATE.load(deps.storage)?;
+
+    let staking_preset = STAKING_PRESETS.load(deps.storage, bin_step)?;
+
     // safety check, making sure that the price can be calculated
     PriceHelper::get_price_from_id(active_id, bin_step)?;
 
@@ -412,12 +424,12 @@ fn try_create_lb_pair(
                 entropy,
                 protocol_fee_recipient: config.fee_recipient,
                 admin_auth: config.admin_auth.into(),
-                total_reward_bins: Some(config.total_reward_bins),
-                rewards_distribution_algorithm: config.rewards_distribution_algorithm,
+                total_reward_bins: Some(staking_preset.total_reward_bins),
+                rewards_distribution_algorithm: staking_preset.rewards_distribution_algorithm,
                 staking_contract_implementation: config.staking_contract_implementation,
-                epoch_staking_index: config.epoch_staking_index,
-                epoch_staking_duration: config.epoch_staking_duration,
-                expiry_staking_duration: config.expiry_staking_duration,
+                epoch_staking_index: staking_preset.epoch_staking_index,
+                epoch_staking_duration: staking_preset.epoch_staking_duration,
+                expiry_staking_duration: staking_preset.expiry_staking_duration,
                 recover_staking_funds_receiver: config.recover_staking_funds_receiver,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
@@ -535,6 +547,10 @@ fn try_set_pair_preset(
     max_volatility_accumulator: u32,
     is_open: bool,
     total_reward_bins: u32,
+    rewards_distribution_algorithm: RewardsDistributionAlgorithm,
+    epoch_staking_index: u64,
+    epoch_staking_duration: u64,
+    expiry_staking_duration: Option<u64>,
 ) -> Result<Response> {
     let mut state = STATE.load(deps.storage)?;
     validate_admin(
@@ -563,9 +579,23 @@ fn try_set_pair_preset(
         preset.0.set_bool(true, _OFFSET_IS_PRESET_OPEN);
     }
 
+    let mut hashset = PRESET_HASHSET.load(deps.storage)?;
+
+    if !hashset.contains(&bin_step) {
+        hashset.insert(bin_step);
+
+        PRESET_HASHSET.save(deps.storage, &hashset)?;
+    }
+
     PRESETS.save(deps.storage, bin_step, &preset)?;
 
-    state.total_reward_bins = total_reward_bins;
+    STAKING_PRESETS.save(deps.storage, bin_step, &StakingPreset {
+        total_reward_bins,
+        rewards_distribution_algorithm,
+        epoch_staking_index,
+        epoch_staking_duration,
+        expiry_staking_duration,
+    })?;
 
     STATE.save(deps.storage, &state)?;
 
@@ -636,6 +666,10 @@ fn try_remove_preset(
 
     PRESETS.remove(deps.storage, bin_step);
 
+    let mut hashset = PRESET_HASHSET.load(deps.storage)?;
+    hashset.remove(&bin_step);
+    PRESET_HASHSET.save(deps.storage, &hashset)?;
+
     Ok(Response::default().add_attribute_plaintext("preset removed", bin_step.to_string()))
 }
 
@@ -686,7 +720,7 @@ fn try_set_fee_parameters_on_pair(
             token_y: token_b.unique_key(),
             bin_step,
         })?
-        .lb_pair;
+        .info;
 
     let msg: CosmosMsg = SetStaticFeeParameters {
         base_factor,
@@ -839,7 +873,7 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) ->
             token_y: token_b.unique_key(),
             bin_step: pair.bin_step,
         })?
-        .lb_pair;
+        .info;
 
     let mut response = Response::new();
 
@@ -1022,7 +1056,8 @@ fn query_lb_pair_information(
     token_b: TokenType,
     bin_step: u16,
 ) -> Result<Binary> {
-    let lb_pair_information = _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
+    let lb_pair_information: LBPairInformation =
+        _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
 
     let response = LBPairInformationResponse {
         lb_pair_information,
@@ -1137,10 +1172,11 @@ fn query_all_bin_steps(deps: Deps) -> Result<Binary> {
 
     let mut bin_step_with_preset = Vec::<u16>::new();
 
-    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
+    let hashset = PRESET_HASHSET.load(deps.storage)?;
 
-    for result in iterator {
-        let (bin_step, _preset) = result.map_err(Error::CwErr)?;
+    // let iterator = PRESETS.range(deps.storage, None, None, Ascending);
+
+    for bin_step in hashset {
         bin_step_with_preset.push(bin_step)
     }
 
@@ -1158,27 +1194,14 @@ fn query_all_bin_steps(deps: Deps) -> Result<Binary> {
 /// * `open_bin_step` - The list of open bin steps.
 fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
     // this way is harder to ready, but maybe more efficient?
-    // let open_bin_steps = PRESETS
-    //     .map(|result| {
-    //         result
-    //             .map_err(Error::CwErr)
-    //             .map(|(bin_step, preset)| {
-    //                 if _is_preset_open(preset.0 .0) {
-    //                     Some(bin_step)
-    //                 } else {
-    //                     None
-    //                 }
-    //             })
-    //             .transpose()
-    //     })
-    //     .collect::<Result<Vec<u16>>>()?;
+
+    let hashset = PRESET_HASHSET.load(deps.storage)?;
 
     let mut open_bin_steps = Vec::<u16>::new();
 
-    let iterator = PRESETS.range(deps.storage, None, None, Ascending);
+    for bin_step in hashset {
+        let preset = PRESETS.load(deps.storage, bin_step)?;
 
-    for result in iterator {
-        let (bin_step, preset) = result.map_err(Error::CwErr)?;
         if _is_preset_open(preset.0.0) {
             open_bin_steps.push(bin_step)
         }
@@ -1261,7 +1284,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                     (token_a.unique_key(), token_b.unique_key(), bin_step),
                     &LBPairInformation {
                         bin_step: lb_pair_key.bin_step,
-                        lb_pair: lb_pair.clone(),
+                        info: lb_pair.clone(),
                         created_by_owner: lb_pair_key.is_open,
                         ignored_for_routing: false,
                     },

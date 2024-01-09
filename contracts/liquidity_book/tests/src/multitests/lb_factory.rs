@@ -2,12 +2,7 @@ use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
-    multi::{
-        admin::init_admin_auth,
-        lb_pair::LbPair,
-        lb_token::LbToken,
-        staking_contract::StakingContract,
-    },
+    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken},
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError},
@@ -165,11 +160,11 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     // 6. Validate that the returned information matches the expected values (binStep, LBPair address, createdByOwner, ignoredForRouting).
     //SORTED token
     if token_x.unique_key() < token_y.unique_key() {
-        assert_eq!(lb_pair_info.lb_pair.token_x, token_x);
-        assert_eq!(lb_pair_info.lb_pair.token_y, token_y);
+        assert_eq!(lb_pair_info.info.token_x, token_x);
+        assert_eq!(lb_pair_info.info.token_y, token_y);
     } else {
-        assert_eq!(lb_pair_info.lb_pair.token_x, token_y);
-        assert_eq!(lb_pair_info.lb_pair.token_y, token_x);
+        assert_eq!(lb_pair_info.info.token_x, token_y);
+        assert_eq!(lb_pair_info.info.token_y, token_x);
     }
 
     let (
@@ -180,7 +175,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &lb_pair_info.info.contract)?;
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD);
     assert_eq!(decay_period, DEFAULT_DECAY_PERIOD);
@@ -193,7 +188,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&app, &lb_pair_info.lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &lb_pair_info.info.contract)?;
 
     assert_eq!(volatility_reference, 0);
     assert_eq!(volatility_accumulator, 0);
@@ -334,11 +329,6 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         addrs.admin().as_str(),
         addrs.admin(),
         admin_contract.into(),
-        100,
-        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
-        1,
-        100,
-        None,
         addrs.admin(),
     )?;
 
@@ -374,6 +364,10 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     //can't create a pair if quote asset is not whitelisted
@@ -460,7 +454,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     //can't create a pair the same pair twice
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
-    let staking_contract = app.store_code(StakingContract::default().contract());
+    let staking_contract = app.store_code(LbStaking::default().contract());
 
     lb_factory::set_lb_pair_implementation(
         &mut app,
@@ -563,6 +557,10 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
         max_volatility_accumulator,
         is_open,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     // Additional assertions and verifications
@@ -621,6 +619,10 @@ fn test_remove_preset() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     lb_factory::set_pair_preset(
@@ -637,6 +639,10 @@ fn test_remove_preset() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     let all_bin_steps = lb_factory::query_all_bin_steps(&mut app, &lb_factory.clone().into())?;
@@ -734,7 +740,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         old_volatility_reference,
         old_id_reference,
         old_time_of_last_update,
-    ) = lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_variable_fee_params(&app, &all_pairs[0].info.contract)?;
 
     // Set the fees parameters on pair
     lb_factory::set_fees_parameters_on_pair(
@@ -762,7 +768,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
         variable_fee_control,
         protocol_share,
         max_volatility_accumulator,
-    ) = lb_pair::query_static_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+    ) = lb_pair::query_static_fee_params(&app, &all_pairs[0].info.contract)?;
 
     assert_eq!(base_factor, DEFAULT_BASE_FACTOR * 2);
     assert_eq!(filter_period, DEFAULT_FILTER_PERIOD * 2);
@@ -776,7 +782,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     );
 
     let (volatility_accumulator, volatility_reference, id_reference, time_of_last_update) =
-        lb_pair::query_variable_fee_params(&app, &all_pairs[0].lb_pair.contract)?;
+        lb_pair::query_variable_fee_params(&app, &all_pairs[0].info.contract)?;
 
     assert_eq!(volatility_accumulator, old_volatility_accumulator);
     assert_eq!(volatility_reference, old_volatility_reference);
@@ -894,6 +900,10 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         true,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
     let PresetResponse { is_open, .. } =
         lb_factory::query_preset(&mut app, &lb_factory.clone().into(), bin_step)?;
@@ -1170,7 +1180,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let all_pairs =
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), sscrt, shd)?;
 
-    let lb_pair = all_pairs[0].clone().lb_pair;
+    let lb_pair = all_pairs[0].clone().info;
 
     // Force decay on the created LBPair
     lb_factory::force_decay(
@@ -1219,6 +1229,10 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     lb_factory::set_pair_preset(
@@ -1235,6 +1249,10 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+        1,
+        100,
+        None,
     )?;
 
     lb_factory::create_lb_pair(

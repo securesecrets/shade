@@ -5,12 +5,7 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{
-        admin::init_admin_auth,
-        lb_pair::LbPair,
-        lb_token::LbToken,
-        staking_contract::StakingContract,
-    },
+    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken},
 };
 use shade_protocol::{
     c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
@@ -248,19 +243,11 @@ pub fn setup(
         addrs.admin().as_str(),
         addrs.joker(),
         admin_contract.into(),
-        10,
-        Some(
-            rewards_distribution_algorithm
-                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
-        ),
-        1,
-        100,
-        None,
         addrs.admin(),
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
-    let staking_contract = app.store_code(StakingContract::default().contract());
+    let staking_contract = app.store_code(LbStaking::default().contract());
 
     lb_factory::set_lb_pair_implementation(
         &mut app,
@@ -300,6 +287,13 @@ pub fn setup(
         DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
         DEFAULT_OPEN_STATE,
         DEFAULT_TOTAL_REWARD_BINS,
+        Some(
+            rewards_distribution_algorithm
+                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+        ),
+        1,
+        100,
+        None,
     )?;
 
     // add quote asset
@@ -797,7 +791,6 @@ pub fn mint_token_helper(
             "viewing_key".to_owned(),
         )?;
     }
-
     Ok(())
 }
 

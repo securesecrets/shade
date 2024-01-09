@@ -9,27 +9,27 @@ use shade_protocol::{
         viewing_keys::ViewingKey,
     },
     liquidity_book::lb_pair::{ContractStatus, RewardsDistribution, RewardsDistributionAlgorithm},
-    secret_storage_plus::{AppendStore, Bincode2, Item, Map},
-    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
+    secret_storage_plus::{AppendStore, Bincode2, Item, Json, Map},
     swap::core::TokenType,
     Contract,
 };
 
-pub const STATE: Item<State, Bincode2> = Item::new("state");
-pub const CONTRACT_STATUS: Item<ContractStatus, Bincode2> = Item::new("contract_status");
-pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //?
+pub const STATE: Item<State> = Item::new("state");
+pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
+pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
 pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
-pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
-pub const FEE_APPEND_STORE: AppendStore<FeeLog, Bincode2> = AppendStore::new("fee_logs"); //?
-pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats"); //?
+pub const EPHEMERAL_STORAGE: Item<NextTokenKey> = Item::new("ephemeral_storage");
+
+pub const FEE_APPEND_STORE: AppendStore<FeeLog> = AppendStore::new("fee_logs"); //?
+pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats"); //
 pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution"); //?
 pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); //?
 pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
-pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo, Bincode2> =
+pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo> =
     Item::new("staking_contract_impl");
-pub const BIN_RESERVES_UPDATED: Map<u64, Vec<u32>, Bincode2> = Map::new("bins_reserves_updated");
-pub const BIN_RESERVES_UPDATED_LOG: AppendStore<u64, Bincode2> =
+pub const BIN_RESERVES_UPDATED: Map<u64, Vec<u32>> = Map::new("bins_reserves_updated");
+pub const BIN_RESERVES_UPDATED_LOG: AppendStore<u64> =
     AppendStore::new("bins_reserves_updated_log"); //?
 
 #[cw_serde]
@@ -67,14 +67,6 @@ pub struct State {
     pub rewards_epoch_id: u64,
     pub base_rewards_bins: Option<u32>,
     pub toggle_distributions_algorithm: bool,
-}
-
-pub fn ephemeral_storage_w(storage: &mut dyn Storage) -> Singleton<NextTokenKey> {
-    singleton(storage, EPHEMERAL_STORAGE_KEY)
-}
-
-pub fn ephemeral_storage_r(storage: &dyn Storage) -> ReadonlySingleton<NextTokenKey> {
-    singleton_read(storage, EPHEMERAL_STORAGE_KEY)
 }
 
 #[cw_serde]

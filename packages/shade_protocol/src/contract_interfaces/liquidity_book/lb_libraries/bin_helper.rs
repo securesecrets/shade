@@ -3,6 +3,8 @@
 //!
 //! This library contains functions to help interaction with bins.
 
+use std::str::FromStr;
+
 use crate::{
     c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128},
     swap::core::TokenType,
@@ -120,12 +122,18 @@ impl BinHelper {
     ) -> Result<(U256, Bytes32), BinError> {
         let (mut x, mut y) = amounts_in.decode();
 
+        // let p: U256 = U256::from_str("340622649287859401926837982039199979667").unwrap();
+
         let user_liquidity = Self::get_liquidity(amounts_in, price)?;
         if total_supply == U256::ZERO || user_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }
 
         let bin_liquidity = Self::get_liquidity(bin_reserves, price)?;
+        // println!("user_liquidity: {:?}", user_liquidity);
+        // println!("bin_liquidity: {:?}", bin_liquidity);
+        // println!("total_supply: {:?}", total_supply);
+
         if bin_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }

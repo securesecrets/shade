@@ -63,7 +63,7 @@ pub fn lb_pair_setup() -> Result<
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -126,7 +126,7 @@ pub fn lb_pair_setup() -> Result<
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -145,7 +145,7 @@ pub fn lb_pair_setup() -> Result<
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -166,7 +166,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     let amount_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_in, amount_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_out, true)?;
     assert_eq!(amount_out_left, Uint128::MIN);
 
     let tokens_to_mint = vec![(SHADE, amount_in)];
@@ -184,7 +184,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_in,
@@ -230,11 +230,11 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -247,7 +247,7 @@ pub fn test_fuzz_swap_in_x() -> Result<(), anyhow::Error> {
         },
     )?;
 
-    let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+    let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -284,7 +284,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     let amount_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_in, amount_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_out, false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_out, false)?;
     assert_eq!(amount_out_left, Uint128::MIN);
 
     let tokens_to_mint = vec![(SILK, amount_in)];
@@ -302,7 +302,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_in,
@@ -347,11 +347,11 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -364,7 +364,7 @@ pub fn test_fuzz_swap_in_y() -> Result<(), anyhow::Error> {
         },
     )?;
 
-    let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+    let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -401,7 +401,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     let amount_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_in, true)?;
 
     assert!(amount_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -421,7 +421,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_in,
@@ -467,11 +467,11 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -484,7 +484,7 @@ pub fn test_fuzz_swap_out_for_x() -> Result<(), anyhow::Error> {
         },
     )?;
 
-    let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+    let (protocol_fee_x, _) = lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -519,7 +519,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     let amount_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_in, false)?;
 
     assert!(amount_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -538,7 +538,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_in,
@@ -584,11 +584,11 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -601,7 +601,7 @@ pub fn test_fuzz_swap_out_for_y() -> Result<(), anyhow::Error> {
         },
     )?;
 
-    let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+    let (_, protocol_fee_y) = lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -639,7 +639,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     // get swap_in for y
     let (amount_x_in, amount_y_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
     // amount_y_out_left == zero since the amount_x_out must be less than total deposit
     assert_eq!(amount_y_out_left, Uint128::zero());
     // mint the tokens
@@ -656,7 +656,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -683,7 +683,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     let amount_x_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     // get swap_in for y
     let (amount_y_in, amount_x_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out, false)?;
     // amount_y_out_left == zero since the amount_x_out must be less than total deposit
     assert_eq!(amount_x_out_left, Uint128::zero());
     // mint the tokens
@@ -702,7 +702,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
@@ -747,12 +747,12 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -766,11 +766,11 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -778,7 +778,7 @@ pub fn test_fuzz_swap_in_x_and_y() -> Result<(), anyhow::Error> {
 
     let lb_pair_balance_y = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -828,7 +828,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     let amount_x_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     // get swap_in for y
     let (amount_y_in, amount_x_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out, false)?;
     // amount_y_out_left == zero since the amount_x_out must be less than total deposit
     assert_eq!(amount_x_out_left, Uint128::zero());
     // mint the tokens
@@ -846,7 +846,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
@@ -874,7 +874,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     // get swap_in for y
     let (amount_x_in, amount_y_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
     // amount_y_out_left == zero since the amount_x_out must be less than total deposit
     assert_eq!(amount_y_out_left, Uint128::zero());
     // mint the tokens
@@ -892,7 +892,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -937,12 +937,12 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -956,11 +956,11 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -968,7 +968,7 @@ pub fn test_fuzz_swap_in_y_and_x() -> Result<(), anyhow::Error> {
 
     let lb_pair_balance_y = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -1017,7 +1017,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     let amount_x_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_y_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_x_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_x_in, true)?;
 
     assert!(amount_y_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1036,7 +1036,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -1063,7 +1063,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     let amount_y_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_x_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_y_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_y_in, false)?;
 
     assert!(amount_x_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1083,7 +1083,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
@@ -1129,11 +1129,11 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1147,11 +1147,11 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -1159,7 +1159,7 @@ pub fn test_fuzz_swap_out_x_and_y() -> Result<(), anyhow::Error> {
 
     let lb_pair_balance_y = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -1205,7 +1205,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     let amount_y_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_x_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_y_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_y_in, false)?;
 
     assert!(amount_x_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1224,7 +1224,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
@@ -1251,7 +1251,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     let amount_x_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_y_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_x_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_x_in, true)?;
 
     assert!(amount_y_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1270,7 +1270,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -1316,11 +1316,11 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
         )?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1334,11 +1334,11 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let lb_pair_balance_x = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SHADE,
         "viewing_key".to_owned(),
@@ -1346,7 +1346,7 @@ pub fn test_fuzz_swap_out_y_and_x() -> Result<(), anyhow::Error> {
 
     let lb_pair_balance_y = snip20::balance_query(
         &app,
-        lb_pair.lb_pair.contract.address.as_str(),
+        lb_pair.info.contract.address.as_str(),
         &deployed_contracts,
         SILK,
         "viewing_key".to_owned(),
@@ -1418,14 +1418,14 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
     let amount_in = Uint128::from(DEPOSIT_AMOUNT);
 
     let (amount_out, _amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_in, true)?;
 
     let tokens_to_mint = vec![(SHADE, amount_in)];
 
@@ -1441,7 +1441,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.scare_crow().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.scare_crow().to_string()),
         token_x,
         amount_in,
@@ -1470,11 +1470,11 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
         .checked_div(Uint256::from(2u128))?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1488,7 +1488,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1521,7 +1521,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1535,7 +1535,7 @@ pub fn test_fee_x_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1603,14 +1603,14 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
     let amount_in = Uint128::from(DEPOSIT_AMOUNT);
 
     let (amount_out, _amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_in, false)?;
 
     let tokens_to_mint = vec![(SILK, amount_in)];
 
@@ -1627,7 +1627,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.scare_crow().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.scare_crow().into_string()),
         token_y,
         amount_in,
@@ -1656,11 +1656,11 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
         .checked_div(Uint256::from(2u128))?;
     }
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1674,7 +1674,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1707,7 +1707,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     lb_pair::remove_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         RemoveLiquidity {
             token_x: token_type_snip20_generator(&token_x)?,
             token_y: token_type_snip20_generator(&token_y)?,
@@ -1721,7 +1721,7 @@ pub fn test_fee_y_2_lp() -> Result<(), anyhow::Error> {
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1767,7 +1767,7 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     let amount_y_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_x_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_y_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_y_in, true)?;
 
     assert!(amount_x_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1787,18 +1787,18 @@ pub fn test_collect_protocol_fees_x_tokens() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_y_in,
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     assert_eq!(protocol_fee_y, 0);
 
-    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1832,7 +1832,7 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     let amount_x_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_y_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_x_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_x_in, false)?;
 
     assert!(amount_y_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1852,18 +1852,18 @@ pub fn test_collect_protocol_fees_y_tokens() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_x_in,
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     assert_eq!(protocol_fee_x, 0);
 
-    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -1897,7 +1897,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     let amount_x_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_y_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_x_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_x_in, true)?;
 
     assert!(amount_y_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1916,7 +1916,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -1943,7 +1943,7 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     let amount_y_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_x_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_y_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_y_in, false)?;
 
     assert!(amount_x_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -1963,19 +1963,19 @@ pub fn test_collect_protocol_fees_both_tokens() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     assert!(protocol_fee_x > 0);
     assert!(protocol_fee_y > 0);
 
-    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let balance_x = snip20::balance_query(
         &app,
@@ -2009,7 +2009,7 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     let amount_x_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_y_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_x_in, true)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_x_in, true)?;
 
     assert!(amount_y_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -2028,26 +2028,26 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
 
     let prev_protocol_fee_x = protocol_fee_x;
 
     assert!(protocol_fee_x > 0);
     assert_eq!(protocol_fee_y, 0);
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
-    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let (reserves_x_after, reserves_y_after) =
-        lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     assert_eq!(reserves_x_after, reserves_x);
     assert_eq!(reserves_y_after, reserves_y);
@@ -2073,14 +2073,14 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(balance_y.u128(), 0);
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
     assert_eq!(protocol_fee_x, 1);
     assert_eq!(protocol_fee_y, 0);
 
     let amount_y_in = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
 
     let (amount_x_out, amount_in_left, _fee) =
-        lb_pair::query_swap_out(&app, &lb_pair.lb_pair.contract, amount_y_in, false)?;
+        lb_pair::query_swap_out(&app, &lb_pair.info.contract, amount_y_in, false)?;
 
     assert!(amount_x_out > Uint128::zero());
     assert_eq!(amount_in_left, Uint128::zero());
@@ -2100,24 +2100,24 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_y,
         amount_y_in,
     )?;
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
     let prev_protocol_fee_y = protocol_fee_y;
     assert_eq!(protocol_fee_x, 1);
     assert!(protocol_fee_y > 0);
 
-    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+    let (reserves_x, reserves_y) = lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
-    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let (reserves_x_after, reserves_y_after) =
-        lb_pair::query_reserves(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_reserves(&app, &lb_pair.info.contract)?;
 
     assert_eq!(reserves_x_after, reserves_x);
     assert_eq!(reserves_y_after, reserves_y);
@@ -2143,12 +2143,12 @@ pub fn test_collect_protocol_fees_after_swap() -> Result<(), anyhow::Error> {
     assert_eq!(balance_y.u128(), protocol_fee_y - 1);
 
     let (protocol_fee_x, protocol_fee_y) =
-        lb_pair::query_protocol_fees(&app, &lb_pair.lb_pair.contract)?;
+        lb_pair::query_protocol_fees(&app, &lb_pair.info.contract)?;
     assert_eq!(protocol_fee_x, 1);
     assert_eq!(protocol_fee_y, 1);
 
     let res =
-        lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract);
+        lb_pair::collect_protocol_fees(&mut app, addrs.admin().as_str(), &lb_pair.info.contract);
 
     assert_eq!(
         res.unwrap_err(),
@@ -2217,7 +2217,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
         let res = lb_pair::set_static_fee_parameters(
             &mut app,
             lb_factory.address.as_str(),
-            &lb_pair.lb_pair.contract,
+            &lb_pair.info.contract,
             base_factor.u128() as u16,
             1,
             1,
@@ -2268,7 +2268,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2332,7 +2332,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -2351,7 +2351,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -2360,7 +2360,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     let amount_y_out = Uint128::from(1 * 1000_000u128); //1000 silk
     // get swap_in for y
     let (amount_x_in, amount_y_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
     assert_eq!(amount_y_out_left, Uint128::zero());
 
     // mint the tokens
@@ -2377,7 +2377,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -2412,7 +2412,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     let amount_x_out = Uint128::from(2 * 1000_000u128); //5_000_000 satoshi
     // get swap_in for y
     let (amount_y_in, amount_x_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out, false)?;
     assert_eq!(amount_x_out_left, Uint128::zero());
 
     // mint the tokens
@@ -2429,7 +2429,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_y_in,
@@ -2458,7 +2458,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(btc_balance, amount_x_out);
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     Ok(())
 }
@@ -2489,7 +2489,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2523,7 +2523,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -2542,7 +2542,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -2551,7 +2551,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     let amount_y_out = Uint128::from(generate_random(1u128, amount_y.u128() - 1));
     // get swap_in for y
     let (amount_x_in, _amount_y_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out, true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
 
     // mint the tokens
     let tokens_to_mint = vec![(SBTC, amount_x_in)];
@@ -2567,7 +2567,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -2577,7 +2577,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     let amount_x_out = Uint128::from(generate_random(1u128, amount_x.u128() - 1)); // get swap_in for y
     let (amount_y_in, _amount_x_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out, false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out, false)?;
 
     // mint the tokens
     let tokens_to_mint = vec![(SILK, amount_y_in)];
@@ -2593,15 +2593,15 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_y_in,
     )?;
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     Ok(())
 }
 
@@ -2631,7 +2631,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2665,7 +2665,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -2684,7 +2684,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
@@ -2693,7 +2693,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     let amount_y_out = amount_y.multiply_ratio(5u128, 10u128).u128();
     // get swap_in for y
     let (amount_x_in, _amount_y_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_y_out.into(), true)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out.into(), true)?;
 
     // mint the tokens
     let tokens_to_mint = vec![(SBTC, amount_x_in)];
@@ -2709,7 +2709,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
@@ -2723,7 +2723,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     let amount_x_out = amount_x.multiply_ratio(5u128, 10u128).u128(); // get swap_in for y
     let (amount_y_in, _amount_x_out_left, _fee) =
-        lb_pair::query_swap_in(&app, &lb_pair.lb_pair.contract, amount_x_out.into(), false)?;
+        lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out.into(), false)?;
 
     // mint the tokens
     let tokens_to_mint = vec![(SILK, amount_y_in)];
@@ -2739,15 +2739,15 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_y_in,
     )?;
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     // println!("Distribution {:?}", _distribution);
     Ok(())
 }
@@ -2777,7 +2777,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2809,7 +2809,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -2828,12 +2828,12 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
     let (_, bin_reserves_y, _) =
-        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+        lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -2841,7 +2841,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     //making a swap for token y hence the bin id moves to the right
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y + 1),
         true,
     )?;
@@ -2860,13 +2860,13 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
 
     assert_eq!(active_id, ACTIVE_ID - 1);
 
@@ -2876,7 +2876,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
 
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y * 5),
         true,
     )?;
@@ -2895,22 +2895,22 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
 
     assert_eq!(active_id, ACTIVE_ID - 1 - 5);
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
     app.set_time(timestamp);
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
 
     Ok(())
 }
@@ -2940,7 +2940,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -2972,7 +2972,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -2991,12 +2991,12 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
     let (_, bin_reserves_y, _) =
-        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+        lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -3004,7 +3004,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     //making a swap for token y hence the bin id moves to the right
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y + 1),
         true,
     )?;
@@ -3023,13 +3023,13 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
     assert_eq!(active_id, ACTIVE_ID - 1);
 
     //making a swap for token y hence the bin id moves to the right
@@ -3038,7 +3038,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
 
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y * 5),
         true,
     )?;
@@ -3057,21 +3057,21 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
     assert_eq!(active_id, ACTIVE_ID - 1 - 5);
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
     app.set_time(timestamp);
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     // println!("_distribution {:?}", _distribution);
     Ok(())
 }
@@ -3101,7 +3101,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         lb_factory::query_all_lb_pairs(&mut app, &lb_factory.clone().into(), token_x, token_y)?;
     let lb_pair = all_pairs[0].clone();
 
-    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.lb_pair.contract)?;
+    let lb_token = lb_pair::query_lb_token(&app, &lb_pair.info.contract)?;
 
     lb_token::set_viewing_key(
         &mut app,
@@ -3133,7 +3133,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
         &mut app,
         &deployed_contracts,
         addrs.batman().into_string(),
-        lb_pair.lb_pair.contract.address.to_string(),
+        lb_pair.info.contract.address.to_string(),
         tokens_to_mint,
     )?;
 
@@ -3152,20 +3152,20 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         liquidity_parameters,
     )?;
 
     lb_pair::reset_rewards_epoch(
         &mut app,
         addrs.admin().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(RewardsDistributionAlgorithm::VolumeBasedRewards),
         None,
     )?;
 
     let (_, bin_reserves_y, _) =
-        lb_pair::query_bin_reserves(&app, &lb_pair.lb_pair.contract, ACTIVE_ID)?;
+        lb_pair::query_bin_reserves(&app, &lb_pair.info.contract, ACTIVE_ID)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 3);
     app.set_time(timestamp);
@@ -3173,7 +3173,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     //making a swap for token y hence the bin id moves to the right
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y + 1),
         true,
     )?;
@@ -3192,19 +3192,19 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
 
     assert_eq!(active_id, ACTIVE_ID - 1);
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
 
     assert!(
@@ -3220,7 +3220,7 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
 
     let (amount_x_in, _amount_y_out_left, _fee) = lb_pair::query_swap_in(
         &app,
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Uint128::from(bin_reserves_y * 5),
         true,
     )?;
@@ -3239,22 +3239,22 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
-        &lb_pair.lb_pair.contract,
+        &lb_pair.info.contract,
         Some(addrs.batman().to_string()),
         token_x,
         amount_x_in,
     )?;
 
-    let active_id = lb_pair::query_active_id(&app, &lb_pair.lb_pair.contract)?;
+    let active_id = lb_pair::query_active_id(&app, &lb_pair.info.contract)?;
 
     assert_eq!(active_id, ACTIVE_ID - 1 - 5);
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 43);
     app.set_time(timestamp);
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.lb_pair.contract)?;
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
-    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.lb_pair.contract, None)?;
+    let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
 
     assert!(

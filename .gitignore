@@ -29,3 +29,4 @@ __pycache__/
 compiled
 logs
 Cargo.lock
+tests/liquidity_orderbook/contract_address_log.json

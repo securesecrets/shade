@@ -20,11 +20,6 @@ pub fn init(
     sender: &str,
     fee_recipient: Addr,
     admin_auth: RawContract,
-    total_reward_bins: u32,
-    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
-    epoch_staking_index: u64,
-    epoch_staking_duration: u64,
-    expiry_staking_duration: Option<u64>,
     recover_staking_funds_receiver: Addr,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
@@ -32,12 +27,7 @@ pub fn init(
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
             admin_auth,
-            total_reward_bins,
-            rewards_distribution_algorithm: rewards_distribution_algorithm
-                .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
-            epoch_staking_index,
-            epoch_staking_duration,
-            expiry_staking_duration,
+
             recover_staking_funds_receiver,
         }
         .test_init(
@@ -119,6 +109,10 @@ pub fn set_pair_preset(
     max_volatility_accumulator: u32,
     is_open: bool,
     total_reward_bins: u32,
+    rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
+    epoch_staking_index: u64,
+    epoch_staking_duration: u64,
+    expiry_staking_duration: Option<u64>,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetPairPreset {
         bin_step,
@@ -131,6 +125,11 @@ pub fn set_pair_preset(
         max_volatility_accumulator,
         is_open,
         total_reward_bins,
+        rewards_distribution_algorithm: rewards_distribution_algorithm
+            .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),
+        epoch_staking_index,
+        epoch_staking_duration,
+        expiry_staking_duration,
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {

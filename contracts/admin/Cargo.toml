@@ -15,8 +15,14 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[example]]
+name = "schema"
+path = "schema/schema.rs"  # Adjust the path according to your project structure
+
+
 [features]
-default = []
+default = ["schema"]
+schema = []
 # for quicker tests, cargo test --lib
 debug-print = ["shade-protocol/debug-print"]
 
@@ -24,6 +30,7 @@ debug-print = ["shade-protocol/debug-print"]
 # Needs to be in contract dependency in order for build to work
 shade-protocol = { path = "../../packages/shade_protocol", default-features = false, features = ["admin_impl"] }
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+cosmwasm-schema = "1.5"
 
 [dev-dependencies]
 rstest = "0.15"

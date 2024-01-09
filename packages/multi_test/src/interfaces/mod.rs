@@ -10,12 +10,12 @@ pub mod adapter;
 pub mod lb_factory;
 #[cfg(feature = "lb_pair")]
 pub mod lb_pair;
+#[cfg(feature = "lb_staking")]
+pub mod lb_staking;
 #[cfg(feature = "lb_token")]
 pub mod lb_token;
 #[cfg(feature = "snip20")]
 pub mod snip20;
-#[cfg(feature = "staking_contract")]
-pub mod staking_contract;
 #[cfg(feature = "treasury")]
 pub mod treasury;
 #[cfg(feature = "treasury_manager")]
