@@ -45,8 +45,8 @@ members = [
   # "contracts/mock/mock_adapter", //TODO: migrate to v1
 
   # Tools
-  "tools/doc2book",
-  "launch"
+  #"tools/doc2book",
+  #"launch"
 ]
 
 exclude = ["packages/network_integration"]
