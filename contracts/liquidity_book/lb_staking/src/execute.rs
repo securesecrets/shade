@@ -149,7 +149,7 @@ pub fn try_stake(
     if staker_liq_snap.liquidity.is_zero() {
         liquidity = staker_liq.amount_delegated;
     } else {
-        liquidity = staker_liq_snap.liquidity; //can panic here
+        liquidity = staker_liq_snap.liquidity;
     }
 
     //**Only adding to liquidity if round has not ended yet
