@@ -24,7 +24,7 @@ use crate::multitests::test_helper::*;
 #[serial]
 pub fn test_setup() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     //query fee recipient
     let fee_recipient = lb_factory::query_fee_recipient(&mut app, &lb_factory.clone().into())?;
 
@@ -41,7 +41,7 @@ pub fn test_setup() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
 
     lb_factory::set_lb_pair_implementation(
@@ -61,7 +61,7 @@ pub fn test_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_revert_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     let lb_pair_stored_code = app.store_code(LbPair::default().contract());
 
     lb_factory::set_lb_pair_implementation(
@@ -94,7 +94,7 @@ pub fn test_revert_set_lb_pair_implementation() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_set_lb_token_implementation() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
     lb_factory::set_lb_token_implementation(
         &mut app,
@@ -113,7 +113,7 @@ pub fn test_set_lb_token_implementation() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     // 3. Create an LBPair.
 
@@ -202,7 +202,7 @@ pub fn test_create_lb_pair() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
@@ -294,7 +294,8 @@ pub fn test_create_lb_pair_factory_unlocked() -> Result<(), anyhow::Error> {
 #[serial]
 fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, admin_contract, query_contract) =
+        setup(None, None)?;
 
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
@@ -322,13 +323,12 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
         ))
     );
 
-    let admin_contract = init_admin_auth(&mut app, &addrs.admin());
-
     let new_lb_factory = lb_factory::init(
         &mut app,
         addrs.admin().as_str(),
         addrs.admin(),
         admin_contract.into(),
+        query_contract.into(), // query_auth should be here,
         addrs.admin(),
     )?;
 
@@ -521,7 +521,7 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
 #[serial]
 fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     let mut bin_step: u16 = generate_random(0, u16::MAX);
     let base_factor: u16 = generate_random(0, u16::MAX);
     let mut filter_period: u16 = generate_random(0, u16::MAX);
@@ -602,7 +602,7 @@ fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
 #[serial]
 fn test_remove_preset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
 
     // Set presets
     lb_factory::set_pair_preset(
@@ -694,7 +694,7 @@ fn test_remove_preset() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
     let shd = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -817,7 +817,7 @@ pub fn test_set_fees_parameters_on_pair() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
     lb_factory::set_fee_recipient(
         &mut app,
         addrs.admin().as_str(),
@@ -858,7 +858,7 @@ pub fn test_set_fee_recipient() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
-    let (mut app, lb_factory, _deployed_contracts) = setup(None, None)?; // Setup
+    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?; // Setup
 
     let min_bin_step = lb_factory::query_min_bin_step(&mut app, &lb_factory.clone().into())?;
     let max_bin_step = u16::MAX;
@@ -962,7 +962,7 @@ pub fn test_fuzz_open_presets() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
-    let (mut app, lb_factory, mut deployed_contracts) = setup(None, None)?; // Setup
+    let (mut app, lb_factory, mut deployed_contracts, _, _) = setup(None, None)?; // Setup
 
     let num_quote_assets_before =
         lb_factory::query_number_of_quote_assets(&mut app, &lb_factory.clone().into())?;
@@ -1065,7 +1065,7 @@ pub fn test_add_quote_asset() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
-    let (mut app, lb_factory, mut deployed_contracts) = setup(None, None)?; // Setup
+    let (mut app, lb_factory, mut deployed_contracts, _, _) = setup(None, None)?; // Setup
 
     //SSCRT and SHD already added as quote asset
     let num_quote_assets_before =
@@ -1156,7 +1156,7 @@ pub fn test_remove_quote_asset() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_force_decay() -> Result<(), anyhow::Error> {
     let addrs = init_addrs(); // Initialize addresses
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?; // Setup
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?; // Setup
 
     let sscrt_info = extract_contract_info(&deployed_contracts, SSCRT)?;
     let sscrt = token_type_snip20_generator(&sscrt_info)?;
@@ -1206,7 +1206,7 @@ pub fn test_force_decay() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     // 3. Create an LBPair.
 

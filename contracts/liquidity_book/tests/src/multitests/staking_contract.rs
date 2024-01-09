@@ -41,7 +41,7 @@ pub fn lb_pair_setup(
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -314,15 +314,10 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
 
     app.set_time(timestamp);
 
+    let query_auth = generate_auth(addrs.batman().to_string());
+
     //Check the liquidity after half the time of duration - duration is 100
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
     for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
         assert_eq!(liq.user_liquidity, bal);
@@ -362,16 +357,10 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     }
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
     //Check the liquidity after half the time of duration - duration is 100
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
     for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
         assert_eq!(liq.user_liquidity, bal);
@@ -421,16 +410,10 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     }
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    //Check the liquidity after full time of duration - duration is 100 liquidity won't change
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
     for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
         assert_eq!(liq.user_liquidity, bal);
@@ -628,16 +611,10 @@ pub fn fuzz_unstake_liquidity_with_time() -> Result<(), anyhow::Error> {
         &lb_staking,
         "viewing_key".to_owned(),
     )?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    //Check the liquidity after full time of duration - duration is 100 liquidity won't change
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
     for (liq, bal) in liquidity.into_iter().zip(balances.clone()).into_iter() {
         assert_approx_eq_abs(
@@ -1239,12 +1216,12 @@ pub fn claim_expired_rewards() -> Result<(), anyhow::Error> {
     )?;
 
     assert!(balance.u128() > 0);
+    let query_auth = generate_auth(addrs.batman().to_string());
 
     let (claim_rewards_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth,
         None,
         None,
         QueryTxnType::ClaimRewards,
@@ -1597,13 +1574,9 @@ fn query_balance() -> Result<(), anyhow::Error> {
         let total: U256 = expected_balance_x * U256::from_str_prefixed(price.to_string().as_str())?
             + (expected_balance_y << 128);
 
-        let balance = lb_staking::query_balance(
-            &app,
-            &lb_staking,
-            addrs.batman(),
-            "viewing_key".to_owned(),
-            id,
-        )?;
+        let query_auth = generate_auth(addrs.batman().to_string());
+
+        let balance = lb_staking::query_balance(&app, &lb_staking, query_auth, id)?;
 
         assert_eq!(total.u256_to_uint256(), balance);
         assert!(balance > Uint256::MIN);
@@ -1658,15 +1631,9 @@ fn query_all_balance() -> Result<(), anyhow::Error> {
         &lb_staking,
         "viewing_key".to_owned(),
     )?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    let balances = lb_staking::query_all_balances(
-        &app,
-        &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
-        None,
-        None,
-    )?;
+    let balances = lb_staking::query_all_balances(&app, &lb_staking, query_auth, None, None)?;
 
     for owner_balance in balances {
         let id = owner_balance.token_id.parse().unwrap();
@@ -1739,11 +1706,12 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
 
     // query all txn history and staking  txn history
 
+    let query_auth = generate_auth(addrs.batman().to_string());
+
     let (all_txns_1, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1755,8 +1723,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (staking_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::Stake,
@@ -1811,8 +1778,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns_2, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1824,8 +1790,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (claim_rewards_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::ClaimRewards,
@@ -1846,8 +1811,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns_3, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1859,8 +1823,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (unstaking_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::UnStake,
@@ -1875,8 +1838,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         Some(10),
         QueryTxnType::All,

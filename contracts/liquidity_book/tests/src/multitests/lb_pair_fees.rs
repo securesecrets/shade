@@ -41,7 +41,7 @@ pub fn lb_pair_setup() -> Result<
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -2184,7 +2184,8 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
 
     let bin_step = Uint128::from(generate_random(1u16, u16::MAX));
-    let (mut app, lb_factory, deployed_contracts) = setup(Some(bin_step.u128() as u16), None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) =
+        setup(Some(bin_step.u128() as u16), None)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
     let token_x = token_type_snip20_generator(&shade)?;
@@ -2241,7 +2242,7 @@ pub fn test_revert_total_fee_exceeded() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let btc = extract_contract_info(&deployed_contracts, SBTC)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
@@ -2466,7 +2467,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) =
+    let (mut app, lb_factory, deployed_contracts, _, _) =
         setup(None, Some(RewardsDistributionAlgorithm::VolumeBasedRewards))?;
 
     let btc = extract_contract_info(&deployed_contracts, SBTC)?;
@@ -2608,7 +2609,7 @@ pub fn test_fuzz_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) =
+    let (mut app, lb_factory, deployed_contracts, _, _) =
         setup(None, Some(RewardsDistributionAlgorithm::VolumeBasedRewards))?;
 
     let btc = extract_contract_info(&deployed_contracts, SBTC)?;
@@ -2755,7 +2756,7 @@ pub fn test_calculate_volume_based_rewards() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
@@ -2918,7 +2919,7 @@ pub fn test_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
@@ -3079,7 +3080,7 @@ pub fn test_fuzz_calculate_time_based_rewards() -> Result<(), anyhow::Error> {
 #[test]
 pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let sscrt = extract_contract_info(&deployed_contracts, SSCRT)?;
     let silk = extract_contract_info(&deployed_contracts, SILK)?;

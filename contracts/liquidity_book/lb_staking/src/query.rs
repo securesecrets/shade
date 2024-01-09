@@ -3,6 +3,7 @@ use std::str::FromStr;
 use shade_protocol::{
     c_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint256},
     liquidity_book::lb_staking::{
+        Auth,
         Liquidity,
         OwnerBalance,
         QueryAnswer,
@@ -18,6 +19,7 @@ use shade_protocol::{
 };
 
 use crate::{
+    contract::authenticate,
     helper::get_txs,
     state::{
         REWARD_TOKENS,
@@ -70,53 +72,9 @@ pub fn query_token_id_balance(deps: Deps, token_id: String) -> StdResult<Binary>
     to_binary(&response)
 }
 
-pub fn viewing_keys_queries(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
-    let (addresses, key) = msg.get_validation_params()?;
-
-    for address in addresses {
-        let result = ViewingKey::check(deps.storage, address.as_str(), key.as_str());
-        if result.is_ok() {
-            return match msg {
-                QueryMsg::Balance {
-                    owner, token_id, ..
-                } => query_balance(deps, &owner, token_id),
-
-                QueryMsg::AllBalances {
-                    owner,
-                    page,
-                    page_size,
-                    ..
-                } => query_all_balances(deps, &owner, page, page_size),
-
-                QueryMsg::Liquidity {
-                    owner,
-                    round_index,
-                    token_ids,
-                    ..
-                } => query_liquidity(deps, &owner, token_ids, round_index),
-
-                QueryMsg::TransactionHistory {
-                    owner,
-                    page,
-                    page_size,
-                    txn_type,
-                    ..
-                } => query_transaction_history(deps, &owner, page, page_size, txn_type),
-
-                QueryMsg::WithPermit { .. } => {
-                    unreachable!("This query type does not require viewing key authentication")
-                }
-                _ => unreachable!("This query type does not require viewing key authentication"),
-            };
-        }
-    }
-
-    to_binary(&QueryAnswer::ViewingKeyError {
-        msg: "Wrong viewing key for this address or viewing key not set".to_string(),
-    })
-}
-
-pub fn query_balance(deps: Deps, owner: &Addr, token_id: String) -> StdResult<Binary> {
+pub fn query_balance(deps: Deps, auth: Auth, token_id: String) -> StdResult<Binary> {
+    let state = STATE.load(deps.storage)?;
+    let owner = &authenticate(deps, auth, state.query_auth)?;
     let id = u32::from_str(&token_id)
         .map_err(|_| StdError::generic_err(format!("token_id {} cannot be parsed", token_id)))?;
 
@@ -132,10 +90,13 @@ pub fn query_balance(deps: Deps, owner: &Addr, token_id: String) -> StdResult<Bi
 
 pub fn query_all_balances(
     deps: Deps,
-    owner: &Addr,
+    auth: Auth,
     page: Option<u32>,
     page_size: Option<u32>,
 ) -> StdResult<Binary> {
+    let state = STATE.load(deps.storage)?;
+    let owner = &authenticate(deps, auth, state.query_auth)?;
+
     let page = page.unwrap_or(0u32);
     let page_size = page_size.unwrap_or(50u32);
     let tree = STAKERS_BIN_TREE.load(deps.storage, owner)?;
@@ -164,11 +125,13 @@ pub fn query_all_balances(
 
 pub fn query_transaction_history(
     deps: Deps,
-    owner: &Addr,
+    auth: Auth,
     page: Option<u32>,
     page_size: Option<u32>,
     query_type: QueryTxnType,
 ) -> StdResult<Binary> {
+    let state = STATE.load(deps.storage)?;
+    let owner = &authenticate(deps, auth, state.query_auth)?;
     let page = page.unwrap_or(0u32);
     let page_size = page_size.unwrap_or(50u32);
 
@@ -180,11 +143,12 @@ pub fn query_transaction_history(
 
 pub fn query_liquidity(
     deps: Deps,
-    owner: &Addr,
+    auth: Auth,
     token_ids: Vec<u32>,
     round_index: Option<u64>,
 ) -> StdResult<Binary> {
     let state = STATE.load(deps.storage)?;
+    let owner = &authenticate(deps, auth, state.query_auth)?;
     let staker_result = STAKERS.load(deps.storage, &owner);
     let mut liquidity_response = Vec::new();
     // Check if staker exists
@@ -277,51 +241,4 @@ pub fn query_liquidity(
     let response = QueryAnswer::Liquidity(liquidity_response);
 
     to_binary(&response)
-}
-
-pub fn permit_queries(
-    deps: Deps,
-    env: Env,
-    permit: Permit,
-    query: QueryWithPermit,
-) -> Result<Binary, StdError> {
-    // Validate permit content
-    let contract_address = env.contract.address;
-    let account_str = validate(
-        deps,
-        PREFIX_REVOKED_PERMITS,
-        &permit,
-        contract_address.to_string(),
-        None,
-    )?;
-    let account = deps.api.addr_validate(&account_str)?;
-
-    let is_owner = permit.check_permission(&TokenPermissions::Owner);
-
-    // Permit validated! We can now execute the query.
-    match query {
-        QueryWithPermit::Balance { owner, token_id } => {
-            if !is_owner {
-                if !permit.check_permission(&TokenPermissions::Balance) {
-                    return Err(StdError::generic_err(format!(
-                        "`Owner` or `Balance` permit required for permit queries, got permissions {:?}",
-                        permit.params.permissions
-                    )));
-                }
-            }
-            query_balance(deps, &owner, token_id)
-        }
-        QueryWithPermit::AllBalances { page, page_size } => {
-            if !is_owner {
-                if !permit.check_permission(&TokenPermissions::Balance) {
-                    return Err(StdError::generic_err(format!(
-                        "`Owner` or `Balance` permit required for permit queries, got permissions {:?}",
-                        permit.params.permissions
-                    )));
-                }
-            }
-            query_all_balances(deps, &account, page, page_size)
-        }
-        _ => unreachable!("This query type does not require viewing key authentication"),
-    }
 }

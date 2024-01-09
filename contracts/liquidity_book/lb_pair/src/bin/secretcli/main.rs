@@ -11,7 +11,10 @@ use shade_protocol::{
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
     liquidity_book::lb_pair::{
-        ContractStatus, InvokeMsg, LiquidityParameters, RemoveLiquidity,
+        ContractStatus,
+        InvokeMsg,
+        LiquidityParameters,
+        RemoveLiquidity,
         RewardsDistributionAlgorithm,
     },
     swap::core::{TokenAmount, TokenType},
@@ -117,6 +120,7 @@ fn main() -> io::Result<()> {
         viewing_key: String::from("viewing_key"),
         entropy: String::from("entropy"),
         protocol_fee_recipient: Addr::funds_recipient(),
+        query_auth: RawContract::example(),
     };
 
     writeln!(file, "## Instantiate Message\n")?;

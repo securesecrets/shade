@@ -1,13 +1,26 @@
 use std::collections::HashMap;
 
-use crate::liquidity_book::lb_libraries::types::ContractInstantiationInfo;
+use crate::{
+    liquidity_book::lb_libraries::types::ContractInstantiationInfo,
+    query_auth::QueryPermit,
+    Contract,
+};
 use cosmwasm_schema::QueryResponses;
-use secret_toolkit::permit::Permit;
 
 use crate::{
     c_std::{
-        to_binary, Addr, Api, Binary, BlockInfo, Coin, ContractInfo, CosmosMsg, StdResult, Uint128,
-        Uint256, WasmMsg,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        BlockInfo,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        StdResult,
+        Uint128,
+        Uint256,
+        WasmMsg,
     },
     cosmwasm_schema::cw_serde,
     snip20::Snip20ReceiveMsg,
@@ -46,7 +59,7 @@ pub struct InstantiateMsg {
     pub amm_pair: String,
     pub lb_token: RawContract,
     pub admin_auth: RawContract,
-    pub query_auth: Option<RawContract>,
+    pub query_auth: RawContract,
     pub epoch_index: u64,
     pub epoch_duration: u64,
     pub expiry_duration: Option<u64>,
@@ -189,8 +202,8 @@ pub struct RewardTokenInfo {
 pub struct State {
     pub lb_token: ContractInfo,
     pub lb_pair: Addr,
-    pub admin_auth: ContractInfo,
-    pub query_auth: Option<ContractInfo>,
+    pub query_auth: Contract,
+    pub admin_auth: Contract,
     pub epoch_index: u64,
     pub epoch_durations: u64,
     pub expiry_durations: Option<u64>,
@@ -304,6 +317,15 @@ impl Default for TotalLiquiditySnapshot {
     }
 }
 
+#[cw_serde]
+pub struct AuthPermit {}
+
+#[cw_serde]
+pub enum Auth {
+    ViewingKey { key: String, address: String },
+    Permit(QueryPermit),
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // Query messages
 /////////////////////////////////////////////////////////////////////////////////
@@ -319,50 +341,25 @@ pub enum QueryMsg {
         id: String,
     },
     Balance {
-        owner: Addr,
-        key: String,
+        auth: Auth,
         token_id: String,
     },
     AllBalances {
-        owner: Addr,
-        key: String,
+        auth: Auth,
         page: Option<u32>,
         page_size: Option<u32>,
     },
     Liquidity {
-        owner: Addr,
-        key: String,
+        auth: Auth,
         round_index: Option<u64>,
         token_ids: Vec<u32>,
     },
     TransactionHistory {
-        owner: Addr,
-        key: String,
+        auth: Auth,
         page: Option<u32>,
         page_size: Option<u32>,
         txn_type: QueryTxnType,
     },
-    WithPermit {
-        permit: Permit,
-        query: QueryWithPermit,
-    },
-}
-
-impl QueryMsg {
-    pub fn get_validation_params(&self) -> StdResult<(Vec<&Addr>, String)> {
-        match self {
-            Self::Balance { owner, key, .. } => Ok((vec![owner], key.clone())),
-            Self::AllBalances { owner, key, .. } => Ok((vec![owner], key.clone())),
-            Self::Liquidity { owner, key, .. } => Ok((vec![owner], key.clone())),
-            Self::TransactionHistory { owner, key, .. } => Ok((vec![owner], key.clone())),
-            Self::ContractInfo {}
-            | Self::IdTotalBalance { .. }
-            | Self::RegisteredTokens { .. }
-            | Self::WithPermit { .. } => {
-                unreachable!("This query type does not require viewing key authentication")
-            }
-        }
-    }
 }
 
 #[cw_serde]
@@ -388,8 +385,8 @@ pub enum QueryAnswer {
     ContractInfo {
         lb_token: ContractInfo,
         lb_pair: Addr,
-        admin_auth: ContractInfo,
-        query_auth: Option<ContractInfo>,
+        admin_auth: Contract,
+        query_auth: Contract,
         epoch_index: u64,
         epoch_durations: u64,
         expiry_durations: Option<u64>,

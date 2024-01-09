@@ -4,14 +4,22 @@ use shade_protocol::{
     contract_interfaces::{liquidity_book::lb_pair, snip20},
     lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
-        BinResponse, ContractStatus, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
-        RewardsDistributionAlgorithm, UpdatedBinsAtHeightResponse,
+        BinResponse,
+        ContractStatus,
+        LiquidityParameters,
+        RemoveLiquidity,
+        RewardsDistribution,
+        RewardsDistributionAlgorithm,
+        UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
     utils::{
         asset::{Contract, RawContract},
-        ExecuteCallback, InstantiateCallback, MultiTestable, Query,
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
     },
 };
 
@@ -31,6 +39,8 @@ pub fn init(
     entropy: String,
     protocol_fee_recipient: Addr,
     admin_auth: RawContract,
+    query_auth: RawContract,
+
     total_reward_bins: u32,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
     epoch_staking_index: u64,
@@ -51,6 +61,7 @@ pub fn init(
             entropy,
             protocol_fee_recipient,
             admin_auth,
+            query_auth,
             total_reward_bins: Some(total_reward_bins),
             rewards_distribution_algorithm: rewards_distribution_algorithm
                 .unwrap_or(RewardsDistributionAlgorithm::TimeBasedRewards),

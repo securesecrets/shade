@@ -4,7 +4,9 @@ use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     liquidity_book::lb_libraries::types::{
-        Bytes32, ContractInstantiationInfo, StaticFeeParameters,
+        Bytes32,
+        ContractInstantiationInfo,
+        StaticFeeParameters,
     },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
@@ -26,6 +28,7 @@ pub struct InstantiateMsg {
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
     pub admin_auth: RawContract,
+    pub query_auth: RawContract,
     pub total_reward_bins: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,

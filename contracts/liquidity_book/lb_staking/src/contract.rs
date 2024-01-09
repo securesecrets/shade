@@ -1,12 +1,33 @@
 use shade_protocol::{
     c_std::{
-        shd_entry_point, Attribute, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+        shd_entry_point,
+        Addr,
+        Attribute,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
     },
     contract_interfaces::liquidity_book::lb_libraries::viewing_keys::{
-        register_receive, set_viewing_key_msg,
+        register_receive,
+        set_viewing_key_msg,
     },
-    liquidity_book::lb_staking::{EpochInfo, ExecuteMsg, InstantiateMsg, QueryMsg, State},
+    liquidity_book::lb_staking::{
+        Auth,
+        AuthPermit,
+        EpochInfo,
+        ExecuteMsg,
+        InstantiateMsg,
+        QueryMsg,
+        State,
+    },
+    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     utils::pad_handle_result,
+    Contract,
     BLOCK_SIZE,
 };
 
@@ -30,11 +51,8 @@ pub fn instantiate(
     let state = State {
         lb_token: msg.lb_token.valid(deps.api)?,
         lb_pair: deps.api.addr_validate(&msg.amm_pair)?,
-        admin_auth: msg.admin_auth.valid(deps.api)?,
-        query_auth: msg
-            .query_auth
-            .map(|auth| auth.valid(deps.api))
-            .transpose()?,
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        query_auth: msg.query_auth.into_valid(deps.api)?,
         epoch_index: msg.epoch_index,
         epoch_durations: msg.epoch_duration,
         expiry_durations: msg.expiry_duration,
@@ -43,18 +61,14 @@ pub fn instantiate(
     };
 
     let now = env.block.time.seconds();
-    EPOCH_STORE.save(
-        deps.storage,
-        state.epoch_index,
-        &EpochInfo {
-            rewards_distribution: None,
-            start_time: now,
-            end_time: now + state.epoch_durations,
-            duration: state.epoch_durations,
-            reward_tokens: None,
-            expired_at: None,
-        },
-    )?;
+    EPOCH_STORE.save(deps.storage, state.epoch_index, &EpochInfo {
+        rewards_distribution: None,
+        start_time: now,
+        end_time: now + state.epoch_durations,
+        duration: state.epoch_durations,
+        reward_tokens: None,
+        expired_at: None,
+    })?;
 
     let messages = vec![
         register_receive(
@@ -144,17 +158,48 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     )
 }
 
+pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<Addr> {
+    match auth {
+        Auth::ViewingKey { key, address } => {
+            let address = deps.api.addr_validate(&address)?;
+            if !authenticate_vk(address.clone(), key, &deps.querier, &query_auth)? {
+                return Err(StdError::generic_err("Invalid Viewing Key"));
+            }
+            Ok(address)
+        }
+        Auth::Permit(permit) => {
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, query_auth)?;
+            if res.revoked {
+                return Err(StdError::generic_err("Permit Revoked"));
+            }
+            Ok(res.sender)
+        }
+    }
+}
+
 #[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => query_contract_info(deps),
         QueryMsg::RegisteredTokens {} => query_registered_tokens(deps),
         QueryMsg::IdTotalBalance { id } => query_token_id_balance(deps, id),
-        QueryMsg::Balance { .. }
-        | QueryMsg::AllBalances { .. }
-        | QueryMsg::Liquidity { .. }
-        | QueryMsg::TransactionHistory { .. } => viewing_keys_queries(deps, msg),
-
-        QueryMsg::WithPermit { permit, query } => permit_queries(deps, env, permit, query),
+        QueryMsg::Balance { auth, token_id } => query_balance(deps, auth, token_id),
+        QueryMsg::AllBalances {
+            auth,
+            page,
+            page_size,
+        } => query_all_balances(deps, auth, page, page_size),
+        QueryMsg::Liquidity {
+            auth,
+            round_index,
+            token_ids,
+        } => query_liquidity(deps, auth, token_ids, round_index),
+        QueryMsg::TransactionHistory {
+            auth,
+            page,
+            page_size,
+            txn_type,
+        } => query_transaction_history(deps, auth, page, page_size, txn_type),
     }
 }

@@ -71,6 +71,7 @@ pub fn instantiate(
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         staking_contract_implementation: ContractInstantiationInfo::default(),
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
+        query_auth: msg.query_auth.into_valid(deps.api)?,
     };
 
     STATE.save(deps.storage, &config)?;
@@ -424,6 +425,7 @@ fn try_create_lb_pair(
                 entropy,
                 protocol_fee_recipient: config.fee_recipient,
                 admin_auth: config.admin_auth.into(),
+                query_auth: config.query_auth.into(),
                 total_reward_bins: Some(staking_preset.total_reward_bins),
                 rewards_distribution_algorithm: staking_preset.rewards_distribution_algorithm,
                 staking_contract_implementation: config.staking_contract_implementation,

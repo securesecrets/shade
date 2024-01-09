@@ -9,15 +9,37 @@ use shade_protocol::{
     self,
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary, to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, DepsMut, Env,
-        MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256,
+        from_binary,
+        to_binary,
+        Addr,
+        BankMsg,
+        Binary,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+        Uint256,
     },
     lb_libraries::types::TreeUint24,
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            EpochInfo, ExecuteAnswer, InvokeMsg, Reward, RewardToken, RewardTokenInfo,
-            StakerLiquidity, StakerLiquiditySnapshot, State,
+            EpochInfo,
+            ExecuteAnswer,
+            InvokeMsg,
+            Reward,
+            RewardToken,
+            RewardTokenInfo,
+            StakerLiquidity,
+            StakerLiquiditySnapshot,
+            State,
         },
         lb_token::TransferAction,
     },
@@ -31,18 +53,36 @@ use shade_protocol::{
     },
     swap::core::TokenType,
     utils::{asset::RawContract, pad_handle_result, ExecuteCallback},
-    Contract, BLOCK_SIZE,
+    Contract,
+    BLOCK_SIZE,
 };
 
 use crate::{
     helper::{
-        assert_lb_pair, check_if_claimable, finding_total_liquidity, finding_user_liquidity,
-        register_reward_tokens, require_lb_token, staker_init_checker, TokenKey,
+        assert_lb_pair,
+        check_if_claimable,
+        finding_total_liquidity,
+        finding_user_liquidity,
+        register_reward_tokens,
+        require_lb_token,
+        staker_init_checker,
+        TokenKey,
     },
     state::{
-        store_claim_rewards, store_stake, store_unstake, EPOCH_STORE, EXPIRED_AT_LOGGER,
-        EXPIRED_AT_LOGGER_MAP, REWARD_TOKENS, REWARD_TOKEN_INFO, STAKERS, STAKERS_BIN_TREE,
-        STAKERS_LIQUIDITY, STAKERS_LIQUIDITY_SNAPSHOT, STATE, TOTAL_LIQUIDITY,
+        store_claim_rewards,
+        store_stake,
+        store_unstake,
+        EPOCH_STORE,
+        EXPIRED_AT_LOGGER,
+        EXPIRED_AT_LOGGER_MAP,
+        REWARD_TOKENS,
+        REWARD_TOKEN_INFO,
+        STAKERS,
+        STAKERS_BIN_TREE,
+        STAKERS_LIQUIDITY,
+        STAKERS_LIQUIDITY_SNAPSHOT,
+        STATE,
+        TOTAL_LIQUIDITY,
         TOTAL_LIQUIDITY_SNAPSHOT,
     },
 };
@@ -240,7 +280,9 @@ pub fn try_stake(
     )?;
     STATE.save(deps.storage, &state)?;
 
-    Ok(Response::default())
+    Ok(Response::default()
+        .add_attribute("amount".to_string(), amount)
+        .add_attribute("token_id".to_string(), token_id.to_string()))
 }
 
 pub fn try_unstake(
@@ -262,6 +304,13 @@ pub fn try_unstake(
         .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
 
     staker_init_checker(deps.storage, &state, &info.sender)?;
+
+    // Serialize the vectors into JSON strings
+    let token_ids_json = serde_json::to_string(&token_ids)
+        .map_err(|e| StdError::generic_err(format!("Failed to serialize token_ids: {}", e)))?;
+
+    let amounts_json = serde_json::to_string(&amounts)
+        .map_err(|e| StdError::generic_err(format!("Failed to serialize amounts: {}", e)))?;
 
     let mut actions: Vec<TransferAction> = Vec::new();
 
@@ -348,7 +397,10 @@ pub fn try_unstake(
     )?;
     STATE.save(deps.storage, &state)?;
 
-    Ok(Response::default().add_message(message))
+    Ok(Response::default()
+        .add_message(message)
+        .add_attribute("amounts".to_string(), amounts_json)
+        .add_attribute("token_ids".to_string(), token_ids_json))
 }
 
 fn update_staker_and_total_liquidity(
@@ -509,18 +561,14 @@ pub fn try_end_epoch(
     EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
 
     let now = env.block.time.seconds();
-    EPOCH_STORE.save(
-        deps.storage,
-        state.epoch_index.add(1),
-        &EpochInfo {
-            rewards_distribution: None,
-            start_time: now,
-            end_time: now + state.epoch_durations,
-            duration: state.epoch_durations,
-            reward_tokens: None,
-            expired_at: None,
-        },
-    )?;
+    EPOCH_STORE.save(deps.storage, state.epoch_index.add(1), &EpochInfo {
+        rewards_distribution: None,
+        start_time: now,
+        end_time: now + state.epoch_durations,
+        duration: state.epoch_durations,
+        reward_tokens: None,
+        expired_at: None,
+    })?;
 
     state.epoch_index.add_assign(1);
 
@@ -748,11 +796,11 @@ pub fn try_update_config(
     )?;
 
     if let Some(ad_auth) = admin_auth {
-        state.admin_auth = ad_auth.valid(deps.api)?;
+        state.admin_auth = ad_auth.into_valid(deps.api)?;
     }
 
     if let Some(q_auth) = query_auth {
-        state.query_auth = Some(q_auth.valid(deps.api)?);
+        state.query_auth = q_auth.into_valid(deps.api)?;
     }
 
     if let Some(ep_duration) = epoch_duration {
@@ -792,13 +840,10 @@ pub fn try_add_rewards(
             return Err(StdError::generic_err("Cannot start emitting in the past"));
         }
 
-        let decimals = token_info(
-            &deps.querier,
-            &Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
-        )?
+        let decimals = token_info(&deps.querier, &Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
+        })?
         .decimals;
 
         let total_epoches = end.sub(start) + 1;

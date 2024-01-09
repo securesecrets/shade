@@ -13,6 +13,7 @@ pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin_auth: RawContract,
+    pub query_auth: RawContract,
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
     pub recover_staking_funds_receiver: Addr,
