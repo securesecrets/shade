@@ -66,7 +66,24 @@ pub const REPLY_IDS: Map<u64, Token> = Map::new("reply_ids");
 /// The next unused reply ID
 pub const NEXT_REPLY_ID: Item<u64> = Item::new("next_reply_id");
 /// A map of market asset -> market contract address
-pub const MARKETS: Map<&Token, MarketState> = Map::new("market");
+pub const MARKETS: Item<Vec<(Token, MarketState)>> = Item::new("market");
 /// A set of "entered markets" for each account, as in markets in which the account is
 /// actively participating.
 pub const ENTERED_MARKETS: Map<&Addr, BTreeSet<Addr>> = Map::new("entered_martkets");
+
+pub fn insert_or_update(vec: &mut Vec<(Token, MarketState)>, token: Token, state: MarketState) {
+    match vec.iter_mut().find(|(t, _)| *t == token) {
+        Some((_, market_state)) => *market_state = state,
+        None => vec.push((token, state)),
+    }
+}
+
+pub fn find_market_state<'a>(
+    market_data: &'a Vec<(Token, MarketState)>,
+    token: &Token,
+) -> Option<&'a MarketState> {
+    market_data
+        .iter()
+        .find(|&(t, _)| t == token)
+        .map(|(_, state)| state)
+}

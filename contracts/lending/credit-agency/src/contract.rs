@@ -14,7 +14,7 @@ use shade_protocol::{
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{Config, CONFIG, NEXT_REPLY_ID},
+    state::{find_market_state, insert_or_update, Config, CONFIG, NEXT_REPLY_ID},
 };
 use lending_utils::token::Token;
 
@@ -138,7 +138,8 @@ mod execute {
             return Err(ContractError::MarketCfgCollateralFailure {});
         }
 
-        if let Some(state) = MARKETS.may_load(deps.storage, &market_token)? {
+        let mut markets = MARKETS.load(deps.storage)?;
+        if let Some(state) = find_market_state(&markets, &market_token) {
             use MarketState::*;
 
             let err = match state {
@@ -147,7 +148,12 @@ mod execute {
             };
             return Err(err);
         }
-        MARKETS.save(deps.storage, &market_token, &MarketState::Instantiating)?;
+        insert_or_update(
+            &mut markets,
+            market_token.clone(),
+            MarketState::Instantiating,
+        );
+        MARKETS.save(deps.storage, &markets)?;
 
         let reply_id =
             NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
@@ -290,9 +296,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     let res = match msg {
         Configuration {} => to_binary(&CONFIG.load(deps.storage)?)?,
         Market { market_token } => to_binary(&query::market(deps, &market_token)?)?,
-        ListMarkets { start_after, limit } => {
-            to_binary(&query::list_markets(deps, start_after, limit)?)?
-        }
+        ListMarkets { limit } => to_binary(&query::list_markets(deps, limit)?)?,
         TotalCreditLine { account } => to_binary(&query::total_credit_line(deps, account)?)?,
         ListEnteredMarkets {
             account,
@@ -328,11 +332,12 @@ mod query {
     /// Returns the address of the market associated to the given `market_token`. Returns an error
     /// if the market does not exists or is being created.
     pub fn market(deps: Deps, market_token: &Token) -> Result<MarketResponse, ContractError> {
-        let state = MARKETS
-            .may_load(deps.storage, market_token)?
+        let markets = MARKETS.load(deps.storage)?;
+        let state = find_market_state(&markets, market_token)
             .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
 
         let addr = state
+            .clone()
             .to_contract()
             .ok_or_else(|| ContractError::MarketCreating(market_token.denom()))?;
 
@@ -348,15 +353,14 @@ mod query {
 
     pub fn list_markets(
         deps: Deps,
-        start_after: Option<Token>,
         limit: Option<u32>,
     ) -> Result<ListMarketsResponse, ContractError> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-        todo!();
-        // let start = start_after.as_ref().map(Bound::exclusive);
 
+        todo!()
         // let markets: StdResult<Vec<_>> = MARKETS
-        //     .range(deps.storage, start, None, Order::Ascending)
+        //     .load(deps.storage, start, None, Order::Ascending)
+        //     .into_iter()
         //     .map(|m| {
         //         let (market_token, market) = m?;
 

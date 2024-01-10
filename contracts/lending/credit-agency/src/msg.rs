@@ -135,10 +135,7 @@ pub enum QueryMsg {
     /// List all base assets and the addresses of markets handling them.
     /// Pagination by base asset
     #[returns(ListMarketsResponse)]
-    ListMarkets {
-        start_after: Option<Token>,
-        limit: Option<u32>,
-    },
+    ListMarkets { limit: Option<u32> },
     /// Queries all markets for credit lines for particular account
     /// and returns sum of all of them.
     #[returns(lending_utils::credit_line::CreditLineResponse)]
