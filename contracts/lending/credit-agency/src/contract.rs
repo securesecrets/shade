@@ -259,8 +259,8 @@ mod execute {
 
         // transfer claimed amount as reward
         let msg = to_binary(&lend_market::msg::ExecuteMsg::TransferFrom {
-            source: account,
-            destination: sender,
+            source: account.clone(),
+            destination: sender.clone(),
             // transfer repaid amount represented as amount of common tokens, which is
             // calculated into collateral_denom's amount later in the market
             amount: coin_times_price_rate(&coins, &price_response)?.amount,
