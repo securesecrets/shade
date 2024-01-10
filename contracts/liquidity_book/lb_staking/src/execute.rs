@@ -1045,6 +1045,8 @@ pub fn try_recover_funds(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let state = STATE.load(deps.storage)?;
+    let mut total_amount = Uint128::zero();
+
     validate_admin(
         &deps.querier,
         AdminPermissions::StakingAdmin,
@@ -1052,8 +1054,44 @@ pub fn try_recover_funds(
         &state.admin_auth.into(),
     )?;
 
-    //Check if amount asked is greater than amount staked by the admin
+    for reward_token in REWARD_TOKENS.load(deps.storage)? {
+        let rewards_token_info;
+        if let Ok(r_t_i) = REWARD_TOKEN_INFO.load(deps.storage, &reward_token.address) {
+            rewards_token_info = r_t_i;
+        } else {
+            continue;
+        };
 
+        for reward_token in rewards_token_info {
+            if token.address() == reward_token.token.address {
+                total_amount += reward_token.total_rewards;
+            }
+        }
+    }
+
+    let token_balance = token.query_balance(
+        deps.as_ref(),
+        _env.contract.address.into_string(),
+        SHADE_STAKING_VIEWING_KEY.to_string(),
+    )?;
+
+    let extra_amount = if let Ok(extra) = token_balance.checked_sub(total_amount) {
+        extra
+    } else {
+        // Handle underflow in subtracting from total_liquidity
+        return Err(StdError::generic_err(
+            "Underflow in subtracting from recover_funds",
+        ));
+    };
+
+    if extra_amount < amount {
+        return Err(StdError::generic_err(format!(
+            "Trying to recover already staked funds. Extra funds {:?}, amount {:?}",
+            extra_amount, amount,
+        )));
+    }
+
+    //Check if amount asked is greater than amount staked by the admin
     let send_msg = match token {
         TokenType::CustomToken {
             contract_addr,

@@ -1604,7 +1604,7 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
 
     //current round index -> 20
 
-    lb_staking::recover_funds(&mut app, addrs.admin().as_str(), &lb_staking)?;
+    lb_staking::recover_expired_rewards(&mut app, addrs.admin().as_str(), &lb_staking)?;
 
     let balance = snip20::balance_query(
         &app,
@@ -1616,6 +1616,184 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
 
     assert_eq!(balance.u128(), 0u128);
 
+    Ok(())
+}
+
+#[test]
+pub fn recover_funds() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let x_bins = 5;
+    let y_bins = 5;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    let mut ids = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances.push(balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    lb_staking::update_config(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        None,
+        None,
+        Some(200),
+        Some(5),
+    )?;
+
+    //Added the reward tokens for next 10 rounds
+    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
+    let shade_token_type = token_type_snip20_generator(&shade_token)?;
+    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let reward_tokens = vec![shade_token, silk_token];
+
+    lb_staking::register_reward_tokens(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        reward_tokens.clone(),
+    )?;
+
+    //mint tokens
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        Uint128::from(200u128),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        Uint128::from(100u128),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 10,
+        })?),
+    )?;
+    snip20::transfer_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        Uint128::from(100u128),
+    )?;
+
+    let balance = snip20::balance_query(
+        &app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "SHADE_STAKING_VIEWING_KEY".to_string(),
+    )?;
+
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    let prev_admin_balance = snip20::balance_query(
+        &app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(balance.u128(), 200u128);
+
+    lb_staking::recover_funds(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        shade_token_type.clone(),
+        Uint128::from(100u128),
+        addrs.admin().to_string(),
+    )?;
+
+    let contract_balance = snip20::balance_query(
+        &app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "SHADE_STAKING_VIEWING_KEY".to_string(),
+    )?;
+
+    assert_eq!(contract_balance.u128(), 100u128);
+
+    let admin_balance = snip20::balance_query(
+        &app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(admin_balance.u128(), prev_admin_balance.u128() + 100);
+
+    let err = lb_staking::recover_funds(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        shade_token_type,
+        Uint128::from(100u128),
+        addrs.admin().to_string(),
+    );
+
+    assert_eq!(
+        err.unwrap_err(),
+        StdError::generic_err(
+            "Generic error: Trying to recover already staked funds. Extra funds Uint128(0), amount Uint128(100)",
+        )
+    );
     Ok(())
 }
 

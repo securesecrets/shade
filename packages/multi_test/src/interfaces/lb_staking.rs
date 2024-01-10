@@ -16,6 +16,7 @@ use shade_protocol::{
         },
     },
     multi_test::App,
+    swap::core::TokenType,
     utils::{asset::RawContract, ExecuteCallback, Query},
     Contract,
 };
@@ -67,13 +68,38 @@ pub fn claim_rewards(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> 
     }
 }
 
-pub fn recover_funds(app: &mut App, sender: &str, lb_staking: &ContractInfo) -> StdResult<()> {
+pub fn recover_expired_rewards(
+    app: &mut App,
+    sender: &str,
+    lb_staking: &ContractInfo,
+) -> StdResult<()> {
     match (ExecuteMsg::RecoverExpiredFunds {}.test_exec(
         lb_staking,
         app,
         Addr::unchecked(sender),
         &[],
     )) {
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
+    }
+}
+
+pub fn recover_funds(
+    app: &mut App,
+    sender: &str,
+    lb_staking: &ContractInfo,
+    token: TokenType,
+    amount: Uint128,
+    to: String,
+) -> StdResult<()> {
+    match (ExecuteMsg::RecoverFunds {
+        token,
+        amount,
+        to,
+        msg: None,
+    }
+    .test_exec(lb_staking, app, Addr::unchecked(sender), &[]))
+    {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
