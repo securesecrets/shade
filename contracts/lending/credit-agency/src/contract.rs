@@ -357,25 +357,22 @@ mod query {
     ) -> Result<ListMarketsResponse, ContractError> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
 
-        todo!()
-        // let markets: StdResult<Vec<_>> = MARKETS
-        //     .load(deps.storage, start, None, Order::Ascending)
-        //     .into_iter()
-        //     .map(|m| {
-        //         let (market_token, market) = m?;
+        let markets: StdResult<Vec<_>> = MARKETS
+            .load(deps.storage)?
+            .into_iter()
+            .map(|(market_token, market_state)| {
+                let result = market_state.to_contract().map(|contract| MarketResponse {
+                    market_token,
+                    market: contract,
+                });
 
-        //         let result = market.to_addr().map(|addr| MarketResponse {
-        //             market_token,
-        //             market: addr,
-        //         });
+                Ok(result)
+            })
+            .filter_map(|m| m.transpose())
+            .take(limit)
+            .collect();
 
-        //         Ok(result)
-        //     })
-        //     .filter_map(|m| m.transpose())
-        //     .take(limit)
-        //     .collect();
-
-        // Ok(ListMarketsResponse { markets: markets? })
+        Ok(ListMarketsResponse { markets: markets? })
     }
 
     /// Handler for `QueryMsg::TotalCreditLine`
