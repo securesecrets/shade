@@ -71,6 +71,7 @@ pub enum ExecuteMsg {
     ClaimRewards {},
     EndEpoch {
         rewards_distribution: RewardsDistribution,
+        epoch_index: u64,
     },
     Unstake {
         token_ids: Vec<u32>,
@@ -92,16 +93,6 @@ pub enum ExecuteMsg {
         msg: Option<Binary>,
     },
     RecoverExpiredFunds {},
-    CreateViewingKey {
-        entropy: String,
-    },
-    SetViewingKey {
-        key: String,
-    },
-    /// disallow the use of a query permit
-    RevokePermit {
-        permit_name: String,
-    },
 }
 
 #[cw_serde]
@@ -336,6 +327,10 @@ pub enum Auth {
 pub enum QueryMsg {
     /// returns public information of the SNIP1155 contract
     ContractInfo {},
+    EpochInfo {
+        index: Option<u64>,
+    },
+
     RegisteredTokens {},
     IdTotalBalance {
         id: String,
@@ -343,6 +338,9 @@ pub enum QueryMsg {
     Balance {
         auth: Auth,
         token_id: String,
+    },
+    StakerInfo {
+        auth: Auth,
     },
     AllBalances {
         auth: Auth,
@@ -391,11 +389,26 @@ pub enum QueryAnswer {
         epoch_durations: u64,
         expiry_durations: Option<u64>,
     },
+    EpochInfo {
+        rewards_distribution: Option<RewardsDistribution>,
+        reward_tokens: Option<Vec<RewardTokenInfo>>,
+        start_time: u64,
+        end_time: u64,
+        duration: u64,
+        expired_at: Option<u64>,
+    },
+
     RegisteredTokens(Vec<ContractInfo>),
     IdTotalBalance {
         amount: Uint256,
     },
     /// returns balance of a specific token_id. Owners can give permission to other addresses to query their balance
+    ///
+    StakerInfo {
+        starting_round: Option<u64>,
+        total_rewards_earned: Uint128,
+        last_claim_rewards_round: Option<u64>,
+    },
     Balance {
         amount: Uint256,
     },

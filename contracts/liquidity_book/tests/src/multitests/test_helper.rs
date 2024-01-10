@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use cosmwasm_std::to_binary;
 use rand::Rng;
 use shade_multi_test::{
@@ -125,6 +127,8 @@ pub fn init_addrs() -> Addrs {
 }
 
 pub fn assert_approx_eq_rel(a: Uint256, b: Uint256, delta: Uint256, error_message: &str) {
+    let delta = delta.multiply_ratio(Uint256::from(10_u128.pow(14)), Uint256::from(1u128));
+
     let abs_delta = (a).abs_diff(b);
     let percent_delta = abs_delta.multiply_ratio(Uint256::from(10_u128.pow(18)), b);
 
@@ -437,6 +441,11 @@ pub fn roll_blockchain(app: &mut App, blocks: Option<u64>) {
         chain_id: "chain_id".to_string(),
         random: None,
     });
+}
+
+pub fn roll_time(app: &mut App, time: Option<u64>) {
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + time.unwrap_or(1));
+    app.set_time(timestamp);
 }
 
 pub fn extract_contract_info(

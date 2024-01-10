@@ -115,6 +115,7 @@ fn main() -> io::Result<()> {
     let claim_rewards = ExecuteMsg::ClaimRewards {};
     let end_epoch = ExecuteMsg::EndEpoch {
         rewards_distribution: RewardsDistribution::example(),
+        epoch_index: 0,
     };
     let unstake = ExecuteMsg::Unstake {
         token_ids: vec![1, 2, 3],
@@ -134,15 +135,6 @@ fn main() -> io::Result<()> {
         expiry_duration: Some(200),
     };
     let recover_funds = ExecuteMsg::RecoverExpiredFunds {};
-    let create_viewing_key = ExecuteMsg::CreateViewingKey {
-        entropy: "random_entropy".to_string(),
-    };
-    let set_viewing_key = ExecuteMsg::SetViewingKey {
-        key: "viewing_key".to_string(),
-    };
-    let revoke_permit = ExecuteMsg::RevokePermit {
-        permit_name: "permit_name".to_string(),
-    };
 
     // Responses for ExecuteMsg
     // Assuming that the execute messages do not return a response directly
@@ -172,9 +164,6 @@ fn main() -> io::Result<()> {
         register_reward_tokens,
         update_config,
         recover_funds,
-        create_viewing_key,
-        set_viewing_key,
-        revoke_permit
     );
 
     // Note: Add a similar macro for InvokeMsg if needed

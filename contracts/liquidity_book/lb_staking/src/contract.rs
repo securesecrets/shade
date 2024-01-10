@@ -138,15 +138,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ExecuteMsg::RecoverExpiredFunds { .. } => try_recover_expired_funds(deps, env, info),
             ExecuteMsg::EndEpoch {
                 rewards_distribution,
-            } => try_end_epoch(deps, env, info, rewards_distribution),
+                epoch_index,
+            } => try_end_epoch(deps, env, info, epoch_index, rewards_distribution),
 
-            ExecuteMsg::CreateViewingKey { entropy } => {
-                try_create_viewing_key(deps, env, info, entropy)
-            }
-            ExecuteMsg::SetViewingKey { key } => try_set_viewing_key(deps, env, info, key),
-            ExecuteMsg::RevokePermit { permit_name } => {
-                try_revoke_permit(deps, env, info, permit_name)
-            }
             ExecuteMsg::RecoverFunds {
                 token,
                 amount,
@@ -182,9 +176,12 @@ pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<A
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => query_contract_info(deps),
+        QueryMsg::EpochInfo { index } => query_epoch_info(deps, index),
+
         QueryMsg::RegisteredTokens {} => query_registered_tokens(deps),
         QueryMsg::IdTotalBalance { id } => query_token_id_balance(deps, id),
         QueryMsg::Balance { auth, token_id } => query_balance(deps, auth, token_id),
+        QueryMsg::StakerInfo { auth } => query_staker_info(deps, auth),
         QueryMsg::AllBalances {
             auth,
             page,

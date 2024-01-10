@@ -4,6 +4,7 @@ use shade_protocol::{
     c_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint256},
     liquidity_book::lb_staking::{
         Auth,
+        EpochInfo,
         Liquidity,
         OwnerBalance,
         QueryAnswer,
@@ -22,6 +23,7 @@ use crate::{
     contract::authenticate,
     helper::get_txs,
     state::{
+        EPOCH_STORE,
         REWARD_TOKENS,
         STAKERS,
         STAKERS_BIN_TREE,
@@ -51,6 +53,23 @@ pub fn query_contract_info(deps: Deps) -> StdResult<Binary> {
     to_binary(&response)
 }
 
+pub fn query_epoch_info(deps: Deps, epoch_index: Option<u64>) -> StdResult<Binary> {
+    let state: State = STATE.load(deps.storage)?;
+    let epoch_info: EpochInfo =
+        EPOCH_STORE.load(deps.storage, epoch_index.unwrap_or(state.epoch_index))?;
+
+    let response = QueryAnswer::EpochInfo {
+        rewards_distribution: epoch_info.rewards_distribution,
+        reward_tokens: epoch_info.reward_tokens,
+        start_time: epoch_info.start_time,
+        end_time: epoch_info.end_time,
+        duration: epoch_info.duration,
+        expired_at: epoch_info.expired_at,
+    };
+
+    to_binary(&response)
+}
+
 pub fn query_registered_tokens(deps: Deps) -> StdResult<Binary> {
     let reg_tokens = REWARD_TOKENS.load(deps.storage)?;
 
@@ -68,6 +87,19 @@ pub fn query_token_id_balance(deps: Deps, token_id: String) -> StdResult<Binary>
 
     let response = QueryAnswer::IdTotalBalance {
         amount: liquidity.amount_delegated,
+    };
+    to_binary(&response)
+}
+
+pub fn query_staker_info(deps: Deps, auth: Auth) -> StdResult<Binary> {
+    let state: State = STATE.load(deps.storage)?;
+    let owner = &authenticate(deps, auth, state.query_auth)?;
+    let staker_info = STAKERS.load(deps.storage, owner)?;
+
+    let response = QueryAnswer::StakerInfo {
+        starting_round: staker_info.starting_round,
+        total_rewards_earned: staker_info.total_rewards_earned,
+        last_claim_rewards_round: staker_info.last_claim_rewards_round,
     };
     to_binary(&response)
 }
@@ -192,7 +224,7 @@ pub fn query_liquidity(
                 if let Some(r_i) = round_index.unwrap_or(state.epoch_index).checked_sub(1) {
                     r_i
                 } else {
-                    return Err(StdError::generic_err("Under-flow sub error"));
+                    return Err(StdError::generic_err("Under-flow sub error query_liq 1"));
                 };
 
             let start = if staker.last_claim_rewards_round.is_some() {
@@ -224,7 +256,7 @@ pub fn query_liquidity(
                     finding_liq_round = if let Some(f_liq) = finding_liq_round.checked_sub(1) {
                         f_liq
                     } else {
-                        return Err(StdError::generic_err("Under-flow sub error"));
+                        return Err(StdError::generic_err("Under-flow sub error query_liq 2"));
                     }
                 }
             }

@@ -65,7 +65,7 @@ pub struct State {
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
     pub last_swap_timestamp: Timestamp,
-    pub rewards_epoch_id: u64,
+    pub rewards_epoch_index: u64,
     pub base_rewards_bins: Option<u32>,
     pub toggle_distributions_algorithm: bool,
 }

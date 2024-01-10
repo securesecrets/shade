@@ -3203,6 +3203,8 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
 
     assert_eq!(active_id, ACTIVE_ID - 1);
 
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;

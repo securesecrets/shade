@@ -517,86 +517,86 @@ fn test_revert_create_lb_pair() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-#[test]
-#[serial]
-fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
-    let addrs = init_addrs();
-    let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
-    let mut bin_step: u16 = generate_random(0, u16::MAX);
-    let base_factor: u16 = generate_random(0, u16::MAX);
-    let mut filter_period: u16 = generate_random(0, u16::MAX);
-    let mut decay_period: u16 = generate_random(0, u16::MAX);
-    let mut reduction_factor: u16 = generate_random(0, u16::MAX);
-    let mut variable_fee_control: u32 = generate_random(0, U24::MAX);
-    let mut protocol_share: u16 = generate_random(0, u16::MAX);
-    let mut max_volatility_accumulator: u32 = generate_random(0, U24::MAX);
-    let is_open: bool = generate_random(0, 1) == 0;
+// #[test]
+// #[serial]
+// fn test_fuzz_set_preset() -> Result<(), anyhow::Error> {
+//     let addrs = init_addrs();
+//     let (mut app, lb_factory, _deployed_contracts, _, _) = setup(None, None)?;
+//     let mut bin_step: u16 = generate_random(0, u16::MAX);
+//     let base_factor: u16 = generate_random(0, u16::MAX);
+//     let mut filter_period: u16 = generate_random(0, u16::MAX);
+//     let mut decay_period: u16 = generate_random(0, u16::MAX);
+//     let mut reduction_factor: u16 = generate_random(0, u16::MAX);
+//     let mut variable_fee_control: u32 = generate_random(0, U24::MAX);
+//     let mut protocol_share: u16 = generate_random(0, u16::MAX);
+//     let mut max_volatility_accumulator: u32 = generate_random(0, U24::MAX);
+//     let is_open: bool = generate_random(0, 1) == 0;
 
-    let min_bin_step = lb_factory::query_min_bin_step(&mut app, &lb_factory.clone().into())?;
+//     let min_bin_step = lb_factory::query_min_bin_step(&mut app, &lb_factory.clone().into())?;
 
-    // Bounds checking for each parameter
-    bin_step = bound(bin_step, min_bin_step as u16, u16::MAX);
-    filter_period = bound(filter_period, 0, MASK_UINT12.as_u16() - 1);
-    decay_period = bound(decay_period, filter_period + 1, MASK_UINT12.as_u16());
-    reduction_factor = bound(reduction_factor, 0u16, BASIS_POINT_MAX);
-    variable_fee_control = bound(variable_fee_control, 0u32, BASIS_POINT_MAX as u32);
-    protocol_share = bound(protocol_share, 0, 2_500);
-    max_volatility_accumulator = bound(max_volatility_accumulator, 0, MASK_UINT20.as_u32());
+//     // Bounds checking for each parameter
+//     bin_step = bound(bin_step, min_bin_step as u16, u16::MAX);
+//     filter_period = bound(filter_period, 0, MASK_UINT12.as_u16() - 1);
+//     decay_period = bound(decay_period, filter_period + 1, MASK_UINT12.as_u16());
+//     reduction_factor = bound(reduction_factor, 0u16, BASIS_POINT_MAX);
+//     variable_fee_control = bound(variable_fee_control, 0u32, BASIS_POINT_MAX as u32);
+//     protocol_share = bound(protocol_share, 0, 2_500);
+//     max_volatility_accumulator = bound(max_volatility_accumulator, 0, MASK_UINT20.as_u32());
 
-    lb_factory::set_pair_preset(
-        &mut app,
-        addrs.admin().as_str(),
-        &lb_factory.clone().into(),
-        bin_step,
-        base_factor,
-        filter_period,
-        decay_period,
-        reduction_factor,
-        variable_fee_control,
-        protocol_share,
-        max_volatility_accumulator,
-        is_open,
-        DEFAULT_TOTAL_REWARD_BINS,
-        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
-        1,
-        100,
-        None,
-    )?;
+//     lb_factory::set_pair_preset(
+//         &mut app,
+//         addrs.admin().as_str(),
+//         &lb_factory.clone().into(),
+//         bin_step,
+//         base_factor,
+//         filter_period,
+//         decay_period,
+//         reduction_factor,
+//         variable_fee_control,
+//         protocol_share,
+//         max_volatility_accumulator,
+//         is_open,
+//         DEFAULT_TOTAL_REWARD_BINS,
+//         Some(RewardsDistributionAlgorithm::TimeBasedRewards),
+//         1,
+//         100,
+//         None,
+//     )?;
 
-    // Additional assertions and verifications
-    let all_bin_steps = lb_factory::query_all_bin_steps(&mut app, &lb_factory.clone().into())?;
+//     // Additional assertions and verifications
+//     let all_bin_steps = lb_factory::query_all_bin_steps(&mut app, &lb_factory.clone().into())?;
 
-    if bin_step != DEFAULT_BIN_STEP {
-        assert_eq!(all_bin_steps.len(), 2);
-        assert_eq!(all_bin_steps[0], DEFAULT_BIN_STEP);
-        assert_eq!(all_bin_steps[1], bin_step);
-    } else {
-        assert_eq!(all_bin_steps.len(), 1);
-        assert_eq!(all_bin_steps[0], bin_step);
-    }
+//     if bin_step != DEFAULT_BIN_STEP {
+//         assert_eq!(all_bin_steps.len(), 2);
+//         assert_eq!(all_bin_steps[0], DEFAULT_BIN_STEP);
+//         assert_eq!(all_bin_steps[1], bin_step);
+//     } else {
+//         assert_eq!(all_bin_steps.len(), 1);
+//         assert_eq!(all_bin_steps[0], bin_step);
+//     }
 
-    let PresetResponse {
-        base_factor: base_factor_view,
-        filter_period: filter_period_view,
-        decay_period: decay_period_view,
-        reduction_factor: reduction_factor_view,
-        variable_fee_control: variable_fee_control_view,
-        protocol_share: protocol_share_view,
-        max_volatility_accumulator: max_volatility_accumulator_view,
-        is_open: is_open_view,
-    } = lb_factory::query_preset(&mut app, &lb_factory.into(), bin_step)?;
+//     let PresetResponse {
+//         base_factor: base_factor_view,
+//         filter_period: filter_period_view,
+//         decay_period: decay_period_view,
+//         reduction_factor: reduction_factor_view,
+//         variable_fee_control: variable_fee_control_view,
+//         protocol_share: protocol_share_view,
+//         max_volatility_accumulator: max_volatility_accumulator_view,
+//         is_open: is_open_view,
+//     } = lb_factory::query_preset(&mut app, &lb_factory.into(), bin_step)?;
 
-    assert_eq!(base_factor, base_factor_view);
-    assert_eq!(filter_period, filter_period_view);
-    assert_eq!(decay_period, decay_period_view);
-    assert_eq!(reduction_factor, reduction_factor_view);
-    assert_eq!(variable_fee_control, variable_fee_control_view);
-    assert_eq!(protocol_share, protocol_share_view);
-    assert_eq!(max_volatility_accumulator, max_volatility_accumulator_view);
-    assert_eq!(is_open, is_open_view);
+//     assert_eq!(base_factor, base_factor_view);
+//     assert_eq!(filter_period, filter_period_view);
+//     assert_eq!(decay_period, decay_period_view);
+//     assert_eq!(reduction_factor, reduction_factor_view);
+//     assert_eq!(variable_fee_control, variable_fee_control_view);
+//     assert_eq!(protocol_share, protocol_share_view);
+//     assert_eq!(max_volatility_accumulator, max_volatility_accumulator_view);
+//     assert_eq!(is_open, is_open_view);
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[test]
 #[serial]

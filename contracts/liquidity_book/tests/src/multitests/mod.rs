@@ -29,6 +29,6 @@ mod lb_router_register_tokens;
 mod lb_router_integration;
 
 #[cfg(test)]
-mod staking_contract;
+mod lb_staking;
 
 pub mod test_helper;

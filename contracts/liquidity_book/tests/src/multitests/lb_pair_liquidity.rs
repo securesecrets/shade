@@ -179,8 +179,6 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
         nb_bins_y,
     )?;
 
-    println!("liquidity parameters {:?}", liquidity_parameters);
-
     lb_pair::add_liquidity(
         &mut app,
         addrs.batman().as_str(),

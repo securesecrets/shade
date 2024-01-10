@@ -1,37 +1,24 @@
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, StdError, StdResult, Uint256},
+    c_std::{Addr, ContractInfo, StdError, StdResult, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
-    liquidity_book::lb_staking::{
-        Auth,
-        ExecuteMsg,
-        Liquidity,
-        OwnerBalance,
-        QueryAnswer,
-        QueryMsg,
-        QueryTxnType,
-        Tx,
+    liquidity_book::{
+        lb_pair::RewardsDistribution,
+        lb_staking::{
+            Auth,
+            ExecuteMsg,
+            Liquidity,
+            OwnerBalance,
+            QueryAnswer,
+            QueryMsg,
+            QueryTxnType,
+            RewardTokenInfo,
+            Tx,
+        },
     },
     multi_test::App,
     utils::{asset::RawContract, ExecuteCallback, Query},
     Contract,
 };
-
-pub fn set_viewing_key(
-    app: &mut App,
-    sender: &str,
-    lb_staking: &ContractInfo,
-    key: String,
-) -> StdResult<()> {
-    match (ExecuteMsg::SetViewingKey { key }.test_exec(
-        lb_staking,
-        app,
-        Addr::unchecked(sender),
-        &[],
-    )) {
-        Ok(_) => Ok(()),
-        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
-    }
-}
 
 pub fn unstaking(
     app: &mut App,
@@ -243,4 +230,65 @@ pub struct Config {
     pub epoch_index: u64,
     pub epoch_durations: u64,
     pub expiry_durations: Option<u64>,
+}
+
+pub fn query_epoch_info(
+    app: &App,
+    lb_staking: &ContractInfo,
+    index: Option<u64>,
+) -> StdResult<EpochInfo> {
+    let res: QueryAnswer = QueryMsg::EpochInfo { index }.test_query(&lb_staking, app)?;
+    match res {
+        QueryAnswer::EpochInfo {
+            rewards_distribution,
+            reward_tokens,
+            start_time,
+            end_time,
+            duration,
+            expired_at,
+        } => Ok(EpochInfo {
+            rewards_distribution,
+            reward_tokens,
+            start_time,
+            end_time,
+            duration,
+            expired_at,
+        }),
+        _ => Err(StdError::generic_err("Query failed")),
+    }
+}
+
+pub struct EpochInfo {
+    pub rewards_distribution: Option<RewardsDistribution>,
+    pub reward_tokens: Option<Vec<RewardTokenInfo>>,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub duration: u64,
+    pub expired_at: Option<u64>,
+}
+
+pub fn query_staker_info(
+    app: &App,
+    lb_staking: &ContractInfo,
+    auth: Auth,
+) -> StdResult<StakerInfo> {
+    let res: QueryAnswer = QueryMsg::StakerInfo { auth }.test_query(&lb_staking, app)?;
+    match res {
+        QueryAnswer::StakerInfo {
+            starting_round,
+            total_rewards_earned,
+            last_claim_rewards_round,
+        } => Ok(StakerInfo {
+            starting_round,
+            total_rewards_earned,
+            last_claim_rewards_round,
+        }),
+        _ => Err(StdError::generic_err("Query failed")),
+    }
+}
+
+pub struct StakerInfo {
+    pub starting_round: Option<u64>,
+    pub total_rewards_earned: Uint128,
+    pub last_claim_rewards_round: Option<u64>,
 }

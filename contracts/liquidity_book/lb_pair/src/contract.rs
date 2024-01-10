@@ -186,7 +186,7 @@ pub fn instantiate(
         protocol_fees_recipient: msg.protocol_fee_recipient,
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
         last_swap_timestamp: env.block.time,
-        rewards_epoch_id: 0,
+        rewards_epoch_index: 1,
         base_rewards_bins: msg.total_reward_bins,
         toggle_distributions_algorithm: false,
         //TODO: set using the setter function and instantiate msg
@@ -201,8 +201,8 @@ pub fn instantiate(
     ORACLE.save(deps.storage, &oracle)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
-    FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
-    REWARDS_STATS_STORE.save(deps.storage, 0, &RewardStats {
+    FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_index, &tree)?;
+    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_index, &RewardStats {
         cumm_value: Uint256::zero(),
         cumm_value_mul_bin_id: Uint256::zero(),
         rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
@@ -213,7 +213,7 @@ pub fn instantiate(
         staking_contract: msg.staking_contract_implementation,
         token_x_symbol,
         token_y_symbol,
-        epoch_index: msg.epoch_staking_index,
+        epoch_index: state.rewards_epoch_index,
         epoch_duration: msg.epoch_staking_duration,
         expiry_duration: msg.expiry_staking_duration,
         recover_funds_receiver: msg.recover_staking_funds_receiver,
@@ -424,7 +424,7 @@ fn try_swap(
 
     let mut params = state.pair_parameters;
     let bin_step = state.bin_step;
-    let mut reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
+    let mut reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_index)?;
 
     let mut active_id = params.get_active_id();
 
@@ -486,7 +486,7 @@ fn try_swap(
                     reward_stats.cumm_value += swap_value_uint256;
                     FEE_MAP_TREE.update(
                         deps.storage,
-                        state.rewards_epoch_id,
+                        state.rewards_epoch_index,
                         |fee_tree| -> Result<_> {
                             Ok(match fee_tree {
                                 Some(mut t) => {
@@ -544,7 +544,7 @@ fn try_swap(
         }
     }
 
-    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &reward_stats)?;
+    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_index, &reward_stats)?;
 
     if amounts_out == [0u8; 32] {
         return Err(Error::InsufficientAmountOut);
@@ -1047,7 +1047,6 @@ fn _update_bin(
         price,
         total_supply,
     )?;
-    println!("id {:?}, shares: {:?}", id, shares);
 
     let amounts_in_to_bin = amounts_in;
 
@@ -1537,7 +1536,7 @@ fn try_calculate_rewards_distribution(
     // loop through the fee_logs uptil a maximum iterations
     // save the results in temporary storage
 
-    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
+    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_index)?;
     let distribution = if !reward_stats.cumm_value.is_zero() {
         match reward_stats.rewards_distribution_algorithm {
             RewardsDistributionAlgorithm::TimeBasedRewards => {
@@ -1555,8 +1554,20 @@ fn try_calculate_rewards_distribution(
         calculate_default_distribution(rewards_bins, state.pair_parameters.get_active_id())?
     };
 
-    REWARDS_DISTRIBUTION.save(deps.storage, state.rewards_epoch_id, &distribution)?;
-    state.rewards_epoch_id += 1;
+    REWARDS_DISTRIBUTION.save(deps.storage, state.rewards_epoch_index, &distribution)?;
+
+    //distribution algorithm
+    let res = lb_staking::ExecuteMsg::EndEpoch {
+        rewards_distribution: distribution,
+        epoch_index: state.rewards_epoch_index,
+    }
+    .to_cosmos_msg(
+        state.staking_contract.code_hash.to_owned(),
+        state.staking_contract.address.to_string(),
+        None,
+    )?;
+
+    state.rewards_epoch_index += 1;
     let toggle = state.toggle_distributions_algorithm;
     state.last_swap_timestamp = env.block.time;
     state.toggle_distributions_algorithm = false;
@@ -1574,7 +1585,7 @@ fn try_calculate_rewards_distribution(
         };
     }
 
-    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &RewardStats {
+    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_index, &RewardStats {
         cumm_value: Uint256::zero(),
         cumm_value_mul_bin_id: Uint256::zero(),
         rewards_distribution_algorithm: distribution_algorithm.clone(),
@@ -1582,18 +1593,8 @@ fn try_calculate_rewards_distribution(
 
     if distribution_algorithm == &RewardsDistributionAlgorithm::VolumeBasedRewards {
         let tree: TreeUint24 = TreeUint24::new();
-        FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_id, &tree)?;
+        FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_index, &tree)?;
     }
-
-    //distribution algorithm
-    let res = lb_staking::ExecuteMsg::EndEpoch {
-        rewards_distribution: distribution,
-    }
-    .to_cosmos_msg(
-        state.staking_contract.code_hash,
-        state.staking_contract.address.to_string(),
-        None,
-    )?;
 
     Ok(Response::default().add_message(res))
 }
@@ -1652,7 +1653,7 @@ fn calculate_volume_based_rewards_distribution(
     let mut ids: Vec<u32> = Vec::new();
     let mut weightages: Vec<u16> = Vec::new();
 
-    let fee_tree: TreeUint24 = FEE_MAP_TREE.load(deps.storage, state.rewards_epoch_id)?;
+    let fee_tree: TreeUint24 = FEE_MAP_TREE.load(deps.storage, state.rewards_epoch_index)?;
     let mut id: u32 = 0;
     let basis_point_max: Uint256 = Uint256::from(BASIS_POINT_MAX);
     let mut total_weight = 0;
@@ -1705,7 +1706,7 @@ fn try_reset_rewards_config(
         info.sender.to_string(),
         &state.admin_auth,
     )?;
-    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_id)?;
+    let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_index)?;
 
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
     match rewards_distribution_algorithm {
@@ -2760,7 +2761,7 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
 fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binary> {
     let (epoch_id) = match epoch_id {
         Some(id) => id,
-        None => STATE.load(deps.storage)?.rewards_epoch_id - 1,
+        None => STATE.load(deps.storage)?.rewards_epoch_index - 1,
     };
 
     to_binary(&RewardsDistributionResponse {
