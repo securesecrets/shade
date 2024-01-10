@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use std::{convert::From, ops::Mul, cmp::Ordering};
+use std::{cmp::Ordering, convert::From, ops::Mul};
 
 use crate::token::Token;
 
