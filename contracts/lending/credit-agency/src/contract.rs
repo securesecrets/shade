@@ -319,6 +319,7 @@ mod query {
     use lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
+        Authentication
     };
 
     use crate::{
@@ -382,6 +383,7 @@ mod query {
     pub fn total_credit_line(
         deps: Deps,
         account: String,
+        authentication: Authentication,
     ) -> Result<CreditLineResponse, ContractError> {
         let common_token = CONFIG.load(deps.storage)?.common_token;
         let markets = ENTERED_MARKETS.load(deps.storage)?;
@@ -390,23 +392,23 @@ mod query {
                 .cloned()
                 .unwrap_or_default();
 
-        todo!()
-        // let total_credit_line: CreditLineValues = markets
-        //     .into_iter()
-        //     .map(|market| {
-        //         let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
-        //             market,
-        //             &MarketQueryMsg::CreditLine {
-        //                 account: deps.api.addr_validate(&account)?,
-        //             },
-        //         )?;
-        //         let price_response = price_response.validate(&common_token.clone())?;
-        //         Ok(price_response)
-        //     })
-        //     .collect::<Result<Vec<CreditLineValues>, ContractError>>()?
-        //     .iter()
-        //     .sum();
-        // Ok(total_credit_line.make_response(common_token))
+        let total_credit_line: CreditLineValues = entered_markets
+            .into_iter()
+            .map(|market| {
+                let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
+                    market,
+                    &MarketQueryMsg::CreditLine {
+                        account: deps.api.addr_validate(&account)?,
+                        authentication: authentication.clone(),
+                    },
+                )?;
+                let price_response = price_response.validate(&common_token.clone())?;
+                Ok(price_response)
+            })
+            .collect::<Result<Vec<CreditLineValues>, ContractError>>()?
+            .iter()
+            .sum();
+        Ok(total_credit_line.make_response(common_token))
     }
 
     pub fn entered_markets(

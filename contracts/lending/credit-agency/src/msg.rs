@@ -5,7 +5,7 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-use lending_utils::{coin::Coin, interest::Interest, token::Token};
+use lending_utils::{coin::Coin, interest::Interest, token::Token, Authentication};
 
 #[cw_serde]
 pub struct InstantiateMsg {

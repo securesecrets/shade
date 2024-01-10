@@ -168,24 +168,6 @@ impl<'a> PrimaryKey<'a> for &Token {
     }
 }
 
-// use std::cmp::Ordering;
-//
-// impl PartialOrd for Token {
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//         match (self, other) {
-//             (Token::Cw20(a), Token::Cw20(b)) => Some(a.address.cmp(&b.address)),
-//             // Handle other Token variants here if there are any
-//             _ => None, // Or some default ordering for different types of Tokens
-//         }
-//     }
-// }
-//
-// impl Ord for Token {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         self.partial_cmp(other).unwrap() // Or handle the None case differently if needed
-//     }
-// }
-//
 // use std::hash::{Hash, Hasher};
 //
 // impl Hash for Token {
