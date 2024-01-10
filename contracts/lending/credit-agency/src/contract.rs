@@ -328,19 +328,18 @@ mod query {
     /// Returns the address of the market associated to the given `market_token`. Returns an error
     /// if the market does not exists or is being created.
     pub fn market(deps: Deps, market_token: &Token) -> Result<MarketResponse, ContractError> {
-        todo!();
-        // let state = MARKETS
-        //     .may_load(deps.storage, market_token)?
-        //     .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
+        let state = MARKETS
+            .may_load(deps.storage, market_token)?
+            .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
 
-        // let addr = state
-        //     .to_addr()
-        //     .ok_or_else(|| ContractError::MarketCreating(market_token.denom()))?;
+        let addr = state
+            .to_contract()
+            .ok_or_else(|| ContractError::MarketCreating(market_token.denom()))?;
 
-        // Ok(MarketResponse {
-        //     market_token: market_token.to_owned(),
-        //     market: addr,
-        // })
+        Ok(MarketResponse {
+            market_token: market_token.to_owned(),
+            market: addr,
+        })
     }
 
     // settings for pagination

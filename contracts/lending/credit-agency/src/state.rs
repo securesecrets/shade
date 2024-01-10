@@ -47,14 +47,14 @@ pub enum MarketState {
     /// Represents a maket that is being created.
     Instantiating,
     /// Represents a market that has already been created.
-    Ready(Addr),
+    Ready(Contract),
 }
 
 impl MarketState {
-    pub fn to_addr(self) -> Option<Addr> {
+    pub fn to_contract(self) -> Option<Contract> {
         match self {
             MarketState::Instantiating => None,
-            MarketState::Ready(addr) => Some(addr),
+            MarketState::Ready(contract) => Some(contract),
         }
     }
 }
