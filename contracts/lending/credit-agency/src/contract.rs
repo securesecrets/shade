@@ -14,7 +14,10 @@ use shade_protocol::{
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{find_value, insert_or_update, Config, MarketState, CONFIG, NEXT_REPLY_ID},
+    state::{
+        find_value, insert_or_update, Config, MarketState, CONFIG, MARKET_VIEWING_KEY,
+        NEXT_REPLY_ID,
+    },
 };
 use lending_utils::token::Token;
 
@@ -25,7 +28,7 @@ use std::collections::BTreeSet;
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -34,6 +37,16 @@ pub fn instantiate(
     } else {
         return Err(ContractError::InvalidEstimateMultiplier {});
     };
+
+    // let random = env.block.random.unwrap();
+    // let mut rng = Prng::new(random.as_slice(), job_id.as_bytes());
+    MARKET_VIEWING_KEY.save(
+        deps.storage,
+        &ViewingKey {
+            key: "".to_owned(),
+            address: env.contract.address.to_string(),
+        },
+    )?;
 
     // TODO: should we validate Tokens?
     let cfg = Config {
@@ -96,6 +109,36 @@ pub fn execute(
         }
     }
 }
+
+// pub fn receive_snip20_message(
+//     deps: DepsMut,
+//     env: Env,
+//     info: MessageInfo,
+//     msg: Snip20ReceiveMsg,
+// ) -> Result<Response, ContractError> {
+//     use ReceiveMsg::*;
+//     // TODO: Result instead of unwrap
+//     match from_binary(&msg.msg.unwrap())? {
+//         Liquidate  => {
+//             let config = CONFIG.load(deps.storage)?;
+//             if config.ctoken_contract != info.sender {
+//                 return Err(ContractError::Unauthorized {});
+//             };
+//             execute::liquidate(
+//                 deps,
+//                 env,
+//                 msg.sender,
+//                 lending_utils::coin::Coin {
+//                     denom: Token::Cw20(
+//                         Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
+//                     ),
+//                     amount: msg.amount,
+//                 },
+//             )
+//         }
+//     }
+//
+// }
 
 mod execute {
     use super::*;
@@ -241,9 +284,11 @@ mod execute {
         collateral_denom: Token,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
+        let token_viewing_key = TOKEN_VIEWING_KEY.load(deps.storage)?;
+        let authentication = Authentication::ViewingKey(token_viewing_key);
 
         // assert that given account actually has more debt then credit
-        let total_credit_line = query::total_credit_line(deps.as_ref(), account.to_string())?;
+        let total_credit_line = query::total_credit_line(deps.as_ref(), account.to_string(), authentication)?;
         let total_credit_line = total_credit_line.validate(&cfg.common_token)?;
         if total_credit_line.debt <= total_credit_line.credit_line {
             return Err(ContractError::LiquidationNotAllowed {});
@@ -319,7 +364,7 @@ mod query {
     use lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
-        Authentication
+        Authentication,
     };
 
     use crate::{
