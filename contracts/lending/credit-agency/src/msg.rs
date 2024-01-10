@@ -17,8 +17,12 @@ pub struct InstantiateMsg {
     pub lend_market_id: u64,
     /// The code hash of the lend-market contract
     pub lend_market_code_hash: String,
+    /// Market's viewing key used to query market state
+    pub market_viewing_key: String,
     /// The CodeId of the lending-token contract
-    pub lend_token_id: u64,
+    pub ctoken_token_id: u64,
+    /// The code hash of the lending-token contract
+    pub ctoken_code_hash: String,
     /// The code hash of the lend-token contract
     pub lend_token_code_hash: String,
     /// Token which would be distributed as reward token to isotonic token holders.
@@ -114,7 +118,7 @@ pub struct MarketConfig {
     /// Ratio of how much tokens can be borrowed for one unit, 0 <= x < 1
     pub collateral_ratio: Decimal,
     /// Address of contract to query for price
-    pub price_oracle: String,
+    pub price_oracle: Contract,
     /// Defines the portion of borrower interest that is converted into reserves (0 <= x <= 1)
     pub reserve_factor: Decimal,
 }

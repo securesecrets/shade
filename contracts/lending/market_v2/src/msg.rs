@@ -19,7 +19,7 @@ pub struct InstantiateMsg {
     /// Decimals for cToken
     pub decimals: u8,
     /// CodeId used to create cToken
-    pub token_id: u64,
+    pub ctoken_id: u64,
     /// Market token
     pub market_token: Token,
     /// An optional cap on total number of tokens deposited into the market

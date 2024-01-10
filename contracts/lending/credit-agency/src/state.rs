@@ -18,9 +18,9 @@ pub struct Config {
     /// The code hash of the lend-market contract
     pub lend_market_code_hash: String,
     /// The CodeId of the lend-token contract
-    pub lend_token_id: u64,
+    pub ctoken_token_id: u64,
     /// The code hash of the lend-token contract
-    pub lend_token_code_hash: String,
+    pub ctoken_code_hash: String,
     /// Token which would be distributed as reward token to wynd_lend token holders.
     /// This is `distributed_token` in the market contract.
     pub reward_token: Token,
@@ -37,6 +37,8 @@ pub struct Config {
     pub default_estimate_multiplier: Decimal,
     /// Address of auth query contract
     pub query_auth: Contract,
+    /// Market's viewing key used to query market state
+    pub market_viewing_key: String,
 }
 
 #[cw_serde]

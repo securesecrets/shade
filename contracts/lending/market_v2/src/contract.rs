@@ -42,7 +42,7 @@ pub fn instantiate(
     };
     let ctoken_instantiate = WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.token_id,
+        code_id: msg.ctoken_id,
         msg: to_binary(&ctoken_msg)?,
         funds: vec![],
         label: format!("ctoken_contract_{}", env.contract.address),
@@ -57,7 +57,7 @@ pub fn instantiate(
         name: msg.name,
         symbol: msg.symbol,
         decimals: msg.decimals,
-        token_id: msg.token_id,
+        token_id: msg.ctoken_id,
         market_token: msg.market_token,
         market_cap: msg.market_cap,
         rates: msg.interest_rate.validate()?,

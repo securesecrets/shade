@@ -5,7 +5,7 @@ use shade_protocol::{
         to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
         StdResult, Uint128,
     },
-    contract_interfaces::snip20::Snip20ReceiveMsg,
+    contract_interfaces::snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20,
     utils::{asset::Contract, Query},
@@ -39,8 +39,9 @@ pub fn instantiate(
         query_auth: msg.query_auth,
         lend_market_id: msg.lend_market_id,
         lend_market_code_hash: msg.lend_market_code_hash,
-        lend_token_id: msg.lend_token_id,
-        lend_token_code_hash: msg.lend_token_code_hash,
+        market_viewing_key: msg.market_viewing_key,
+        ctoken_token_id: msg.ctoken_token_id,
+        ctoken_code_hash: msg.ctoken_code_hash,
         reward_token: msg.reward_token,
         common_token: msg.common_token,
         liquidation_price: msg.liquidation_price,
@@ -158,7 +159,9 @@ mod execute {
             symbol: market_cfg.symbol,
             decimals: market_cfg.decimals,
             distributed_token: cfg.reward_token,
-            token_id: cfg.lend_token_id,
+            ctoken_id: cfg.ctoken_token_id,
+            ctoken_code_hash: cfg.ctoken_code_hash,
+            viewing_key: cfg.market_viewing_key,
 
             market_token: market_token.clone(),
             market_cap: market_cfg.market_cap,
@@ -171,6 +174,7 @@ mod execute {
             gov_contract: cfg.gov_contract.address.to_string(),
             borrow_limit_ratio: cfg.borrow_limit_ratio,
             query_auth: cfg.query_auth,
+            credit_agency_code_hash: env.contract.code_hash.clone(),
         };
         let market_instantiate = WasmMsg::Instantiate {
             admin: Some(env.contract.address.to_string()),
@@ -188,20 +192,23 @@ mod execute {
     }
 
     fn create_repay_to_submessage(
-        coin: utils::coin::Coin,
+        coin: lending_utils::coin::Coin,
         debt_market: Contract,
         account: Addr,
     ) -> StdResult<SubMsg> {
         match coin.denom {
             Token::Cw20(contract_info) => {
-                let repay_to_msg: Binary = to_binary(&MarketRepayTo {
+                let repay_to_msg: Binary = to_binary(&lend_market::msg::ReceiveMsg::RepayTo {
                     account: account.to_string(),
                 })?;
 
-                let msg = to_binary(&Cw20ExecuteMsg::Send {
-                    contract: debt_market.address.to_string(),
+                let msg = to_binary(&Snip20ExecuteMsg::Send {
+                    recipient: debt_market.address.to_string(),
+                    recipient_code_hash: debt_market.code_hash.into(),
                     amount: coin.amount,
                     msg: Some(repay_to_msg),
+                    memo: None,
+                    padding: None,
                 })
                 .unwrap();
 
@@ -235,24 +242,20 @@ mod execute {
         }
 
         // Count debt and repay it. This requires that market returns error if repaying more then balance.
-        let debt_market = query::market(deps.as_ref(), &coins.denom)?;
+        let debt_market = query::market(deps.as_ref(), &coins.denom)?.market;
 
-        let repay_to_msg = create_repay_to_submessage(
-            coins.clone(),
-            debt_market.market.clone(),
-            debt_market.code_hash.clone(),
-            account.clone(),
-        )?;
+        let repay_to_msg =
+            create_repay_to_submessage(coins.clone(), debt_market.clone(), account.clone())?;
 
         // find price rate of collateral denom
         let price_response: PriceRate = deps.querier.query_wasm_smart(
-            debt_market.code_hash.into(),
-            debt_market.address.into(),
+            debt_market.code_hash,
+            debt_market.address.to_string(),
             &MarketQueryMsg::PriceMarketLocalPerCommon {},
         )?;
 
         // find market with wanted collateral_denom
-        let collateral_market = query::market(deps.as_ref(), &collateral_denom)?;
+        let collateral_market = query::market(deps.as_ref(), &collateral_denom)?.market;
 
         // transfer claimed amount as reward
         let msg = to_binary(&lend_market::msg::ExecuteMsg::TransferFrom {
