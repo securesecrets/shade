@@ -14,10 +14,13 @@ pub struct InstantiateMsg {
     /// Address of query auth contract
     pub query_auth: Contract,
     /// The CodeId of the lending-market contract
-    pub lending_market_id: u64,
-    pub lending_market_code_hash: String,
+    pub lend_market_id: u64,
+    /// The code hash of the lend-market contract
+    pub lend_market_code_hash: String,
     /// The CodeId of the lending-token contract
-    pub lending_token_id: u64,
+    pub lend_token_id: u64,
+    /// The code hash of the lend-token contract
+    pub lend_token_code_hash: String,
     /// Token which would be distributed as reward token to isotonic token holders.
     /// This is `distributed_token` in the market contract.
     pub reward_token: Token,
@@ -157,8 +160,7 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct MarketResponse {
     pub market_token: Token,
-    pub market: Addr,
-    pub code_hash: String,
+    pub market: Contract,
 }
 
 #[cw_serde]

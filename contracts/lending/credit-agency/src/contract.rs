@@ -8,7 +8,7 @@ use shade_protocol::{
     contract_interfaces::snip20::Snip20ReceiveMsg,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20,
-    utils::Query,
+    utils::{asset::Contract, Query},
 };
 
 use crate::{
@@ -37,9 +37,10 @@ pub fn instantiate(
     let cfg = Config {
         gov_contract: msg.gov_contract,
         query_auth: msg.query_auth,
-        lend_market_id: msg.lending_market_id,
-        lend_market_code_hash: msg.lending_market_code_hash,
-        lend_token_id: msg.lending_token_id,
+        lend_market_id: msg.lend_market_id,
+        lend_market_code_hash: msg.lend_market_code_hash,
+        lend_token_id: msg.lend_token_id,
+        lend_token_code_hash: msg.lend_token_code_hash,
         reward_token: msg.reward_token,
         common_token: msg.common_token,
         liquidation_price: msg.liquidation_price,
@@ -187,29 +188,26 @@ mod execute {
     }
 
     fn create_repay_to_submessage(
-        coin: lending_utils::coin::Coin,
-        debt_market: Addr,
-        debt_market_code_hash: String,
+        coin: utils::coin::Coin,
+        debt_market: Contract,
         account: Addr,
     ) -> StdResult<SubMsg> {
         match coin.denom {
-            Token::Cw20(_) => {
+            Token::Cw20(contract_info) => {
                 let repay_to_msg: Binary = to_binary(&MarketRepayTo {
                     account: account.to_string(),
                 })?;
 
-                let msg = to_binary(&snip20::ExecuteMsg::Send {
-                    recipient: debt_market.to_string(),
-                    recipient_code_hash: Some(debt_market_code_hash),
+                let msg = to_binary(&Cw20ExecuteMsg::Send {
+                    contract: debt_market.address.to_string(),
                     amount: coin.amount,
                     msg: Some(repay_to_msg),
                 })
                 .unwrap();
 
                 Ok(SubMsg::new(WasmMsg::Execute {
-                    contract_addr: coin.denom.denom(),
-                    // TODO: Add code hash to the coin type
-                    code_hash: "TODO: Add code hash to the coin type".to_owned(),
+                    contract_addr: contract_info.address.to_string(),
+                    code_hash: contract_info.code_hash,
                     msg,
                     funds: vec![],
                 }))
@@ -248,8 +246,8 @@ mod execute {
 
         // find price rate of collateral denom
         let price_response: PriceRate = deps.querier.query_wasm_smart(
-            debt_market.market.to_string(),
-            debt_market.code_hash.to_string(),
+            debt_market.code_hash.into(),
+            debt_market.address.into(),
             &MarketQueryMsg::PriceMarketLocalPerCommon {},
         )?;
 
@@ -266,8 +264,8 @@ mod execute {
             liquidation_price: cfg.liquidation_price,
         })?;
         let transfer_from_msg = SubMsg::new(WasmMsg::Execute {
-            contract_addr: collateral_market.market.to_string(),
-            code_hash: collateral_market.code_hash.to_string(),
+            contract_addr: collateral_market.address.to_string(),
+            code_hash: collateral_market.code_hash.clone(),
             msg,
             funds: vec![],
         });
