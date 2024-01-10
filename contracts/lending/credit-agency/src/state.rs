@@ -71,19 +71,19 @@ pub const MARKETS: Item<Vec<(Token, MarketState)>> = Item::new("market");
 /// actively participating.
 pub const ENTERED_MARKETS: Map<&Addr, BTreeSet<Addr>> = Map::new("entered_martkets");
 
-pub fn insert_or_update(vec: &mut Vec<(Token, MarketState)>, token: Token, state: MarketState) {
-    match vec.iter_mut().find(|(t, _)| *t == token) {
-        Some((_, market_state)) => *market_state = state,
-        None => vec.push((token, state)),
+pub fn insert_or_update<K, V>(vec: &mut Vec<(K, V)>, key: K, value: V)
+where
+    K: PartialEq,
+{
+    match vec.iter_mut().find(|(k, _)| *k == key) {
+        Some((_, v)) => *v = value,
+        None => vec.push((key, value)),
     }
 }
 
-pub fn find_market_state<'a>(
-    market_data: &'a Vec<(Token, MarketState)>,
-    token: &Token,
-) -> Option<&'a MarketState> {
-    market_data
-        .iter()
-        .find(|&(t, _)| t == token)
-        .map(|(_, state)| state)
+pub fn find_value<'a, K, V>(vec: &'a Vec<(K, V)>, key: &K) -> Option<&'a V>
+where
+    K: PartialEq,
+{
+    vec.iter().find(|(k, _)| k == key).map(|(_, v)| v)
 }

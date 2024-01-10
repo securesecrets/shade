@@ -14,7 +14,7 @@ use shade_protocol::{
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{find_market_state, insert_or_update, Config, CONFIG, NEXT_REPLY_ID},
+    state::{find_value, insert_or_update, Config, MarketState, CONFIG, NEXT_REPLY_ID},
 };
 use lending_utils::token::Token;
 
@@ -139,7 +139,7 @@ mod execute {
         }
 
         let mut markets = MARKETS.load(deps.storage)?;
-        if let Some(state) = find_market_state(&markets, &market_token) {
+        if let Some(state) = find_value::<Token, MarketState>(&markets, &market_token) {
             use MarketState::*;
 
             let err = match state {
@@ -333,7 +333,7 @@ mod query {
     /// if the market does not exists or is being created.
     pub fn market(deps: Deps, market_token: &Token) -> Result<MarketResponse, ContractError> {
         let markets = MARKETS.load(deps.storage)?;
-        let state = find_market_state(&markets, market_token)
+        let state = find_value::<Token, MarketState>(&markets, market_token)
             .ok_or_else(|| ContractError::NoMarket(market_token.denom()))?;
 
         let addr = state
