@@ -69,7 +69,7 @@ pub const NEXT_REPLY_ID: Item<u64> = Item::new("next_reply_id");
 pub const MARKETS: Item<Vec<(Token, MarketState)>> = Item::new("market");
 /// A set of "entered markets" for each account, as in markets in which the account is
 /// actively participating.
-pub const ENTERED_MARKETS: Map<&Addr, BTreeSet<Addr>> = Map::new("entered_martkets");
+pub const ENTERED_MARKETS: Item<Vec<(Addr, BTreeSet<Addr>)>> = Item::new("entered_martkets");
 
 pub fn insert_or_update<K, V>(vec: &mut Vec<(K, V)>, key: K, value: V)
 where

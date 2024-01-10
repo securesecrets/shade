@@ -20,6 +20,8 @@ use lending_utils::token::Token;
 
 use either::Either;
 
+use std::collections::BTreeSet;
+
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -382,9 +384,11 @@ mod query {
         account: String,
     ) -> Result<CreditLineResponse, ContractError> {
         let common_token = CONFIG.load(deps.storage)?.common_token;
-        let markets = ENTERED_MARKETS
-            .may_load(deps.storage, &Addr::unchecked(&account))?
-            .unwrap_or_default();
+        let markets = ENTERED_MARKETS.load(deps.storage)?;
+        let entered_markets =
+            find_value::<Addr, BTreeSet<Addr>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
 
         todo!()
         // let total_credit_line: CreditLineValues = markets
@@ -411,25 +415,26 @@ mod query {
         start_after: Option<String>,
         limit: Option<u32>,
     ) -> Result<ListEnteredMarketsResponse, ContractError> {
-        let account = Addr::unchecked(account);
-        let markets = ENTERED_MARKETS
-            .may_load(deps.storage, &account)?
-            .unwrap_or_default()
-            .into_iter();
+        todo!()
+        // let account = Addr::unchecked(account);
+        // let markets = ENTERED_MARKETS
+        //     .may_load(deps.storage, &account)?
+        //     .unwrap_or_default()
+        //     .into_iter();
 
-        let markets = if let Some(start_after) = &start_after {
-            Either::Left(
-                markets
-                    .skip_while(move |market| market != start_after)
-                    .skip(1),
-            )
-        } else {
-            Either::Right(markets)
-        };
+        // let markets = if let Some(start_after) = &start_after {
+        //     Either::Left(
+        //         markets
+        //             .skip_while(move |market| market != start_after)
+        //             .skip(1),
+        //     )
+        // } else {
+        //     Either::Right(markets)
+        // };
 
-        let markets = markets.take(limit.unwrap_or(u32::MAX) as usize).collect();
+        // let markets = markets.take(limit.unwrap_or(u32::MAX) as usize).collect();
 
-        Ok(ListEnteredMarketsResponse { markets })
+        // Ok(ListEnteredMarketsResponse { markets })
     }
 
     pub fn is_on_market(
@@ -437,15 +442,16 @@ mod query {
         account: String,
         market: String,
     ) -> Result<IsOnMarketResponse, ContractError> {
-        let account = Addr::unchecked(account);
-        let market = Addr::unchecked(market);
-        let markets = ENTERED_MARKETS
-            .may_load(deps.storage, &account)?
-            .unwrap_or_default();
+        todo!()
+        // let account = Addr::unchecked(account);
+        // let market = Addr::unchecked(market);
+        // let markets = ENTERED_MARKETS
+        //     .may_load(deps.storage, &account)?
+        //     .unwrap_or_default();
 
-        Ok(IsOnMarketResponse {
-            participating: markets.contains(&market),
-        })
+        // Ok(IsOnMarketResponse {
+        //     participating: markets.contains(&market),
+        // })
     }
 
     pub fn liquidation(deps: Deps, account: String) -> Result<LiquidationResponse, ContractError> {
@@ -455,11 +461,11 @@ mod query {
         let total_credit_line: CreditLineResponse = total_credit_line(deps, account.clone())?;
         let can_liquidate = total_credit_line.debt > total_credit_line.credit_line;
 
-        let markets = ENTERED_MARKETS
-            .may_load(deps.storage, &account_addr)?
-            .unwrap_or_default();
-
         todo!();
+        // let markets = ENTERED_MARKETS
+        //     .may_load(deps.storage, &account_addr)?
+        //     .unwrap_or_default();
+
         // let market_data: Result<Vec<_>, _> = markets
         //     .into_iter()
         //     .map(|market| -> Result<(Addr, Coin, Coin), ContractError> {
