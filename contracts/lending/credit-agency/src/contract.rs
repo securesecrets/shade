@@ -19,7 +19,7 @@ use crate::{
         NEXT_REPLY_ID,
     },
 };
-use lending_utils::token::Token;
+use lending_utils::{Authentication, token::Token, ViewingKey};
 
 use either::Either;
 
@@ -284,7 +284,7 @@ mod execute {
         collateral_denom: Token,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
-        let token_viewing_key = TOKEN_VIEWING_KEY.load(deps.storage)?;
+        let token_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
         let authentication = Authentication::ViewingKey(token_viewing_key);
 
         // assert that given account actually has more debt then credit
@@ -344,7 +344,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         Configuration {} => to_binary(&CONFIG.load(deps.storage)?)?,
         Market { market_token } => to_binary(&query::market(deps, &market_token)?)?,
         ListMarkets { limit } => to_binary(&query::list_markets(deps, limit)?)?,
-        TotalCreditLine { account } => to_binary(&query::total_credit_line(deps, account)?)?,
+        TotalCreditLine { account, authentication } => to_binary(&query::total_credit_line(deps, account, authentication)?)?,
         ListEnteredMarkets {
             account,
             start_after,
@@ -433,7 +433,7 @@ mod query {
         let common_token = CONFIG.load(deps.storage)?.common_token;
         let markets = ENTERED_MARKETS.load(deps.storage)?;
         let entered_markets =
-            find_value::<Addr, BTreeSet<Addr>>(&markets, &Addr::unchecked(&account))
+            find_value::<Addr, BTreeSet<Contract>>(&markets, &Addr::unchecked(&account))
                 .cloned()
                 .unwrap_or_default();
 
@@ -441,7 +441,8 @@ mod query {
             .into_iter()
             .map(|market| {
                 let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
-                    market,
+                    market.code_hash,
+                    market.address.to_string(),
                     &MarketQueryMsg::CreditLine {
                         account: deps.api.addr_validate(&account)?,
                         authentication: authentication.clone(),
@@ -504,8 +505,11 @@ mod query {
     pub fn liquidation(deps: Deps, account: String) -> Result<LiquidationResponse, ContractError> {
         let account_addr = deps.api.addr_validate(&account)?;
 
+        let token_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
+        let authentication = Authentication::ViewingKey(token_viewing_key);
+
         // check whether the given account actually has more debt then credit
-        let total_credit_line: CreditLineResponse = total_credit_line(deps, account.clone())?;
+        let total_credit_line: CreditLineResponse = total_credit_line(deps, account.clone(), authentication)?;
         let can_liquidate = total_credit_line.debt > total_credit_line.credit_line;
 
         todo!();
