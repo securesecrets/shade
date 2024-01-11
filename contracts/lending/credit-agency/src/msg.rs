@@ -139,7 +139,10 @@ pub enum QueryMsg {
     /// Queries all markets for credit lines for particular account
     /// and returns sum of all of them.
     #[returns(lending_utils::credit_line::CreditLineResponse)]
-    TotalCreditLine { account: String, authentication: Authentication },
+    TotalCreditLine {
+        account: String,
+        authentication: Authentication,
+    },
     /// Lists all markets which address entered. Pagination by market contract address. Mostly for
     /// verification purposes, but may be useful to verify if there are some obsolete markets to
     /// leave.

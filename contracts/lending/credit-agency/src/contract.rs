@@ -19,7 +19,7 @@ use crate::{
         NEXT_REPLY_ID,
     },
 };
-use lending_utils::{Authentication, token::Token, ViewingKey};
+use lending_utils::{token::Token, Authentication, ViewingKey};
 
 use either::Either;
 
@@ -288,7 +288,8 @@ mod execute {
         let authentication = Authentication::ViewingKey(token_viewing_key);
 
         // assert that given account actually has more debt then credit
-        let total_credit_line = query::total_credit_line(deps.as_ref(), account.to_string(), authentication)?;
+        let total_credit_line =
+            query::total_credit_line(deps.as_ref(), account.to_string(), authentication)?;
         let total_credit_line = total_credit_line.validate(&cfg.common_token)?;
         if total_credit_line.debt <= total_credit_line.credit_line {
             return Err(ContractError::LiquidationNotAllowed {});
@@ -344,7 +345,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         Configuration {} => to_binary(&CONFIG.load(deps.storage)?)?,
         Market { market_token } => to_binary(&query::market(deps, &market_token)?)?,
         ListMarkets { limit } => to_binary(&query::list_markets(deps, limit)?)?,
-        TotalCreditLine { account, authentication } => to_binary(&query::total_credit_line(deps, account, authentication)?)?,
+        TotalCreditLine {
+            account,
+            authentication,
+        } => to_binary(&query::total_credit_line(deps, account, authentication)?)?,
         ListEnteredMarkets {
             account,
             start_after,
@@ -433,7 +437,7 @@ mod query {
         let common_token = CONFIG.load(deps.storage)?.common_token;
         let markets = ENTERED_MARKETS.load(deps.storage)?;
         let entered_markets =
-            find_value::<Addr, BTreeSet<Contract>>(&markets, &Addr::unchecked(&account))
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
                 .cloned()
                 .unwrap_or_default();
 
@@ -509,7 +513,8 @@ mod query {
         let authentication = Authentication::ViewingKey(token_viewing_key);
 
         // check whether the given account actually has more debt then credit
-        let total_credit_line: CreditLineResponse = total_credit_line(deps, account.clone(), authentication)?;
+        let total_credit_line: CreditLineResponse =
+            total_credit_line(deps, account.clone(), authentication)?;
         let can_liquidate = total_credit_line.debt > total_credit_line.credit_line;
 
         todo!();
