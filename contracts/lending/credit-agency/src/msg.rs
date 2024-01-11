@@ -147,11 +147,7 @@ pub enum QueryMsg {
     /// verification purposes, but may be useful to verify if there are some obsolete markets to
     /// leave.
     #[returns(ListEnteredMarketsResponse)]
-    ListEnteredMarkets {
-        account: String,
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
+    ListEnteredMarkets { account: String },
     /// Checks if account is a member of particular market. Useful to ensure if the account is
     /// included in market before leaving it (to not waste tokens on obsolete call).
     #[returns(IsOnMarketResponse)]
@@ -174,7 +170,7 @@ pub struct ListMarketsResponse {
 
 #[cw_serde]
 pub struct ListEnteredMarketsResponse {
-    pub markets: Vec<Addr>,
+    pub markets: Vec<Contract>,
 }
 
 #[cw_serde]

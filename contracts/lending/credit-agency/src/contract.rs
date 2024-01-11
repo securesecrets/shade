@@ -349,11 +349,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             account,
             authentication,
         } => to_binary(&query::total_credit_line(deps, account, authentication)?)?,
-        ListEnteredMarkets {
-            account,
-            start_after,
-            limit,
-        } => to_binary(&query::entered_markets(deps, account, start_after, limit)?)?,
+        ListEnteredMarkets { account } => to_binary(&query::entered_markets(deps, account)?)?,
         IsOnMarket { account, market } => to_binary(&query::is_on_market(deps, account, market)?)?,
         Liquidation { account } => to_binary(&query::liquidation(deps, account)?)?,
     };
@@ -464,29 +460,17 @@ mod query {
     pub fn entered_markets(
         deps: Deps,
         account: String,
-        start_after: Option<String>,
-        limit: Option<u32>,
     ) -> Result<ListEnteredMarketsResponse, ContractError> {
-        todo!()
-        // let account = Addr::unchecked(account);
-        // let markets = ENTERED_MARKETS
-        //     .may_load(deps.storage, &account)?
-        //     .unwrap_or_default()
-        //     .into_iter();
+        let account = Addr::unchecked(account);
+        let markets = ENTERED_MARKETS.load(deps.storage)?;
+        let entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
 
-        // let markets = if let Some(start_after) = &start_after {
-        //     Either::Left(
-        //         markets
-        //             .skip_while(move |market| market != start_after)
-        //             .skip(1),
-        //     )
-        // } else {
-        //     Either::Right(markets)
-        // };
-
-        // let markets = markets.take(limit.unwrap_or(u32::MAX) as usize).collect();
-
-        // Ok(ListEnteredMarketsResponse { markets })
+        Ok(ListEnteredMarketsResponse {
+            markets: entered_markets,
+        })
     }
 
     pub fn is_on_market(
