@@ -14,7 +14,7 @@ use shade_protocol::{
     Contract,
 };
 
-pub const STATE: Item<State> = Item::new("state");
+pub const CONFIG: Item<Config> = Item::new("config");
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
@@ -49,7 +49,7 @@ pub struct FeeLog {
 }
 
 #[cw_serde]
-pub struct State {
+pub struct Config {
     pub creator: Addr,
     pub factory: ContractInfo,
     pub token_x: TokenType,

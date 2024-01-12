@@ -59,7 +59,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response> {
-    let config = State {
+    let config = Config {
         contract_info: ContractInfo {
             address: env.contract.address,
             code_hash: env.contract.code_hash,
@@ -73,7 +73,7 @@ pub fn instantiate(
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
     };
 
-    STATE.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config)?;
     PRESET_HASHSET.save(deps.storage, &HashSet::new())?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
 
@@ -214,7 +214,7 @@ fn try_set_lb_pair_implementation(
     info: MessageInfo,
     new_lb_pair_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -229,7 +229,7 @@ fn try_set_lb_pair_implementation(
         });
     }
 
-    STATE.update(deps.storage, |mut config| -> StdResult<_> {
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
         config.lb_pair_implementation = new_lb_pair_implementation;
         Ok(config)
     })?;
@@ -248,7 +248,7 @@ fn try_set_lb_token_implementation(
     info: MessageInfo,
     new_lb_token_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -263,7 +263,7 @@ fn try_set_lb_token_implementation(
         });
     }
 
-    STATE.update(deps.storage, |mut config| -> StdResult<_> {
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
         config.lb_token_implementation = new_lb_token_implementation;
         Ok(config)
     })?;
@@ -282,7 +282,7 @@ fn try_set_staking_contract_implementation(
     info: MessageInfo,
     new_implementation: ContractInstantiationInfo,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -297,7 +297,7 @@ fn try_set_staking_contract_implementation(
         });
     }
 
-    STATE.update(deps.storage, |mut config| -> StdResult<_> {
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
         config.staking_contract_implementation = new_implementation;
         Ok(config)
     })?;
@@ -328,7 +328,7 @@ fn try_create_lb_pair(
     viewing_key: String,
     entropy: String,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     if !PRESETS.has(deps.storage, bin_step) {
         return Err(Error::BinStepHasNoPreset { bin_step });
@@ -364,7 +364,7 @@ fn try_create_lb_pair(
         });
     }
 
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     let staking_preset = STAKING_PRESETS.load(deps.storage, bin_step)?;
 
@@ -552,7 +552,7 @@ fn try_set_pair_preset(
     epoch_staking_duration: u64,
     expiry_staking_duration: Option<u64>,
 ) -> Result<Response> {
-    let mut state = STATE.load(deps.storage)?;
+    let mut state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -597,7 +597,7 @@ fn try_set_pair_preset(
         expiry_staking_duration,
     })?;
 
-    STATE.save(deps.storage, &state)?;
+    CONFIG.save(deps.storage, &state)?;
 
     Ok(Response::default().add_attribute_plaintext("set preset", bin_step.to_string()))
 }
@@ -615,7 +615,7 @@ fn try_set_preset_open_state(
     bin_step: u16,
     is_open: bool,
 ) -> Result<Response> {
-    let state = STATE.load(deps.storage)?;
+    let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -653,7 +653,7 @@ fn try_remove_preset(
     info: MessageInfo,
     bin_step: u16,
 ) -> Result<Response> {
-    let state = STATE.load(deps.storage)?;
+    let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -702,7 +702,7 @@ fn try_set_fee_parameters_on_pair(
     protocol_share: u16,
     max_volatility_accumulator: u32,
 ) -> Result<Response> {
-    let state = STATE.load(deps.storage)?;
+    let state = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -748,7 +748,7 @@ fn try_set_fee_recipient(
     info: MessageInfo,
     fee_recipient: Addr,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -763,7 +763,7 @@ fn try_set_fee_recipient(
         });
     }
 
-    STATE.update(deps.storage, |mut config| -> StdResult<_> {
+    CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
         config.fee_recipient = fee_recipient.clone();
         Ok(config)
     })?;
@@ -784,7 +784,7 @@ fn try_add_quote_asset(
     info: MessageInfo,
     quote_asset: TokenType,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -820,7 +820,7 @@ fn try_remove_quote_asset(
     info: MessageInfo,
     asset: TokenType,
 ) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -854,7 +854,7 @@ fn try_remove_quote_asset(
 }
 
 fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
@@ -929,7 +929,7 @@ fn query_min_bin_step(_deps: Deps) -> Result<Binary> {
 ///
 /// * `fee_recipient` - The address of the fee recipient.
 fn query_fee_recipient(deps: Deps) -> Result<Binary> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = FeeRecipientResponse {
         fee_recipient: config.fee_recipient,
     };
@@ -942,7 +942,7 @@ fn query_fee_recipient(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_pair_implementation` - The code ID and hash of the LBPair implementation.
 fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = LBPairImplementationResponse {
         lb_pair_implementation: config.lb_pair_implementation,
     };
@@ -955,7 +955,7 @@ fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
 ///
 /// * `lb_token_implementation` - The code ID and hash of the LBToken implementation.
 fn query_lb_token_implementation(deps: Deps) -> Result<Binary> {
-    let config = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let response = LBTokenImplementationResponse {
         lb_token_implementation: config.lb_token_implementation,
     };

@@ -4,10 +4,7 @@ use std::collections::HashSet;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Storage},
     cosmwasm_schema::cw_serde,
-    lb_libraries::{
-        pair_parameter_helper::PairParameters,
-        types::{ContractInstantiationInfo, TreeUint24},
-    },
+    lb_libraries::{pair_parameter_helper::PairParameters, types::ContractInstantiationInfo},
     liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     secret_storage_plus::{AppendStore, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
@@ -16,7 +13,7 @@ use shade_protocol::{
 };
 
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
-pub const STATE: Item<State> = Item::new("state");
+pub const CONFIG: Item<Config> = Item::new("state");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
 // pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");
