@@ -3,34 +3,36 @@ name = "lb_staking"
 version = "0.1.0"
 authors = ["Haseeb Saeed <me@itsHaseebSaeed.com>"]
 edition = "2021"
-
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
   "contract.wasm",
   "hash.txt",
 ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
 [[example]]
 name = "schema"
-path = "schema/schema.rs"  # Adjust the path according to your project structure
+path = "schema/schema.rs" # Adjust the path according to your project structure
 
 
 [features]
 default = ["schema"]
 schema = []
 
+
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl"] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "liquidity_book_impl",
+] }
 snafu = { version = "0.7.1" }
 schemars = "0.8.16"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
-  "alloc"
+  "alloc",
 ] }
 cosmwasm-schema = "1.5"
 serde_json = "1"

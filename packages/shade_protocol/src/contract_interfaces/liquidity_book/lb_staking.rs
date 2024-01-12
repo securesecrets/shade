@@ -6,8 +6,18 @@ use secret_toolkit::permit::Permit;
 
 use crate::{
     c_std::{
-        to_binary, Addr, Api, Binary, BlockInfo, Coin, ContractInfo, CosmosMsg, StdResult, Uint128,
-        Uint256, WasmMsg,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        BlockInfo,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        StdResult,
+        Uint128,
+        Uint256,
+        WasmMsg,
     },
     cosmwasm_schema::cw_serde,
     snip20::Snip20ReceiveMsg,

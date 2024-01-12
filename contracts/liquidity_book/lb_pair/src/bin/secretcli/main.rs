@@ -11,7 +11,10 @@ use shade_protocol::{
         types::{ContractInstantiationInfo, StaticFeeParameters},
     },
     liquidity_book::lb_pair::{
-        ContractStatus, InvokeMsg, LiquidityParameters, RemoveLiquidity,
+        ContractStatus,
+        InvokeMsg,
+        LiquidityParameters,
+        RemoveLiquidity,
         RewardsDistributionAlgorithm,
     },
     swap::core::{TokenAmount, TokenType},

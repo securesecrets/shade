@@ -18,10 +18,13 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl","liquidity_book"] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "liquidity_book_impl",
+  "liquidity_book",
+] }
 schemars = "0.8.16"
 serde = { version = "1.0" }
-serde-json-wasm = { version = "1.0"}
+serde-json-wasm = { version = "1.0" }
 ethnum = { version = "1.5" }
 thiserror = { version = "1.0" }
 
@@ -29,14 +32,14 @@ thiserror = { version = "1.0" }
 anyhow = "1"
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.11" }
 rand = "0.8"
-shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+shade-multi-test = { path = "../../../packages/multi_test", features = [
   "admin",
   "lb_pair",
   "lb_token",
   "lb_staking",
   "snip20",
   "router",
-  "lb_factory"
+  "lb_factory",
 ] }
-lb_pair ={ path = "../lb_pair"}
+lb_pair = { path = "../lb_pair" }
 serial_test = "2.0.0"

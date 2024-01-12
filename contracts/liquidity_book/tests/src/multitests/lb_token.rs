@@ -1,7 +1,5 @@
 use serial_test::serial;
 use std::ops::{Add, Mul};
-use serial_test::serial;
-use std::ops::{Add, Mul};
 
 use crate::multitests::test_helper::*;
 

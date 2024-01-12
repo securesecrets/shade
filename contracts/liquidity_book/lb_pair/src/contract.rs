@@ -4,9 +4,29 @@ use serde::Serialize;
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary, shd_entry_point, to_binary, Addr, Attribute, Binary, ContractInfo, CosmosMsg,
-        Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg,
-        SubMsgResult, Timestamp, Uint128, Uint256, WasmMsg,
+        from_binary,
+        shd_entry_point,
+        to_binary,
+        Addr,
+        Attribute,
+        Binary,
+        ContractInfo,
+        CosmosMsg,
+        Decimal,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Reply,
+        Response,
+        StdError,
+        StdResult,
+        SubMsg,
+        SubMsgResult,
+        Timestamp,
+        Uint128,
+        Uint256,
+        WasmMsg,
     },
     contract_interfaces::{
         liquidity_book::{lb_pair::*, lb_staking, lb_token},
@@ -19,7 +39,6 @@ use shade_protocol::{
             router::ExecuteMsgResponse,
         },
     },
-    contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
     lb_libraries::{
         approx_div,
         bin_helper::BinHelper,
@@ -41,7 +60,8 @@ use shade_protocol::{
         types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
-    snip20, Contract,
+    snip20,
+    Contract,
 };
 use std::{collections::HashMap, ops::Sub, vec};
 
@@ -182,29 +202,22 @@ pub fn instantiate(
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, 0, &tree)?;
-    REWARDS_STATS_STORE.save(
-        deps.storage,
-        0,
-        &RewardStats {
-            cumm_value: Uint256::zero(),
-            cumm_value_mul_bin_id: Uint256::zero(),
-            rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
-        },
-    )?;
+    REWARDS_STATS_STORE.save(deps.storage, 0, &RewardStats {
+        cumm_value: Uint256::zero(),
+        cumm_value_mul_bin_id: Uint256::zero(),
+        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
+    })?;
 
-    EPHEMERAL_STORAGE.save(
-        deps.storage,
-        &NextTokenKey {
-            lb_token_code_hash: msg.lb_token_implementation.code_hash,
-            staking_contract: msg.staking_contract_implementation,
-            token_x_symbol,
-            token_y_symbol,
-            epoch_index: msg.epoch_staking_index,
-            epoch_duration: msg.epoch_staking_duration,
-            expiry_duration: msg.expiry_staking_duration,
-            recover_funds_receiver: msg.recover_staking_funds_receiver,
-        },
-    )?;
+    EPHEMERAL_STORAGE.save(deps.storage, &NextTokenKey {
+        lb_token_code_hash: msg.lb_token_implementation.code_hash,
+        staking_contract: msg.staking_contract_implementation,
+        token_x_symbol,
+        token_y_symbol,
+        epoch_index: msg.epoch_staking_index,
+        epoch_duration: msg.epoch_staking_duration,
+        expiry_duration: msg.expiry_staking_duration,
+        recover_funds_receiver: msg.recover_staking_funds_receiver,
+    })?;
 
     response = response.add_messages(messages);
 
@@ -1561,15 +1574,11 @@ fn try_calculate_rewards_distribution(
         };
     }
 
-    REWARDS_STATS_STORE.save(
-        deps.storage,
-        state.rewards_epoch_id,
-        &RewardStats {
-            cumm_value: Uint256::zero(),
-            cumm_value_mul_bin_id: Uint256::zero(),
-            rewards_distribution_algorithm: distribution_algorithm.clone(),
-        },
-    )?;
+    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_id, &RewardStats {
+        cumm_value: Uint256::zero(),
+        cumm_value_mul_bin_id: Uint256::zero(),
+        rewards_distribution_algorithm: distribution_algorithm.clone(),
+    })?;
 
     if distribution_algorithm == &RewardsDistributionAlgorithm::VolumeBasedRewards {
         let tree: TreeUint24 = TreeUint24::new();
@@ -2781,12 +2790,21 @@ fn query_bin_map(deps: Deps, id: u32) -> Result<Binary> {
         ids.push(id);
     }
 
-    let stuff = ids.into_iter()
-        .map(|id| (id, BIN_MAP.load(deps.storage, id).map_err(Error::CwErr).unwrap()))
+    let stuff = ids
+        .into_iter()
+        .map(|id| {
+            (
+                id,
+                BIN_MAP
+                    .load(deps.storage, id)
+                    .map_err(Error::CwErr)
+                    .unwrap(),
+            )
+        })
         .collect::<Vec<(u32, Bytes32)>>();
 
     println!("{stuff:#?}");
-    
+
     // let response = BinMapResponse { bin_map };
     // to_binary(&response).map_err(Error::CwErr)
 

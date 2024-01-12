@@ -1,9 +1,18 @@
 use shade_protocol::{
     c_std::{
-        shd_entry_point, Attribute, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+        shd_entry_point,
+        Attribute,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdResult,
     },
     contract_interfaces::liquidity_book::lb_libraries::viewing_keys::{
-        register_receive, set_viewing_key_msg,
+        register_receive,
+        set_viewing_key_msg,
     },
     liquidity_book::lb_staking::{EpochInfo, ExecuteMsg, InstantiateMsg, QueryMsg, State},
     utils::pad_handle_result,
@@ -43,18 +52,14 @@ pub fn instantiate(
     };
 
     let now = env.block.time.seconds();
-    EPOCH_STORE.save(
-        deps.storage,
-        state.epoch_index,
-        &EpochInfo {
-            rewards_distribution: None,
-            start_time: now,
-            end_time: now + state.epoch_durations,
-            duration: state.epoch_durations,
-            reward_tokens: None,
-            expired_at: None,
-        },
-    )?;
+    EPOCH_STORE.save(deps.storage, state.epoch_index, &EpochInfo {
+        rewards_distribution: None,
+        start_time: now,
+        end_time: now + state.epoch_durations,
+        duration: state.epoch_durations,
+        reward_tokens: None,
+        expired_at: None,
+    })?;
 
     let messages = vec![
         register_receive(

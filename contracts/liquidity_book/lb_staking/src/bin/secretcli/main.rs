@@ -7,7 +7,12 @@ use shade_protocol::{
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            ExecuteMsg, InstantiateMsg, InvokeMsg, QueryAnswer, QueryMsg, QueryTxnType,
+            ExecuteMsg,
+            InstantiateMsg,
+            InvokeMsg,
+            QueryAnswer,
+            QueryMsg,
+            QueryTxnType,
             QueryWithPermit,
         },
         lb_token::Snip1155ReceiveMsg,

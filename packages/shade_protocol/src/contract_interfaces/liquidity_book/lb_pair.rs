@@ -4,7 +4,9 @@ use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     liquidity_book::lb_libraries::types::{
-        Bytes32, ContractInstantiationInfo, StaticFeeParameters,
+        Bytes32,
+        ContractInstantiationInfo,
+        StaticFeeParameters,
     },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
