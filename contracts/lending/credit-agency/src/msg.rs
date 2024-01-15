@@ -181,6 +181,6 @@ pub struct IsOnMarketResponse {
 #[cw_serde]
 pub struct LiquidationResponse {
     pub can_liquidate: bool,
-    pub debt: Vec<(Addr, Coin)>,
-    pub collateral: Vec<(Addr, Coin)>,
+    pub debt: Vec<(Contract, Coin)>,
+    pub collateral: Vec<(Contract, Coin)>,
 }

@@ -481,60 +481,65 @@ mod query {
         let account = Addr::unchecked(account);
         let markets = ENTERED_MARKETS.load(deps.storage)?;
         let entered_markets =
-            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account));
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
 
         Ok(IsOnMarketResponse {
-            participating: entered_markets.map_or(false, |vec| vec.contains(&market)),
+            participating: entered_markets.contains(&market),
         })
     }
 
     pub fn liquidation(deps: Deps, account: String) -> Result<LiquidationResponse, ContractError> {
         let account_addr = deps.api.addr_validate(&account)?;
 
-        let token_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
-        let authentication = Authentication::ViewingKey(token_viewing_key);
+        let market_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
+        let authentication = Authentication::ViewingKey(market_viewing_key);
 
         // check whether the given account actually has more debt then credit
         let total_credit_line: CreditLineResponse =
-            total_credit_line(deps, account.clone(), authentication)?;
+            total_credit_line(deps, account.clone(), authentication.clone())?;
         let can_liquidate = total_credit_line.debt > total_credit_line.credit_line;
 
-        todo!();
-        // let markets = ENTERED_MARKETS
-        //     .may_load(deps.storage, &account_addr)?
-        //     .unwrap_or_default();
+        let markets = ENTERED_MARKETS.load(deps.storage)?;
+        let entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
 
-        // let market_data: Result<Vec<_>, _> = markets
-        //     .into_iter()
-        //     .map(|market| -> Result<(Addr, Coin, Coin), ContractError> {
-        //         let token_balances: TokensBalanceResponse = deps.querier.query_wasm_smart(
-        //             &market,
-        //             &MarketQueryMsg::TokensBalance {
-        //                 account: deps.api.addr_validate(&account)?,
-        //             },
-        //         )?;
+        let market_data: Result<Vec<_>, _> = entered_markets
+            .into_iter()
+            .map(|market| -> Result<(Contract, Coin, Coin), ContractError> {
+                let token_balances: TokensBalanceResponse = deps.querier.query_wasm_smart(
+                    market.code_hash.clone(),
+                    market.address.to_string(),
+                    &MarketQueryMsg::TokensBalance {
+                        account: deps.api.addr_validate(&account)?,
+                        authentication: authentication.clone(),
+                    },
+                )?;
 
-        //         Ok((market, token_balances.collateral, token_balances.debt))
-        //     })
-        //     .collect();
-        // let market_data = market_data?;
+                Ok((market, token_balances.collateral, token_balances.debt))
+            })
+            .collect();
+        let market_data = market_data?;
 
-        // let collateral: Vec<_> = market_data
-        //     .iter()
-        //     .filter(|(_, collateral, _)| !collateral.amount.is_zero())
-        //     .cloned()
-        //     .map(|(market, collateral, _)| (market, collateral))
-        //     .collect();
-        // let debt: Vec<_> = market_data
-        //     .into_iter()
-        //     .filter(|(_, _, debt)| !debt.amount.is_zero())
-        //     .map(|(market, _, debt)| (market, debt))
-        //     .collect();
+        let collateral: Vec<_> = market_data
+            .iter()
+            .filter(|(_, collateral, _)| !collateral.amount.is_zero())
+            .cloned()
+            .map(|(market, collateral, _)| (market, collateral))
+            .collect();
+        let debt: Vec<_> = market_data
+            .into_iter()
+            .filter(|(_, _, debt)| !debt.amount.is_zero())
+            .map(|(market, _, debt)| (market, debt))
+            .collect();
 
-        // Ok(LiquidationResponse {
-        //     can_liquidate,
-        //     debt,
-        //     collateral,
-        // })
+        Ok(LiquidationResponse {
+            can_liquidate,
+            debt,
+            collateral,
+        })
     }
 }
