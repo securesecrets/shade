@@ -81,7 +81,7 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        CreateMarket(market_cfg) => todo!(), // execute::create_market(deps, env, info, market_cfg),
+        CreateMarket(market_cfg) => execute::create_market(deps, env, info, market_cfg),
         EnterMarket { account } => {
             let account = deps.api.addr_validate(&account)?;
             todo!() //execute::enter_market(deps, info, account)
