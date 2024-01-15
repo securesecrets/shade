@@ -23,7 +23,7 @@ use lending_utils::{token::Token, Authentication, ViewingKey};
 
 use either::Either;
 
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, ops::Deref};
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -476,18 +476,16 @@ mod query {
     pub fn is_on_market(
         deps: Deps,
         account: String,
-        market: String,
+        market: Contract,
     ) -> Result<IsOnMarketResponse, ContractError> {
-        todo!()
-        // let account = Addr::unchecked(account);
-        // let market = Addr::unchecked(market);
-        // let markets = ENTERED_MARKETS
-        //     .may_load(deps.storage, &account)?
-        //     .unwrap_or_default();
+        let account = Addr::unchecked(account);
+        let markets = ENTERED_MARKETS.load(deps.storage)?;
+        let entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account));
 
-        // Ok(IsOnMarketResponse {
-        //     participating: markets.contains(&market),
-        // })
+        Ok(IsOnMarketResponse {
+            participating: entered_markets.map_or(false, |vec| vec.contains(&market)),
+        })
     }
 
     pub fn liquidation(deps: Deps, account: String) -> Result<LiquidationResponse, ContractError> {

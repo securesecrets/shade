@@ -151,7 +151,7 @@ pub enum QueryMsg {
     /// Checks if account is a member of particular market. Useful to ensure if the account is
     /// included in market before leaving it (to not waste tokens on obsolete call).
     #[returns(IsOnMarketResponse)]
-    IsOnMarket { account: String, market: String },
+    IsOnMarket { account: String, market: Contract },
     /// Checks if the given account is liquidatable and returns the necessary information to do so.
     #[returns(LiquidationResponse)]
     Liquidation { account: String },
