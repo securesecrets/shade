@@ -55,18 +55,8 @@ pub enum ExecuteMsg {
     /// * Sender have no CTokens in the market, or collateral provided by owned CTokens
     ///   is not affecting liquidity of sender
     ExitMarket {
-        /// Address of the `isotonic-market` sender want to exit from.
-        market: String,
-    },
-    /// Repay a loan by using some indicated collateral.
-    /// The collateral is traded on Wynd DEX.
-    RepayWithCollateral {
-        /// The maximum amount of collateral to use
-        max_collateral: Coin,
-        /// How much of the loan is trying to be repaid
-        amount_to_repay: Coin,
-        /// How much more of collateral will be used in swap then the estimated amount.
-        estimate_multiplier: Option<Decimal>,
+        /// Address of the `lend-market` sender want to exit from.
+        market: Contract,
     },
     /// Handles contract's logics that involves receiving Snip20 tokens.
     Receive(Snip20ReceiveMsg),

@@ -86,21 +86,7 @@ pub fn execute(
             let account = deps.api.addr_validate(&account)?;
             execute::enter_market(deps, info, market, account)
         }
-        ExitMarket { market } => {
-            let market = deps.api.addr_validate(&market)?;
-            todo!() //execute::exit_market(deps, info, market)
-        }
-        RepayWithCollateral {
-            max_collateral,
-            amount_to_repay,
-            estimate_multiplier,
-        } => todo!(), // execute::repay_with_collateral(
-        //     deps,
-        //     info.sender,
-        //     max_collateral,
-        //     amount_to_repay,
-        //     estimate_multiplier,
-        // ),
+        ExitMarket { market } => execute::exit_market(deps, info, market),
         Receive(msg) => todo!(), //execute::receive_snip20_message(deps, env, info, msg),
         AdjustMarketId { new_market_id } => todo!(), //restricted::adjust_market_id(deps, info, new_market_id),
         AdjustTokenId { new_token_id } => todo!(), //restricted::adjust_token_id(deps, info, new_token_id),
