@@ -1,7 +1,7 @@
-use shade_protocol::c_std::{Decimal, Fraction};
 use schemars::JsonSchema;
-use thiserror::Error;
 use serde::{Deserialize, Serialize};
+use shade_protocol::c_std::{Decimal, Fraction};
+use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]

@@ -49,7 +49,6 @@ impl Token {
         }
     }
 
-
     /// Checks i token is cw20
     pub fn is_cw20(&self) -> bool {
         matches!(self, Token::Cw20(_))
@@ -131,3 +130,54 @@ impl fmt::Display for Token {
         }
     }
 }
+
+impl KeyDeserialize for &Token {
+    type Output = Token;
+
+    fn from_vec(value: Vec<u8>) -> StdResult<Self::Output> {
+        let (asset_type, address, code_hash) = <(u8, Addr, String)>::from_vec(value)?;
+
+        match asset_type {
+            1 => Ok(Token::Cw20(ContractInfo { address, code_hash })),
+            _ => Err(StdError::generic_err("Invalid Token key, invalid type")),
+        }
+    }
+}
+
+impl<'a> Prefixer<'a> for &Token {
+    fn prefix(&self) -> Vec<Key> {
+        self.key()
+    }
+}
+
+// Allow using `AssetInfoValidated` as a key in a `Map`
+impl<'a> PrimaryKey<'a> for &Token {
+    type Prefix = ();
+    type SubPrefix = ();
+    type Suffix = Self;
+    type SuperSuffix = Self;
+
+    fn key(&self) -> Vec<Key> {
+        match self {
+            Token::Cw20(contract_info) => vec![
+                Key::Val8([1]),
+                Key::Ref(contract_info.address.as_bytes()),
+                Key::Ref(contract_info.code_hash.as_bytes()),
+            ],
+        }
+    }
+}
+
+// use std::hash::{Hash, Hasher};
+//
+// impl Hash for Token {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         match self {
+//             Token::Cw20(contract_info) => {
+//                 contract_info.address.hash(state);
+//                 // Hash other fields or other variants as needed
+//             },
+//             // Handle other Token variants here if there are any
+//         }
+//     }
+// }

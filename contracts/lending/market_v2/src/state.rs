@@ -7,7 +7,7 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-use lending_utils::{interest::ValidatedInterest, token::Token};
+use lending_utils::{interest::ValidatedInterest, token::Token, ViewingKey};
 
 pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
@@ -37,11 +37,9 @@ pub struct Config {
     /// because they maxed out their credit limit.
     pub borrow_limit_ratio: Decimal,
     /// Address of Oracle's contract
-    pub price_oracle: String,
+    pub price_oracle: Contract,
     /// Address of Credit Agency
     pub credit_agency: Contract,
-    /// Address of oracle
-    pub oracle: Contract,
     /// Address of auth query contract
     pub query_auth: Contract,
     pub reserve_factor: Decimal,
@@ -49,7 +47,7 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const VIEWING_KEY: Item<ViewingKey> = Item::new("viewing_key");
 
 pub mod debt {
     use super::*;

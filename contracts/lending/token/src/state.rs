@@ -7,6 +7,7 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
+use lending_utils::ViewingKey;
 use crate::i128::Int128;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -62,5 +63,5 @@ pub const MULTIPLIER: Item<Decimal> = Item::new("multiplier");
 pub const DISTRIBUTION: Item<Distribution> = Item::new("distribution");
 pub const WITHDRAW_ADJUSTMENT: Map<&Addr, WithdrawAdjustment> = Map::new("withdraw_adjustment");
 
-pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const VIEWING_KEY: Item<ViewingKey> = Item::new("viewing_key");
 pub const QUERY_AUTH: Item<Contract> = Item::new("query_auth");

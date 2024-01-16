@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
-    contract_interfaces::query_auth::QueryPermit,
     utils::{asset::Contract, Query},
 };
 
 use lending_utils::{
     interest::Interest,
+    Authentication,
     {coin::Coin, token::Token},
 };
 
@@ -19,7 +19,7 @@ pub struct InstantiateMsg {
     /// Decimals for cToken
     pub decimals: u8,
     /// CodeId used to create cToken
-    pub token_id: u64,
+    pub ctoken_id: u64,
     /// Market token
     pub market_token: Token,
     /// An optional cap on total number of tokens deposited into the market
@@ -35,7 +35,7 @@ pub struct InstantiateMsg {
     /// Ratio of how much tokens can be borrowed for one unit, 0 <= x < 1
     pub collateral_ratio: Decimal,
     /// Address of contract to query for price
-    pub price_oracle: String,
+    pub price_oracle: Contract,
     /// Defines the portion of borrower interest that is converted into reserves (0 <= x <= 1)
     pub reserve_factor: Decimal,
     /// Maximum percentage of credit_limit that can be borrowed.
@@ -50,8 +50,6 @@ pub struct InstantiateMsg {
     pub ctoken_code_hash: String,
     // I have no idea what to do with it
     pub credit_agency_code_hash: String,
-    /// Oracle address
-    pub oracle: Contract,
     /// Address of auth query contract
     pub query_auth: Contract,
 }
@@ -79,7 +77,7 @@ pub enum ReceiveMsg {
     /// The underlying market_token is stored in this Market contract
     Deposit {},
     /// If sent tokens' denom matches market_token, burns tokens from sender's address
-    Repay,
+    Repay {},
     /// Helper to allow repay of debt on given account.
     /// Sender must be a Credit Agency
     RepayTo { account: String },
@@ -94,12 +92,6 @@ pub enum CreditAgencyExecuteMsg {
 
 #[cw_serde]
 pub struct AuthPermit {}
-
-#[cw_serde]
-pub enum Authentication {
-    ViewingKey { key: String, address: String },
-    Permit(QueryPermit),
-}
 
 #[cw_serde]
 #[derive(QueryResponses)]

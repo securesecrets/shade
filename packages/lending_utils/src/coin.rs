@@ -1,7 +1,10 @@
+use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
-use std::{convert::From, ops::Mul};
+use thiserror::Error;
+
+use std::{cmp::Ordering, convert::From, ops::Mul};
 
 use crate::token::Token;
 
@@ -55,12 +58,27 @@ impl Coin {
     }
 }
 
+impl PartialOrd for Coin {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.amount.cmp(&other.amount))
+    }
+}
+
+impl Ord for Coin {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.amount.cmp(&other.amount)
+    }
+}
+
 pub fn coin_cw20(amount: u128, info: ContractInfo) -> Coin {
     Coin::new(amount, Token::new_cw20(info))
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CoinError {
+    #[error(
+       "Operation {operation} is not allowed, because denoms does not match: {denom1:?} {denom2:?}"
+    )]
     IncorrectDenoms {
         operation: String,
         denom1: Token,

@@ -16,14 +16,11 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{
-        AuthPermit, Authentication, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg,
-        TotalDebtResponse,
-    },
+    msg::{AuthPermit, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
-use lending_utils::token::Token;
+use lending_utils::{token::Token, Authentication, ViewingKey};
 
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
 
@@ -41,10 +38,11 @@ pub fn instantiate(
         controller: env.contract.clone().into(),
         distributed_token: msg.distributed_token.as_contract_info().unwrap().into(),
         viewing_key: msg.viewing_key.clone(),
+        query_auth: msg.query_auth.clone().into(),
     };
     let ctoken_instantiate = WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.token_id,
+        code_id: msg.ctoken_id,
         msg: to_binary(&ctoken_msg)?,
         funds: vec![],
         label: format!("ctoken_contract_{}", env.contract.address),
@@ -59,7 +57,7 @@ pub fn instantiate(
         name: msg.name,
         symbol: msg.symbol,
         decimals: msg.decimals,
-        token_id: msg.token_id,
+        token_id: msg.ctoken_id,
         market_token: msg.market_token,
         market_cap: msg.market_cap,
         rates: msg.interest_rate.validate()?,
@@ -72,11 +70,16 @@ pub fn instantiate(
         credit_agency: Contract::new(&info.sender.clone(), &msg.credit_agency_code_hash).into(),
         reserve_factor: msg.reserve_factor,
         borrow_limit_ratio: msg.borrow_limit_ratio,
-        oracle: msg.oracle.into(),
         query_auth: msg.query_auth.into(),
     };
     CONFIG.save(deps.storage, &cfg)?;
-    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
+    VIEWING_KEY.save(
+        deps.storage,
+        &ViewingKey {
+            key: msg.viewing_key,
+            address: env.contract.address.to_string(),
+        },
+    )?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -162,10 +165,8 @@ pub fn receive_snip20_message(
     info: MessageInfo,
     msg: Snip20ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    use ReceiveMsg::*;
-    // TODO: Result instead of unwrap
     match from_binary(&msg.msg.unwrap())? {
-        Deposit => {
+        ReceiveMsg::Deposit {} => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});
@@ -182,7 +183,7 @@ pub fn receive_snip20_message(
                 },
             )
         }
-        Repay => {
+        ReceiveMsg::Repay {} => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});
@@ -200,7 +201,7 @@ pub fn receive_snip20_message(
                 sender,
             )
         }
-        RepayTo { account } => {
+        ReceiveMsg::RepayTo { account } => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});
@@ -306,9 +307,16 @@ mod cr_lending_utils {
             .map_err(|_| ContractError::ZeroCollateralRatio {})?;
         if credit.debt.u128() == 0 {
             let multiplier = query_ctoken_multiplier(deps, config)?;
+            let viewing_key = VIEWING_KEY.load(deps.storage)?;
             can_transfer = std::cmp::max(
                 base_to_token(can_transfer, multiplier),
-                query::ctoken_balance(deps, config, &account)?.amount,
+                query::ctoken_balance(
+                    deps,
+                    config,
+                    &account,
+                    Authentication::ViewingKey(viewing_key),
+                )?
+                .amount,
             );
         }
         Ok(can_transfer)
@@ -741,7 +749,7 @@ mod execute {
 pub fn authenticate(deps: Deps, auth: Authentication, account: &Addr) -> StdResult<()> {
     let config = CONFIG.load(deps.storage)?;
     match auth {
-        Authentication::ViewingKey { key, address } => {
+        Authentication::ViewingKey(ViewingKey { key, address }) => {
             let address = deps.api.addr_validate(&address)?;
             if !authenticate_vk(address.clone(), key, &deps.querier, &config.query_auth)? {
                 return Err(StdError::generic_err("Invalid Viewing Key"));
@@ -820,7 +828,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 fn oracle(deps: Deps, symbol: String) -> StdResult<Uint128> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.oracle)?;
+    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.price_oracle)?;
 
     Ok(Uint128::from(answer.rate))
 }
@@ -834,7 +842,10 @@ mod query {
         utils::asset::Contract,
     };
 
-    use lend_token::msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse};
+    use lend_token::{
+        msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse},
+        state::VIEWING_KEY,
+    };
     use lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
@@ -854,28 +865,40 @@ mod query {
         deps: Deps,
         token_contract: &ContractInfo,
         address: String,
+        authentication: Authentication,
     ) -> StdResult<BalanceResponse> {
-        TokenQueryMsg::Balance { address }.query(&deps.querier, token_contract)
+        TokenQueryMsg::Balance {
+            address,
+            authentication,
+        }
+        .query(&deps.querier, token_contract)
     }
 
     fn base_balance(
         deps: Deps,
         token_contract: &ContractInfo,
         address: String,
+        authentication: Authentication,
     ) -> StdResult<BalanceResponse> {
-        TokenQueryMsg::BaseBalance { address }.query(&deps.querier, token_contract)
+        TokenQueryMsg::BaseBalance {
+            address,
+            authentication,
+        }
+        .query(&deps.querier, token_contract)
     }
 
     pub fn ctoken_balance(
         deps: Deps,
         config: &Config,
         account: impl ToString,
+        authentication: Authentication,
     ) -> Result<Coin, ContractError> {
         Ok(config.market_token.amount(
             token_balance(
                 deps,
                 &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
                 account.to_string(),
+                authentication,
             )?
             .balance,
         ))
@@ -885,12 +908,14 @@ mod query {
         deps: Deps,
         config: &Config,
         account: impl ToString,
+        authentication: Authentication,
     ) -> Result<Coin, ContractError> {
         Ok(config.market_token.amount(
             base_balance(
                 deps,
                 &Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
                 account.to_string(),
+                authentication,
             )?
             .balance,
         ))
@@ -913,8 +938,14 @@ mod query {
         account: String,
     ) -> Result<TokensBalanceResponse, ContractError> {
         let config = CONFIG.load(deps.storage)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
-        let mut collateral = ctoken_base_balance(deps, &config, account.clone())?;
+        let mut collateral = ctoken_base_balance(
+            deps,
+            &config,
+            account.clone(),
+            Authentication::ViewingKey(viewing_key),
+        )?;
         let mut debt = Coin {
             denom: config.market_token.clone(),
             amount: debt::of(deps.storage, &deps.api.addr_validate(&account)?)?,
@@ -951,12 +982,17 @@ mod query {
         let viewing_key = VIEWING_KEY.load(deps.storage)?;
 
         let transferable = cr_lending_utils::transferable_amount(deps, &cfg, &account)?;
-        let ctoken_balance = ctoken_base_balance(deps, &cfg, &account)?;
+        let ctoken_balance = ctoken_base_balance(
+            deps,
+            &cfg,
+            &account,
+            Authentication::ViewingKey(viewing_key.clone()),
+        )?;
         let allowed_to_withdraw = min(transferable, ctoken_balance.amount);
         let withdrawable = min(
             allowed_to_withdraw,
             cfg.market_token
-                .query_balance(deps, env.contract.address, viewing_key)?
+                .query_balance(deps, env.contract.address, viewing_key.key)?
                 .into(),
         );
 
@@ -974,7 +1010,7 @@ mod query {
         let borrowable = min(
             borrowable,
             cfg.market_token
-                .query_balance(deps, env.contract.address.to_string(), viewing_key)?
+                .query_balance(deps, env.contract.address.to_string(), viewing_key.key)?
                 .into(),
         );
 
@@ -1034,7 +1070,13 @@ mod query {
         account: Addr,
     ) -> Result<CreditLineResponse, ContractError> {
         let config = CONFIG.load(deps.storage)?;
-        let mut collateral = ctoken_base_balance(deps, &config, &account)?;
+        let viewing_key = VIEWING_KEY.load(deps.storage)?;
+        let mut collateral = ctoken_base_balance(
+            deps,
+            &config,
+            &account,
+            Authentication::ViewingKey(viewing_key),
+        )?;
         let mut debt = Coin {
             denom: config.market_token.clone(),
             amount: debt::of(deps.storage, &account)?,
