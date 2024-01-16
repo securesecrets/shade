@@ -165,10 +165,8 @@ pub fn receive_snip20_message(
     info: MessageInfo,
     msg: Snip20ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    use ReceiveMsg::*;
-    // TODO: Result instead of unwrap
     match from_binary(&msg.msg.unwrap())? {
-        Deposit => {
+        ReceiveMsg::Deposit {} => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});
@@ -185,7 +183,7 @@ pub fn receive_snip20_message(
                 },
             )
         }
-        Repay => {
+        ReceiveMsg::Repay {} => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});
@@ -203,7 +201,7 @@ pub fn receive_snip20_message(
                 sender,
             )
         }
-        RepayTo { account } => {
+        ReceiveMsg::RepayTo { account } => {
             let config = CONFIG.load(deps.storage)?;
             if config.ctoken_contract != info.sender {
                 return Err(ContractError::Unauthorized {});

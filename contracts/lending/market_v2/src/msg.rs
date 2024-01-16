@@ -77,7 +77,7 @@ pub enum ReceiveMsg {
     /// The underlying market_token is stored in this Market contract
     Deposit {},
     /// If sent tokens' denom matches market_token, burns tokens from sender's address
-    Repay,
+    Repay {},
     /// Helper to allow repay of debt on given account.
     /// Sender must be a Credit Agency
     RepayTo { account: String },
