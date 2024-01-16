@@ -1,37 +1,37 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
-    Uint128,
-};
-use cw2::set_contract_version;
-use cw20::Cw20ReceiveMsg;
-use utils::amount::{base_to_token, token_to_base};
-use utils::coin::Coin;
-
-use crate::error::ContractError;
-use crate::msg::{
-    BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse, InstantiateMsg,
-    MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
-};
-use crate::state::{
-    Distribution, TokenInfo, WithdrawAdjustment, BALANCES, CONTROLLER, DISTRIBUTION, MULTIPLIER,
-    POINTS_SCALE, TOKEN_INFO, TOTAL_SUPPLY, WITHDRAW_ADJUSTMENT,
+use shade_protocol::c_std::shd_entry_point;
+use shade_protocol::{
+    c_std::{
+        to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Uint128,
+    },
+    contract_interfaces::snip20::Snip20ReceiveMsg,
+    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
+    snip20,
+    utils::Query,
 };
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:lend-token";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+use crate::{
+    error::ContractError,
+    msg::{
+        AuthPermit, Authentication, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse,
+        InstantiateMsg, MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
+    },
+    state::{
+        Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER,
+        DISTRIBUTION, MULTIPLIER, POINTS_SCALE, QUERY_AUTH, TOKEN_INFO, TOTAL_SUPPLY, VIEWING_KEY,
+        WITHDRAW_ADJUSTMENT,
+    },
+};
+use lending_utils::amount::{base_to_token, token_to_base};
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     let token_info = TokenInfo {
         name: msg.name,
         symbol: msg.symbol,
@@ -41,20 +41,82 @@ pub fn instantiate(
     TOKEN_INFO.save(deps.storage, &token_info)?;
 
     let distribution = Distribution {
-        denom: msg.distributed_token,
+        denom: msg.distributed_token.into_valid(deps.api)?,
         points_per_token: Uint128::zero(),
         points_leftover: Uint128::zero(),
         distributed_total: Uint128::zero(),
         withdrawable_total: Uint128::zero(),
     };
-
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
+    QUERY_AUTH.save(deps.storage, &msg.query_auth)?;
+
     TOTAL_SUPPLY.save(deps.storage, &Uint128::zero())?;
-    CONTROLLER.save(deps.storage, &deps.api.addr_validate(&msg.controller)?)?;
+    CONTROLLER.save(deps.storage, &msg.controller.into_valid(deps.api)?)?;
     MULTIPLIER.save(deps.storage, &Decimal::from_ratio(1u128, 100_000u128))?;
 
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
+
     Ok(Response::new())
+}
+
+/// Execution entry point
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
+    use ExecuteMsg::*;
+
+    match msg {
+        Transfer { recipient, amount } => {
+            let recipient = deps.api.addr_validate(&recipient)?;
+            transfer(deps, env, info, recipient, amount)
+        }
+        TransferFrom {
+            sender,
+            recipient,
+            amount,
+        } => {
+            let recipient = deps.api.addr_validate(&recipient)?;
+            let sender = deps.api.addr_validate(&sender)?;
+            transfer_from(deps, info, sender, recipient, amount)
+        }
+        TransferBaseFrom {
+            sender,
+            recipient,
+            amount,
+        } => {
+            let controller = CONTROLLER.load(deps.storage)?;
+
+            if info.sender != controller.address {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            let recipient = deps.api.addr_validate(&recipient)?;
+            let sender = deps.api.addr_validate(&sender)?;
+            let multiplier = MULTIPLIER.load(deps.storage)?;
+            let amount = base_to_token(amount, multiplier);
+            transfer_from(deps, info, sender, recipient, amount)
+        }
+        Send {
+            contract,
+            amount,
+            msg,
+        } => {
+            let recipient = deps.api.addr_validate(&contract)?;
+            send(deps, env, info, recipient, amount, msg)
+        }
+        Mint { recipient, amount } => mint(deps, info, recipient, amount),
+        MintBase { recipient, amount } => mint_base(deps, info, recipient, amount),
+        BurnFrom { owner, amount } => burn_from(deps, info, owner, amount),
+        BurnBaseFrom { owner, amount } => burn_base_from(deps, info, owner, amount),
+        Rebase { ratio } => rebase(deps, info, ratio),
+        Distribute { sender } => distribute(deps, env, info, sender),
+        WithdrawFunds {} => withdraw_funds(deps, env, info),
+    }
 }
 
 /// Ensures, that tokens can be transferred from given account
@@ -65,13 +127,11 @@ fn can_transfer(
     amount: Uint128,
 ) -> Result<(), ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    let transferable: TransferableAmountResp = deps.querier.query_wasm_smart(
-        controller,
-        &ControllerQuery::TransferableAmount {
-            token: env.contract.address.to_string(),
-            account,
-        },
-    )?;
+    let transferable: TransferableAmountResp = ControllerQuery::TransferableAmount {
+        token: env.contract.address.to_string(),
+        account,
+    }
+    .query(&deps.querier, &controller)?;
 
     if amount <= transferable.transferable {
         Ok(())
@@ -147,7 +207,7 @@ fn transfer_from(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -181,12 +241,14 @@ fn send(
         .add_attribute("to", &recipient)
         .add_attribute("amount", amount)
         .add_message(
-            Cw20ReceiveMsg {
-                sender: info.sender.into(),
+            Snip20ReceiveMsg {
+                sender: info.sender.clone().into(),
+                from: info.sender.into(),
                 amount,
-                msg,
+                memo: None,
+                msg: Some(msg),
             }
-            .into_cosmos_msg(recipient)?,
+            .into_cosmos_msg(env.contract.code_hash, recipient.to_string())?,
         );
 
     Ok(res)
@@ -211,7 +273,7 @@ pub fn mint(
 ) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
 
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -264,7 +326,7 @@ pub fn burn_from(
     let controller = CONTROLLER.load(deps.storage)?;
     let owner = deps.api.addr_validate(&owner)?;
 
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -308,7 +370,7 @@ pub fn burn_from(
 /// Handler for `ExecuteMsg::Rebase`
 pub fn rebase(deps: DepsMut, info: MessageInfo, ratio: Decimal) -> Result<Response, ContractError> {
     let controller = CONTROLLER.load(deps.storage)?;
-    if info.sender != controller {
+    if info.sender != controller.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -345,9 +407,13 @@ pub fn distribute(
 
     let withdrawable: u128 = distribution.withdrawable_total.into();
 
-    let balance = distribution
-        .denom
-        .query_balance(deps.as_ref(), env.contract.address)?;
+    let balance = snip20::helpers::balance_query(
+        &deps.querier,
+        env.contract.address.clone(),
+        VIEWING_KEY.load(deps.storage)?,
+        &distribution.denom.clone(),
+    )?
+    .u128();
 
     let amount = balance - withdrawable;
     if amount == 0 {
@@ -377,21 +443,17 @@ pub fn distribute(
 
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
-    let mut resp = Response::new()
+    let resp = Response::new()
         .add_attribute("action", "distribute_tokens")
         .add_attribute("sender", sender.as_str())
-        .add_attribute("amount", amount.to_string());
-
-    match distribution.denom {
-        utils::token::Token::Native(denom) => resp = resp.add_attribute("denom", denom),
-        utils::token::Token::Cw20(address) => resp = resp.add_attribute("cw20_address", address),
-    }
+        .add_attribute("amount", amount.to_string())
+        .add_attribute("snip20_address", distribution.denom.address);
 
     Ok(resp)
 }
 
 /// Handler for `ExecuteMsg::WithdrawFunds`
-fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+fn withdraw_funds(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let mut distribution = DISTRIBUTION.load(deps.storage)?;
     let mut adjustment = WITHDRAW_ADJUSTMENT
         .may_load(deps.storage, &info.sender)?
@@ -408,79 +470,23 @@ fn withdraw_funds(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
     distribution.withdrawable_total -= token.amount;
     DISTRIBUTION.save(deps.storage, &distribution)?;
 
-    let mut resp = Response::new()
+    let resp = Response::new()
         .add_attribute("action", "withdraw_tokens")
         .add_attribute("owner", info.sender.as_str())
         .add_attribute("amount", token.amount.to_string())
-        .add_submessage(SubMsg::new(
-            token.denom.send_msg(info.sender, token.amount)?,
-        ));
-
-    match distribution.denom {
-        utils::token::Token::Native(denom) => resp = resp.add_attribute("denom", denom),
-        utils::token::Token::Cw20(address) => resp = resp.add_attribute("cw20_address", address),
-    }
+        .add_message(
+            Snip20ReceiveMsg {
+                sender: env.contract.address.clone().into(),
+                from: env.contract.address.into(),
+                amount: token.amount,
+                memo: None,
+                msg: None,
+            }
+            .into_cosmos_msg(env.contract.code_hash, info.sender.to_string())?,
+        )
+        .add_attribute("snip20_address", distribution.denom.address);
 
     Ok(resp)
-}
-
-/// Execution entry point
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
-    use ExecuteMsg::*;
-
-    match msg {
-        Transfer { recipient, amount } => {
-            let recipient = deps.api.addr_validate(&recipient)?;
-            transfer(deps, env, info, recipient, amount)
-        }
-        TransferFrom {
-            sender,
-            recipient,
-            amount,
-        } => {
-            let recipient = deps.api.addr_validate(&recipient)?;
-            let sender = deps.api.addr_validate(&sender)?;
-            transfer_from(deps, info, sender, recipient, amount)
-        }
-        TransferBaseFrom {
-            sender,
-            recipient,
-            amount,
-        } => {
-            let controller = CONTROLLER.load(deps.storage)?;
-
-            if info.sender != controller {
-                return Err(ContractError::Unauthorized {});
-            }
-
-            let recipient = deps.api.addr_validate(&recipient)?;
-            let sender = deps.api.addr_validate(&sender)?;
-            let multiplier = MULTIPLIER.load(deps.storage)?;
-            let amount = base_to_token(amount, multiplier);
-            transfer_from(deps, info, sender, recipient, amount)
-        }
-        Send {
-            contract,
-            amount,
-            msg,
-        } => {
-            let recipient = deps.api.addr_validate(&contract)?;
-            send(deps, env, info, recipient, amount, msg)
-        }
-        Mint { recipient, amount } => mint(deps, info, recipient, amount),
-        MintBase { recipient, amount } => mint_base(deps, info, recipient, amount),
-        BurnFrom { owner, amount } => burn_from(deps, info, owner, amount),
-        BurnBaseFrom { owner, amount } => burn_base_from(deps, info, owner, amount),
-        Rebase { ratio } => rebase(deps, info, ratio),
-        Distribute { sender } => distribute(deps, env, info, sender),
-        WithdrawFunds {} => withdraw_funds(deps, info),
-    }
 }
 
 /// Handler for `QueryMsg::BaseBalance`
@@ -530,21 +536,23 @@ pub fn query_multiplier(deps: Deps) -> StdResult<MultiplierResponse> {
 pub fn query_distributed_funds(deps: Deps) -> StdResult<FundsResponse> {
     let distribution = DISTRIBUTION.load(deps.storage)?;
     Ok(FundsResponse {
-        funds: Coin::new(distribution.distributed_total.into(), distribution.denom),
+        token: distribution.denom,
+        amount: distribution.distributed_total.into(),
     })
 }
 
 /// Handler for `QueryMsg::UndistributedFunds`
 pub fn query_undistributed_funds(deps: Deps, env: Env) -> StdResult<FundsResponse> {
     let distribution = DISTRIBUTION.load(deps.storage)?;
-    let balance = distribution
-        .denom
-        .query_balance(deps, env.contract.address)?;
+    let balance = snip20::helpers::balance_query(
+        &deps.querier,
+        env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        &distribution.denom.clone(),
+    )?;
     Ok(FundsResponse {
-        funds: Coin::new(
-            balance - distribution.withdrawable_total.u128(),
-            distribution.denom,
-        ),
+        token: distribution.denom,
+        amount: balance - distribution.withdrawable_total,
     })
 }
 
@@ -556,24 +564,79 @@ pub fn query_withdrawable_funds(deps: Deps, owner: String) -> StdResult<FundsRes
         .may_load(deps.storage, &owner)?
         .unwrap_or_default();
 
+    let withdrawable_funds = withdrawable_funds(deps, &owner, &distribution, &adjustment)?;
     Ok(FundsResponse {
-        funds: withdrawable_funds(deps, &owner, &distribution, &adjustment)?,
+        token: withdrawable_funds.denom,
+        amount: withdrawable_funds.amount.into(),
     })
 }
 
+pub fn authenticate(deps: Deps, auth: Authentication, account: Addr) -> StdResult<()> {
+    match auth {
+        Authentication::ViewingKey { key, address } => {
+            let address = deps.api.addr_validate(&address)?;
+            if !authenticate_vk(
+                address.clone(),
+                key,
+                &deps.querier,
+                &QUERY_AUTH.load(deps.storage)?,
+            )? {
+                return Err(StdError::generic_err("Invalid Viewing Key"));
+            }
+            if address != account {
+                return Err(StdError::generic_err(
+                    "Trying to query using viewing key not matching the account",
+                ));
+            }
+            Ok(())
+        }
+        Authentication::Permit(permit) => {
+            let res: PermitAuthentication<AuthPermit> =
+                authenticate_permit(permit, &deps.querier, QUERY_AUTH.load(deps.storage)?)?;
+            if res.revoked {
+                return Err(StdError::generic_err("Permit Revoked"));
+            }
+            if res.sender != CONTROLLER.load(deps.storage)?.address {
+                return Err(StdError::generic_err(
+                    "Unauthorized: Only proper market contract can query using permit",
+                ));
+            }
+            Ok(())
+        }
+    }
+}
+
 /// `QueryMsg` entry point
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     use QueryMsg::*;
 
     match msg {
-        Balance { address } => to_binary(&query_balance(deps, address)?),
-        BaseBalance { address } => to_binary(&query_base_balance(deps, address)?),
+        Balance {
+            address,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&address)?)?;
+            to_binary(&query_balance(deps, address)?)
+        }
+        BaseBalance {
+            address,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&address)?)?;
+            to_binary(&query_base_balance(deps, address)?)
+        }
         TokenInfo {} => to_binary(&query_token_info(deps)?),
         Multiplier {} => to_binary(&query_multiplier(deps)?),
         DistributedFunds {} => to_binary(&query_distributed_funds(deps)?),
         UndistributedFunds {} => to_binary(&query_undistributed_funds(deps, env)?),
-        WithdrawableFunds { owner } => to_binary(&query_withdrawable_funds(deps, owner)?),
+        WithdrawableFunds {
+            owner,
+            authentication,
+        } => {
+            authenticate(deps, authentication, deps.api.addr_validate(&owner)?)?;
+            to_binary(&query_withdrawable_funds(deps, owner)?)
+        }
     }
 }
 
@@ -583,7 +646,7 @@ pub fn withdrawable_funds(
     owner: &Addr,
     distribution: &Distribution,
     adjustment: &WithdrawAdjustment,
-) -> StdResult<Coin> {
+) -> StdResult<Withdrawable> {
     let ppt: u128 = distribution.points_per_token.into();
     let tokens: u128 = BALANCES
         .may_load(deps.storage, owner)?
@@ -596,7 +659,10 @@ pub fn withdrawable_funds(
     let amount = points as u128 / POINTS_SCALE;
     let amount = amount - withdrawn;
 
-    Ok(Coin::new(amount, distribution.denom.clone()))
+    Ok(Withdrawable {
+        amount: Uint128::new(amount),
+        denom: distribution.denom.clone(),
+    })
 }
 
 /// Applies points correction for given address.
@@ -615,21 +681,25 @@ pub fn apply_points_correction(deps: DepsMut, addr: &Addr, ppt: u128, diff: i128
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use shade_protocol::{
+        c_std::testing::{mock_dependencies, mock_env, mock_info},
+        utils::asset::RawContract,
+    };
 
     use super::*;
-    use utils::token::Token;
 
     #[test]
     fn rebase_works() {
         let mut deps = mock_dependencies();
-        let controller = "controller";
+        let controller = RawContract::new(&"controller".to_string(), &"".to_string());
+        let distributed_token = RawContract::new(&"SHADE".to_string(), &"".to_string());
         let instantiate_msg = InstantiateMsg {
             name: "Cash Token".to_string(),
             symbol: "CASH".to_string(),
             decimals: 9,
-            controller: controller.to_string(),
-            distributed_token: Token::Native(String::new()),
+            controller,
+            distributed_token,
+            viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
         let env = mock_env();
@@ -641,7 +711,7 @@ mod tests {
         assert_eq!(basic_mul, MULTIPLIER.load(&deps.storage).unwrap());
 
         // We rebase by 1.2, multiplier is 1.2
-        let info = mock_info(controller, &[]);
+        let info = mock_info(&controller.address, &[]);
         rebase(deps.as_mut(), info.clone(), Decimal::percent(120)).unwrap();
         assert_eq!(
             basic_mul * Decimal::percent(120),
@@ -659,13 +729,15 @@ mod tests {
     #[test]
     fn rebase_query_works() {
         let mut deps = mock_dependencies();
-        let controller = "controller";
+        let controller = RawContract::new(&"controller".to_string(), &"".to_string());
+        let distributed_token = RawContract::new(&"SHADE".to_string(), &"".to_string());
         let instantiate_msg = InstantiateMsg {
             name: "Cash Token".to_string(),
             symbol: "CASH".to_string(),
             decimals: 9,
-            controller: controller.to_string(),
-            distributed_token: Token::Native(String::new()),
+            controller,
+            distributed_token,
+            viewing_key: "VIEWIENG_KEY".to_string(),
         };
         let info = mock_info("creator", &[]);
         let env = mock_env();
@@ -674,7 +746,7 @@ mod tests {
 
         let basic_mul = MULTIPLIER.load(&deps.storage).unwrap();
 
-        let info = mock_info(controller, &[]);
+        let info = mock_info(&controller.address, &[]);
         rebase(deps.as_mut(), info, Decimal::percent(120)).unwrap();
         assert_eq!(
             basic_mul * Decimal::percent(120),

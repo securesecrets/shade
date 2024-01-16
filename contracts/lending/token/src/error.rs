@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint128};
+use shade_protocol::c_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

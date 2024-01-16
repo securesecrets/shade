@@ -1,8 +1,10 @@
 use crate::multitest::suite::SuiteBuilder;
 
 use super::suite::Suite;
-use cosmwasm_std::{Decimal, Uint128};
-use utils::amount::token_to_base;
+
+use shade_protocol::c_std::{Decimal, Uint128};
+
+use lending_utils::amount::token_to_base;
 
 fn query_base_total_supply(suite: &Suite) -> Uint128 {
     let info = suite.query_token_info().unwrap();

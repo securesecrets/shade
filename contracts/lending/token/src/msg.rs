@@ -1,7 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Decimal, Uint128};
+use shade_protocol::{
+    c_std::{Binary, Decimal, Uint128},
+    contract_interfaces::query_auth::QueryPermit,
+    utils::{
+        asset::{Contract, RawContract},
+        Query,
+    },
+};
 
-use utils::{amount::token_to_base, coin::Coin, token::Token};
+use lending_utils::amount::token_to_base;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -12,10 +19,14 @@ pub struct InstantiateMsg {
     /// Token precision for displaying
     pub decimals: u8,
     /// Controller is contract allowed to ming, burn, rebase, and must be checked with to
-    /// enable transfer. Usually it is an wynd_lend market contract.
-    pub controller: String,
+    /// enable transfer. Usually it is an lend market contract.
+    pub controller: RawContract,
     /// Token which will be distributed via this contract by cw2222 interface
-    pub distributed_token: Token,
+    pub distributed_token: RawContract,
+    /// Key used for reading data in queries
+    pub viewing_key: String,
+    /// Address of auth query contract
+    pub query_auth: Contract,
 }
 
 #[cw_serde]
@@ -78,11 +89,15 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub enum ControllerQuery {
     TransferableAmount {
-        /// WyndLend contract address that calls "CanTransfer"
+        /// Lend contract address that calls "CanTransfer"
         token: String,
         /// Address that wishes to transfer
         account: String,
     },
+}
+
+impl Query for ControllerQuery {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
@@ -91,14 +106,29 @@ pub struct TransferableAmountResp {
 }
 
 #[cw_serde]
+pub struct AuthPermit {}
+
+#[cw_serde]
+pub enum Authentication {
+    ViewingKey { key: String, address: String },
+    Permit(QueryPermit),
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Returns the current balance of the given address, 0 if unset.
     #[returns(BalanceResponse)]
-    Balance { address: String },
+    Balance {
+        address: String,
+        authentication: Authentication,
+    },
     /// Like `Balance`, but returns the amount of base tokens.
     #[returns(BalanceResponse)]
-    BaseBalance { address: String },
+    BaseBalance {
+        address: String,
+        authentication: Authentication,
+    },
     /// Returns metadata on the contract - name, decimals, supply, etc.
     #[returns(TokenInfoResponse)]
     TokenInfo {},
@@ -112,8 +142,15 @@ pub enum QueryMsg {
     #[returns(FundsResponse)]
     UndistributedFunds {},
     /// Queries for funds distributed but not yet withdrawn by owner
-    #[returns(Coin)]
-    WithdrawableFunds { owner: String },
+    #[returns(WithdrawableFundsResponse)]
+    WithdrawableFunds {
+        owner: String,
+        authentication: Authentication,
+    },
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
@@ -144,5 +181,12 @@ pub struct MultiplierResponse {
 
 #[cw_serde]
 pub struct FundsResponse {
-    pub funds: Coin,
+    pub token: Contract,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct WithdrawableFundsResponse {
+    pub token: Contract,
+    pub amount: Uint128,
 }

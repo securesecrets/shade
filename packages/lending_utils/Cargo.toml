@@ -11,7 +11,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+schemars = "0.8"
+serde = { version = "1", default-features = false, features = ["derive"] }
 shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "snip20",
   "storage_plus",
 ] }
+thiserror = "1"

@@ -1,9 +1,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Item, Map};
-use utils::token::Token;
+use shade_protocol::{
+    c_std::{Addr, Decimal, Uint128},
+    secret_storage_plus::{Item, Map},
+    utils::asset::Contract,
+};
 
 use crate::i128::Int128;
 
@@ -18,7 +20,7 @@ pub struct TokenInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Distribution {
     /// Token distributed by this contract.
-    pub denom: Token,
+    pub denom: Contract,
     /// How much points is single division of wynd_lend worth at this point.
     pub points_per_token: Uint128,
     /// Points which were not fully distributed on previous distribution, and should be
@@ -38,6 +40,12 @@ pub struct WithdrawAdjustment {
     pub withdrawn_funds: Uint128,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct Withdrawable {
+    pub denom: Contract,
+    pub amount: Uint128,
+}
+
 /// How much points is the worth of single token in token distribution.
 ///
 /// 4_000_000_000 is choosen as the closest to reasonable 32bits shift,
@@ -48,8 +56,11 @@ pub const POINTS_SCALE: u128 = 4_000_000_000;
 
 pub const TOKEN_INFO: Item<TokenInfo> = Item::new("token_info");
 pub const TOTAL_SUPPLY: Item<Uint128> = Item::new("total_supply");
-pub const CONTROLLER: Item<Addr> = Item::new("controller");
+pub const CONTROLLER: Item<Contract> = Item::new("controller");
 pub const BALANCES: Map<&Addr, Uint128> = Map::new("balance");
 pub const MULTIPLIER: Item<Decimal> = Item::new("multiplier");
 pub const DISTRIBUTION: Item<Distribution> = Item::new("distribution");
 pub const WITHDRAW_ADJUSTMENT: Map<&Addr, WithdrawAdjustment> = Map::new("withdraw_adjustment");
+
+pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const QUERY_AUTH: Item<Contract> = Item::new("query_auth");
