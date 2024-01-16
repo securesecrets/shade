@@ -268,6 +268,89 @@ mod execute {
             .add_attribute("account", account))
     }
 
+    pub fn exit_market(
+        deps: DepsMut,
+        info: MessageInfo,
+        market: Contract,
+    ) -> Result<Response, ContractError> {
+        let common_token = CONFIG.load(deps.storage)?.common_token;
+
+        let token_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
+        let authentication = Authentication::ViewingKey(token_viewing_key);
+
+        let mut markets = ENTERED_MARKETS.load(deps.storage)?;
+        let mut entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&info.sender))
+                .cloned()
+                .unwrap_or_default();
+        if !entered_markets.contains(&market) {
+            return Err(ContractError::NotOnMarket {
+                address: info.sender,
+                market: market.address.clone(),
+            });
+        }
+
+        let market_credit_line: CreditLineResponse = deps.querier.query_wasm_smart(
+            market.code_hash.clone(),
+            market.address.to_string(),
+            &MarketQueryMsg::CreditLine {
+                account: info.sender.clone(),
+                authentication: authentication.clone(),
+            },
+        )?;
+
+        if !market_credit_line.debt.amount.is_zero() {
+            return Err(ContractError::DebtOnMarket {
+                address: info.sender,
+                market: market.address.clone(),
+                debt: market_credit_line.debt,
+            });
+        }
+
+        // It can be removed before everything is checked, as if anything would fail, this removal
+        // would not be applied. And in `reduced_credit_line` we don't want this market to be
+        // there, so removing early.
+        entered_markets.retain(|x| x != &market);
+
+        let reduced_credit_line = entered_markets
+            .iter()
+            .map(|market| -> Result<CreditLineValues, ContractError> {
+                let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
+                    market.code_hash.clone(),
+                    market.address.to_string(),
+                    &MarketQueryMsg::CreditLine {
+                        account: info.sender.clone(),
+                        authentication: authentication.clone(),
+                    },
+                )?;
+                let price_response = price_response.validate(&common_token)?;
+                Ok(price_response)
+            })
+            .try_fold(
+                CreditLineValues::zero(),
+                |total, credit_line| match credit_line {
+                    Ok(cl) => Ok(total + cl),
+                    Err(err) => Err(err),
+                },
+            )?;
+
+        if reduced_credit_line.credit_line < reduced_credit_line.debt {
+            return Err(ContractError::NotEnoughCollat {
+                debt: reduced_credit_line.debt,
+                credit_line: reduced_credit_line.credit_line,
+                collateral: reduced_credit_line.collateral,
+            });
+        }
+
+        insert_or_update(&mut markets, info.sender.clone(), entered_markets);
+        ENTERED_MARKETS.save(deps.storage, &markets)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "exit_market")
+            .add_attribute("market", market.address)
+            .add_attribute("account", info.sender))
+    }
+
     fn create_repay_to_submessage(
         coin: lending_utils::coin::Coin,
         debt_market: Contract,
