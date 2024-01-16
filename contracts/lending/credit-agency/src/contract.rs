@@ -82,9 +82,9 @@ pub fn execute(
 
     match msg {
         CreateMarket(market_cfg) => execute::create_market(deps, env, info, market_cfg),
-        EnterMarket { account } => {
+        EnterMarket { account, market } => {
             let account = deps.api.addr_validate(&account)?;
-            todo!() //execute::enter_market(deps, info, account)
+            execute::enter_market(deps, info, market, account)
         }
         ExitMarket { market } => {
             let market = deps.api.addr_validate(&market)?;
@@ -240,6 +240,32 @@ mod execute {
             .add_attribute("action", "create_market")
             .add_attribute("sender", info.sender)
             .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
+    }
+
+    pub fn enter_market(
+        deps: DepsMut,
+        info: MessageInfo,
+        market: Contract,
+        account: Addr,
+    ) -> Result<Response, ContractError> {
+        if market.address != info.sender {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        let mut markets = ENTERED_MARKETS.load(deps.storage)?;
+        let mut entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
+        if !entered_markets.contains(&market) {
+            entered_markets.push(market.clone());
+        }
+        insert_or_update(&mut markets, account.clone(), entered_markets);
+
+        Ok(Response::new()
+            .add_attribute("action", "enter_market")
+            .add_attribute("market", market.address)
+            .add_attribute("account", account))
     }
 
     fn create_repay_to_submessage(

@@ -48,6 +48,7 @@ pub enum ExecuteMsg {
     /// market contract - so the sender of the msg would be the market. The store is treated as a set.
     EnterMarket {
         account: String,
+        market: Contract,
     },
     /// Exits market if:
     /// * Sender have no debt in the market
