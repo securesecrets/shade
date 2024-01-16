@@ -2,8 +2,8 @@
 use shade_protocol::c_std::shd_entry_point;
 use shade_protocol::{
     c_std::{
-        to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-        StdResult, Uint128,
+        from_binary, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
+        StdError, StdResult, Uint128,
     },
     contract_interfaces::snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
@@ -13,7 +13,7 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg},
     state::{
         find_value, insert_or_update, Config, MarketState, CONFIG, MARKET_VIEWING_KEY,
         NEXT_REPLY_ID,
@@ -87,7 +87,7 @@ pub fn execute(
             execute::enter_market(deps, info, market, account)
         }
         ExitMarket { market } => execute::exit_market(deps, info, market),
-        Receive(msg) => todo!(), //execute::receive_snip20_message(deps, env, info, msg),
+        Receive(msg) => receive_snip20_message(deps, env, info, msg),
         AdjustMarketId { new_market_id } => todo!(), //restricted::adjust_market_id(deps, info, new_market_id),
         AdjustTokenId { new_token_id } => todo!(), //restricted::adjust_token_id(deps, info, new_token_id),
         AdjustCommonToken { new_common_token } => {
@@ -96,35 +96,36 @@ pub fn execute(
     }
 }
 
-// pub fn receive_snip20_message(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     msg: Snip20ReceiveMsg,
-// ) -> Result<Response, ContractError> {
-//     use ReceiveMsg::*;
-//     // TODO: Result instead of unwrap
-//     match from_binary(&msg.msg.unwrap())? {
-//         Liquidate  => {
-//             let config = CONFIG.load(deps.storage)?;
-//             if config.ctoken_contract != info.sender {
-//                 return Err(ContractError::Unauthorized {});
-//             };
-//             execute::liquidate(
-//                 deps,
-//                 env,
-//                 msg.sender,
-//                 lending_utils::coin::Coin {
-//                     denom: Token::Cw20(
-//                         Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
-//                     ),
-//                     amount: msg.amount,
-//                 },
-//             )
-//         }
-//     }
-//
-// }
+pub fn receive_snip20_message(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: Snip20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    match from_binary(&msg.msg.unwrap())? {
+        ReceiveMsg::Liquidate {
+            account,
+            collateral_denom,
+        } => {
+            let account = deps.api.addr_validate(&account)?;
+            let sender = deps.api.addr_validate(&msg.sender)?;
+            let config = CONFIG.load(deps.storage)?;
+
+            execute::liquidate(
+                deps,
+                sender,
+                account,
+                lending_utils::coin::Coin {
+                    denom: Token::Cw20(
+                        Contract::new(&info.sender, &config.ctoken_code_hash).into(),
+                    ),
+                    amount: msg.amount,
+                },
+                collateral_denom,
+            )
+        }
+    }
+}
 
 mod execute {
     use super::*;
@@ -374,7 +375,6 @@ mod execute {
         sender: Addr,
         // Account to liquidate.
         account: Addr,
-        // Native or cw20 tokens sent along with the tx.
         coins: lending_utils::coin::Coin,
         collateral_denom: Token,
     ) -> Result<Response, ContractError> {
