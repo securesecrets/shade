@@ -1,4 +1,5 @@
 use std::{
+    borrow::{Borrow, BorrowMut},
     collections::HashMap,
     ops::{Add, AddAssign, Sub},
     str::FromStr,
@@ -163,54 +164,8 @@ pub fn try_stake(
 ) -> StdResult<Response> {
     let token_id: u32 = token_id_string.parse().unwrap();
 
-    //LOADING general use readonly stores
-    let mut epoch_obj = match EPOCH_STORE.may_load(deps.storage, state.epoch_index)? {
-        Some(e) => Ok(e),
-        None => Err(StdError::generic_err("Reward token storage already exists")),
-    }?;
-
-    loop {
-        let current_time = env.block.time.seconds();
-
-        // Check if the current epoch has ended
-        if current_time >= epoch_obj.end_time {
-            // Move to the next epoch
-            state.epoch_index += 1;
-
-            // Attempt to load the next epoch's data
-            match EPOCH_STORE.may_load(deps.storage, state.epoch_index)? {
-                Some(e) => {
-                    epoch_obj = e;
-                    // // Check if the newly loaded epoch starts right now
-                    // if epoch_obj.start_time == current_time {
-                    //     break;
-                    // }
-                }
-                None => {
-                    // Initialize a new epoch if it doesn't exist
-                    let expired_at = match state.expiry_durations {
-                        Some(durations) => Some(durations + epoch_obj.start_time),
-                        None => None,
-                    };
-                    epoch_obj = EpochInfo {
-                        rewards_distribution: None,
-                        reward_tokens: None,
-                        start_time: epoch_obj.end_time,
-                        end_time: epoch_obj.end_time + state.epoch_durations,
-                        duration: state.epoch_durations,
-                        expired_at,
-                    };
-
-                    EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
-
-                    break;
-                }
-            }
-        } else {
-            // Exit the loop if the current epoch has not ended
-            break;
-        }
-    }
+    // //LOADING general use readonly stores
+    let epoch_obj = process_epoch(deps.storage, &env, &mut state)?;
 
     //1) UPDATING: staker_info and staker_liquidity_snapshot
     //*INIT STAKER_INFO if not initialized already
@@ -332,52 +287,9 @@ pub fn try_unstake(
     }
 
     let mut state = STATE.load(deps.storage)?;
-    let mut epoch_obj = EPOCH_STORE
-        .may_load(deps.storage, state.epoch_index)?
-        .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
 
-    loop {
-        let current_time = env.block.time.seconds();
+    let epoch_obj = process_epoch(deps.storage, &env, &mut state)?;
 
-        // Check if the current epoch has ended
-        if current_time >= epoch_obj.end_time {
-            // Move to the next epoch
-            state.epoch_index += 1;
-
-            // Attempt to load the next epoch's data
-            match EPOCH_STORE.may_load(deps.storage, state.epoch_index)? {
-                Some(e) => {
-                    epoch_obj = e;
-                    // // Check if the newly loaded epoch starts right now
-                    // if epoch_obj.start_time == current_time {
-                    //     break;
-                    // }
-                }
-                None => {
-                    // Initialize a new epoch if it doesn't exist
-                    let expired_at = match state.expiry_durations {
-                        Some(durations) => Some(durations + epoch_obj.start_time),
-                        None => None,
-                    };
-                    epoch_obj = EpochInfo {
-                        rewards_distribution: None,
-                        reward_tokens: None,
-                        start_time: epoch_obj.end_time,
-                        end_time: epoch_obj.end_time + state.epoch_durations,
-                        duration: state.epoch_durations,
-                        expired_at,
-                    };
-
-                    EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
-
-                    break;
-                }
-            }
-        } else {
-            // Exit the loop if the current epoch has not ended
-            break;
-        }
-    }
     staker_init_checker(deps.storage, &state, &info.sender)?;
 
     // Serialize the vectors into JSON strings
@@ -871,6 +783,7 @@ pub fn try_register_reward_tokens(
 pub fn try_update_config(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     admin_auth: Option<RawContract>,
     query_auth: Option<RawContract>,
     epoch_duration: Option<u64>,
@@ -894,6 +807,7 @@ pub fn try_update_config(
     }
 
     if let Some(ep_duration) = epoch_duration {
+        let _ = process_epoch(deps.storage, &env, &mut state)?;
         state.epoch_durations = ep_duration;
     }
 
@@ -904,6 +818,51 @@ pub fn try_update_config(
     STATE.save(deps.storage, &state)?;
 
     Ok(Response::default())
+}
+
+fn process_epoch(storage: &mut dyn Storage, env: &Env, state: &mut State) -> StdResult<EpochInfo> {
+    let mut epoch_obj = EPOCH_STORE
+        .may_load(storage, state.epoch_index)?
+        .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
+    let current_time = env.block.time.seconds();
+
+    // Check if the current epoch has ended
+    if current_time >= epoch_obj.end_time {
+        let difference = current_time - epoch_obj.end_time;
+
+        let multiples: u64 = difference / state.epoch_durations + 1;
+
+        for _ in 0..multiples {
+            // Move to the next epoch
+            state.epoch_index += 1;
+
+            // Attempt to load the next epoch's data
+            match EPOCH_STORE.may_load(storage, state.epoch_index)? {
+                Some(e) => {
+                    epoch_obj = e;
+                }
+                None => {
+                    // Initialize a new epoch if it doesn't exist
+                    let expired_at = match state.expiry_durations {
+                        Some(durations) => Some(durations + epoch_obj.start_time),
+                        None => None,
+                    };
+                    epoch_obj = EpochInfo {
+                        rewards_distribution: None,
+                        reward_tokens: None,
+                        start_time: epoch_obj.end_time,
+                        end_time: epoch_obj.end_time + state.epoch_durations,
+                        duration: state.epoch_durations,
+                        expired_at,
+                    };
+
+                    EPOCH_STORE.save(storage, state.epoch_index, &epoch_obj)?;
+                }
+            }
+        }
+    }
+
+    Ok(epoch_obj)
 }
 
 pub fn try_add_rewards(

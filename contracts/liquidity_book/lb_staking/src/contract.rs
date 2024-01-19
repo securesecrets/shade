@@ -130,6 +130,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             } => try_update_config(
                 deps,
                 info,
+                env,
                 admin_auth,
                 query_auth,
                 epoch_duration,
