@@ -189,7 +189,7 @@ pub fn instantiate(
         rewards_epoch_index: 1,
         base_rewards_bins: msg.total_reward_bins,
         toggle_distributions_algorithm: false,
-        //TODO: set using the setter function and instantiate msg
+        max_bins_per_swap: 100, // TODO: do this by message
     };
 
     let tree: TreeUint24 = TreeUint24::new();
@@ -428,6 +428,7 @@ fn try_swap(
 
     let mut active_id = params.get_active_id();
 
+    // updating the volatility
     params.update_references(&env.block.time)?;
     if reward_stats.rewards_distribution_algorithm == RewardsDistributionAlgorithm::TimeBasedRewards
     {
@@ -438,7 +439,8 @@ fn try_swap(
         reward_stats.cumm_value_mul_bin_id += time_difference * (Uint256::from(active_id));
     }
 
-    loop {
+    // Allowing max 100 bins crossed per swap
+    for _ in 0..state.max_bins_per_swap {
         let bin_reserves = BIN_MAP
             .load(deps.storage, active_id)
             .map_err(|_| Error::ZeroBinReserve { active_id })?;
@@ -670,8 +672,6 @@ pub fn add_liquidity_internal(
 
     let state = STATE.load(deps.storage)?;
 
-    // TODO - we are initializing the vector of empty values, and populating them in a
-    //        loop later. I think this could be refactored.
     let mut liquidity_configs = vec![
         LiquidityConfigurations {
             distribution_x: 0,
@@ -1533,7 +1533,6 @@ fn try_calculate_rewards_distribution(
         &state.admin_auth,
     )?;
 
-    // loop through the fee_logs uptil a maximum iterations
     // save the results in temporary storage
 
     let reward_stats = REWARDS_STATS_STORE.load(deps.storage, state.rewards_epoch_index)?;
@@ -1658,7 +1657,8 @@ fn calculate_volume_based_rewards_distribution(
     let basis_point_max: Uint256 = Uint256::from(BASIS_POINT_MAX);
     let mut total_weight = 0;
 
-    loop {
+    // TODO: Decide a reasonable value with shade's consultation
+    for _ in 0..U24::MAX {
         id = fee_tree.find_first_left(id);
         if id == U24::MAX || id == 0 {
             break;
@@ -2116,9 +2116,10 @@ fn query_all_bins_reserves(
         page_size
     };
 
+    let state = STATE.load(deps.storage)?;
     let mut counter: u32 = 0;
 
-    loop {
+    for _ in 0..state.max_bins_per_swap {
         let next_id = tree.find_first_left(id);
         id = next_id;
 
@@ -2601,7 +2602,7 @@ fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -> Re
 
     params.update_references(&env.block.time)?;
 
-    loop {
+    for _ in 0..state.max_bins_per_swap {
         let bin_reserves = BIN_MAP
             .load(deps.storage, id)
             .unwrap_or_default()
@@ -2689,7 +2690,7 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
 
     params.update_references(&env.block.time)?;
 
-    loop {
+    for _ in 0..state.max_bins_per_swap {
         let bin_reserves = BIN_MAP.load(deps.storage, id).unwrap_or_default();
         if !BinHelper::is_empty(bin_reserves, !swap_for_y) {
             let price = PriceHelper::get_price_from_id(id, bin_step)?;

@@ -68,6 +68,7 @@ pub struct State {
     pub rewards_epoch_index: u64,
     pub base_rewards_bins: Option<u32>,
     pub toggle_distributions_algorithm: bool,
+    pub max_bins_per_swap: u32,
 }
 
 #[cw_serde]
