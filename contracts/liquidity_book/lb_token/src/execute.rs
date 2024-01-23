@@ -16,31 +16,22 @@ use cosmwasm_std::{
     Uint256,
 };
 
-use crate::{
-    receiver::Snip1155ReceiveMsg,
-    state::{
-        balances_r,
-        balances_w,
-        blockinfo_w,
-        contr_conf_r,
-        contr_conf_w,
-        get_receiver_hash,
-        permissions::{may_load_any_permission, new_permission, update_permission},
-        set_receiver_hash,
-        tkn_info_r,
-        tkn_info_w,
-        tkn_tot_supply_r,
-        tkn_tot_supply_w,
-        txhistory::{
-            append_new_owner,
-            may_get_current_owner,
-            store_burn,
-            store_mint,
-            store_transfer,
-        },
-        PREFIX_REVOKED_PERMITS,
-        RESPONSE_BLOCK_SIZE,
-    },
+use crate::state::{
+    balances_r,
+    balances_w,
+    blockinfo_w,
+    contr_conf_r,
+    contr_conf_w,
+    get_receiver_hash,
+    permissions::{may_load_any_permission, new_permission, update_permission},
+    set_receiver_hash,
+    tkn_info_r,
+    tkn_info_w,
+    tkn_tot_supply_r,
+    tkn_tot_supply_w,
+    txhistory::{append_new_owner, may_get_current_owner, store_burn, store_mint, store_transfer},
+    PREFIX_REVOKED_PERMITS,
+    RESPONSE_BLOCK_SIZE,
 };
 
 use shade_protocol::{
@@ -48,12 +39,6 @@ use shade_protocol::{
         expiration::Expiration,
         metadata::Metadata,
         permissions::Permission,
-        s_toolkit::{
-            crypto::sha_256,
-            permit::RevokedPermits,
-            utils::space_pad,
-            viewing_key::{ViewingKey, ViewingKeyStore},
-        },
         state_structs::{
             ContractConfig,
             CurateTokenId,
@@ -69,214 +54,21 @@ use shade_protocol::{
         InstantiateMsg,
         ResponseStatus::Success,
         SendAction,
+        Snip1155ReceiveMsg,
         TransferAction,
+    },
+    s_toolkit::{
+        crypto::sha_256,
+        permit::RevokedPermits,
+        utils::space_pad,
+        viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };
 /////////////////////////////////////////////////////////////////////////////////
 // Init
 /////////////////////////////////////////////////////////////////////////////////
 
-/// instantiation function. See [InitMsg](crate::msg::InitMsg) for the api
-#[entry_point]
-pub fn instantiate(
-    mut deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: InstantiateMsg,
-) -> StdResult<Response> {
-    // save latest block info. not necessary once we migrate to CosmWasm v1.0
-    blockinfo_w(deps.storage).save(&env.block)?;
-
-    // set admin. If `has_admin` == None => no admin.
-    // If `has_admin` == true && msg.admin == None => admin is the instantiator
-    let admin = match msg.has_admin {
-        false => None,
-        true => match msg.admin {
-            Some(i) => Some(i),
-            None => Some(info.sender.clone()),
-        },
-    };
-
-    // create contract config -- save later
-    let prng_seed_hashed = sha_256(msg.entropy.as_bytes());
-    let prng_seed = prng_seed_hashed.to_vec();
-    // let prng_seed = sha_256(
-    //     general_purpose::STANDARD
-    //         .encode(msg.entropy.as_str())
-    //         .as_bytes(),
-    // );
-
-    ViewingKey::set_seed(deps.storage, &prng_seed);
-
-    let mut config = ContractConfig {
-        admin,
-        curators: msg.curators,
-        token_id_list: vec![],
-        tx_cnt: 0u64,
-        prng_seed: prng_seed.to_vec(),
-        contract_address: env.contract.address.clone(),
-        lb_pair_info: msg.lb_pair_info,
-    };
-
-    // // set initial balances
-    for initial_token in msg.initial_tokens {
-        exec_curate_token_id(&mut deps, &env, &info, &mut config, initial_token, None)?;
-    }
-
-    // save contract config -- where tx_cnt would have increased post initial balances
-    contr_conf_w(deps.storage).save(&config)?;
-
-    Ok(Response::default())
-}
-
-/////////////////////////////////////////////////////////////////////////////////
-// Handles
-/////////////////////////////////////////////////////////////////////////////////
-
-/// contract handle function. See [ExecuteMsg](crate::msg::ExecuteMsg) and
-/// [ExecuteAnswer](crate::msg::ExecuteAnswer) for the api
-#[entry_point]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
-    // allows approx latest block info to be available for queries. Important to enforce
-    // allowance expiration. Remove this after BlockInfo becomes available to queries
-    blockinfo_w(deps.storage).save(&env.block)?;
-
-    let response = match msg {
-        // ExecuteMsg::CurateTokenIds {
-        //     initial_tokens,
-        //     memo,
-        //     padding: _,
-        // } => try_curate_token_ids(deps, env, info, initial_tokens, memo),
-        ExecuteMsg::MintTokens {
-            mint_tokens,
-            memo,
-            padding: _,
-        } => try_mint_tokens(deps, env, info, mint_tokens, memo),
-        ExecuteMsg::BurnTokens {
-            burn_tokens,
-            memo,
-            padding: _,
-        } => try_burn_tokens(deps, env, info, burn_tokens, memo),
-        ExecuteMsg::ChangeMetadata {
-            token_id,
-            public_metadata,
-            private_metadata,
-        } => try_change_metadata(
-            deps,
-            env,
-            info,
-            token_id,
-            *public_metadata,
-            *private_metadata,
-        ),
-        ExecuteMsg::Transfer {
-            token_id,
-            from,
-            recipient,
-            amount,
-            memo,
-            padding: _,
-        } => try_transfer(deps, env, info, token_id, from, recipient, amount, memo),
-        ExecuteMsg::BatchTransfer {
-            actions,
-            padding: _,
-        } => try_batch_transfer(deps, env, info, actions),
-        ExecuteMsg::Send {
-            token_id,
-            from,
-            recipient,
-            recipient_code_hash,
-            amount,
-            msg,
-            memo,
-            padding: _,
-        } => try_send(deps, env, info, SendAction {
-            token_id,
-            from,
-            recipient,
-            recipient_code_hash,
-            amount,
-            msg,
-            memo,
-        }),
-        ExecuteMsg::BatchSend {
-            actions,
-            padding: _,
-        } => try_batch_send(deps, env, info, actions),
-        ExecuteMsg::GivePermission {
-            allowed_address,
-            token_id,
-            view_balance,
-            view_balance_expiry,
-            view_private_metadata,
-            view_private_metadata_expiry,
-            transfer,
-            transfer_expiry,
-            padding: _,
-        } => try_give_permission(
-            deps,
-            env,
-            info,
-            allowed_address,
-            token_id,
-            view_balance,
-            view_balance_expiry,
-            view_private_metadata,
-            view_private_metadata_expiry,
-            transfer,
-            transfer_expiry,
-        ),
-        ExecuteMsg::RevokePermission {
-            token_id,
-            owner,
-            allowed_address,
-            padding: _,
-        } => try_revoke_permission(deps, env, info, token_id, owner, allowed_address),
-        ExecuteMsg::CreateViewingKey {
-            entropy,
-            padding: _,
-        } => try_create_viewing_key(deps, env, info, entropy),
-        ExecuteMsg::SetViewingKey { key, padding: _ } => try_set_viewing_key(deps, env, info, key),
-        ExecuteMsg::RevokePermit {
-            permit_name,
-            padding: _,
-        } => try_revoke_permit(deps, env, info, permit_name),
-        ExecuteMsg::AddCurators {
-            add_curators,
-            padding: _,
-        } => try_add_curators(deps, env, info, add_curators),
-        ExecuteMsg::RemoveCurators {
-            remove_curators,
-            padding: _,
-        } => try_remove_curators(deps, env, info, remove_curators),
-        // ExecuteMsg::AddMinters {
-        //     token_id,
-        //     add_minters,
-        //     padding: _,
-        // } => try_add_minters(deps, env, info, token_id, add_minters),
-        // ExecuteMsg::RemoveMinters {
-        //     token_id,
-        //     remove_minters,
-        //     padding: _,
-        // } => try_remove_minters(deps, env, info, token_id, remove_minters),
-        ExecuteMsg::ChangeAdmin {
-            new_admin,
-            padding: _,
-        } => try_change_admin(deps, env, info, new_admin),
-        ExecuteMsg::RemoveAdmin {
-            current_admin,
-            contract_address,
-            padding: _,
-        } => try_remove_admin(deps, env, info, current_admin, contract_address),
-        ExecuteMsg::RegisterReceive {
-            code_hash,
-            padding: _,
-        } => try_register_receive(deps, env, info, code_hash),
-    };
-    pad_response(response)
-}
-
-// fn try_curate_token_ids(
+// pub fn try_curate_token_ids(
 //     mut deps: DepsMut,
 //     env: Env,
 //     info: MessageInfo,
@@ -308,7 +100,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 //     )
 // }
 
-fn try_mint_tokens(
+pub fn try_mint_tokens(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -316,7 +108,6 @@ fn try_mint_tokens(
     memo: Option<String>,
 ) -> StdResult<Response> {
     let mut config = contr_conf_r(deps.storage).load()?;
-
     verify_curator(&config, &info)?;
 
     // mint tokens
@@ -328,8 +119,8 @@ fn try_mint_tokens(
             let curate_token = CurateTokenId {
                 token_info: TokenInfoMsg {
                     token_id: mint_token.token_id.clone(),
-                    name: format!("{}-{}", &config.lb_pair_info.name, mint_token.token_id),
-                    symbol: format!("{}", &config.lb_pair_info.symbol),
+                    name: format!("LP-{}", &config.lb_pair_info.symbol),
+                    symbol: format!("LP-{}", &config.lb_pair_info.symbol),
                     token_config: TknConfig::Fungible {
                         minters: Vec::new(), // No need for minter curator will be the minter
                         decimals: config.lb_pair_info.decimals,
@@ -356,22 +147,22 @@ fn try_mint_tokens(
         }
 
         // check if enable_mint == true
-        if !token_info_op
-            .clone()
-            .unwrap()
-            .token_config
-            .flatten()
-            .enable_mint
-        {
-            return Err(StdError::generic_err(
-                "minting is not enabled for this token_id",
-            ));
-        }
+        // if !token_info_op
+        //     .clone()
+        //     .unwrap()
+        //     .token_config
+        //     .flatten()
+        //     .enable_mint
+        // {
+        //     return Err(StdError::generic_err(
+        //         "minting is not enabled for this token_id",
+        //     ));
+        // }
 
         // check if sender is a minter
         // verify_minter(token_info_op.as_ref().unwrap(), &info)?;
-
         // add balances
+
         for add_balance in mint_token.balances {
             exec_change_balance(
                 deps.storage,
@@ -402,7 +193,7 @@ fn try_mint_tokens(
 }
 
 // in the base specifications, this function can be performed by token owner only
-fn try_burn_tokens(
+pub fn try_burn_tokens(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -411,7 +202,6 @@ fn try_burn_tokens(
 ) -> StdResult<Response> {
     let mut config = contr_conf_r(deps.storage).load()?;
     verify_curator(&config, &info)?;
-
     // burn tokens
     for burn_token in burn_tokens {
         let token_info_op = tkn_info_r(deps.storage).may_load(burn_token.token_id.as_bytes())?;
@@ -433,12 +223,12 @@ fn try_burn_tokens(
         // remove balances
         for rem_balance in burn_token.balances {
             // in base specification, burner MUST be the owner
-            if rem_balance.address != info.sender {
-                return Err(StdError::generic_err(format!(
-                    "you do not have permission to burn {} tokens from address {}",
-                    rem_balance.amount, rem_balance.address
-                )));
-            }
+            // if rem_balance.address != info.sender {
+            //     return Err(StdError::generic_err(format!(
+            //         "you do not have permission to burn {} tokens from address {}",
+            //         rem_balance.amount, rem_balance.address
+            //     )));
+            // }
 
             exec_change_balance(
                 deps.storage,
@@ -469,7 +259,7 @@ fn try_burn_tokens(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::BurnTokens { status: Success })?))
 }
 
-fn try_change_metadata(
+pub fn try_change_metadata(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -529,7 +319,7 @@ fn try_change_metadata(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_transfer(
+pub fn try_transfer(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -546,7 +336,7 @@ fn try_transfer(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Transfer { status: Success })?))
 }
 
-fn try_batch_transfer(
+pub fn try_batch_transfer(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -574,7 +364,7 @@ fn try_batch_transfer(
     )
 }
 
-fn try_send(
+pub fn try_send(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -590,7 +380,7 @@ fn try_send(
     Ok(res)
 }
 
-fn try_batch_send(
+pub fn try_batch_send(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -611,7 +401,7 @@ fn try_batch_send(
 /// does not check if `token_id` exists so attacker cannot easily figure out if
 /// a `token_id` has been created
 #[allow(clippy::too_many_arguments)]
-fn try_give_permission(
+pub fn try_give_permission(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -716,7 +506,7 @@ fn try_give_permission(
 /// entry in storage, because it is unecessarily in most use cases, but will require also removing
 /// owner-specific PermissionKeys, which introduces complexity and increases gas cost.
 /// If permission does not exist, message will return an error.
-fn try_revoke_permission(
+pub fn try_revoke_permission(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -746,7 +536,7 @@ fn try_revoke_permission(
     )
 }
 
-fn try_create_viewing_key(
+pub fn try_create_viewing_key(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -763,7 +553,7 @@ fn try_create_viewing_key(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key })?))
 }
 
-fn try_set_viewing_key(
+pub fn try_set_viewing_key(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -777,7 +567,7 @@ fn try_set_viewing_key(
     )
 }
 
-fn try_revoke_permit(
+pub fn try_revoke_permit(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -793,51 +583,51 @@ fn try_revoke_permit(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RevokePermit { status: Success })?))
 }
 
-fn try_add_curators(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    add_curators: Vec<Addr>,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+// pub fn try_add_curators(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     add_curators: Vec<Addr>,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // verify admin
-    verify_admin(&config, &info)?;
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    // add curators
-    for curator in add_curators {
-        config.curators.push(curator);
-    }
-    contr_conf_w(deps.storage).save(&config)?;
+//     // add curators
+//     for curator in add_curators {
+//         config.curators.push(curator);
+//     }
+//     contr_conf_w(deps.storage).save(&config)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddCurators { status: Success })?))
-}
+//     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddCurators { status: Success })?))
+// }
 
-fn try_remove_curators(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    remove_curators: Vec<Addr>,
-) -> StdResult<Response> {
-    let mut config = contr_conf_r(deps.storage).load()?;
+// pub fn try_remove_curators(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     remove_curators: Vec<Addr>,
+// ) -> StdResult<Response> {
+//     let mut config = contr_conf_r(deps.storage).load()?;
 
-    // verify admin
-    verify_admin(&config, &info)?;
+//     // verify admin
+//     verify_admin(&config, &info)?;
 
-    // remove curators
-    for curator in remove_curators {
-        config.curators.retain(|x| x != &curator);
-    }
-    contr_conf_w(deps.storage).save(&config)?;
+//     // remove curators
+//     for curator in remove_curators {
+//         config.curators.retain(|x| x != &curator);
+//     }
+//     contr_conf_w(deps.storage).save(&config)?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCurators {
-            status: Success,
-        })?),
-    )
-}
+//     Ok(
+//         Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCurators {
+//             status: Success,
+//         })?),
+//     )
+// }
 
-// fn try_add_minters(
+// pub fn try_add_minters(
 //     deps: DepsMut,
 //     _env: Env,
 //     info: MessageInfo,
@@ -878,7 +668,7 @@ fn try_remove_curators(
 //     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddMinters { status: Success })?))
 // }
 
-// fn try_remove_minters(
+// pub fn try_remove_minters(
 //     deps: DepsMut,
 //     _env: Env,
 //     info: MessageInfo,
@@ -923,7 +713,9 @@ fn try_remove_curators(
 //     )
 // }
 
-fn try_change_admin(
+//No need to change admin cause we're using admin_auth
+
+pub fn try_change_admin(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -941,7 +733,7 @@ fn try_change_admin(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::ChangeAdmin { status: Success })?))
 }
 
-fn try_remove_admin(
+pub fn try_remove_admin(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -968,7 +760,7 @@ fn try_remove_admin(
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveAdmin { status: Success })?))
 }
 
-fn try_register_receive(
+pub fn try_register_receive(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -986,7 +778,7 @@ fn try_register_receive(
 // Private functions
 /////////////////////////////////////////////////////////////////////////////////
 
-fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
+pub fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
     response.map(|mut response| {
         response.data = response.data.map(|mut data| {
             space_pad(&mut data.0, RESPONSE_BLOCK_SIZE);
@@ -1003,10 +795,12 @@ fn is_valid_name(name: &str) -> bool {
 
 fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
-    let len_is_valid = (3..=6).contains(&len);
+    (3..=30).contains(&len)
+    // let len = symbol.len();
+    // let len_is_valid = (3..=50).contains(&len);
 
-    // len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
-    len_is_valid && symbol.bytes().all(|byte| byte.is_ascii_uppercase())
+    // // len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
+    // len_is_valid && symbol.bytes().all(|byte| byte.is_ascii_uppercase())
 }
 
 fn verify_admin(contract_config: &ContractConfig, info: &MessageInfo) -> StdResult<()> {
@@ -1064,7 +858,7 @@ fn verify_minter(token_info: &StoredTokenInfo, info: &MessageInfo) -> StdResult<
 }
 
 /// checks if `token_id` is available (ie: not yet created), then creates new `token_id` and initial balances
-fn exec_curate_token_id(
+pub fn exec_curate_token_id(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
@@ -1103,11 +897,13 @@ fn exec_curate_token_id(
             "Name is not in the expected format (3-30 UTF-8 bytes)",
         ));
     }
+
     if !is_valid_symbol(&initial_token.token_info.symbol) {
         return Err(StdError::generic_err(
             "Ticker symbol is not in expected format [A-Z]{3,6}",
         ));
     }
+
     if initial_token.token_info.token_config.flatten().decimals > 18 {
         return Err(StdError::generic_err("Decimals must not exceed 18"));
     }
@@ -1244,11 +1040,10 @@ fn impl_transfer(
             }
             // success, so need to reduce allowance
             Some(mut perm) if perm.trfer_allowance_perm >= amount => {
-                let new_allowance = Uint256::from(
-                    perm.trfer_allowance_perm
-                        .checked_sub(amount)
-                        .expect("something strange happened"),
-                );
+                let new_allowance = perm
+                    .trfer_allowance_perm
+                    .checked_sub(amount)
+                    .expect("something strange happened");
                 perm.trfer_allowance_perm = new_allowance;
                 update_permission(deps.storage, from, token_id, &info.sender, &perm)?;
             }
@@ -1338,10 +1133,8 @@ fn exec_change_balance(
         if from_new_amount_op.is_err() {
             return Err(StdError::generic_err("insufficient funds"));
         }
-        balances_w(storage, token_id).save(
-            to_binary(&from)?.as_slice(),
-            &Uint256::from(from_new_amount_op.unwrap()),
-        )?;
+        balances_w(storage, token_id)
+            .save(to_binary(&from)?.as_slice(), &from_new_amount_op.unwrap())?;
 
         // NOTE: if nft, the ownership history remains in storage. Any existing viewing permissions of last owner
         // will remain too
@@ -1356,6 +1149,11 @@ fn exec_change_balance(
             // if `to` address has no balance yet, initiate zero balance
             None => Uint256::from(0_u64),
         };
+
+        // println!("to_existing_bal {:?}", to_existing_bal);
+
+        // println!("amount {:?}", amount);
+
         let to_new_amount_op = to_existing_bal.checked_add(*amount);
         if to_new_amount_op.is_err() {
             return Err(StdError::generic_err(
@@ -1364,10 +1162,8 @@ fn exec_change_balance(
         }
 
         // save new balances
-        balances_w(storage, token_id).save(
-            to_binary(&to)?.as_slice(),
-            &Uint256::from(to_new_amount_op.unwrap()),
-        )?;
+        balances_w(storage, token_id)
+            .save(to_binary(&to)?.as_slice(), &to_new_amount_op.unwrap())?;
 
         // if is_nft == true, store new owner of NFT
         if token_info.token_config.flatten().is_nft {
@@ -1383,7 +1179,7 @@ fn exec_change_balance(
             let old_amount = tkn_tot_supply_r(storage).load(token_info.token_id.as_bytes())?;
             let new_amount_op = old_amount.checked_add(*amount);
             let new_amount = match new_amount_op {
-                Ok(i) => Uint256::from(i),
+                Ok(i) => i,
                 Err(_e) => {
                     return Err(StdError::generic_err(
                         "total supply exceeds max allowed of 2^128",
@@ -1396,7 +1192,7 @@ fn exec_change_balance(
             let old_amount = tkn_tot_supply_r(storage).load(token_info.token_id.as_bytes())?;
             let new_amount_op = old_amount.checked_sub(*amount);
             let new_amount = match new_amount_op {
-                Ok(i) => Uint256::from(i),
+                Ok(i) => i,
                 Err(_e) => return Err(StdError::generic_err("total supply drops below zero")),
             };
             tkn_tot_supply_w(storage).save(token_info.token_id.as_bytes(), &new_amount)?;

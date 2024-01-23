@@ -26,7 +26,7 @@ fn test_q_init() -> StdResult<()> {
     assert_ne!(init_result.unwrap(), Response::default());
 
     // check contract info
-    let msg = QueryMsg::TokenContractInfo {};
+    let msg = QueryMsg::ContractInfo {};
     let q_result = query(deps.as_ref(), mock_env(), msg);
     let q_answer = from_binary::<QueryAnswer>(&q_result?)?;
     match q_answer {

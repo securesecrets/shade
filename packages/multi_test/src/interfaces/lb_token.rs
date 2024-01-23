@@ -41,7 +41,7 @@ pub fn batch_send(
 }
 
 pub fn query_contract_info(app: &App, info: &ContractInfo) -> StdResult<QueryAnswer> {
-    let res: QueryAnswer = QueryMsg::TokenContractInfo {}.test_query(&info, app)?;
+    let res: QueryAnswer = QueryMsg::ContractInfo {}.test_query(&info, app)?;
     match res {
         QueryAnswer::TokenContractInfo { .. } => Ok(res),
         _ => Err(StdError::generic_err("Query failed")),

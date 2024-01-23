@@ -191,21 +191,21 @@ pub enum ExecuteMsg {
     //     remove_minters: Vec<Addr>,
     //     padding: Option<String>,
     // },
-    // ChangeAdmin {
-    //     new_admin: Addr,
-    //     padding: Option<String>,
-    // },
-    // /// Permanently breaks admin keys for this contract. No admin function can be called after this
-    // /// action. Any existing curators or minters will remain as curators or minters; no new curators can be
-    // /// added and no current curator can be removed.
-    // ///
-    // /// Requires caller to input current admin address and contract address. These inputs are not strictly
-    // /// necessary, but as a safety precaution to reduce the chances of accidentally calling this function.
-    // RemoveAdmin {
-    //     current_admin: Addr,
-    //     contract_address: Addr,
-    //     padding: Option<String>,
-    // },
+    ChangeAdmin {
+        new_admin: Addr,
+        padding: Option<String>,
+    },
+    /// Permanently breaks admin keys for this contract. No admin function can be called after this
+    /// action. Any existing curators or minters will remain as curators or minters; no new curators can be
+    /// added and no current curator can be removed.
+    ///
+    /// Requires caller to input current admin address and contract address. These inputs are not strictly
+    /// necessary, but as a safety precaution to reduce the chances of accidentally calling this function.
+    RemoveAdmin {
+        current_admin: Addr,
+        contract_address: Addr,
+        padding: Option<String>,
+    },
     RegisterReceive {
         code_hash: String,
         padding: Option<String>,
@@ -279,7 +279,7 @@ pub enum ExecuteAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// returns public information of the SNIP1155 contract
-    TokenContractInfo {},
+    ContractInfo {},
     IdTotalBalance {
         id: String,
     },
@@ -348,7 +348,7 @@ impl QueryMsg {
             } => Ok((vec![owner, allowed_address], key.clone())),
             Self::AllPermissions { address, key, .. } => Ok((vec![address], key.clone())),
             Self::TokenIdPrivateInfo { address, key, .. } => Ok((vec![address], key.clone())),
-            Self::TokenContractInfo {}
+            Self::ContractInfo {}
             | Self::IdTotalBalance { .. }
             | Self::TokenIdPublicInfo { .. }
             | Self::RegisteredCodeHash { .. }
