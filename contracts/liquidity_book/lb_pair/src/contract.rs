@@ -1,6 +1,5 @@
 use crate::{prelude::*, state::*};
 use ethnum::U256;
-use serde::Serialize;
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
@@ -63,13 +62,13 @@ use shade_protocol::{
     snip20,
     Contract,
 };
-use std::{collections::HashMap, ops::Sub, vec};
+use std::{collections::HashMap, vec};
 
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const INSTANTIATE_STAKING_CONTRACT_REPLY_ID: u64 = 2u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
-const LB_PAIR_CONTRACT_VERSION: u32 = 1;
 const DEFAULT_REWARDS_BINS: u32 = 100;
+const DEFAULT_MAX_BINS_PER_SWAP: u32 = 100;
 
 /////////////// INSTANTIATE ///////////////
 
@@ -189,7 +188,7 @@ pub fn instantiate(
         rewards_epoch_index: 1,
         base_rewards_bins: msg.total_reward_bins,
         toggle_distributions_algorithm: false,
-        max_bins_per_swap: 100, // TODO: do this by message
+        max_bins_per_swap: msg.max_bins_per_swap.unwrap_or(DEFAULT_MAX_BINS_PER_SWAP),
     };
 
     let tree: TreeUint24 = TreeUint24::new();
@@ -455,7 +454,6 @@ fn try_swap(
                 params,
                 bin_step,
                 swap_for_y,
-                active_id,
                 amounts_left,
                 price,
             )?;
@@ -1740,10 +1738,6 @@ fn only_factory(sender: &Addr, factory: &Addr) -> Result<()> {
     Ok(())
 }
 
-fn serialize_or_err<T: Serialize>(data: &T) -> Result<String> {
-    serde_json_wasm::to_string(data).map_err(|_| Error::SerializationError)
-}
-
 fn receiver_callback(
     deps: DepsMut,
     env: Env,
@@ -1861,7 +1855,6 @@ fn query_pair_info(deps: Deps) -> Result<Binary> {
     let state = STATE.load(deps.storage)?;
 
     let (reserve_x, reserve_y) = state.reserves.decode();
-    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
     let response = GetPairInfo {
         liquidity_token: Contract {
@@ -1909,12 +1902,10 @@ fn query_swap_simulation(
     deps: Deps,
     env: Env,
     offer: shade_protocol::swap::core::TokenAmount,
-    exclude_fee: Option<bool>,
+    _exclude_fee: Option<bool>,
 ) -> Result<Binary> {
     let state = STATE.load(deps.storage)?;
 
-    let (reserve_x, reserve_y) = state.reserves.decode();
-    let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
     let mut swap_for_y = false;
     match offer.token {
         token if token == state.token_x => swap_for_y = true,
@@ -2702,7 +2693,6 @@ fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Re
                 params,
                 bin_step,
                 swap_for_y,
-                id,
                 amounts_in_left,
                 price,
             )?;
@@ -2760,7 +2750,7 @@ fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
 }
 
 fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binary> {
-    let (epoch_id) = match epoch_id {
+    let epoch_id = match epoch_id {
         Some(id) => id,
         None => STATE.load(deps.storage)?.rewards_epoch_index - 1,
     };

@@ -1,13 +1,12 @@
-use std::str::FromStr;
-
-use ethnum::U256;
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
-    lb_libraries::{
-        math::uint256_to_u256::ConvertU256,
-        types::{ContractInstantiationInfo, LBPair, LBPairInformation, StaticFeeParameters},
+    lb_libraries::types::{
+        ContractInstantiationInfo,
+        LBPair,
+        LBPairInformation,
+        StaticFeeParameters,
     },
-    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution},
+    liquidity_book::lb_pair::{LiquidityParameters, RemoveLiquidity},
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::asset::RawContract,

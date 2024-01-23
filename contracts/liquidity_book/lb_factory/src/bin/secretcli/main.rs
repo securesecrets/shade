@@ -74,6 +74,7 @@ fn main() -> io::Result<()> {
         query_auth: RawContract::example(),
 
         recover_staking_funds_receiver: Addr::funds_recipient(),
+        max_bins_per_swap: Some(500),
     };
 
     writeln!(file, "## Instantiate Message\n")?;

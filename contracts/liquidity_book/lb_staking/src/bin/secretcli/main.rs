@@ -2,8 +2,7 @@ mod example_data;
 
 use example_data::*;
 use shade_protocol::{
-    c_std::{Addr, Binary, ContractInfo, Uint128, Uint256},
-    lb_libraries::pair_parameter_helper::PairParameters,
+    c_std::{Addr, ContractInfo, Uint256},
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
@@ -14,16 +13,10 @@ use shade_protocol::{
             QueryAnswer,
             QueryMsg,
             QueryTxnType,
-            QueryWithPermit,
         },
         lb_token::Snip1155ReceiveMsg,
     },
-    s_toolkit::permit::Permit,
     snip20::Snip20ReceiveMsg,
-    swap::{
-        core::{TokenAmount, TokenType},
-        router::*,
-    },
     utils::asset::RawContract,
     Contract,
 };

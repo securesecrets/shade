@@ -3,8 +3,6 @@
 //!
 //! This library contains functions to help interaction with bins.
 
-use std::str::FromStr;
-
 use crate::{
     c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128},
     swap::core::TokenType,
@@ -20,7 +18,6 @@ use super::{
         u256x256_math::{U256x256Math, U256x256MathError},
     },
     pair_parameter_helper::{PairParameters, PairParametersError},
-    price_helper::PriceHelper,
     transfer::HandleMsg,
     types::Bytes32,
 };
@@ -315,7 +312,6 @@ impl BinHelper {
         parameters: PairParameters,
         bin_step: u16,
         swap_for_y: bool,
-        active_id: u32,
         amounts_in_left: Bytes32,
         price: U256,
     ) -> Result<(Bytes32, Bytes32, Bytes32), BinError> {
@@ -692,7 +688,7 @@ mod tests {
     #[test]
     fn test_get_shares_and_effective_amounts_in_delta_liquidity_adjustment() {
         // Assume these constants based on your SCALE and SCALE_OFFSET values
-        let scale = U256::from(SCALE);
+        let _scale = U256::from(SCALE);
         let scale_offset = U256::from(SCALE_OFFSET);
 
         // Sample input values to trigger the condition

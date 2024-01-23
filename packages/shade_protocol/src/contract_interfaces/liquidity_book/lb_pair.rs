@@ -30,6 +30,7 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
     pub total_reward_bins: Option<u32>,
+    pub max_bins_per_swap: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,
     pub epoch_staking_duration: u64,

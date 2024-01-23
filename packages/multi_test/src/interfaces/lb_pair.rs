@@ -10,7 +10,6 @@ use shade_protocol::{
         RemoveLiquidity,
         RewardsDistribution,
         RewardsDistributionAlgorithm,
-        UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
@@ -35,7 +34,7 @@ pub fn init(
     lb_token_implementation: ContractInstantiationInfo,
     staking_contract_implementation: ContractInstantiationInfo,
     viewing_key: String,
-    pair_name: String,
+    _pair_name: String,
     entropy: String,
     protocol_fee_recipient: Addr,
     admin_auth: RawContract,
@@ -70,6 +69,7 @@ pub fn init(
             epoch_staking_duration,
             expiry_staking_duration,
             recover_staking_funds_receiver,
+            max_bins_per_swap: Some(500),
         }
         .test_init(
             LbPair::default(),
@@ -526,7 +526,7 @@ pub fn query_bins_reserves(
     app: &App,
     lb_pair: &ContractInfo,
     ids: Vec<u32>,
-) -> StdResult<(Vec<BinResponse>)> {
+) -> StdResult<Vec<BinResponse>> {
     let res = lb_pair::QueryMsg::GetBinsReserves { ids }.test_query(lb_pair, app)?;
     let lb_pair::BinsResponse(reserves) = res;
     Ok(reserves)

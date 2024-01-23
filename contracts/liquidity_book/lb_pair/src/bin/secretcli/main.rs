@@ -121,6 +121,7 @@ fn main() -> io::Result<()> {
         entropy: String::from("entropy"),
         protocol_fee_recipient: Addr::funds_recipient(),
         query_auth: RawContract::example(),
+        max_bins_per_swap: Some(500),
     };
 
     writeln!(file, "## Instantiate Message\n")?;

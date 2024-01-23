@@ -2,17 +2,10 @@ use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
-    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken},
+    multi::{lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken},
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError},
-    lb_libraries::{
-        constants::BASIS_POINT_MAX,
-        math::{
-            encoded_sample::{MASK_UINT12, MASK_UINT20},
-            u24::U24,
-        },
-    },
     liquidity_book::{lb_factory::PresetResponse, lb_pair::RewardsDistributionAlgorithm},
     swap::core::TokenType,
     utils::MultiTestable,

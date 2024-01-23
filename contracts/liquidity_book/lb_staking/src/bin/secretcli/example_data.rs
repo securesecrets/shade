@@ -12,7 +12,7 @@ use shade_protocol::{
         lb_staking::Auth,
         lb_token::Snip1155ReceiveMsg,
     },
-    s_toolkit::permit::{Permit, PermitParams, TokenPermissions},
+    s_toolkit::permit::{Permit, TokenPermissions},
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::asset::RawContract,

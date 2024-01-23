@@ -1,6 +1,5 @@
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult, Uint128, Uint256},
-    cosmwasm_schema::cw_serde,
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{

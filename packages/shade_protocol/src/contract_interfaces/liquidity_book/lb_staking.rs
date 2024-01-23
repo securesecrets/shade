@@ -5,15 +5,12 @@ use crate::{
     query_auth::QueryPermit,
     Contract,
 };
-use cosmwasm_schema::QueryResponses;
 
 use crate::{
     c_std::{
         to_binary,
         Addr,
-        Api,
         Binary,
-        BlockInfo,
         Coin,
         ContractInfo,
         CosmosMsg,

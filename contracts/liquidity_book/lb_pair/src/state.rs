@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, Storage, Timestamp, Uint128, Uint256},
+    c_std::{Addr, ContractInfo, Timestamp, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
     lb_libraries::{
         math::tree_math::TreeUint24,
@@ -9,7 +9,7 @@ use shade_protocol::{
         viewing_keys::ViewingKey,
     },
     liquidity_book::lb_pair::{ContractStatus, RewardsDistribution, RewardsDistributionAlgorithm},
-    secret_storage_plus::{AppendStore, Bincode2, Item, Json, Map},
+    secret_storage_plus::{AppendStore, Bincode2, Item, Map},
     swap::core::TokenType,
     utils::asset::RawContract,
     Contract,

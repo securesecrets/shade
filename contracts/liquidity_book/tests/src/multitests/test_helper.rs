@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use cosmwasm_std::to_binary;
 use rand::Rng;
 use shade_multi_test::{

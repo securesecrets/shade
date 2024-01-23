@@ -448,7 +448,7 @@ fn test_fuzz_query_swap_in() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_invalid_reward_bins_error() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts, lb_pair) = lb_pair_setup()?;
+    let (mut app, lb_factory, deployed_contracts, _lb_pair) = lb_pair_setup()?;
 
     lb_factory::set_pair_preset(
         &mut app,

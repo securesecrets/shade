@@ -72,6 +72,7 @@ pub fn instantiate(
         staking_contract_implementation: ContractInstantiationInfo::default(),
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
         query_auth: msg.query_auth.into_valid(deps.api)?,
+        max_bins_per_swap: msg.max_bins_per_swap,
     };
 
     STATE.save(deps.storage, &config)?;
@@ -433,6 +434,7 @@ fn try_create_lb_pair(
                 epoch_staking_duration: staking_preset.epoch_staking_duration,
                 expiry_staking_duration: staking_preset.expiry_staking_duration,
                 recover_staking_funds_receiver: config.recover_staking_funds_receiver,
+                max_bins_per_swap: None,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -554,7 +556,7 @@ fn try_set_pair_preset(
     epoch_staking_duration: u64,
     expiry_staking_duration: Option<u64>,
 ) -> Result<Response> {
-    let mut state = STATE.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,
