@@ -22,7 +22,7 @@ pub struct TokenInfo {
 pub struct Distribution {
     /// Token distributed by this contract.
     pub denom: Contract,
-    /// How much points is single division of wynd_lend worth at this point.
+    /// How much points is single division of lending worth at this point.
     pub points_per_token: Uint128,
     /// Points which were not fully distributed on previous distribution, and should be
     /// redistributed.

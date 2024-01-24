@@ -57,11 +57,11 @@ pub fn init_snip20(
 /// Builder for test suite
 #[derive(Debug)]
 pub struct SuiteBuilder {
-    /// WyndLend token name
+    /// Lend token name
     name: String,
-    /// WyndLend token symbol
+    /// Lend token symbol
     symbol: String,
-    /// WyndLend token precision
+    /// Lend token precision
     decimals: u8,
     /// Amount of tokens controller would allow to transfer
     transferable: HashMap<String, Uint128>,
@@ -74,7 +74,7 @@ pub struct SuiteBuilder {
 impl SuiteBuilder {
     pub fn new() -> Self {
         Self {
-            name: "wynd_lend".to_owned(),
+            name: "lend".to_owned(),
             symbol: "LDX".to_owned(),
             decimals: 9,
             transferable: HashMap::new(),
@@ -176,7 +176,7 @@ impl SuiteBuilder {
                     viewing_key: VIEWING_KEY.to_string(),
                 },
                 &[],
-                "WyndLend",
+                "LendToken",
                 None,
             )
             .unwrap();

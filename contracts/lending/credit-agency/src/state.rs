@@ -21,7 +21,7 @@ pub struct Config {
     pub ctoken_token_id: u64,
     /// The code hash of the lend-token contract
     pub ctoken_code_hash: String,
-    /// Token which would be distributed as reward token to wynd_lend token holders.
+    /// Token which would be distributed as reward token to lend token holders.
     /// This is `distributed_token` in the market contract.
     pub reward_token: Token,
     /// Common Token (same for all markets)
