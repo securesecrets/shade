@@ -111,3 +111,12 @@ The "_base" functions in the smart contract (TransferBaseFrom, MintBase, and Bur
 - BurnBaseFrom
  - Similar to MintBase, BurnBaseFrom destroys lending tokens based on the base token amount. This function is essential for managing the token supply in relation to the underlying asset, allowing for the adjustment of the lending token's supply to accurately reflect changes in the base asset.
 The purpose of these "_base" functions is to align the lending token's operations with the base token's metrics. This alignment is crucial for maintaining the integrity and balance of the lending/borrowing protocol, ensuring that the lending tokens accurately represent the underlying assets' value and quantity.
+
+- cw2222 Mechanism in Distribute
+ - This is a reference to a specific Cosmos SDK standard, similar in concept to Ethereum's ERC standards. It specifies a mechanism for token distribution.
+ - Functionality: In the Distribute function, the cw2222 mechanism is used to distribute tokens. This could involve the allocation of rewards, interest, or dividends to users within the lending market.
+
+- Global Multiplier in Rebase
+ - This is a factor used to adjust certain financial metrics within the contract globally.
+ - Functionality: In the Rebase function, the global multiplier is used to adjust the valuation of tokens or accounts in the system. This could be related to inflationary or deflationary measures, interest rate adjustments, or rebalancing of token supplies.
+ - Purpose: The rebase mechanism is often used in financial protocols to maintain stability, peg values to external assets, or manage supply. The multiplier alters how values are calculated or represented within the contract, affecting all users.
