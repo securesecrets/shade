@@ -32,6 +32,9 @@ pub struct InstantiateMsg {
     pub common_token: Token,
     /// Price for collateral in exchange for paying debt during liquidation
     pub liquidation_price: Decimal,
+    /// LTV threshold that acts as a “cushion zone” so users can take a max LTV loan but still
+    /// have e.g. 5% buffer before getting liquidated
+    pub liquidation_threshold: Decimal,
     /// Maximum percentage of credit_limit that can be borrowed.
     /// This is used to prevent borrowers from being liquidated (almost) immediately after borrowing,
     /// because they maxed out their credit limit.

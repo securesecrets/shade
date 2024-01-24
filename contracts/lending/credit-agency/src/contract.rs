@@ -48,6 +48,10 @@ pub fn instantiate(
         },
     )?;
 
+    if msg.liquidation_threshold > Decimal::percent(5) {
+        return Err(ContractError::InvalidLiquidationThreshold {});
+    }
+
     // TODO: should we validate Tokens?
     let cfg = Config {
         gov_contract: msg.gov_contract,
@@ -60,6 +64,7 @@ pub fn instantiate(
         reward_token: msg.reward_token,
         common_token: msg.common_token,
         liquidation_price: msg.liquidation_price,
+        liquidation_threshold: msg.liquidation_threshold,
         borrow_limit_ratio: msg.borrow_limit_ratio,
         default_estimate_multiplier,
     };
@@ -386,7 +391,11 @@ mod execute {
         let total_credit_line =
             query::total_credit_line(deps.as_ref(), account.to_string(), authentication)?;
         let total_credit_line = total_credit_line.validate(&cfg.common_token)?;
-        if total_credit_line.debt <= total_credit_line.credit_line {
+        // apply the liquidation threshold, so that user wouldn't become liquidated right away
+        if total_credit_line.debt
+            <= total_credit_line.credit_line
+                + (total_credit_line.credit_line * cfg.liquidation_threshold)
+        {
             return Err(ContractError::LiquidationNotAllowed {});
         }
 
@@ -602,6 +611,7 @@ mod query {
     }
 
     pub fn liquidation(deps: Deps, account: String) -> Result<LiquidationResponse, ContractError> {
+        let cfg = CONFIG.load(deps.storage)?;
         let account_addr = deps.api.addr_validate(&account)?;
 
         let market_viewing_key = MARKET_VIEWING_KEY.load(deps.storage)?;
@@ -610,7 +620,13 @@ mod query {
         // check whether the given account actually has more debt then credit
         let total_credit_line: CreditLineResponse =
             total_credit_line(deps, account.clone(), authentication.clone())?;
-        let can_liquidate = total_credit_line.debt > total_credit_line.credit_line;
+
+        // add liquidation threshold to the credit line
+        let additional_amount = total_credit_line.credit_line.amount * cfg.liquidation_threshold;
+        let mut tcl_with_cushion = total_credit_line.credit_line;
+        tcl_with_cushion.amount += additional_amount;
+
+        let can_liquidate = total_credit_line.debt > tcl_with_cushion;
 
         let markets = ENTERED_MARKETS.load(deps.storage)?;
         let entered_markets =

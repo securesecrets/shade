@@ -80,4 +80,7 @@ pub enum ContractError {
 
     #[error("Estimate multiplier must be bigger or equal to 1.0")]
     InvalidEstimateMultiplier {},
+
+    #[error("Invalid liquidation price threshold - must be between 0% and 5%")]
+    InvalidLiquidationThreshold {},
 }
