@@ -41,133 +41,9 @@ use shade_protocol::{
 /////////////////////////////////////////////////////////////////////////////////
 // Queries
 /////////////////////////////////////////////////////////////////////////////////
-
-/// contract query function. See [QueryMsg](crate::msg::QueryMsg) and
-/// [QueryAnswer](crate::msg::QueryAnswer) for the api
-#[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::ContractInfo {} => query_contract_info(deps),
-        QueryMsg::TokenIdPublicInfo { token_id } => query_token_id_public_info(deps, token_id),
-        QueryMsg::RegisteredCodeHash { contract } => query_registered_code_hash(deps, contract),
-        QueryMsg::WithPermit { permit, query } => permit_queries(deps, permit, query),
-        QueryMsg::Balance { .. }
-        | QueryMsg::AllBalances { .. }
-        | QueryMsg::TransactionHistory { .. }
-        | QueryMsg::Permission { .. }
-        | QueryMsg::AllPermissions { .. }
-        | QueryMsg::TokenIdPrivateInfo { .. } => viewing_keys_queries(deps, msg),
-    }
-}
-
-fn permit_queries(deps: Deps, permit: Permit, query: QueryWithPermit) -> Result<Binary, StdError> {
-    // Validate permit content
-    let contract_address = contr_conf_r(deps.storage).load()?.contract_address;
-
-    let account_str = validate(
-        deps,
-        PREFIX_REVOKED_PERMITS,
-        &permit,
-        contract_address.to_string(),
-        None,
-    )?;
-    let account = deps.api.addr_validate(&account_str)?;
-
-    if !permit.check_permission(&TokenPermissions::Owner) {
-        return Err(StdError::generic_err(format!(
-            "`Owner` permit required for SNIP1155 permit queries, got permissions {:?}",
-            permit.params.permissions
-        )));
-    }
-
-    // Permit validated! We can now execute the query.
-    match query {
-        QueryWithPermit::Balance { owner, token_id } => {
-            query_balance(deps, &owner, &account, token_id)
-        }
-        QueryWithPermit::AllBalances {
-            tx_history_page,
-            tx_history_page_size,
-        } => query_all_balances(deps, &account, tx_history_page, tx_history_page_size),
-        QueryWithPermit::TransactionHistory { page, page_size } => {
-            query_transactions(deps, &account, page.unwrap_or(0), page_size)
-        }
-        QueryWithPermit::Permission {
-            owner,
-            allowed_address,
-            token_id,
-        } => {
-            if account != owner.as_str() && account != allowed_address.as_str() {
-                return Err(StdError::generic_err(format!(
-                    "Cannot query permission. Requires permit for either owner {:?} or viewer||spender {:?}, got permit for {:?}",
-                    owner.as_str(),
-                    allowed_address.as_str(),
-                    account.as_str()
-                )));
-            }
-
-            query_permission(deps, token_id, owner, allowed_address)
-        }
-        QueryWithPermit::AllPermissions { page, page_size } => {
-            query_all_permissions(deps, &account, page.unwrap_or(0), page_size)
-        }
-        QueryWithPermit::TokenIdPrivateInfo { token_id } => {
-            query_token_id_private_info(deps, &account, token_id)
-        }
-    }
-}
-
-fn viewing_keys_queries(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
-    let (addresses, key) = msg.get_validation_params()?;
-
-    for address in addresses {
-        let result = ViewingKey::check(deps.storage, address.as_str(), key.as_str());
-        if result.is_ok() {
-            return match msg {
-                QueryMsg::Balance {
-                    owner,
-                    viewer,
-                    token_id,
-                    ..
-                } => query_balance(deps, &owner, &viewer, token_id),
-                QueryMsg::AllBalances {
-                    tx_history_page,
-                    tx_history_page_size,
-                    ..
-                } => query_all_balances(deps, address, tx_history_page, tx_history_page_size),
-                QueryMsg::TransactionHistory {
-                    page, page_size, ..
-                } => query_transactions(deps, address, page.unwrap_or(0), page_size),
-                QueryMsg::Permission {
-                    owner,
-                    allowed_address,
-                    token_id,
-                    ..
-                } => query_permission(deps, token_id, owner, allowed_address),
-                QueryMsg::AllPermissions {
-                    page, page_size, ..
-                } => query_all_permissions(deps, address, page.unwrap_or(0), page_size),
-                QueryMsg::TokenIdPrivateInfo {
-                    address, token_id, ..
-                } => query_token_id_private_info(deps, &address, token_id),
-                QueryMsg::ContractInfo {}
-                | QueryMsg::TokenIdPublicInfo { .. }
-                | QueryMsg::RegisteredCodeHash { .. }
-                | QueryMsg::WithPermit { .. } => {
-                    unreachable!("This query type does not require viewing key authentication")
-                }
-            };
-        }
-    }
-
-    to_binary(&QueryAnswer::ViewingKeyError {
-        msg: "Wrong viewing key for this address or viewing key not set".to_string(),
-    })
-}
-
-fn query_contract_info(deps: Deps) -> StdResult<Binary> {
+pub fn query_contract_info(deps: Deps) -> StdResult<Binary> {
     let contr_conf = contr_conf_r(deps.storage).load()?;
-    let response = QueryAnswer::ContractInfo {
+    let response = QueryAnswer::TokenContractInfo {
         admin: contr_conf.admin,
         curators: contr_conf.curators,
         all_token_ids: contr_conf.token_id_list,
@@ -175,7 +51,20 @@ fn query_contract_info(deps: Deps) -> StdResult<Binary> {
     to_binary(&response)
 }
 
-fn query_token_id_public_info(deps: Deps, token_id: String) -> StdResult<Binary> {
+pub fn query_id_balance(deps: Deps, token_id: String) -> StdResult<Binary> {
+    let id_balance_raw = tkn_tot_supply_r(deps.storage).load(token_id.as_bytes());
+
+    let mut id_balance = Uint256::zero();
+
+    if id_balance_raw.is_ok() {
+        id_balance = id_balance_raw?;
+    }
+
+    let response = QueryAnswer::IdTotalBalance { amount: id_balance };
+    to_binary(&response)
+}
+
+pub fn query_token_id_public_info(deps: Deps, token_id: String) -> StdResult<Binary> {
     let tkn_info_op = tkn_info_r(deps.storage).may_load(token_id.as_bytes())?;
     match tkn_info_op {
         None => Err(StdError::generic_err(format!(
@@ -210,7 +99,11 @@ fn query_token_id_public_info(deps: Deps, token_id: String) -> StdResult<Binary>
     }
 }
 
-fn query_token_id_private_info(deps: Deps, viewer: &Addr, token_id: String) -> StdResult<Binary> {
+pub fn query_token_id_private_info(
+    deps: Deps,
+    viewer: &Addr,
+    token_id: String,
+) -> StdResult<Binary> {
     let tkn_info_op = tkn_info_r(deps.storage).may_load(token_id.as_bytes())?;
     if tkn_info_op.is_none() {
         return Err(StdError::generic_err(format!(
@@ -285,7 +178,7 @@ fn query_token_id_private_info(deps: Deps, viewer: &Addr, token_id: String) -> S
     to_binary(&response)
 }
 
-fn query_registered_code_hash(deps: Deps, contract: Addr) -> StdResult<Binary> {
+pub fn query_registered_code_hash(deps: Deps, contract: Addr) -> StdResult<Binary> {
     let may_hash_res = get_receiver_hash(deps.storage, &contract);
     let response: QueryAnswer = match may_hash_res {
         Some(hash_res) => QueryAnswer::RegisteredCodeHash {
@@ -297,7 +190,12 @@ fn query_registered_code_hash(deps: Deps, contract: Addr) -> StdResult<Binary> {
     to_binary(&response)
 }
 
-fn query_balance(deps: Deps, owner: &Addr, viewer: &Addr, token_id: String) -> StdResult<Binary> {
+pub fn query_balance(
+    deps: Deps,
+    owner: &Addr,
+    viewer: &Addr,
+    token_id: String,
+) -> StdResult<Binary> {
     if owner != viewer {
         let permission_op = may_load_any_permission(deps.storage, owner, &token_id, viewer)?;
         match permission_op {
@@ -337,7 +235,7 @@ fn query_balance(deps: Deps, owner: &Addr, viewer: &Addr, token_id: String) -> S
     to_binary(&response)
 }
 
-fn query_all_balances(
+pub fn query_all_balances(
     deps: Deps,
     account: &Addr,
     tx_history_page: Option<u32>,
@@ -365,10 +263,13 @@ fn query_all_balances(
             .may_load(to_binary(account).unwrap().as_slice())
             .unwrap();
         if let Some(i) = amount {
-            balances.push(OwnerBalance {
-                token_id,
-                amount: i,
-            })
+            // LB change
+            if !i.is_zero() {
+                balances.push(OwnerBalance {
+                    token_id,
+                    amount: i,
+                })
+            }
         }
     }
 
@@ -376,7 +277,12 @@ fn query_all_balances(
     to_binary(&response)
 }
 
-fn query_transactions(deps: Deps, account: &Addr, page: u32, page_size: u32) -> StdResult<Binary> {
+pub fn query_transactions(
+    deps: Deps,
+    account: &Addr,
+    page: u32,
+    page_size: u32,
+) -> StdResult<Binary> {
     let address = deps.api.addr_canonicalize(account.as_str())?;
     let (txs, total) = get_txs(deps.api, deps.storage, &address, page, page_size)?;
 
@@ -384,7 +290,7 @@ fn query_transactions(deps: Deps, account: &Addr, page: u32, page_size: u32) -> 
     to_binary(&response)
 }
 
-fn query_permission(
+pub fn query_permission(
     deps: Deps,
     token_id: String,
     owner: Addr,
@@ -396,7 +302,7 @@ fn query_permission(
     to_binary(&response)
 }
 
-fn query_all_permissions(
+pub fn query_all_permissions(
     deps: Deps,
     account: &Addr,
     page: u32,

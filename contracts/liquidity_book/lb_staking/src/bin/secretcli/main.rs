@@ -7,7 +7,13 @@ use shade_protocol::{
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            ExecuteMsg, InstantiateMsg, InvokeMsg, QueryAnswer, QueryMsg, QueryTxnType,
+            Auth,
+            ExecuteMsg,
+            InstantiateMsg,
+            InvokeMsg,
+            QueryAnswer,
+            QueryMsg,
+            QueryTxnType,
             QueryWithPermit,
         },
         lb_token::Snip1155ReceiveMsg,
@@ -82,7 +88,7 @@ fn main() -> io::Result<()> {
         amm_pair: Addr::contract().to_string(),
         lb_token: RawContract::example(),
         admin_auth: RawContract::example(),
-        query_auth: None,
+        query_auth: RawContract::example(),
         epoch_index: 1,
         epoch_duration: 3600,
         expiry_duration: Some(50),
@@ -109,6 +115,7 @@ fn main() -> io::Result<()> {
     let claim_rewards = ExecuteMsg::ClaimRewards {};
     let end_epoch = ExecuteMsg::EndEpoch {
         rewards_distribution: RewardsDistribution::example(),
+        epoch_index: 0,
     };
     let unstake = ExecuteMsg::Unstake {
         token_ids: vec![1, 2, 3],
@@ -128,15 +135,6 @@ fn main() -> io::Result<()> {
         expiry_duration: Some(200),
     };
     let recover_funds = ExecuteMsg::RecoverExpiredFunds {};
-    let create_viewing_key = ExecuteMsg::CreateViewingKey {
-        entropy: "random_entropy".to_string(),
-    };
-    let set_viewing_key = ExecuteMsg::SetViewingKey {
-        key: "viewing_key".to_string(),
-    };
-    let revoke_permit = ExecuteMsg::RevokePermit {
-        permit_name: "permit_name".to_string(),
-    };
 
     // Responses for ExecuteMsg
     // Assuming that the execute messages do not return a response directly
@@ -166,9 +164,6 @@ fn main() -> io::Result<()> {
         register_reward_tokens,
         update_config,
         recover_funds,
-        create_viewing_key,
-        set_viewing_key,
-        revoke_permit
     );
 
     // Note: Add a similar macro for InvokeMsg if needed
@@ -190,35 +185,26 @@ fn main() -> io::Result<()> {
         id: "token_id".to_string(),
     };
     let balance_query = QueryMsg::Balance {
-        owner: Addr::unchecked("owner_addr"),
-        key: "key".to_string(),
         token_id: "token_id".to_string(),
+        auth: Auth::example(),
     };
     let all_balances_query = QueryMsg::AllBalances {
-        owner: Addr::unchecked("owner_addr"),
-        key: "key".to_string(),
+        auth: Auth::example(),
+
         page: Some(1),
         page_size: Some(10),
     };
     let liquidity_query = QueryMsg::Liquidity {
-        owner: Addr::unchecked("owner_addr"),
-        key: "key".to_string(),
+        auth: Auth::example(),
+
         round_index: Some(1234567890u64),
         token_ids: vec![1, 2, 3],
     };
     let transaction_history_query = QueryMsg::TransactionHistory {
-        owner: Addr::unchecked("owner_addr"),
-        key: "key".to_string(),
+        auth: Auth::example(),
         page: Some(1),
         page_size: Some(10),
         txn_type: QueryTxnType::All,
-    };
-    let with_permit_query = QueryMsg::WithPermit {
-        permit: Permit::example(),
-        query: QueryWithPermit::Balance {
-            owner: Addr::unchecked("owner_addr"),
-            token_id: "token_id".to_string(),
-        },
     };
 
     // Responses for QueryMsg
@@ -226,8 +212,8 @@ fn main() -> io::Result<()> {
     let contract_info_response = QueryAnswer::ContractInfo {
         lb_token: ContractInfo::example(),
         lb_pair: Addr::contract(),
-        admin_auth: ContractInfo::example(),
-        query_auth: None,
+        admin_auth: Contract::example(),
+        query_auth: Contract::example(),
         epoch_index: 1,
         epoch_durations: 3600,
         expiry_durations: Some(5000), /* ... fill in details ... */
@@ -260,7 +246,6 @@ fn main() -> io::Result<()> {
         (all_balances_query, all_balances_response),
         (liquidity_query, liquidity_response),
         (transaction_history_query, transaction_history_response),
-        (with_permit_query, balance_response) // Add here the with_permit_query if needed along with its corresponding response
     );
 
     Ok(())

@@ -71,6 +71,7 @@ fn main() -> io::Result<()> {
         admin_auth: RawContract::example(),
         owner: Some(Addr::owner()),
         fee_recipient: Addr::recipient(),
+        query_auth: RawContract::example(),
 
         recover_staking_funds_receiver: Addr::funds_recipient(),
     };

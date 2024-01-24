@@ -41,7 +41,7 @@ pub fn lb_pair_setup(
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -246,6 +246,7 @@ pub fn fuzz_stake_simple() -> Result<(), anyhow::Error> {
 pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     let x_bins = generate_random(0, 50);
     let y_bins = generate_random(0, 50);
+
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
@@ -268,9 +269,11 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
     let mut ids = vec![];
-    let mut liq = vec![];
+    let mut liqs = vec![];
 
     let mut actions = vec![];
+    let mut balances = vec![];
+
     //Querying all the bins
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, y_bins);
@@ -284,8 +287,9 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
             String::from("viewing_key"),
             id.to_string(),
         )?;
+        balances.push(balance);
 
-        liq.push(balance / Uint256::from_u128(2));
+        liqs.push(balance / Uint256::from_u128(2));
 
         actions.push(SendAction {
             token_id: id.to_string(),
@@ -301,30 +305,18 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
         })
     }
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
-
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
 
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 50);
 
     app.set_time(timestamp);
 
-    //Check the liquidity after half the time of duration - duration is 100
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
+
+    for (liq, bal) in liquidity.into_iter().zip(liqs.clone()).into_iter() {
         assert_eq!(liq.user_liquidity, bal);
     }
 
@@ -344,8 +336,8 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
             id.to_string(),
         )?;
 
-        liq[i as usize] =
-            liq[i as usize] + balance.multiply_ratio(Uint256::from(50u128), Uint256::from(100u128));
+        liqs[i as usize] = liqs[i as usize]
+            + balance.multiply_ratio(Uint256::from(50u128), Uint256::from(100u128));
 
         actions.push(SendAction {
             token_id: id.to_string(),
@@ -362,20 +354,15 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     }
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
     //Check the liquidity after half the time of duration - duration is 100
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
-    for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
+    for (liq, bal) in liquidity.into_iter().zip(liqs.clone()).into_iter() {
         assert_eq!(liq.user_liquidity, bal);
     }
+    let mut liqs = vec![];
 
     //trying to add liquidity after the end_time:
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 51);
@@ -406,6 +393,9 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
             id.to_string(),
         )?;
 
+        balances[i as usize] += balance;
+        liqs.push(balance.multiply_ratio(Uint256::from(99u128), Uint256::from(100u128)));
+
         actions.push(SendAction {
             token_id: id.to_string(),
             from: addrs.batman(),
@@ -421,19 +411,23 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     }
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    //Check the liquidity after full time of duration - duration is 100 liquidity won't change
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
-    for (liq, bal) in liquidity.into_iter().zip(liq.clone()).into_iter() {
-        assert_eq!(liq.user_liquidity, bal);
+    for (liq, bal) in liquidity
+        .clone()
+        .into_iter()
+        .zip(balances.clone())
+        .into_iter()
+    {
+        let half_balance = bal.multiply_ratio(Uint256::from(1u128), Uint256::from(2u128));
+        assert_eq!(
+            liq.user_liquidity,
+            half_balance
+                + half_balance.multiply_ratio(Uint256::from(99u128), Uint256::from(100u128)),
+        );
     }
 
     Ok(())
@@ -622,22 +616,10 @@ pub fn fuzz_unstake_liquidity_with_time() -> Result<(), anyhow::Error> {
         balances.clone(),
     )?;
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    //Check the liquidity after full time of duration - duration is 100 liquidity won't change
-    let liquidity = lb_staking::query_liquidity(
-        &app,
-        &addrs.batman(),
-        String::from("viewing_key"),
-        &lb_staking,
-        ids.clone(),
-        None,
-    )?;
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
 
     for (liq, bal) in liquidity.into_iter().zip(balances.clone()).into_iter() {
         assert_approx_eq_abs(
@@ -885,6 +867,8 @@ pub fn fuzz_claim_rewards() -> Result<(), anyhow::Error> {
         })?),
     )?;
 
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
@@ -977,41 +961,57 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
             end: 10,
         })?),
     )?;
+    roll_time(&mut app, Some(100));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //1
+    roll_time(&mut app, Some(100));
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //2
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //3
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //4
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //5
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //6
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //7
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //8
+    roll_time(&mut app, Some(100));
+
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //9
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //10
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //11
+    roll_time(&mut app, Some(100));
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //12 -> 13
-    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
+    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     snip20::set_viewing_key_exec(
         &mut app,
@@ -1080,7 +1080,9 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
     )?;
 
     //unstake all:
+    roll_time(&mut app, Some(100));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //13->14
+
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     let balance = snip20::balance_query(
@@ -1102,6 +1104,168 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
     )?;
 
     assert_eq!(balance.u128(), DEPOSIT_AMOUNT + DEPOSIT_AMOUNT);
+
+    Ok(())
+}
+#[test]
+pub fn end_epoch_by_stakers() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let x_bins = 10;
+    let y_bins = 10;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    //1) Stake the Snip-1155 tokens
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    let lb_staking_config = lb_staking::query_config(&app, &lb_staking)?;
+    assert_eq!(lb_staking_config.epoch_index, 1);
+
+    let epoch_info = lb_staking::query_epoch_info(&app, &lb_staking, None)?;
+    assert_eq!(epoch_info.start_time, app.block_info().time.seconds());
+    assert_eq!(epoch_info.end_time, app.block_info().time.seconds() + 100);
+
+    //Rolling Time + duration, t=0 + duration
+    let timestamp = Timestamp::from_seconds(
+        app.block_info().time.seconds() + lb_staking_config.epoch_durations,
+    );
+    app.set_time(timestamp);
+
+    //2) End Epoch
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //1
+
+    let lb_staking_config = lb_staking::query_config(&app, &lb_staking)?;
+    assert_eq!(lb_staking_config.epoch_index, 2);
+
+    let epoch_info = lb_staking::query_epoch_info(&app, &lb_staking, None)?;
+    assert_eq!(epoch_info.start_time, app.block_info().time.seconds());
+    assert_eq!(epoch_info.end_time, app.block_info().time.seconds() + 100);
+
+    //3 Claim rewards
+    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
+
+    let staker_info = lb_staking::query_staker_info(&app, &lb_staking, query_auth.clone())?;
+
+    assert_eq!(staker_info.last_claim_rewards_round, Some(1));
+
+    //Rolling Time + duration, t= duration*2
+    let timestamp = Timestamp::from_seconds(
+        app.block_info().time.seconds() + lb_staking_config.epoch_durations,
+    );
+    app.set_time(timestamp);
+
+    //4)Stake after one round at t = 2*duration
+    mint_and_add_liquidity(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        &lb_pair,
+        Some(x_bins),
+        Some(y_bins),
+        DEPOSIT_AMOUNT,
+        DEPOSIT_AMOUNT,
+    )?;
+
+    let mut actions = vec![];
+    // Stake the Snip-1155 tokens
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    //Check epoch id
+    let lb_staking_config = lb_staking::query_config(&app, &lb_staking)?;
+    assert_eq!(lb_staking_config.epoch_index, 3);
+
+    let epoch_info = lb_staking::query_epoch_info(&app, &lb_staking, None)?;
+    assert_eq!(epoch_info.start_time, app.block_info().time.seconds());
+    assert_eq!(epoch_info.end_time, app.block_info().time.seconds() + 100);
+
+    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    let staker_info = lb_staking::query_staker_info(&app, &lb_staking, query_auth.clone())?;
+    assert_eq!(staker_info.last_claim_rewards_round, Some(1)); // No rewards distribution yet
+
+    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    let staker_info = lb_staking::query_staker_info(&app, &lb_staking, query_auth.clone())?;
+    assert_eq!(staker_info.last_claim_rewards_round, Some(1)); // No rewards distribution yet
+
+    let timestamp = Timestamp::from_seconds(
+        app.block_info().time.seconds() + lb_staking_config.epoch_durations,
+    );
+    app.set_time(timestamp);
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //2
+    let lb_staking_config = lb_staking::query_config(&app, &lb_staking)?;
+    assert_eq!(lb_staking_config.epoch_index, 3);
+
+    let timestamp = Timestamp::from_seconds(
+        app.block_info().time.seconds() + lb_staking_config.epoch_durations,
+    );
+    app.set_time(timestamp);
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //3
+
+    let lb_staking_config = lb_staking::query_config(&app, &lb_staking)?;
+    assert_eq!(lb_staking_config.epoch_index, 4);
+
+    lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    let staker_info = lb_staking::query_staker_info(&app, &lb_staking, query_auth.clone())?;
+    assert_eq!(staker_info.last_claim_rewards_round, Some(3)); // No rewards distribution yet
 
     Ok(())
 }
@@ -1201,26 +1365,30 @@ pub fn claim_expired_rewards() -> Result<(), anyhow::Error> {
             end: 10,
         })?),
     )?;
+    // println!("CHECKING");
 
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //1
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //2
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //3
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //4
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //5
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //6
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //7
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //8
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //9
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //10
 
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
-
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
 
     snip20::set_viewing_key_exec(
         &mut app,
@@ -1239,12 +1407,12 @@ pub fn claim_expired_rewards() -> Result<(), anyhow::Error> {
     )?;
 
     assert!(balance.u128() > 0);
+    let query_auth = generate_auth(addrs.batman().to_string());
 
     let (claim_rewards_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth,
         None,
         None,
         QueryTxnType::ClaimRewards,
@@ -1378,51 +1546,65 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
     )?;
     assert_eq!(balance.u128(), 0u128);
 
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //1 expired at 6
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
+    roll_time(&mut app, Some(200));
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //2 expired at 7
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //3 expired at 8
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //4 expired at 9
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //5 expired at 10
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //6 expired at 11
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //7 expired at 12
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //8 expires at 13
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //9 expires at 14
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //10 expires at 15
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //11 expires at 16 
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //12 expires at 17
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //13 expires at 18 
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
+    roll_time(&mut app, Some(200));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //14 expires at 19 
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     //current round index -> 20
 
-    lb_staking::recover_funds(&mut app, addrs.admin().as_str(), &lb_staking)?;
+    lb_staking::recover_expired_rewards(&mut app, addrs.admin().as_str(), &lb_staking)?;
 
     let balance = snip20::balance_query(
         &app,
@@ -1434,6 +1616,184 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
 
     assert_eq!(balance.u128(), 0u128);
 
+    Ok(())
+}
+
+#[test]
+pub fn recover_funds() -> Result<(), anyhow::Error> {
+    let addrs = init_addrs();
+    let x_bins = 5;
+    let y_bins = 5;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    let mut ids = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances.push(balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    lb_staking::update_config(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        None,
+        None,
+        Some(200),
+        Some(5),
+    )?;
+
+    //Added the reward tokens for next 10 rounds
+    let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
+    let shade_token_type = token_type_snip20_generator(&shade_token)?;
+    let silk_token = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let reward_tokens = vec![shade_token, silk_token];
+
+    lb_staking::register_reward_tokens(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        reward_tokens.clone(),
+    )?;
+
+    //mint tokens
+    snip20::mint_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        &vec![],
+        addrs.admin().to_string(),
+        Uint128::from(200u128),
+    )?;
+
+    snip20::send_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        Uint128::from(100u128),
+        Some(to_binary(&InvokeMsg::AddRewards {
+            start: None,
+            end: 10,
+        })?),
+    )?;
+    snip20::transfer_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        lb_staking.address.to_string(),
+        Uint128::from(100u128),
+    )?;
+
+    let balance = snip20::balance_query(
+        &app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "SHADE_STAKING_VIEWING_KEY".to_string(),
+    )?;
+
+    snip20::set_viewing_key_exec(
+        &mut app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    let prev_admin_balance = snip20::balance_query(
+        &app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(balance.u128(), 200u128);
+
+    lb_staking::recover_funds(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        shade_token_type.clone(),
+        Uint128::from(100u128),
+        addrs.admin().to_string(),
+    )?;
+
+    let contract_balance = snip20::balance_query(
+        &app,
+        lb_staking.address.as_str(),
+        &deployed_contracts,
+        SHADE,
+        "SHADE_STAKING_VIEWING_KEY".to_string(),
+    )?;
+
+    assert_eq!(contract_balance.u128(), 100u128);
+
+    let admin_balance = snip20::balance_query(
+        &app,
+        addrs.admin().as_str(),
+        &deployed_contracts,
+        SHADE,
+        "viewing_key".to_owned(),
+    )?;
+
+    assert_eq!(admin_balance.u128(), prev_admin_balance.u128() + 100);
+
+    let err = lb_staking::recover_funds(
+        &mut app,
+        addrs.admin().as_str(),
+        &lb_staking,
+        shade_token_type,
+        Uint128::from(100u128),
+        addrs.admin().to_string(),
+    );
+
+    assert_eq!(
+        err.unwrap_err(),
+        StdError::generic_err(
+            "Generic error: Trying to recover already staked funds. Extra funds Uint128(0), amount Uint128(100)",
+        )
+    );
     Ok(())
 }
 
@@ -1578,13 +1938,6 @@ fn query_balance() -> Result<(), anyhow::Error> {
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
-
     for i in 0..total_bins {
         let id = get_id(ACTIVE_ID, i, NB_BINS_Y);
         let (reserves_x, reserves_y, _) =
@@ -1597,13 +1950,9 @@ fn query_balance() -> Result<(), anyhow::Error> {
         let total: U256 = expected_balance_x * U256::from_str_prefixed(price.to_string().as_str())?
             + (expected_balance_y << 128);
 
-        let balance = lb_staking::query_balance(
-            &app,
-            &lb_staking,
-            addrs.batman(),
-            "viewing_key".to_owned(),
-            id,
-        )?;
+        let query_auth = generate_auth(addrs.batman().to_string());
+
+        let balance = lb_staking::query_balance(&app, &lb_staking, query_auth, id)?;
 
         assert_eq!(total.u256_to_uint256(), balance);
         assert!(balance > Uint256::MIN);
@@ -1652,21 +2001,9 @@ fn query_all_balance() -> Result<(), anyhow::Error> {
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
+    let query_auth = generate_auth(addrs.batman().to_string());
 
-    let balances = lb_staking::query_all_balances(
-        &app,
-        &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
-        None,
-        None,
-    )?;
+    let balances = lb_staking::query_all_balances(&app, &lb_staking, query_auth, None, None)?;
 
     for owner_balance in balances {
         let id = owner_balance.token_id.parse().unwrap();
@@ -1730,20 +2067,14 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
 
     lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
 
-    lb_staking::set_viewing_key(
-        &mut app,
-        addrs.batman().as_str(),
-        &lb_staking,
-        "viewing_key".to_owned(),
-    )?;
-
     // query all txn history and staking  txn history
+
+    let query_auth = generate_auth(addrs.batman().to_string());
 
     let (all_txns_1, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1755,8 +2086,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (staking_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::Stake,
@@ -1801,6 +2131,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
             end: 20,
         })?),
     )?;
+    roll_time(&mut app, Some(100));
 
     lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?;
 
@@ -1811,8 +2142,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns_2, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1824,8 +2154,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (claim_rewards_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::ClaimRewards,
@@ -1846,8 +2175,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns_3, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::All,
@@ -1859,8 +2187,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (unstaking_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         None,
         QueryTxnType::UnStake,
@@ -1875,8 +2202,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (all_txns, count) = lb_staking::query_txn_history(
         &app,
         &lb_staking,
-        addrs.batman(),
-        "viewing_key".to_owned(),
+        query_auth.clone(),
         None,
         Some(10),
         QueryTxnType::All,

@@ -9,6 +9,7 @@ use shade_protocol::{
     },
     liquidity_book::{
         lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution, TokenPair},
+        lb_staking::Auth,
         lb_token::Snip1155ReceiveMsg,
     },
     s_toolkit::permit::{Permit, PermitParams, TokenPermissions},
@@ -79,6 +80,15 @@ impl ExampleData for ContractInstantiationInfo {
             code_hash: "0123456789ABCDEF".to_string(),
         }
         .clone()
+    }
+}
+
+impl ExampleData for Auth {
+    fn example() -> Self {
+        Auth::ViewingKey {
+            key: "viewing_key".to_string(),
+            address: Addr::staker().to_string(),
+        }
     }
 }
 

@@ -14,7 +14,7 @@ use shade_multi_test::interfaces::{
 #[serial]
 pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, mut deployed_contracts) = setup(None, None)?;
+    let (mut app, _lb_factory, mut deployed_contracts, _, _) = setup(None, None)?;
 
     //intro app
     router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;

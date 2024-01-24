@@ -20,6 +20,8 @@ pub fn init(
     sender: &str,
     fee_recipient: Addr,
     admin_auth: RawContract,
+    query_auth: RawContract,
+
     recover_staking_funds_receiver: Addr,
 ) -> StdResult<Contract> {
     let lb_factory = Contract::from(
@@ -29,6 +31,7 @@ pub fn init(
             admin_auth,
 
             recover_staking_funds_receiver,
+            query_auth,
         }
         .test_init(
             LbFactory::default(),

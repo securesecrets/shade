@@ -1,3 +1,6 @@
+use std::ops::Mul;
+
+use cosmwasm_std::to_binary;
 use rand::Rng;
 use shade_multi_test::{
     interfaces::{
@@ -5,15 +8,31 @@ use shade_multi_test::{
         snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{admin::init_admin_auth, lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken},
+    multi::{
+        admin::init_admin_auth,
+        lb_pair::LbPair,
+        lb_staking::LbStaking,
+        lb_token::LbToken,
+        query_auth::QueryAuth,
+    },
 };
 use shade_protocol::{
     c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
     lb_libraries::{constants::PRECISION, math::u24::U24},
-    liquidity_book::lb_pair::{LiquidityParameters, RewardsDistributionAlgorithm},
+    liquidity_book::{
+        lb_pair::{LiquidityParameters, RewardsDistributionAlgorithm},
+        lb_staking::Auth,
+    },
     multi_test::App,
+    query_auth,
     swap::core::TokenType,
-    utils::{asset::Contract, cycle::parse_utc_datetime, MultiTestable},
+    utils::{
+        asset::Contract,
+        cycle::parse_utc_datetime,
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+    },
 };
 
 pub const ID_ONE: u32 = 1 << 23;
@@ -108,6 +127,8 @@ pub fn init_addrs() -> Addrs {
 }
 
 pub fn assert_approx_eq_rel(a: Uint256, b: Uint256, delta: Uint256, error_message: &str) {
+    let delta = delta.multiply_ratio(Uint256::from(10_u128.pow(14)), Uint256::from(1u128));
+
     let abs_delta = (a).abs_diff(b);
     let percent_delta = abs_delta.multiply_ratio(Uint256::from(10_u128.pow(18)), b);
 
@@ -129,10 +150,17 @@ pub fn assert_approx_eq_abs(a: Uint256, b: Uint256, delta: Uint256, error_messag
     }
 }
 
+pub fn generate_auth(addr: String) -> Auth {
+    Auth::ViewingKey {
+        key: "viewing_key".to_string(),
+        address: addr,
+    }
+}
+
 pub fn setup(
     bin_step: Option<u16>,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
-) -> Result<(App, Contract, DeployedContracts), anyhow::Error> {
+) -> Result<(App, Contract, DeployedContracts, ContractInfo, ContractInfo), anyhow::Error> {
     // init snip-20's
     let mut app = App::default();
     let addrs = init_addrs();
@@ -237,12 +265,33 @@ pub fn setup(
 
     //2. init factory
     let admin_contract = init_admin_auth(&mut app, &addrs.admin());
+    let query_contract = query_auth::InstantiateMsg {
+        admin_auth: admin_contract.clone().into(),
+        prng_seed: to_binary("").ok().unwrap(),
+    }
+    .test_init(
+        QueryAuth::default(),
+        &mut app,
+        addrs.admin(),
+        "query_auth",
+        &[],
+    )
+    .unwrap();
+
+    // set staking user VK
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "viewing_key".to_string(),
+        padding: None,
+    }
+    .test_exec(&query_contract, &mut app, addrs.batman().clone(), &[])
+    .unwrap();
 
     let lb_factory = lb_factory::init(
         &mut app,
         addrs.admin().as_str(),
         addrs.joker(),
-        admin_contract.into(),
+        admin_contract.clone().into(),
+        query_contract.clone().into(),
         addrs.admin(),
     )?;
     let lb_token_stored_code = app.store_code(LbToken::default().contract());
@@ -372,7 +421,13 @@ pub fn setup(
         },
     )?;
 
-    Ok((app, lb_factory, deployed_contracts))
+    Ok((
+        app,
+        lb_factory,
+        deployed_contracts,
+        admin_contract,
+        query_contract,
+    ))
 }
 
 pub fn roll_blockchain(app: &mut App, blocks: Option<u64>) {
@@ -386,6 +441,11 @@ pub fn roll_blockchain(app: &mut App, blocks: Option<u64>) {
         chain_id: "chain_id".to_string(),
         random: None,
     });
+}
+
+pub fn roll_time(app: &mut App, time: Option<u64>) {
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + time.unwrap_or(1));
+    app.set_time(timestamp);
 }
 
 pub fn extract_contract_info(

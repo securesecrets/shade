@@ -36,7 +36,9 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "lb_staking",
   "snip20",
   "router",
-  "lb_factory"
+  "lb_factory",
+    "query_auth",
+
 ] }
 lb_pair ={ path = "../lb_pair"}
 serial_test = "2.0.0"

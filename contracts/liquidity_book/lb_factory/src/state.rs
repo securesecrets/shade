@@ -63,6 +63,7 @@ pub struct State {
     pub lb_token_implementation: ContractInstantiationInfo,
     pub staking_contract_implementation: ContractInstantiationInfo,
     pub admin_auth: Contract,
+    pub query_auth: Contract,
     pub recover_staking_funds_receiver: Addr,
 }
 

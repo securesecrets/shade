@@ -35,7 +35,7 @@ pub fn lb_pair_setup() -> Result<
     anyhow::Error,
 > {
     let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts) = setup(None, None)?;
+    let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 
     let silk = extract_contract_info(&deployed_contracts, SILK)?;
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -178,8 +178,6 @@ pub fn test_simple_mint() -> Result<(), anyhow::Error> {
         nb_bins_x,
         nb_bins_y,
     )?;
-
-    println!("liquidity parameters {:?}", liquidity_parameters);
 
     lb_pair::add_liquidity(
         &mut app,

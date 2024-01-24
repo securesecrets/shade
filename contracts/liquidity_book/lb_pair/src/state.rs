@@ -11,6 +11,7 @@ use shade_protocol::{
     liquidity_book::lb_pair::{ContractStatus, RewardsDistribution, RewardsDistributionAlgorithm},
     secret_storage_plus::{AppendStore, Bincode2, Item, Json, Map},
     swap::core::TokenType,
+    utils::asset::RawContract,
     Contract,
 };
 
@@ -19,7 +20,7 @@ pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //
 pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
 pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
-pub const EPHEMERAL_STORAGE: Item<NextTokenKey> = Item::new("ephemeral_storage");
+pub const EPHEMERAL_STORAGE: Item<EphemeralStruct> = Item::new("ephemeral_storage");
 
 pub const FEE_APPEND_STORE: AppendStore<FeeLog> = AppendStore::new("fee_logs"); //?
 pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats"); //
@@ -64,14 +65,16 @@ pub struct State {
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
     pub last_swap_timestamp: Timestamp,
-    pub rewards_epoch_id: u64,
+    pub rewards_epoch_index: u64,
     pub base_rewards_bins: Option<u32>,
     pub toggle_distributions_algorithm: bool,
+    pub max_bins_per_swap: u32,
 }
 
 #[cw_serde]
-pub struct NextTokenKey {
+pub struct EphemeralStruct {
     pub lb_token_code_hash: String,
+    pub query_auth: RawContract,
     pub staking_contract: ContractInstantiationInfo,
     pub token_x_symbol: String,
     pub token_y_symbol: String,

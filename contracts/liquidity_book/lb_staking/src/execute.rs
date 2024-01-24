@@ -1,4 +1,5 @@
 use std::{
+    borrow::{Borrow, BorrowMut},
     collections::HashMap,
     ops::{Add, AddAssign, Sub},
     str::FromStr,
@@ -9,15 +10,37 @@ use shade_protocol::{
     self,
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary, to_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, DepsMut, Env,
-        MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256,
+        from_binary,
+        to_binary,
+        Addr,
+        BankMsg,
+        Binary,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+        Uint256,
     },
     lb_libraries::types::TreeUint24,
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            EpochInfo, ExecuteAnswer, InvokeMsg, Reward, RewardToken, RewardTokenInfo,
-            StakerLiquidity, StakerLiquiditySnapshot, State,
+            EpochInfo,
+            ExecuteAnswer,
+            InvokeMsg,
+            Reward,
+            RewardToken,
+            RewardTokenInfo,
+            StakerLiquidity,
+            StakerLiquiditySnapshot,
+            State,
         },
         lb_token::TransferAction,
     },
@@ -31,18 +54,36 @@ use shade_protocol::{
     },
     swap::core::TokenType,
     utils::{asset::RawContract, pad_handle_result, ExecuteCallback},
-    Contract, BLOCK_SIZE,
+    Contract,
+    BLOCK_SIZE,
 };
 
 use crate::{
     helper::{
-        assert_lb_pair, check_if_claimable, finding_total_liquidity, finding_user_liquidity,
-        register_reward_tokens, require_lb_token, staker_init_checker, TokenKey,
+        assert_lb_pair,
+        check_if_claimable,
+        finding_total_liquidity,
+        finding_user_liquidity,
+        register_reward_tokens,
+        require_lb_token,
+        staker_init_checker,
+        TokenKey,
     },
     state::{
-        store_claim_rewards, store_stake, store_unstake, EPOCH_STORE, EXPIRED_AT_LOGGER,
-        EXPIRED_AT_LOGGER_MAP, REWARD_TOKENS, REWARD_TOKEN_INFO, STAKERS, STAKERS_BIN_TREE,
-        STAKERS_LIQUIDITY, STAKERS_LIQUIDITY_SNAPSHOT, STATE, TOTAL_LIQUIDITY,
+        store_claim_rewards,
+        store_stake,
+        store_unstake,
+        EPOCH_STORE,
+        EXPIRED_AT_LOGGER,
+        EXPIRED_AT_LOGGER_MAP,
+        REWARD_TOKENS,
+        REWARD_TOKEN_INFO,
+        STAKERS,
+        STAKERS_BIN_TREE,
+        STAKERS_LIQUIDITY,
+        STAKERS_LIQUIDITY_SNAPSHOT,
+        STATE,
+        TOTAL_LIQUIDITY,
         TOTAL_LIQUIDITY_SNAPSHOT,
     },
 };
@@ -76,14 +117,7 @@ pub fn receiver_callback_snip_1155(
                 } else {
                     from
                 };
-                try_stake(
-                    deps,
-                    env,
-                    state,
-                    checked_from,
-                    token_id.parse().unwrap(),
-                    amount,
-                )
+                try_stake(deps, env, state, checked_from, token_id, amount)
             }
             InvokeMsg::AddRewards { .. } => Err(StdError::generic_err("Wrong Receiver called")),
         },
@@ -113,8 +147,8 @@ pub fn receiver_callback(
 
     pad_handle_result(
         match from_binary(&msg)? {
-            InvokeMsg::Stake { .. } => Err(StdError::generic_err("Wrong Receiver")),
             InvokeMsg::AddRewards { start, end } => try_add_rewards(deps, info, start, end, amount),
+            InvokeMsg::Stake { .. } => Err(StdError::generic_err("Wrong Receiver called")),
         },
         BLOCK_SIZE,
     )
@@ -125,14 +159,14 @@ pub fn try_stake(
     env: Env,
     mut state: State,
     staker: Addr,
-    token_id: u32,
+    token_id_string: String,
     amount: Uint256,
 ) -> StdResult<Response> {
-    //LOADING general use readonly stores
-    let epoch_obj = match EPOCH_STORE.may_load(deps.storage, state.epoch_index)? {
-        Some(e) => Ok(e),
-        None => Err(StdError::generic_err("Reward token storage already exists")),
-    }?;
+    let token_id: u32 = token_id_string.parse().unwrap();
+
+    // //LOADING general use readonly stores
+    let epoch_obj = process_epoch(deps.storage, &env, &mut state)?;
+
     //1) UPDATING: staker_info and staker_liquidity_snapshot
     //*INIT STAKER_INFO if not initialized already
     staker_init_checker(deps.storage, &state, &staker)?;
@@ -153,18 +187,15 @@ pub fn try_stake(
     }
 
     //**Only adding to liquidity if round has not ended yet
-    if env.block.time.seconds() >= epoch_obj.end_time {
-        staker_liq_snap.liquidity = liquidity;
-    } else {
-        staker_liq_snap.liquidity = liquidity.add(amount.multiply_ratio(
-            if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
-                time
-            } else {
-                return Err(StdError::generic_err("Under-flow sub error"));
-            },
-            epoch_obj.duration,
-        ));
-    }
+
+    staker_liq_snap.liquidity = liquidity.add(amount.multiply_ratio(
+        if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
+            time
+        } else {
+            return Err(StdError::generic_err("Under-flow sub error try_stake 1"));
+        },
+        epoch_obj.duration,
+    ));
 
     if staker_liq.amount_delegated.is_zero() {
         STAKERS_BIN_TREE.update(deps.storage, &staker, |tree| -> StdResult<_> {
@@ -208,18 +239,15 @@ pub fn try_stake(
     }
 
     //**Only adding to liquidity if round has not ended yet
-    if env.block.time.seconds() >= epoch_obj.end_time {
-        total_liq_snap.liquidity = total_liquidity;
-    } else {
-        total_liq_snap.liquidity = total_liquidity.add(amount.multiply_ratio(
-            if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
-                time
-            } else {
-                return Err(StdError::generic_err("Under-flow sub error"));
-            },
-            epoch_obj.duration,
-        ));
-    }
+
+    total_liq_snap.liquidity = total_liquidity.add(amount.multiply_ratio(
+        if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
+            time
+        } else {
+            return Err(StdError::generic_err("Under-flow sub error try_stake 2"));
+        },
+        epoch_obj.duration,
+    ));
 
     total_liq.amount_delegated.add_assign(amount);
     total_liq.last_deposited = Some(state.epoch_index);
@@ -240,7 +268,9 @@ pub fn try_stake(
     )?;
     STATE.save(deps.storage, &state)?;
 
-    Ok(Response::default())
+    Ok(Response::default()
+        .add_attribute("amount".to_string(), amount)
+        .add_attribute("token_id".to_string(), token_id.to_string()))
 }
 
 pub fn try_unstake(
@@ -257,11 +287,17 @@ pub fn try_unstake(
     }
 
     let mut state = STATE.load(deps.storage)?;
-    let epoch_obj = EPOCH_STORE
-        .may_load(deps.storage, state.epoch_index)?
-        .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
+
+    let epoch_obj = process_epoch(deps.storage, &env, &mut state)?;
 
     staker_init_checker(deps.storage, &state, &info.sender)?;
+
+    // Serialize the vectors into JSON strings
+    let token_ids_json = serde_json::to_string(&token_ids)
+        .map_err(|e| StdError::generic_err(format!("Failed to serialize token_ids: {}", e)))?;
+
+    let amounts_json = serde_json::to_string(&amounts)
+        .map_err(|e| StdError::generic_err(format!("Failed to serialize amounts: {}", e)))?;
 
     let mut actions: Vec<TransferAction> = Vec::new();
 
@@ -284,27 +320,38 @@ pub fn try_unstake(
             )));
         }
 
+        // println!("amount_delegated : {:?}", staker_liq.amount_delegated);
+        // println!("amount : {:?}", amount);
+        // println!("end_time : {:?}", epoch_obj.end_time);
+        // println!("now : {:?}", env.block.time.seconds());
+        // println!(
+        //     "difference : {:?}",
+        //     epoch_obj.end_time - env.block.time.seconds()
+        // );
+        // println!("duration : {:?}", epoch_obj.duration);
+
         let liquidity = if staker_liq_snap.liquidity.is_zero() {
             staker_liq.amount_delegated
         } else {
             staker_liq_snap.liquidity
         };
 
-        if env.block.time.seconds() < epoch_obj.end_time {
-            let subtraction_amount = amount.multiply_ratio(
-                epoch_obj
-                    .end_time
-                    .checked_sub(env.block.time.seconds())
-                    .ok_or_else(|| StdError::generic_err("Overflow in time calculation"))?,
-                epoch_obj.duration,
-            );
+        let subtraction_amount = amount.multiply_ratio(
+            epoch_obj
+                .end_time
+                .checked_sub(env.block.time.seconds())
+                .ok_or_else(|| StdError::generic_err("Overflow in time calculation"))?,
+            epoch_obj.duration,
+        );
 
-            staker_liq_snap.liquidity = liquidity
-                .checked_sub(subtraction_amount)
-                .map_err(|_| StdError::generic_err("Underflow in subtracting from liquidity"))?;
-        } else {
-            staker_liq_snap.liquidity = liquidity;
-        }
+        // println!(
+        //     "liquidity {:?}, subtraction_amount {:?}",
+        //     liquidity, subtraction_amount
+        // );
+
+        staker_liq_snap.liquidity = liquidity
+            .checked_sub(subtraction_amount)
+            .map_err(|_| StdError::generic_err("Underflow in subtracting from liquidity"))?;
 
         update_staker_and_total_liquidity(
             deps.storage,
@@ -348,7 +395,10 @@ pub fn try_unstake(
     )?;
     STATE.save(deps.storage, &state)?;
 
-    Ok(Response::default().add_message(message))
+    Ok(Response::default()
+        .add_message(message)
+        .add_attribute("amounts".to_string(), amounts_json)
+        .add_attribute("token_ids".to_string(), token_ids_json))
 }
 
 fn update_staker_and_total_liquidity(
@@ -398,30 +448,27 @@ fn update_staker_and_total_liquidity(
     }
 
     //**Only adding to liquidity if round has not ended yet
-    if env.block.time.seconds() >= epoch_obj.end_time {
-        total_liq_snap.liquidity = total_liquidity;
-    } else {
-        let subtraction_amount = amount.multiply_ratio(
-            if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
-                time
-            } else {
-                // Handle overflow in time calculation
-                return Err(StdError::generic_err("Overflow in time calculation"));
-            },
-            epoch_obj.duration,
-        );
 
-        // Use checked_sub to prevent underflow when subtracting from total_liquidity
-        total_liq_snap.liquidity =
-            if let Ok(new_liquidity) = total_liquidity.checked_sub(subtraction_amount) {
-                new_liquidity
-            } else {
-                // Handle underflow in subtracting from total_liquidity
-                return Err(StdError::generic_err(
-                    "Underflow in subtracting from total_liquidity",
-                ));
-            };
-    }
+    let subtraction_amount = amount.multiply_ratio(
+        if let Some(time) = epoch_obj.end_time.checked_sub(env.block.time.seconds()) {
+            time
+        } else {
+            // Handle overflow in time calculation
+            return Err(StdError::generic_err("Overflow in time calculation"));
+        },
+        epoch_obj.duration,
+    );
+
+    // Use checked_sub to prevent underflow when subtracting from total_liquidity
+    total_liq_snap.liquidity =
+        if let Ok(new_liquidity) = total_liquidity.checked_sub(subtraction_amount) {
+            new_liquidity
+        } else {
+            // Handle underflow in subtracting from total_liquidity
+            return Err(StdError::generic_err(
+                "Underflow in subtracting from total_liquidity",
+            ));
+        };
 
     // Use checked_sub to safely subtract amounts[i] from total_liq.amount_delegated
     if let Ok(new_amount_delegated) = total_liq.amount_delegated.checked_sub(amount) {
@@ -446,6 +493,7 @@ pub fn try_end_epoch(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    epoch_index: u64,
     rewards_distribution: RewardsDistribution,
 ) -> StdResult<Response> {
     let mut state = STATE.load(deps.storage)?;
@@ -479,13 +527,13 @@ pub fn try_end_epoch(
     }
 
     //saves the distribution
-    let mut epoch_obj = EPOCH_STORE.load(deps.storage, state.epoch_index)?;
-    epoch_obj.rewards_distribution = Some(rewards_distribution);
-    epoch_obj.reward_tokens = Some(reward_tokens);
+    let mut prev_epoch_obj = EPOCH_STORE.load(deps.storage, epoch_index)?;
+    prev_epoch_obj.rewards_distribution = Some(rewards_distribution);
+    prev_epoch_obj.reward_tokens = Some(reward_tokens);
 
     if let Some(expiry_duration) = state.expiry_durations {
         let expired_at = state.epoch_index + expiry_duration;
-        epoch_obj.expired_at = Some(expired_at);
+        prev_epoch_obj.expired_at = Some(expired_at);
         EXPIRED_AT_LOGGER.update(deps.storage, |mut list| -> StdResult<Vec<u64>> {
             if !list.contains(&expired_at) {
                 list.push(expired_at);
@@ -505,27 +553,24 @@ pub fn try_end_epoch(
             },
         )?;
     }
+    EPOCH_STORE.save(deps.storage, epoch_index, &prev_epoch_obj)?;
 
-    EPOCH_STORE.save(deps.storage, state.epoch_index, &epoch_obj)?;
+    if env.block.time.seconds() >= prev_epoch_obj.end_time {
+        if !EPOCH_STORE.has(deps.storage, epoch_index.add(1)) {
+            EPOCH_STORE.save(deps.storage, epoch_index.add(1), &EpochInfo {
+                rewards_distribution: None,
+                start_time: prev_epoch_obj.end_time,
+                end_time: prev_epoch_obj.end_time + state.epoch_durations,
+                duration: state.epoch_durations,
+                reward_tokens: None,
+                expired_at: None,
+            })?;
 
-    let now = env.block.time.seconds();
-    EPOCH_STORE.save(
-        deps.storage,
-        state.epoch_index.add(1),
-        &EpochInfo {
-            rewards_distribution: None,
-            start_time: now,
-            end_time: now + state.epoch_durations,
-            duration: state.epoch_durations,
-            reward_tokens: None,
-            expired_at: None,
-        },
-    )?;
+            state.epoch_index.add_assign(1);
 
-    state.epoch_index.add_assign(1);
-
-    STATE.save(deps.storage, &state)?;
-
+            STATE.save(deps.storage, &state)?;
+        }
+    }
     Ok(Response::default())
 }
 
@@ -563,10 +608,15 @@ pub fn try_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> StdResul
         staker.starting_round.unwrap_or_default()
     };
 
-    let ending_epoch = state.epoch_index;
+    let mut ending_epoch = state.epoch_index;
 
     for round_epoch in starting_epoch..ending_epoch {
         let mut epoch_info = EPOCH_STORE.load(deps.storage, round_epoch)?;
+
+        if epoch_info.rewards_distribution.is_none() {
+            ending_epoch = round_epoch;
+            break;
+        }
 
         // Check if the epoch has expired or has no reward tokens
         let is_expired = epoch_info
@@ -733,6 +783,7 @@ pub fn try_register_reward_tokens(
 pub fn try_update_config(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     admin_auth: Option<RawContract>,
     query_auth: Option<RawContract>,
     epoch_duration: Option<u64>,
@@ -748,14 +799,15 @@ pub fn try_update_config(
     )?;
 
     if let Some(ad_auth) = admin_auth {
-        state.admin_auth = ad_auth.valid(deps.api)?;
+        state.admin_auth = ad_auth.into_valid(deps.api)?;
     }
 
     if let Some(q_auth) = query_auth {
-        state.query_auth = Some(q_auth.valid(deps.api)?);
+        state.query_auth = q_auth.into_valid(deps.api)?;
     }
 
     if let Some(ep_duration) = epoch_duration {
+        let _ = process_epoch(deps.storage, &env, &mut state)?;
         state.epoch_durations = ep_duration;
     }
 
@@ -766,6 +818,51 @@ pub fn try_update_config(
     STATE.save(deps.storage, &state)?;
 
     Ok(Response::default())
+}
+
+fn process_epoch(storage: &mut dyn Storage, env: &Env, state: &mut State) -> StdResult<EpochInfo> {
+    let mut epoch_obj = EPOCH_STORE
+        .may_load(storage, state.epoch_index)?
+        .ok_or_else(|| StdError::generic_err("Reward token storage does not exist"))?;
+    let current_time = env.block.time.seconds();
+
+    // Check if the current epoch has ended
+    if current_time >= epoch_obj.end_time {
+        let difference = current_time - epoch_obj.end_time;
+
+        let multiples: u64 = difference / state.epoch_durations + 1;
+
+        for _ in 0..multiples {
+            // Move to the next epoch
+            state.epoch_index += 1;
+
+            // Attempt to load the next epoch's data
+            match EPOCH_STORE.may_load(storage, state.epoch_index)? {
+                Some(e) => {
+                    epoch_obj = e;
+                }
+                None => {
+                    // Initialize a new epoch if it doesn't exist
+                    let expired_at = match state.expiry_durations {
+                        Some(durations) => Some(durations + epoch_obj.start_time),
+                        None => None,
+                    };
+                    epoch_obj = EpochInfo {
+                        rewards_distribution: None,
+                        reward_tokens: None,
+                        start_time: epoch_obj.end_time,
+                        end_time: epoch_obj.end_time + state.epoch_durations,
+                        duration: state.epoch_durations,
+                        expired_at,
+                    };
+
+                    EPOCH_STORE.save(storage, state.epoch_index, &epoch_obj)?;
+                }
+            }
+        }
+    }
+
+    Ok(epoch_obj)
 }
 
 pub fn try_add_rewards(
@@ -792,13 +889,10 @@ pub fn try_add_rewards(
             return Err(StdError::generic_err("Cannot start emitting in the past"));
         }
 
-        let decimals = token_info(
-            &deps.querier,
-            &Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
-        )?
+        let decimals = token_info(&deps.querier, &Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
+        })?
         .decimals;
 
         let total_epoches = end.sub(start) + 1;
@@ -835,49 +929,6 @@ pub fn try_add_rewards(
     }
 
     Ok(Response::default())
-}
-
-pub fn try_create_viewing_key(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    entropy: String,
-) -> StdResult<Response> {
-    let key = ViewingKey::create(
-        deps.storage,
-        &info,
-        &env,
-        info.sender.as_str(),
-        entropy.as_ref(),
-    );
-
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::CreateViewingKey { key })?))
-}
-
-pub fn try_set_viewing_key(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    key: String,
-) -> StdResult<Response> {
-    ViewingKey::set(deps.storage, info.sender.as_str(), key.as_str());
-    Ok(Response::new())
-}
-
-pub fn try_revoke_permit(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    permit_name: String,
-) -> StdResult<Response> {
-    RevokedPermits::revoke_permit(
-        deps.storage,
-        PREFIX_REVOKED_PERMITS,
-        info.sender.as_ref(),
-        &permit_name,
-    );
-
-    Ok(Response::new())
 }
 
 pub fn try_recover_expired_funds(
@@ -953,12 +1004,53 @@ pub fn try_recover_funds(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let state = STATE.load(deps.storage)?;
+    let mut total_amount = Uint128::zero();
+
     validate_admin(
         &deps.querier,
         AdminPermissions::StakingAdmin,
         info.sender.to_string(),
         &state.admin_auth.into(),
     )?;
+
+    for reward_token in REWARD_TOKENS.load(deps.storage)? {
+        let rewards_token_info;
+        if let Ok(r_t_i) = REWARD_TOKEN_INFO.load(deps.storage, &reward_token.address) {
+            rewards_token_info = r_t_i;
+        } else {
+            continue;
+        };
+
+        for reward_token in rewards_token_info {
+            if token.address() == reward_token.token.address {
+                total_amount += reward_token.total_rewards;
+            }
+        }
+    }
+
+    let token_balance = token.query_balance(
+        deps.as_ref(),
+        _env.contract.address.into_string(),
+        SHADE_STAKING_VIEWING_KEY.to_string(),
+    )?;
+
+    let extra_amount = if let Ok(extra) = token_balance.checked_sub(total_amount) {
+        extra
+    } else {
+        // Handle underflow in subtracting from total_liquidity
+        return Err(StdError::generic_err(
+            "Underflow in subtracting from recover_funds",
+        ));
+    };
+
+    if extra_amount < amount {
+        return Err(StdError::generic_err(format!(
+            "Trying to recover already staked funds. Extra funds {:?}, amount {:?}",
+            extra_amount, amount,
+        )));
+    }
+
+    //Check if amount asked is greater than amount staked by the admin
     let send_msg = match token {
         TokenType::CustomToken {
             contract_addr,
