@@ -17,6 +17,9 @@ mod lb_pair_trivial;
 mod lb_pair_fees;
 
 #[cfg(test)]
+mod lb_pair_rewards;
+
+#[cfg(test)]
 mod lb_pair_swap;
 
 #[cfg(test)]
