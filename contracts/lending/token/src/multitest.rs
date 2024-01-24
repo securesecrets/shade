@@ -13,7 +13,7 @@ use suite::{Suite, SuiteBuilder};
 #[test]
 fn fresh_queries() {
     let suite = SuiteBuilder::new()
-        .with_name("WyndLend")
+        .with_name("LendToken")
         .with_symbol("LDX")
         .with_decimals(9)
         .build();
@@ -24,7 +24,7 @@ fn fresh_queries() {
     assert_eq!(
         suite.query_token_info().unwrap(),
         TokenInfoResponse {
-            name: "WyndLend".to_owned(),
+            name: "LendToken".to_owned(),
             symbol: "LDX".to_owned(),
             decimals: 9,
             total_supply: Uint128::zero(),
