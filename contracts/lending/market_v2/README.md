@@ -78,8 +78,27 @@ This section provides detailed information about the contract's workflows and in
 
 ![Withdraw](assets/withdraw.png "withdraw")
 
-TODO: All remaining messages.
+## ExecuteMsg
 
-### Query
+- Withdraw
+ - allows the withdrawal of a specified amount of C Tokens.
+ - the contract burns the C Tokens and returns the equivalent value in the base asset to the lender.
 
-TODO: All queries.
+- Borrow
+ - Facilitates increasing the sender's debt.
+ - Dispatches a message to send a specified amount of the base asset to the sender.
+
+- TransferFrom
+ - Enables the transfer of C Tokens from one account to another.
+ - Used for transferring C Tokens between accounts, with the sender required to be a Credit Agency. Includes liquidation price details in the transaction.
+
+### ReceiveMsg
+
+The ReceiveMsg enum, specifically the Deposit function, plays a pivotal role in the token exchange mechanism of the lending market. It allows users to deposit market tokens into the contract in exchange for CTokens, reflecting the lending aspect of the protocol. This process is fundamental for liquidity provision and collateral management within the lending market.
+
+### Repay function
+
+- Facilitates the repayment of borrowed funds.
+- Allows borrowers to return the borrowed amount, usually along with any accrued interest, to the lending contract. This is often done by sending the required amount of the borrowed asset (or a designated repayment asset) to the contract.
+- The primary purpose is to reduce or settle the borrower's outstanding debt. Successful repayment typically results in a proportional reduction of the borrower's debt
+
