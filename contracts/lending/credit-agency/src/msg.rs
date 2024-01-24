@@ -146,6 +146,26 @@ pub enum QueryMsg {
     /// Checks if the given account is liquidatable and returns the necessary information to do so.
     #[returns(LiquidationResponse)]
     Liquidation { account: String },
+
+    /// Querie that encapsulates all data for a given user
+    #[returns(UserDataResponse)]
+    UserData {
+        account: String,
+        authentication: Authentication,
+        // Returns balances of entered markets
+        tokens_balance: bool,
+        withdrawable: bool,
+        borrowable: bool,
+        credit_line: bool,
+    },
+}
+
+#[cw_serde]
+pub struct UserDataResponse {
+    pub token_balance: Vec<(Contract, lend_market::msg::TokensBalanceResponse)>,
+    pub withdrawable: Vec<(Contract, Coin)>,
+    pub borrowable: Vec<(Contract, Coin)>,
+    pub credit_line: Vec<(Contract, lending_utils::credit_line::CreditLineResponse)>,
 }
 
 #[cw_serde]

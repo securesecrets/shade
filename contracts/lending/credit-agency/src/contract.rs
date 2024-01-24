@@ -13,7 +13,7 @@ use shade_protocol::{
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
     state::{
         find_value, insert_or_update, Config, MarketState, CONFIG, MARKET_VIEWING_KEY,
         NEXT_REPLY_ID,
@@ -447,6 +447,22 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         ListEnteredMarkets { account } => to_binary(&query::entered_markets(deps, account)?)?,
         IsOnMarket { account, market } => to_binary(&query::is_on_market(deps, account, market)?)?,
         Liquidation { account } => to_binary(&query::liquidation(deps, account)?)?,
+        UserData {
+            account,
+            authentication,
+            tokens_balance,
+            withdrawable,
+            borrowable,
+            credit_line,
+        } => to_binary(&query::user_data(
+            deps,
+            account,
+            authentication,
+            tokens_balance,
+            withdrawable,
+            borrowable,
+            credit_line,
+        )?)?,
     };
 
     Ok(res)
@@ -635,6 +651,109 @@ mod query {
             can_liquidate,
             debt,
             collateral,
+        })
+    }
+
+    // Query message that summs up all the other queries in a one call
+    pub fn user_data(
+        deps: Deps,
+        account: String,
+        authentication: Authentication,
+        token_balance: bool,
+        withdrawable: bool,
+        borrowable: bool,
+        credit_line: bool,
+    ) -> StdResult<UserDataResponse> {
+        let common_token = CONFIG.load(deps.storage)?.common_token;
+        let markets = ENTERED_MARKETS.load(deps.storage)?;
+        let entered_markets =
+            find_value::<Addr, Vec<Contract>>(&markets, &Addr::unchecked(&account))
+                .cloned()
+                .unwrap_or_default();
+
+        let token_balance = if token_balance {
+            entered_markets
+                .iter()
+                .map(|market| {
+                    let market = market.clone();
+                    let balance_response: lend_market::msg::TokensBalanceResponse =
+                        deps.querier.query_wasm_smart(
+                            market.code_hash.clone(),
+                            market.address.to_string(),
+                            &MarketQueryMsg::TokensBalance {
+                                account: deps.api.addr_validate(&account)?,
+                                authentication: authentication.clone(),
+                            },
+                        )?;
+                    Ok((market.clone(), balance_response))
+                })
+                .collect::<StdResult<Vec<(Contract, lend_market::msg::TokensBalanceResponse)>>>()?
+        } else {
+            vec![]
+        };
+
+        let withdrawable = if withdrawable {
+            entered_markets
+                .iter()
+                .map(|market| {
+                    let balance_response: Coin = deps.querier.query_wasm_smart(
+                        market.code_hash.clone(),
+                        market.address.to_string(),
+                        &MarketQueryMsg::Withdrawable {
+                            account: deps.api.addr_validate(&account)?,
+                            authentication: authentication.clone(),
+                        },
+                    )?;
+                    Ok((market.clone(), balance_response))
+                })
+                .collect::<StdResult<Vec<(Contract, Coin)>>>()?
+        } else {
+            vec![]
+        };
+
+        let borrowable = if borrowable {
+            entered_markets
+                .iter()
+                .map(|market| {
+                    let balance_response: Coin = deps.querier.query_wasm_smart(
+                        market.code_hash.clone(),
+                        market.address.to_string(),
+                        &MarketQueryMsg::Borrowable {
+                            account: deps.api.addr_validate(&account)?,
+                            authentication: authentication.clone(),
+                        },
+                    )?;
+                    Ok((market.clone(), balance_response))
+                })
+                .collect::<StdResult<Vec<(Contract, Coin)>>>()?
+        } else {
+            vec![]
+        };
+
+        let credit_line = if credit_line {
+            entered_markets
+                .into_iter()
+                .map(|market| {
+                    let price_response: CreditLineResponse = deps.querier.query_wasm_smart(
+                        market.code_hash.clone(),
+                        market.address.to_string(),
+                        &MarketQueryMsg::CreditLine {
+                            account: deps.api.addr_validate(&account)?,
+                            authentication: authentication.clone(),
+                        },
+                    )?;
+                    Ok((market.clone(), price_response))
+                })
+                .collect::<StdResult<Vec<(Contract, CreditLineResponse)>>>()?
+        } else {
+            vec![]
+        };
+
+        Ok(UserDataResponse {
+            token_balance,
+            withdrawable,
+            borrowable,
+            credit_line,
         })
     }
 }
