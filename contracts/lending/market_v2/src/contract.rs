@@ -1,5 +1,5 @@
 #[cfg(not(feature = "library"))]
-use shade_protocol::c_std::entry_point;
+use shade_protocol::c_std::shd_entry_point;
 use shade_protocol::{
     c_std::{
         from_binary, to_binary, Addr, Binary, Coin as StdCoin, Decimal, Deps, DepsMut, Env,
@@ -24,7 +24,7 @@ use lending_utils::{token::Token, Authentication, ViewingKey};
 
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -90,7 +90,7 @@ pub fn instantiate(
         )))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         CTOKEN_INIT_REPLY_ID => reply::token_instantiate_reply(deps, env, msg),
@@ -131,7 +131,7 @@ mod reply {
 }
 
 /// Execution entry point
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -777,7 +777,7 @@ pub fn authenticate(deps: Deps, auth: Authentication, account: &Addr) -> StdResu
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::TokensBalance {
