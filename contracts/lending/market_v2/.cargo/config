@@ -2,5 +2,5 @@
 wasm = "build --release --lib --target wasm32-unknown-unknown"
 wasm-debug = "build --target wasm32-unknown-unknown"
 unit-test = "test --lib"
-schema = "run --bin schema"
+schema = "run --bin market_schema"
 
