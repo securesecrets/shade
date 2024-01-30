@@ -5,13 +5,14 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+library = []
 
 [dependencies]
 cosmwasm-schema = "1.4.0"
 either = "1.6"
 lending-utils = { version = "0.1.0", path = "../../../packages/lending_utils" }
-lend-token = { version = "0.1.0", path = "../token" }
-lend-market = { version = "0.1.0", path = "../market_v2" }
+lend-token = { version = "0.1.0", path = "../token", features = ["library"] }
+lend-market = { version = "0.1.0", path = "../market_v2", features = ["library"] }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "snip20",
   "storage_plus",
