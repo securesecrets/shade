@@ -1,10 +1,15 @@
 [package]
 name = "credit-agency"
 version = "0.1.0"
+authors = ["Jakub <jakub@moonbite.space>"]
 edition = "2021"
+description = "Implementation of Credit Agency contract"
+repository = "https://github.com/securesecrets/shade"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[features]
 library = []
 
 [dependencies]

@@ -8,6 +8,8 @@ repository = "https://github.com/securesecrets/shade"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[features]
 library = []
 
 [dependencies]

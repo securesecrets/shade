@@ -10,7 +10,6 @@ repository = "https://github.com/securesecrets/shade"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
