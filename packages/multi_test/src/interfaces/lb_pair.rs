@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
@@ -194,7 +196,7 @@ pub fn swap_snip_20(
     lb_token: &ContractInfo,
 
     amount: Uint128,
-) -> StdResult<()> {
+) -> StdResult<Uint128> {
     let msg = to_binary(&lb_pair::InvokeMsg::SwapTokens {
         expected_return: None,
         to,
@@ -210,7 +212,29 @@ pub fn swap_snip_20(
     }
     .test_exec(&lb_token, app, Addr::unchecked(sender), &[]))
     {
-        Ok(_) => Ok(()),
+        Ok(res) => {
+            let total_fee = res
+                .events
+                .iter()
+                .flat_map(|event| &event.attributes)
+                .find_map(|attribute| {
+                    if attribute.key == "total_fee_amount" {
+                        Some(attribute.value.clone()) // Clone the value to give it a 'static lifetime
+                    } else {
+                        None
+                    }
+                });
+
+            println!("res {:?}", res);
+            let mut t_fee = Uint128::zero();
+            match total_fee {
+                Some(fee) => {
+                    t_fee = Uint128::from_str(fee.as_str())?;
+                }
+                None => {}
+            }
+            Ok(t_fee)
+        }
         Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
@@ -599,12 +623,16 @@ pub fn query_oracle_sample_at(
     lb_pair: &ContractInfo,
     look_up_timestamp: u64,
 ) -> StdResult<(u64, u64, u64)> {
-    let res =
-        lb_pair::QueryMsg::GetOracleSampleAt { look_up_timestamp }.test_query(lb_pair, app)?;
+    let res = lb_pair::QueryMsg::GetOracleSampleAt { oracle_id: 0 }.test_query(lb_pair, app)?;
     let lb_pair::OracleSampleAtResponse {
         cumulative_id,
         cumulative_volatility,
         cumulative_bin_crossed,
+        cumulative_volume_x,
+        cumulative_volume_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
     } = res;
     Ok((cumulative_id, cumulative_volatility, cumulative_bin_crossed))
 }

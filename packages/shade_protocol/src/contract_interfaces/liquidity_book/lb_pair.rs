@@ -218,7 +218,7 @@ pub enum QueryMsg {
     #[returns(OracleParametersResponse)]
     GetOracleParameters {},
     #[returns(OracleSampleAtResponse)]
-    GetOracleSampleAt { look_up_timestamp: u64 },
+    GetOracleSampleAt { oracle_id: u16 },
     #[returns(PriceFromIdResponse)]
     GetPriceFromId { id: u32 },
     #[returns(IdFromPriceResponse)]
@@ -381,9 +381,14 @@ pub struct OracleParametersResponse {
 
 #[cw_serde]
 pub struct OracleSampleAtResponse {
+    pub oracle_id: u16,
     pub cumulative_id: u64,
     pub cumulative_volatility: u64,
     pub cumulative_bin_crossed: u64,
+    pub cumulative_volume_x: u128,
+    pub cumulative_volume_y: u128,
+    pub cumulative_fee_x: u128,
+    pub cumulative_fee_y: u128,
 }
 
 #[cw_serde]

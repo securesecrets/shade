@@ -329,7 +329,6 @@ impl BinHelper {
 
         let total_fee = parameters.get_total_fee(bin_step);
         let max_fee = FeeHelper::get_fee_amount(max_amount_in, total_fee)?;
-
         let max_amount_in = max_amount_in + max_fee;
 
         let mut amount_in128 = amounts_in_left.decode_alt(swap_for_y);

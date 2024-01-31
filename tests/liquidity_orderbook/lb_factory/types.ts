@@ -13,13 +13,11 @@ export type TokenType =
       custom_token: {
         contract_addr: Addr;
         token_code_hash: string;
-        [k: string]: unknown;
       };
     }
   | {
       native_token: {
         denom: string;
-        [k: string]: unknown;
       };
     };
 export interface AllLBPairsResponse {
@@ -29,7 +27,7 @@ export interface LBPairInformation {
   bin_step: number;
   created_by_owner: boolean;
   ignored_for_routing: boolean;
-  lb_pair: LBPair; //TODO change this to `info`
+  info: LBPair;
 }
 export interface LBPair {
   bin_step: number;
@@ -144,7 +142,9 @@ export interface FeeRecipientResponse {
 export interface InstantiateMsg {
   admin_auth: RawContract;
   fee_recipient: Addr;
+  max_bins_per_swap?: number | null;
   owner?: Addr | null;
+  query_auth: RawContract;
   recover_staking_funds_receiver: Addr;
 }
 export interface RawContract {

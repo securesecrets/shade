@@ -59,6 +59,7 @@ use shade_protocol::{
         types::{Bytes32, MintArrays},
         viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
     },
+    oracles::oracle,
     snip20,
     Contract,
 };
@@ -192,12 +193,10 @@ pub fn instantiate(
     };
 
     let tree: TreeUint24 = TreeUint24::new();
-    let oracle = Oracle {
-        samples: HashMap::<u16, OracleSample>::new(),
-    };
+    let oracle = Oracle(OracleSample::default());
 
     STATE.save(deps.storage, &state)?;
-    ORACLE.save(deps.storage, &oracle)?;
+    ORACLE.save(deps.storage, 0, &oracle)?;
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_index, &tree)?;
@@ -289,9 +288,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             remove_liquidity_params,
         } => try_remove_liquidity(deps, env, info, remove_liquidity_params),
         ExecuteMsg::CollectProtocolFees {} => try_collect_protocol_fees(deps, env, info),
-        ExecuteMsg::IncreaseOracleLength { new_length } => {
-            try_increase_oracle_length(deps, env, info, new_length)
-        }
+        // ExecuteMsg::IncreaseOracleLength { new_length } => {
+        //     try_increase_oracle_length(deps, env, info, new_length)
+        // }
         ExecuteMsg::SetStaticFeeParameters {
             base_factor,
             filter_period,
@@ -333,6 +332,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             CONTRACT_STATUS.save(deps.storage, &contract_status)?;
             Ok(Response::default().add_attribute("new_status", contract_status.to_string()))
         }
+        _ => panic!("Invalid"),
     }
 }
 
@@ -418,6 +418,8 @@ fn try_swap(
     if amounts_left == [0u8; 32] {
         return Err(Error::InsufficientAmountIn);
     };
+
+    let mut volume_tracked = amounts_left;
 
     let mut reserves = reserves.add(amounts_left);
 
@@ -551,9 +553,25 @@ fn try_swap(
     }
 
     reserves = reserves.sub(amounts_out);
+    volume_tracked = volume_tracked.add(amounts_out);
 
-    let mut oracle = ORACLE.load(deps.storage)?;
-    oracle.update(&env.block.time, params, active_id)?;
+    let oracle_id = params.get_oracle_id();
+    let mut oracle = ORACLE.load(deps.storage, oracle_id)?;
+    let sample;
+    let new_sample;
+    (params, sample, new_sample) = oracle.update(
+        &env.block.time,
+        params,
+        active_id,
+        Some(volume_tracked),
+        Some(total_fees),
+    )?;
+
+    ORACLE.save(deps.storage, oracle_id, &Oracle(sample))?;
+
+    if let Some(n_s) = new_sample {
+        ORACLE.save(deps.storage, params.get_oracle_id(), &Oracle(n_s))?;
+    }
 
     STATE.update(deps.storage, |mut state| {
         state.last_swap_timestamp = env.block.time;
@@ -1037,8 +1055,6 @@ fn _update_bin(
         config.lb_token.code_hash,
         config.lb_token.address,
     )?;
-    // println!("id {:?}", id);
-
     let (shares, amounts_in) = BinHelper::get_shares_and_effective_amounts_in(
         bin_reserves,
         max_amounts_in_to_bin,
@@ -1078,8 +1094,19 @@ fn _update_bin(
                 })?;
             }
 
-            let mut oracle = ORACLE.load(deps.storage)?;
-            parameters = oracle.update(time, parameters, id)?;
+            let oracle_id = parameters.get_oracle_id();
+
+            let mut oracle = ORACLE.load(deps.storage, oracle_id)?;
+            let sample;
+            let new_sample;
+            (parameters, sample, new_sample) = oracle.update(time, parameters, id, None, None)?;
+
+            ORACLE.save(deps.storage, oracle_id, &Oracle(sample))?;
+
+            if let Some(n_s) = new_sample {
+                ORACLE.save(deps.storage, parameters.get_oracle_id(), &Oracle(n_s))?;
+            }
+
             STATE.update(deps.storage, |mut state| -> StdResult<_> {
                 state.pair_parameters = parameters;
                 Ok(state)
@@ -1407,44 +1434,47 @@ fn try_collect_protocol_fees(deps: DepsMut, _env: Env, info: MessageInfo) -> Res
     }
 }
 
-/// Increase the length of the oracle used by the pool.
-///
-/// # Arguments
-///
-/// * `new_length` - The new length of the oracle
-fn try_increase_oracle_length(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    new_length: u16,
-) -> Result<Response> {
-    let state = STATE.load(deps.storage)?;
-    validate_admin(
-        &deps.querier,
-        AdminPermissions::LiquidityBookAdmin,
-        info.sender.to_string(),
-        &state.admin_auth,
-    )?;
+// /// Increase the length of the oracle used by the pool.
+// ///
+// /// # Arguments
+// ///
+// /// * `new_length` - The new length of the oracle
+// fn try_increase_oracle_length(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     new_length: u16,
+// ) -> Result<Response> {
+//     let state = STATE.load(deps.storage)?;
+//     validate_admin(
+//         &deps.querier,
+//         AdminPermissions::LiquidityBookAdmin,
+//         info.sender.to_string(),
+//         &state.admin_auth,
+//     )?;
 
-    let mut params = state.pair_parameters;
+//     let mut params = state.pair_parameters;
 
-    let mut oracle_id = params.get_oracle_id();
+//     let mut oracle_id = params.get_oracle_id();
 
-    // activate the oracle if it is not active yet
-    if oracle_id == 0 {
-        oracle_id = 1;
-        params.set_oracle_id(oracle_id);
-    }
+//     // activate the oracle if it is not active yet
+//     if oracle_id == 0 {
+//         oracle_id = 1;
+//         params.set_oracle_id(oracle_id);
+//     }
 
-    ORACLE.update(deps.storage, |mut oracle| {
-        oracle
-            .increase_length(oracle_id, new_length)
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-        Ok::<Oracle, StdError>(oracle)
-    })?;
+//     ORACLE.update(deps.storage, oracle_id, |mut oracle| {
+//         if let Some(ora) = oracle {
+//             ora.increase_length(oracle_id, new_length)
+//                 .map_err(|err| StdError::generic_err(err.to_string()))?;
+//             Ok::<Oracle, StdError>(ora)
+//         } else {
+//             panic!("");
+//         }
+//     })?;
 
-    Ok(Response::default().add_attribute("Oracle Length Increased to", new_length.to_string()))
-}
+//     Ok(Response::default().add_attribute("Oracle Length Increased to", new_length.to_string()))
+// }
 
 /// Sets the static fee parameters of the pool.
 ///
@@ -1825,9 +1855,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetStaticFeeParameters {} => query_static_fee_params(deps),
         QueryMsg::GetVariableFeeParameters {} => query_variable_fee_params(deps),
         QueryMsg::GetOracleParameters {} => query_oracle_params(deps),
-        QueryMsg::GetOracleSampleAt { look_up_timestamp } => {
-            query_oracle_sample_at(deps, env, look_up_timestamp)
-        }
+        QueryMsg::GetOracleSampleAt { oracle_id } => query_oracle_sample(deps, env, oracle_id),
         QueryMsg::GetPriceFromId { id } => query_price_from_id(deps, id),
         QueryMsg::GetIdFromPrice { price } => query_id_from_price(deps, price),
         QueryMsg::GetSwapIn {
@@ -2432,14 +2460,26 @@ fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
 /// * `first_timestamp` - The first timestamp of the oracle, i.e. the timestamp of the oldest sample
 fn query_oracle_params(deps: Deps) -> Result<Binary> {
     let state = STATE.load(deps.storage)?;
-    let oracle = ORACLE.load(deps.storage)?;
     let params = state.pair_parameters;
 
     let sample_lifetime = MAX_SAMPLE_LIFETIME;
     let oracle_id = params.get_oracle_id();
+    let oracle = ORACLE.load(deps.storage, oracle_id)?;
 
     if oracle_id > 0 {
-        let (mut sample, mut active_size) = oracle.get_active_sample_and_size(oracle_id)?;
+        let mut sample = oracle.0;
+        let mut active_size = OracleSample::get_oracle_length(&sample);
+
+        if oracle_id != active_size {
+            active_size =
+                OracleSample::get_oracle_length(&ORACLE.load(deps.storage, active_size)?.0);
+            active_size = if oracle_id > active_size {
+                oracle_id
+            } else {
+                active_size
+            };
+        }
+
         let size = sample.get_oracle_length();
         let last_updated = sample.get_sample_last_update();
 
@@ -2448,7 +2488,7 @@ fn query_oracle_params(deps: Deps) -> Result<Binary> {
         }
 
         if active_size > 0 {
-            sample = oracle.get_sample(1 + (oracle_id % active_size))?;
+            sample = ORACLE.load(deps.storage, 1 + (oracle_id % active_size))?.0;
         }
         let first_timestamp = sample.get_sample_last_update();
 
@@ -2484,43 +2524,99 @@ fn query_oracle_params(deps: Deps) -> Result<Binary> {
 /// * `cumulative_id` - The cumulative id of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_volatility` - The cumulative volatility of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_bin_crossed` - The cumulative bin crossed of the Liquidity Book Pair at the given timestamp
-fn query_oracle_sample_at(deps: Deps, env: Env, look_up_timestamp: u64) -> Result<Binary> {
-    let state = STATE.load(deps.storage)?;
-    let oracle = ORACLE.load(deps.storage)?;
-    let mut params = state.pair_parameters;
-
-    let _sample_lifetime = MAX_SAMPLE_LIFETIME;
-    let oracle_id = params.get_oracle_id();
-
-    if oracle_id == 0 || look_up_timestamp > env.block.time.seconds() {
+fn query_oracle_sample(deps: Deps, _env: Env, oracle_id: u16) -> Result<Binary> {
+    if oracle_id == 0 {
         let response = OracleSampleAtResponse {
             cumulative_id: 0,
             cumulative_volatility: 0,
             cumulative_bin_crossed: 0,
+            cumulative_volume_x: 0,
+            cumulative_volume_y: 0,
+            cumulative_fee_x: 0,
+            cumulative_fee_y: 0,
+            oracle_id,
         };
         return to_binary(&response).map_err(Error::CwErr);
     }
 
-    let (time_of_last_update, _cumulative_id, _cumulative_volatility, cumulative_bin_crossed) =
-        oracle.get_sample_at(oracle_id, look_up_timestamp)?;
+    let oracle = ORACLE.load(deps.storage, oracle_id)?;
 
-    if time_of_last_update < look_up_timestamp {
-        params.update_volatility_parameters(params.get_active_id(), &env.block.time)?;
+    let cumulative_id = oracle.0.get_cumulative_id();
+    let cumulative_volatility = oracle.0.get_cumulative_volatility();
+    let cumulative_bin_crossed = oracle.0.get_cumulative_bin_crossed();
+    let cumulative_vol_x = oracle.0.get_vol_token_x();
+    let cumulative_vol_y = oracle.0.get_vol_token_y();
+    let cumulative_fee_x = oracle.0.get_fee_token_x();
+    let cumulative_fee_y = oracle.0.get_fee_token_y();
 
-        let delta_time = look_up_timestamp - time_of_last_update;
+    let response = OracleSampleAtResponse {
+        cumulative_id,
+        cumulative_volatility,
+        cumulative_bin_crossed,
+        cumulative_volume_x: cumulative_vol_x,
+        cumulative_volume_y: cumulative_vol_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
+    };
+    to_binary(&response).map_err(Error::CwErr)
+}
 
-        let cumulative_id = params.get_active_id() as u64 * delta_time;
-        let cumulative_volatility = params.get_volatility_accumulator() as u64 * delta_time;
+fn query_oracle_samples(deps: Deps, _env: Env, oracle_ids: Vec<u16>) -> Result<Binary> {
+    let mut responses = Vec::new();
 
-        let response = OracleSampleAtResponse {
-            cumulative_id,
-            cumulative_volatility,
-            cumulative_bin_crossed,
-        };
-        to_binary(&response).map_err(Error::CwErr)
-    } else {
-        Err(Error::LastUpdateTimestampGreaterThanLookupTimestamp)
+    for oracle_id in oracle_ids {
+        if oracle_id == 0 {
+            let response = OracleSampleAtResponse {
+                cumulative_id: 0,
+                cumulative_volatility: 0,
+                cumulative_bin_crossed: 0,
+                cumulative_volume_x: 0,
+                cumulative_volume_y: 0,
+                cumulative_fee_x: 0,
+                cumulative_fee_y: 0,
+                oracle_id,
+            };
+            responses.push(response);
+        }
+
+        let raw_oracle = ORACLE.load(deps.storage, oracle_id);
+
+        if let Ok(oracle) = raw_oracle {
+            let cumulative_id = oracle.0.get_cumulative_id();
+            let cumulative_volatility = oracle.0.get_cumulative_volatility();
+            let cumulative_bin_crossed = oracle.0.get_cumulative_bin_crossed();
+            let cumulative_vol_x = oracle.0.get_vol_token_x();
+            let cumulative_vol_y = oracle.0.get_vol_token_y();
+            let cumulative_fee_x = oracle.0.get_fee_token_x();
+            let cumulative_fee_y = oracle.0.get_fee_token_y();
+
+            let response = OracleSampleAtResponse {
+                cumulative_id,
+                cumulative_volatility,
+                cumulative_bin_crossed,
+                cumulative_volume_x: cumulative_vol_x,
+                cumulative_volume_y: cumulative_vol_y,
+                cumulative_fee_x,
+                cumulative_fee_y,
+                oracle_id,
+            };
+            responses.push(response);
+        } else {
+            let response = OracleSampleAtResponse {
+                cumulative_id: 0,
+                cumulative_volatility: 0,
+                cumulative_bin_crossed: 0,
+                cumulative_volume_x: 0,
+                cumulative_volume_y: 0,
+                cumulative_fee_x: 0,
+                cumulative_fee_y: 0,
+                oracle_id,
+            };
+            responses.push(response);
+        }
     }
+    to_binary(&responses).map_err(Error::CwErr)
 }
 
 /// Returns the price corresponding to the given id, as a 128.128-binary fixed-point number.

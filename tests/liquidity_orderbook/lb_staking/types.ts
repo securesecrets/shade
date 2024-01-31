@@ -10,6 +10,7 @@ export type ExecuteMsg =
     }
   | {
       end_epoch: {
+        epoch_index: number;
         rewards_distribution: RewardsDistribution;
       };
     }
@@ -37,27 +38,32 @@ export type ExecuteMsg =
       };
     }
   | {
-      recover_funds: {};
-    }
-  | {
-      create_viewing_key: {
-        entropy: string;
+      recover_funds: {
+        amount: Uint128;
+        msg?: Binary | null;
+        to: string;
+        token: TokenType;
       };
     }
   | {
-      set_viewing_key: {
-        key: string;
-      };
-    }
-  | {
-      revoke_permit: {
-        permit_name: string;
-      };
+      recover_expired_funds: {};
     };
 export type Uint256 = string;
 export type Addr = string;
 export type Binary = string;
 export type Uint128 = string;
+export type TokenType =
+  | {
+      custom_token: {
+        contract_addr: Addr;
+        token_code_hash: string;
+      };
+    }
+  | {
+      native_token: {
+        denom: string;
+      };
+    };
 export interface RewardsDistribution {
   denominator: number;
   ids: number[];
@@ -95,19 +101,42 @@ export interface InstantiateMsg {
   epoch_index: number;
   expiry_duration?: number | null;
   lb_token: RawContract;
-  query_auth?: RawContract | null;
+  query_auth: RawContract;
   recover_funds_receiver: Addr;
 }
+export type InvokeMsg =
+  | {
+      stake: {
+        from?: string | null;
+        padding?: string | null;
+      };
+    }
+  | {
+      add_rewards: {
+        end: number;
+        start?: number | null;
+      };
+    };
 export type QueryAnswer =
   | {
       contract_info: {
-        admin_auth: ContractInfo;
+        admin_auth: Contract;
         epoch_durations: number;
         epoch_index: number;
         expiry_durations?: number | null;
         lb_pair: Addr;
         lb_token: ContractInfo;
-        query_auth?: ContractInfo | null;
+        query_auth: Contract;
+      };
+    }
+  | {
+      epoch_info: {
+        duration: number;
+        end_time: number;
+        expired_at?: number | null;
+        reward_tokens?: RewardTokenInfo[] | null;
+        rewards_distribution?: RewardsDistribution | null;
+        start_time: number;
       };
     }
   | {
@@ -116,6 +145,13 @@ export type QueryAnswer =
   | {
       id_total_balance: {
         amount: Uint256;
+      };
+    }
+  | {
+      staker_info: {
+        last_claim_rewards_round?: number | null;
+        starting_round?: number | null;
+        total_rewards_earned: Uint128;
       };
     }
   | {
@@ -161,6 +197,19 @@ export type TxAction =
   | {
       claim_rewards: Reward[];
     };
+export interface Contract {
+  address: Addr;
+  code_hash: string;
+}
+export interface RewardTokenInfo {
+  claimed_rewards: Uint128;
+  decimals: number;
+  end: number;
+  reward_per_epoch: Uint128;
+  start: number;
+  token: ContractInfo;
+  total_rewards: Uint128;
+}
 export interface OwnerBalance {
   amount: Uint256;
   token_id: string;
@@ -191,6 +240,11 @@ export type QueryMsg =
       contract_info: {};
     }
   | {
+      epoch_info: {
+        index?: number | null;
+      };
+    }
+  | {
       registered_tokens: {};
     }
   | {
@@ -200,82 +254,65 @@ export type QueryMsg =
     }
   | {
       balance: {
-        key: string;
-        owner: Addr;
+        auth: Auth;
         token_id: string;
       };
     }
   | {
+      staker_info: {
+        auth: Auth;
+      };
+    }
+  | {
       all_balances: {
-        key: string;
-        owner: Addr;
+        auth: Auth;
         page?: number | null;
         page_size?: number | null;
       };
     }
   | {
       liquidity: {
-        key: string;
-        owner: Addr;
+        auth: Auth;
         round_index?: number | null;
         token_ids: number[];
       };
     }
   | {
       transaction_history: {
-        key: string;
-        owner: Addr;
+        auth: Auth;
         page?: number | null;
         page_size?: number | null;
         txn_type: QueryTxnType;
       };
+    };
+export type Auth =
+  | {
+      viewing_key: {
+        address: string;
+        key: string;
+      };
     }
   | {
-      with_permit: {
-        permit: PermitForTokenPermissions;
-        query: QueryWithPermit;
-      };
+      permit: PermitForPermitData;
     };
 export type QueryTxnType = "all" | "stake" | "un_stake" | "claim_rewards";
-export type TokenPermissions = "allowance" | "balance" | "history" | "owner";
-export type QueryWithPermit =
-  | {
-      balance: {
-        owner: Addr;
-        token_id: string;
-      };
-    }
-  | {
-      all_balances: {
-        page?: number | null;
-        page_size?: number | null;
-      };
-    }
-  | {
-      transaction_history: {
-        page?: number | null;
-        page_size: number;
-      };
-    };
-export interface PermitForTokenPermissions {
-  params: PermitParamsForTokenPermissions;
+export interface PermitForPermitData {
+  account_number?: Uint128 | null;
+  chain_id?: string | null;
+  memo?: string | null;
+  params: PermitData;
+  sequence?: Uint128 | null;
   signature: PermitSignature;
-  [k: string]: unknown;
 }
-export interface PermitParamsForTokenPermissions {
-  allowed_tokens: string[];
-  chain_id: string;
-  permissions: TokenPermissions[];
-  permit_name: string;
-  [k: string]: unknown;
+export interface PermitData {
+  data: Binary;
+  key: string;
 }
 export interface PermitSignature {
   pub_key: PubKey;
   signature: Binary;
-  [k: string]: unknown;
 }
 export interface PubKey {
   type: string;
   value: Binary;
-  [k: string]: unknown;
 }

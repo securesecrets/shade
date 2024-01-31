@@ -246,9 +246,7 @@ fn main() -> io::Result<()> {
     let get_static_fee_parameters = QueryMsg::GetStaticFeeParameters {};
     let get_variable_fee_parameters = QueryMsg::GetVariableFeeParameters {};
     let get_oracle_parameters = QueryMsg::GetOracleParameters {};
-    let get_oracle_sample_at = QueryMsg::GetOracleSampleAt {
-        look_up_timestamp: 1234567890,
-    };
+    let get_oracle_sample_at = QueryMsg::GetOracleSampleAt { oracle_id: 12345 };
     let get_price_from_id = QueryMsg::GetPriceFromId { id: ACTIVE_ID };
 
     let get_id_from_price = QueryMsg::GetIdFromPrice { price };
@@ -427,6 +425,11 @@ fn main() -> io::Result<()> {
         cumulative_id: 100,
         cumulative_volatility: 200,
         cumulative_bin_crossed: 50,
+        cumulative_volume_x: 2000,
+        cumulative_volume_y: 1000,
+        cumulative_fee_x: 20,
+        cumulative_fee_y: 50,
+        oracle_id: 50,
     };
 
     let get_price_from_id_response = PriceFromIdResponse { price };

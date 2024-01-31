@@ -17,21 +17,24 @@ use shade_protocol::{
 
 pub const STATE: Item<State> = Item::new("state");
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
-pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map"); //
-pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree"); //?
-pub const ORACLE: Item<Oracle, Bincode2> = Item::new("oracle"); //?
+pub const BIN_MAP: Map<u32, Bytes32> = Map::new("bins_map");
+pub const BIN_TREE: Item<TreeUint24, Bincode2> = Item::new("bin_tree");
+pub const ORACLE: Map<u16, Oracle> = Map::new("oracle");
 pub const EPHEMERAL_STORAGE: Item<EphemeralStruct> = Item::new("ephemeral_storage");
 
-pub const FEE_APPEND_STORE: AppendStore<FeeLog> = AppendStore::new("fee_logs"); //?
-pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats"); //
-pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution"); //?
-pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree"); //?
-pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map"); //?
+pub const FEE_APPEND_STORE: AppendStore<FeeLog> = AppendStore::new("fee_logs");
+pub const REWARDS_STATS_STORE: Map<u64, RewardStats> = Map::new("rewards_stats");
+pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution");
+pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree");
+pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map");
 pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo> =
     Item::new("staking_contract_impl");
 pub const BIN_RESERVES_UPDATED: Map<u64, Vec<u32>> = Map::new("bins_reserves_updated");
 pub const BIN_RESERVES_UPDATED_LOG: AppendStore<u64> =
-    AppendStore::new("bins_reserves_updated_log"); //?
+    AppendStore::new("bins_reserves_updated_log");
+
+// pub const VOLUME_ANALYTICS: Map<u64, Bytes32> = Map::new("volume_analytics");
+// pub const FEE_ANALYTICS: Map<u64, Bytes32> = Map::new("fee_analytics");
 
 #[cw_serde]
 pub struct RewardStats {

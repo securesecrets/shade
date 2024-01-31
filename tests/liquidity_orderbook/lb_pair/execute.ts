@@ -23,7 +23,7 @@ export async function executeSwap(
     },
   };
 
-  const tx = await client.tx.snip20.send(
+  const res = await client.tx.snip20.send(
     {
       sender: client.address,
       contract_address: contractAddressToken,
@@ -36,14 +36,22 @@ export async function executeSwap(
     }
   );
 
-  if (tx.code !== 0) {
-    throw new Error(`Failed with the following error:\n ${tx.rawLog}`);
+  if (res.code !== 0) {
+    throw new Error(`Failed with the following error:\n ${res.rawLog}`);
   }
-
   //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
-  console.log(`Swap TX used ${tx.gasUsed} gas`);
-}
+  console.log(`Swap TX used ${res.gasUsed} gas`);
 
+  // const wasmAttributes = extractWasmAttributes(res.jsonLog);
+  // console.log(`${JSON.stringify(wasmAttributes)}`);
+}
+function extractWasmAttributes(jsonLog: any) {
+  return jsonLog.flatMap((item: any) =>
+    item.events
+      .filter((event: any) => event.type === "wasm")
+      .flatMap((event: any) => event.attributes)
+  );
+}
 const PRECISION = 1_000_000_000_000_000_000; // 1e18
 
 export function get_total_bins(nb_bin_x: number, nb_bin_y: number): number {
@@ -166,8 +174,6 @@ export async function executeAddLiquidity(
   no_of_bins_x: number,
   no_of_bins_y: number
 ) {
-  console.log(amount_x);
-  console.log(amount_y);
   let liquidity_params = liquidityParametersGenerator(
     bin_step,
     2 ** 23,
@@ -217,9 +223,9 @@ export async function executeAddLiquidity(
   let total_bins = get_total_bins(no_of_bins_x, no_of_bins_y);
 
   console.log(`total_bins ${total_bins}`);
-  // console.log(
-  //   `Add Liquidity TX used ${tx.gasUsed} gas, total_bins ${total_bins}`
-  // );
+  console.log(
+    `Add Liquidity TX used ${tx.gasUsed} gas, total_bins ${total_bins}`
+  );
 }
 
 export async function executeRemoveLiquidity(

@@ -237,25 +237,3 @@ pub fn test_native_tokens_error() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
-
-#[test]
-#[serial]
-pub fn test_increase_oracle_lenght() -> Result<(), anyhow::Error> {
-    let addrs = init_addrs();
-    let (mut app, _lb_factory, _deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
-
-    app.deps(&lb_pair.info.contract.address, |storage| {
-        assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 0);
-    })?;
-
-    // update oracle lenght
-
-    lb_pair::increase_oracle_length(&mut app, addrs.admin().as_str(), &lb_pair.info.contract, 20)?;
-
-    // query_oracle lenght
-    app.deps(&lb_pair.info.contract.address, |storage| {
-        assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 20);
-    })?;
-
-    Ok(())
-}

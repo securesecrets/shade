@@ -228,6 +228,8 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `bin_step` - The bin step (in basis points)
+    /// base_factor is on the basis points, B * 10000
+    ///
     pub fn get_base_fee(&self, bin_step: u16) -> u128 {
         let base_factor = Self::get_base_factor(self) as u128;
         base_factor * (bin_step as u128) * 10_000_000_000
