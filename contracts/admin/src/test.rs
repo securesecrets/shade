@@ -1,19 +1,10 @@
-use crate::{
-    shared::is_valid_permission,
-};
+use crate::shared::is_valid_permission;
 use rstest::*;
 use shade_multi_test::multi::admin::Admin;
 use shade_protocol::{
     admin::{
-        AdminAuthStatus,
-        AdminsResponse,
-        ConfigResponse,
-        ExecuteMsg,
-        InstantiateMsg,
-        PermissionsResponse,
-        QueryMsg,
-        RegistryAction,
-        ValidateAdminPermissionResponse,
+        AdminAuthStatus, AdminsResponse, ConfigResponse, ExecuteMsg, InstantiateMsg,
+        PermissionsResponse, QueryMsg, RegistryAction, ValidateAdminPermissionResponse,
     },
     c_std::Addr,
     multi_test::App,
@@ -43,51 +34,80 @@ fn test_is_valid_permission(#[case] permission: String, #[case] is_valid: bool) 
 #[case(AdminAuthStatus::Maintenance, vec![true, true, true, false, true, true, true])]
 #[case(AdminAuthStatus::Shutdown, vec![false, false, false, false, false, false, true])]
 fn test_status(#[case] status: AdminAuthStatus, #[case] expect_success: Vec<bool>) {
-        //init
-        let mut chain: App = App::default();
-        let contract = InstantiateMsg { super_admin: None }
-            .test_init(
-                Admin::default(), 
-                &mut chain, 
-                Addr::unchecked("admin"), 
-                "admin_contract", 
-                &[],
-            )
-            .unwrap();
-        //set state
-        ExecuteMsg::ToggleStatus { new_status: status }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]).unwrap();
-       
-        //register 'super' as admin
-        let action = RegistryAction::RegisterAdmin { user: "super".to_string() };
-        let result = ExecuteMsg::UpdateRegistry { action: action.clone() }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(0).unwrap());
+    //init
+    let mut chain: App = App::default();
+    let contract = InstantiateMsg { super_admin: None }
+        .test_init(
+            Admin::default(),
+            &mut chain,
+            Addr::unchecked("admin"),
+            "admin_contract",
+            &[],
+        )
+        .unwrap();
+    //set state
+    ExecuteMsg::ToggleStatus { new_status: status }
+        .test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[])
+        .unwrap();
 
-        //test bulk update
-        let actions = vec![action.clone()];
-        let result = ExecuteMsg::UpdateRegistryBulk { actions }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(1).unwrap());
-        
-        //set super admin to 'super'
-        let result = ExecuteMsg::TransferSuper { new_super: "super".to_string() }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(2).unwrap());
+    //register 'super' as admin
+    let action = RegistryAction::RegisterAdmin {
+        user: "super".to_string(),
+    };
+    let result = ExecuteMsg::UpdateRegistry {
+        action: action.clone(),
+    }
+    .test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(0).unwrap());
 
-        //register 'admin' as admin without being the super user
-        let action = RegistryAction::RegisterAdmin { user: "admin".to_string() };
-        let result = ExecuteMsg::UpdateRegistry { action: action.clone() }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(3).unwrap());
+    //test bulk update
+    let actions = vec![action.clone()];
+    let result = ExecuteMsg::UpdateRegistryBulk { actions }.test_exec(
+        &contract,
+        &mut chain,
+        Addr::unchecked("admin"),
+        &[],
+    );
+    assert_eq!(&result.is_ok(), expect_success.get(1).unwrap());
 
-        //register admin as admin with correct permissions
-        let action = RegistryAction::RegisterAdmin { user: "admin".to_string() };
-        let result = ExecuteMsg::UpdateRegistry { action: action.clone() }.test_exec(&contract, &mut chain, Addr::unchecked("super"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(4).unwrap());
+    //set super admin to 'super'
+    let result = ExecuteMsg::TransferSuper {
+        new_super: "super".to_string(),
+    }
+    .test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(2).unwrap());
 
-        //set super admin to 'admin'
-        let result = ExecuteMsg::TransferSuper { new_super: "admin".to_string() }.test_exec(&contract, &mut chain, Addr::unchecked("super"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(5).unwrap());
+    //register 'admin' as admin without being the super user
+    let action = RegistryAction::RegisterAdmin {
+        user: "admin".to_string(),
+    };
+    let result = ExecuteMsg::UpdateRegistry {
+        action: action.clone(),
+    }
+    .test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(3).unwrap());
 
-        //self destruct
-        let result = ExecuteMsg::SelfDestruct {  }.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
-        assert_eq!(&result.is_ok(), expect_success.get(6).unwrap());
+    //register admin as admin with correct permissions
+    let action = RegistryAction::RegisterAdmin {
+        user: "admin".to_string(),
+    };
+    let result = ExecuteMsg::UpdateRegistry {
+        action: action.clone(),
+    }
+    .test_exec(&contract, &mut chain, Addr::unchecked("super"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(4).unwrap());
+
+    //set super admin to 'admin'
+    let result = ExecuteMsg::TransferSuper {
+        new_super: "admin".to_string(),
+    }
+    .test_exec(&contract, &mut chain, Addr::unchecked("super"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(5).unwrap());
+
+    //self destruct
+    let result =
+        ExecuteMsg::SelfDestruct {}.test_exec(&contract, &mut chain, Addr::unchecked("admin"), &[]);
+    assert_eq!(&result.is_ok(), expect_success.get(6).unwrap());
 }
 
 #[rstest]
@@ -235,19 +255,15 @@ fn test_permissions(
     }
 
     // Check that only super admin chan do this
-    assert!(
-        ExecuteMsg::UpdateRegistryBulk {
-            actions: actions.clone()
-        }
-        .test_exec(&admin, &mut chain, Addr::unchecked("user"), &[])
-        .is_err()
-    );
+    assert!(ExecuteMsg::UpdateRegistryBulk {
+        actions: actions.clone()
+    }
+    .test_exec(&admin, &mut chain, Addr::unchecked("user"), &[])
+    .is_err());
 
-    assert!(
-        ExecuteMsg::UpdateRegistryBulk { actions }
-            .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])
-            .is_ok()
-    );
+    assert!(ExecuteMsg::UpdateRegistryBulk { actions }
+        .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])
+        .is_ok());
 
     // Confirm that all permissions are set
     for permission in permissions.iter() {
@@ -282,21 +298,17 @@ fn test_permissions(
         })
         .collect();
 
-    assert!(
-        ExecuteMsg::UpdateRegistryBulk {
-            actions: revoke_actions.clone()
-        }
-        .test_exec(&admin, &mut chain, Addr::unchecked("user"), &[])
-        .is_err()
-    );
+    assert!(ExecuteMsg::UpdateRegistryBulk {
+        actions: revoke_actions.clone()
+    }
+    .test_exec(&admin, &mut chain, Addr::unchecked("user"), &[])
+    .is_err());
 
-    assert!(
-        ExecuteMsg::UpdateRegistryBulk {
-            actions: revoke_actions
-        }
-        .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])
-        .is_ok()
-    );
+    assert!(ExecuteMsg::UpdateRegistryBulk {
+        actions: revoke_actions
+    }
+    .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])
+    .is_ok());
 
     for permission in permissions.iter() {
         // Check that the permissions are correctly returned

@@ -13,22 +13,19 @@ rm ./$(1).wasm
 endef
 
 CONTRACTS = \
-		airdrop governance \
-		treasury treasury_manager scrt_staking rewards_emission \
-		oracle snip20 query_auth sky peg_stability admin\
-		mock_band mock_secretswap_pair mock_sienna_pair mock_adapter\
-		mock_stkd_derivative basic_staking snip20_migration lp_shdswap stkd_scrt\
+		airdrop treasury treasury_manager scrt_staking \
+		snip20 query_auth admin \
+		mock_sienna_pair mock_adapter \
+		mock_stkd_derivative basic_staking snip20_migration stkd_scrt \
 		snip20_derivative
 
-PACKAGES = \
-	  shade_protocol contract_harness cosmwasm_math_compat \
-		network_integration network_tester secretcli
+PACKAGES = shade_protocol contract_harness cosmwasm_math_compat 
 
 release: setup
 	${build-release}
 	@$(MAKE) compress_all
 
-dao: treasury treasury_manager scrt_staking rewards_emission
+dao: treasury treasury_manager scrt_staking
 
 compress_all: setup
 	@$(MAKE) $(addprefix compress-,$(CONTRACTS))
