@@ -25,5 +25,5 @@ node_modules/
 *.pyc
 __pycache__/
 compiled
+artifacts
 logs
-Cargo.lock

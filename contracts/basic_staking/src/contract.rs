@@ -1,5 +1,7 @@
 use shade_protocol::{
-    basic_staking::{Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
+    basic_staking::{
+        Auth, AuthPermit, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryAnswer, QueryMsg,
+    },
     c_std::{
         shd_entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response,
         StdError, StdResult, Uint128,
@@ -212,6 +214,29 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[shd_entry_point]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    Ok(Response::default())
+pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    let stake_token = STAKE_TOKEN.load(deps.storage)?;
+    let reward_tokens = REWARD_TOKENS.load(deps.storage)?;
+
+    let mut msgs = vec![];
+    let mut stake_is_reward = false;
+    for token in reward_tokens {
+        if token.address == stake_token.address {
+            stake_is_reward = true;
+        }
+        msgs.push(register_receive(
+            env.contract.code_hash.clone(),
+            None,
+            &token,
+        )?);
+    }
+
+    if !stake_is_reward {
+        msgs.push(register_receive(
+            env.contract.code_hash.clone(),
+            None,
+            &stake_token,
+        )?);
+    }
+    Ok(Response::default().add_messages(msgs))
 }
