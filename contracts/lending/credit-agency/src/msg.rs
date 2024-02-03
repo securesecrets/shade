@@ -23,9 +23,7 @@ pub struct InstantiateMsg {
     pub ctoken_token_id: u64,
     /// The code hash of the lending-token contract
     pub ctoken_code_hash: String,
-    /// The code hash of the lend-token contract
-    pub lend_token_code_hash: String,
-    /// Token which would be distributed as reward token to isotonic token holders.
+    /// Token which would be distributed as reward token to lend token holders.
     /// This is `distributed_token` in the market contract.
     pub reward_token: Token,
     /// Common Token (same for all markets)

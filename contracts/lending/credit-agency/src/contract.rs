@@ -15,7 +15,7 @@ use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
     state::{
-        find_value, insert_or_update, Config, MarketState, CONFIG, MARKET_VIEWING_KEY,
+        find_value, insert_or_update, Config, MarketState, CONFIG, MARKETS, MARKET_VIEWING_KEY,
         NEXT_REPLY_ID,
     },
 };
@@ -70,6 +70,7 @@ pub fn instantiate(
     };
     CONFIG.save(deps.storage, &cfg)?;
     NEXT_REPLY_ID.save(deps.storage, &0)?;
+    MARKETS.save(deps.storage, &vec![])?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -144,7 +145,7 @@ mod execute {
 
     use crate::{
         msg::{MarketConfig, ReceiveMsg},
-        state::{MarketState, ENTERED_MARKETS, MARKETS, REPLY_IDS},
+        state::{MarketState, ENTERED_MARKETS, REPLY_IDS},
     };
     use lend_market::{
         msg::{ExecuteMsg as MarketExecuteMsg, QueryMsg as MarketQueryMsg},
