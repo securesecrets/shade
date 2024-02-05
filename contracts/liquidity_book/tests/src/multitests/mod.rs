@@ -8,6 +8,9 @@ pub mod lb_pair_initial_state;
 pub mod lb_pair_queries;
 
 #[cfg(test)]
+pub mod lb_pair_oracle;
+
+#[cfg(test)]
 mod lb_pair_liquidity;
 
 #[cfg(test)]

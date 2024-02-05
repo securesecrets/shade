@@ -225,20 +225,22 @@ impl Oracle {
         active_id: u32,
         new_volume: Option<Bytes32>,
         new_fee: Option<Bytes32>,
-    ) -> Result<(PairParameters, OracleSample, Option<OracleSample>), OracleError> {
-        let oracle_id = parameters.get_oracle_id();
+        length: u16,
+    ) -> Result<(PairParameters, Option<OracleSample>), OracleError> {
+        let mut oracle_id = parameters.get_oracle_id();
         if oracle_id == 0 {
-            return Ok((parameters, self.0, None));
+            return Ok((parameters, None));
         };
 
         let new_vol = new_volume.unwrap_or_default();
         let new_fee = new_fee.unwrap_or_default();
 
-        let created_at = self.0.get_sample_creation();
+        let mut created_at = self.0.get_sample_creation();
         let last_updated_at = created_at + self.0.get_sample_lifetime() as u64;
 
         if time.seconds() > last_updated_at {
             let (
+                mut cumulative_txns,
                 cumulative_id,
                 cumulative_volatility,
                 cumulative_bin_crossed,
@@ -254,23 +256,18 @@ impl Oracle {
                 new_fee,
             );
 
-            let length = self.0.get_oracle_length();
-            let lifetime = time.seconds() - created_at;
+            let mut lifetime = time.seconds() - created_at;
 
-            let oracle_id = if lifetime > MAX_SAMPLE_LIFETIME as u64 {
-                (oracle_id % length) + 1
-            } else {
-                oracle_id
-            };
-
-            let created_at = if lifetime > MAX_SAMPLE_LIFETIME as u64 {
-                time.seconds()
-            } else {
-                created_at
-            };
+            if lifetime > MAX_SAMPLE_LIFETIME as u64 {
+                cumulative_txns = 1;
+                oracle_id = (oracle_id % length) + 1;
+                lifetime = 0;
+                created_at = time.seconds();
+                parameters.set_oracle_id(oracle_id);
+            }
 
             let new_sample = OracleSample::encode(
-                length,
+                cumulative_txns,
                 cumulative_id,
                 cumulative_volatility,
                 cumulative_bin_crossed,
@@ -280,12 +277,10 @@ impl Oracle {
                 cumulative_fee,
             );
 
-            parameters.set_oracle_id(oracle_id);
-
-            return Ok((parameters, self.0, Some(new_sample)));
+            return Ok((parameters, Some(new_sample)));
         }
 
-        return Ok((parameters, self.0, None));
+        return Ok((parameters, None));
     }
 
     // /// Increases the oracle length.

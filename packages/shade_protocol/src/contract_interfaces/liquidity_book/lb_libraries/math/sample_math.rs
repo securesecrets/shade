@@ -18,7 +18,7 @@ use crate::liquidity_book::lb_libraries::types::Bytes32;
 
 use super::{encoded_sample::*, packed_u128_math::PackedUint128Math};
 
-pub const OFFSET_ORACLE_LENGTH: u8 = 0;
+pub const OFFSET_CUMULATIVE_TXNS: u8 = 0;
 pub const OFFSET_CUMULATIVE_ID: u8 = 16;
 pub const OFFSET_CUMULATIVE_VOLATILITY: u8 = 80;
 pub const OFFSET_CUMULATIVE_BIN_CROSSED: u8 = 144;
@@ -38,14 +38,14 @@ impl OracleSample {
     ///
     /// # Arguments
     ///
-    /// * `oracle_length` - The oracle length
+    /// * `cumulative_txns` - The number of transactions
     /// * `cumulative_id` - The cumulative id
     /// * `cumulative_volatility` - The cumulative volatility
     /// * `cumulative_bin_crossed` - The cumulative bin crossed
     /// * `sample_lifetime` - The sample lifetime
     /// * `created_at` - The sample creation timestamp
     pub fn encode(
-        oracle_length: u16,
+        cumulative_txns: u16,
         cumulative_id: u64,
         cumulative_volatility: u64,
         cumulative_bin_crossed: u64,
@@ -56,7 +56,7 @@ impl OracleSample {
     ) -> OracleSample {
         let mut sample = EncodedSample::default();
 
-        sample.set(oracle_length.into(), MASK_UINT16, OFFSET_ORACLE_LENGTH);
+        sample.set(cumulative_txns.into(), MASK_UINT16, OFFSET_CUMULATIVE_TXNS);
         sample.set(cumulative_id.into(), MASK_UINT64, OFFSET_CUMULATIVE_ID);
         sample.set(
             cumulative_volatility.into(),
@@ -85,7 +85,7 @@ impl OracleSample {
     /// * `sample` - The encoded sample as follows:
     ///     * [0 - 16[: oracle length (16 bits)
     ///     * [16 - 256[: any (240 bits)
-    pub fn get_oracle_length(&self) -> u16 {
+    pub fn get_cumulative_txns(&self) -> u16 {
         self.data.decode_uint16(0)
     }
 
@@ -273,7 +273,8 @@ impl OracleSample {
         bin_crossed: u32,
         vol: Bytes32,
         fee: Bytes32,
-    ) -> (u64, u64, u64, Bytes32, Bytes32) {
+    ) -> (u16, u64, u64, u64, Bytes32, Bytes32) {
+        let mut cumulative_txns = self.get_cumulative_txns();
         let cumulative_id = u64::from(active_id) * delta_time;
         let cumulative_volatility = u64::from(volatility_accumulator) * delta_time;
         let cumulative_bin_crossed = u64::from(bin_crossed) * delta_time;
@@ -282,10 +283,15 @@ impl OracleSample {
         let cumulative_volatility = cumulative_volatility + self.get_cumulative_volatility();
         let cumulative_bin_crossed = cumulative_bin_crossed + self.get_cumulative_bin_crossed();
 
+        if !vol.is_empty() && !fee.is_empty() {
+            cumulative_txns += 1;
+        }
+
         let cumm_vol = vol.add(self.volume.0);
         let cumm_fee = fee.add(self.fee.0);
 
         (
+            cumulative_txns,
             cumulative_id,
             cumulative_volatility,
             cumulative_bin_crossed,

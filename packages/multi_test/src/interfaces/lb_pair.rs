@@ -9,6 +9,7 @@ use shade_protocol::{
         BinResponse,
         ContractStatus,
         LiquidityParameters,
+        OracleSampleAtResponse,
         RemoveLiquidity,
         RewardsDistribution,
         RewardsDistributionAlgorithm,
@@ -225,7 +226,6 @@ pub fn swap_snip_20(
                     }
                 });
 
-            println!("res {:?}", res);
             let mut t_fee = Uint128::zero();
             match total_fee {
                 Some(fee) => {
@@ -600,30 +600,23 @@ pub fn query_protocol_fees(app: &App, lb_pair: &ContractInfo) -> StdResult<(u128
 pub fn query_oracle_parameters(
     app: &App,
     lb_pair: &ContractInfo,
-) -> StdResult<(u8, u16, u16, u64, u64)> {
+) -> StdResult<(u8, u16, u64, u64)> {
     let res = lb_pair::QueryMsg::GetOracleParameters {}.test_query(lb_pair, app)?;
     let lb_pair::OracleParametersResponse {
         sample_lifetime,
         size,
-        active_size,
         last_updated,
         first_timestamp,
     } = res;
-    Ok((
-        sample_lifetime,
-        size,
-        active_size,
-        last_updated,
-        first_timestamp,
-    ))
+    Ok((sample_lifetime, size, last_updated, first_timestamp))
 }
 
 pub fn query_oracle_sample_at(
     app: &App,
     lb_pair: &ContractInfo,
-    look_up_timestamp: u64,
-) -> StdResult<(u64, u64, u64)> {
-    let res = lb_pair::QueryMsg::GetOracleSampleAt { oracle_id: 0 }.test_query(lb_pair, app)?;
+    oracle_id: u16,
+) -> StdResult<(u64, u64, u64, u128, u128, u128, u128, u16, u16, u8, u64)> {
+    let res = lb_pair::QueryMsg::GetOracleSampleAt { oracle_id }.test_query(lb_pair, app)?;
     let lb_pair::OracleSampleAtResponse {
         cumulative_id,
         cumulative_volatility,
@@ -633,8 +626,38 @@ pub fn query_oracle_sample_at(
         cumulative_fee_x,
         cumulative_fee_y,
         oracle_id,
+        cumulative_txns,
+        lifetime,
+        created_at,
     } = res;
-    Ok((cumulative_id, cumulative_volatility, cumulative_bin_crossed))
+    Ok((
+        cumulative_id,
+        cumulative_volatility,
+        cumulative_bin_crossed,
+        cumulative_volume_x,
+        cumulative_volume_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
+        cumulative_txns,
+        lifetime,
+        created_at,
+    ))
+}
+
+pub fn query_oracle_sample_after(
+    app: &App,
+    lb_pair: &ContractInfo,
+    oracle_id: u16,
+) -> StdResult<Vec<OracleSampleAtResponse>> {
+    let res = lb_pair::QueryMsg::GetOracleSamplesAfter {
+        oracle_id,
+        page: None,
+        page_size: None,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::OracleSamplesAfterResponse(vec) = res;
+    Ok(vec)
 }
 
 pub fn query_price_from_id(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<Uint256> {

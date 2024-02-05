@@ -212,13 +212,12 @@ pub fn test_query_variable_fee_parameters() -> Result<(), anyhow::Error> {
 pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let (sample_lifetime, size, active_size, last_updated, first_timestamp) =
+    let (sample_lifetime, size, last_updated, first_timestamp) =
         lb_pair::query_oracle_parameters(&app, &lb_pair.info.contract)?;
 
-    assert_eq!(size, 0);
-    assert_eq!(active_size, 0);
-    assert_eq!(last_updated, 0);
-    assert_eq!(first_timestamp, 0);
+    assert_eq!(size, u16::MAX);
+    assert_eq!(last_updated, app.block_info().time.seconds());
+    assert_eq!(first_timestamp, app.block_info().time.seconds());
     assert_eq!(sample_lifetime, MAX_SAMPLE_LIFETIME);
 
     Ok(())
@@ -229,12 +228,31 @@ pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
 pub fn test_query_oracle_sample_at() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let (cumulative_id, cumulative_volatility, cumulative_bin_crossed) =
-        lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+    let (
+        cumulative_id,
+        cumulative_volatility,
+        cumulative_bin_crossed,
+        cumulative_volume_x,
+        cumulative_volume_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
+        cumulative_txns,
+        lifetime,
+        created_at,
+    ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
     assert_eq!(cumulative_id, 0);
     assert_eq!(cumulative_volatility, 0);
     assert_eq!(cumulative_bin_crossed, 0);
+    assert_eq!(cumulative_volume_x, 0);
+    assert_eq!(cumulative_volume_y, 0);
+    assert_eq!(cumulative_fee_x, 0);
+    assert_eq!(cumulative_fee_y, 0);
+    assert_eq!(oracle_id, 1);
+    assert_eq!(cumulative_txns, 0);
+    assert_eq!(lifetime, 0);
+    assert_eq!(created_at, app.block_info().time.seconds());
 
     Ok(())
 }

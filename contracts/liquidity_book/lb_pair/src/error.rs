@@ -2,7 +2,7 @@
 
 use ethnum::U256;
 use shade_protocol::{
-    c_std::{Uint128, StdError},
+    c_std::{StdError, Uint128},
     lb_libraries::{
         bin_helper::BinError,
         fee_helper::FeeError,
@@ -71,6 +71,9 @@ pub enum LBPairError {
 
     #[error("Zero amount for bin id: {id}")]
     ZeroAmount { id: u32 },
+
+    #[error("Oracle not active!")]
+    OracleNotActive,
 
     // TODO - why return amount_to_burn and total_supply? They will be illegible as U256 anyway.
     // Would like to remove U256 dependency for error messages.
