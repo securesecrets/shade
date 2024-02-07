@@ -120,22 +120,6 @@ pub fn add_liquidity(
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
-pub fn increase_oracle_length(
-    app: &mut App,
-    sender: &str,
-    lb_pair: &ContractInfo,
-    new_length: u16,
-) -> StdResult<()> {
-    match (lb_pair::ExecuteMsg::IncreaseOracleLength { new_length }.test_exec(
-        lb_pair,
-        app,
-        Addr::unchecked(sender),
-        &[],
-    )) {
-        Ok(_) => Ok(()),
-        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
-    }
-}
 
 pub fn add_native_liquidity(
     app: &mut App,
@@ -652,7 +636,6 @@ pub fn query_oracle_sample_after(
 ) -> StdResult<Vec<OracleSampleAtResponse>> {
     let res = lb_pair::QueryMsg::GetOracleSamplesAfter {
         oracle_id,
-        page: None,
         page_size: None,
     }
     .test_query(lb_pair, app)?;

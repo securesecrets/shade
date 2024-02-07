@@ -28,7 +28,12 @@ pub enum PriceError {
 pub struct PriceHelper;
 
 impl PriceHelper {
-    /// Calculates the price as a 128.128-binary fixed-point number from the id and the bin step.
+    /// Calculates the price as a 128.128-binary fixed-point number
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Bin id
+    /// * `bin_step` - The bin step
     pub fn get_price_from_id(id: u32, bin_step: u16) -> Result<U256, U128x128MathError> {
         let base = Self::get_base(bin_step);
         let exponent = Self::get_exponent(id);
@@ -51,6 +56,9 @@ impl PriceHelper {
 
     /// Calculates the base from the bin step, which is `1 + binStep / BASIS_POINT_MAX`.
     pub fn get_base(bin_step: u16) -> U256 {
+        //SCALE = 1 << 128
+        //SCALE_OFFSET =  128
+        //just scaling
         SCALE + (U256::from(bin_step) << SCALE_OFFSET) / BASIS_POINT_MAX as u128
     }
 
@@ -104,15 +112,6 @@ mod tests {
             price,
             U256::from_str_prefixed("42008768657166552252904831246223292524636112144").unwrap()
         );
-
-        // TODO - add some assertions for the fixed point stuff
-        let fixed_point =
-            U256::from_str_prefixed("42008768657166552252904831246223292524636112144").unwrap();
-        let integer_part = fixed_point >> 128;
-        let shifted: U256 = U256::from(1u128) << 128;
-        let fractional_part = fixed_point & shifted.checked_sub(U256::ONE).unwrap();
-        let _fractional_part_decimal = fractional_part / shifted;
-        let _real_value = integer_part;
     }
 
     #[test]
@@ -122,6 +121,12 @@ mod tests {
         let id = PriceHelper::get_id_from_price(price, bin_step).unwrap();
 
         assert!(id > 0);
+
+        let price =
+            U256::from_str_prefixed("42008768657166552252904831246223292524636112144").unwrap();
+        let bin_step = 1u16;
+        let id = PriceHelper::get_id_from_price(price, bin_step).unwrap();
+        assert_eq!(id, 8574931);
     }
 
     #[test]

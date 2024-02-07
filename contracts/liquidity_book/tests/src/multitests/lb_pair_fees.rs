@@ -1,5 +1,3 @@
-use std::ops::SubAssign;
-
 use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
 
 use super::test_helper::{
@@ -2674,8 +2672,6 @@ pub fn test_base_and_variable_fee_only() -> Result<(), anyhow::Error> {
         token_x,
         amount_x_in,
     )?;
-
-    println!("Total fee: {}", total_fee);
 
     // // Base fee set to 0.5% so
     // // No variable is included

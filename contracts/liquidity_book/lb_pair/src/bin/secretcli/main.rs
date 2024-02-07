@@ -152,8 +152,6 @@ fn main() -> io::Result<()> {
 
     let collect_protocol_fees = ExecuteMsg::CollectProtocolFees {};
 
-    let increase_oracle_length = ExecuteMsg::IncreaseOracleLength { new_length: 100 };
-
     let set_static_fee_parameters = ExecuteMsg::SetStaticFeeParameters {
         base_factor: preset.get_base_factor(),
         filter_period: preset.get_filter_period(),
@@ -184,7 +182,6 @@ fn main() -> io::Result<()> {
         swap_tokens,
         swap_tokens_invoke,
         collect_protocol_fees,
-        increase_oracle_length,
         set_static_fee_parameters,
         force_decay,
         calculte_rewards,

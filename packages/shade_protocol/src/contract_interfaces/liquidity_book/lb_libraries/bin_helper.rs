@@ -119,22 +119,18 @@ impl BinHelper {
     ) -> Result<(U256, Bytes32), BinError> {
         let (mut x, mut y) = amounts_in.decode();
 
-        // let p: U256 = U256::from_str("340622649287859401926837982039199979667").unwrap();
-
         let user_liquidity = Self::get_liquidity(amounts_in, price)?;
         if total_supply == U256::ZERO || user_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }
 
         let bin_liquidity = Self::get_liquidity(bin_reserves, price)?;
-        // println!("user_liquidity: {:?}", user_liquidity);
-        // println!("bin_liquidity: {:?}", bin_liquidity);
-        // println!("total_supply: {:?}", total_supply);
 
         if bin_liquidity == U256::ZERO {
             return Ok((user_liquidity, amounts_in));
         }
 
+        // Total supply is almost always equals to eachother
         let shares = U256x256Math::mul_div_round_down(user_liquidity, total_supply, bin_liquidity)?;
 
         let effective_liquidity =
@@ -375,6 +371,32 @@ impl BinHelper {
         };
 
         Ok((amounts_in_with_fees, amounts_out_of_bin, total_fees))
+    }
+
+    // TODO - these next three functions are supposed to query the balance of the contract itself,
+    // then subtract the reserves from that balance to determine the exact amounts of tokens
+    // received
+
+    /// Returns the encoded amounts that were transferred to the contract for both tokens.
+    ///
+    /// # Arguments
+    ///
+    /// * `reserves` - The reserves
+    /// * `token_x` - The token X
+    /// * `token_y` - The token Y
+    ///
+    /// # Returns
+    ///
+    /// * `amounts` - The amounts, encoded as follows:
+    ///     * [0 - 128[: amount_x
+    ///     * [128 - 256[: amount_y
+    pub fn received_amount(swap_for_y: bool, amounts_received: Uint128) -> Bytes32 {
+        let mut amounts_left = if swap_for_y {
+            BinHelper::received_x(amounts_received)
+        } else {
+            BinHelper::received_y(amounts_received)
+        };
+        amounts_left
     }
 
     // TODO - these next three functions are supposed to query the balance of the contract itself,

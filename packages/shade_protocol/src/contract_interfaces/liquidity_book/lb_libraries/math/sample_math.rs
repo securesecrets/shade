@@ -78,6 +78,18 @@ impl OracleSample {
         }
     }
 
+    /// Set the creation_time in the encoded pair parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `parameters` - The encoded pair parameters
+    /// * `created_at` - Time of the creation
+    pub fn set_created_at(&mut self, created_at: u64) -> &mut Self {
+        self.data
+            .set(created_at.into(), MASK_UINT40, OFFSET_SAMPLE_CREATION);
+        self
+    }
+
     /// Gets the oracle length from an encoded sample.
     ///
     /// # Arguments
@@ -283,13 +295,12 @@ impl OracleSample {
         let cumulative_volatility = cumulative_volatility + self.get_cumulative_volatility();
         let cumulative_bin_crossed = cumulative_bin_crossed + self.get_cumulative_bin_crossed();
 
-        if !vol.is_empty() && !fee.is_empty() {
+        if !(vol == [0u8; 32]) && !(fee == [0u8; 32]) {
             cumulative_txns += 1;
         }
 
         let cumm_vol = vol.add(self.volume.0);
         let cumm_fee = fee.add(self.fee.0);
-
         (
             cumulative_txns,
             cumulative_id,
@@ -303,78 +314,111 @@ impl OracleSample {
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::Uint256;
+
     use super::*;
 
-    // #[test]
-    // fn test_encode() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_oracle_length(), 3);
-    //     assert_eq!(sample.get_cumulative_id(), 1000);
-    //     assert_eq!(sample.get_cumulative_volatility(), 2000);
-    //     assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
-    //     assert_eq!(sample.get_sample_lifetime(), 4);
-    //     assert_eq!(sample.get_sample_creation(), 123456);
-    // }
+    #[test]
+    fn test_encode() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_cumulative_txns(), 3);
+        assert_eq!(sample.get_cumulative_id(), 1000);
+        assert_eq!(sample.get_cumulative_volatility(), 2000);
+        assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
+        assert_eq!(sample.get_sample_lifetime(), 4);
+        assert_eq!(sample.get_sample_creation(), 123456);
+    }
 
-    // #[test]
-    // fn test_get_oracle_length() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_oracle_length(), 3);
-    // }
+    #[test]
+    fn test_get_cumulative_txns() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_cumulative_txns(), 3);
+    }
 
-    // #[test]
-    // fn test_get_cumulative_id() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_cumulative_id(), 1000);
-    // }
+    #[test]
+    fn test_get_cumulative_id() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_cumulative_id(), 1000);
+    }
 
-    // #[test]
-    // fn test_get_cumulative_volatility() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_cumulative_volatility(), 2000);
-    // }
+    #[test]
+    fn test_get_cumulative_volatility() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_cumulative_volatility(), 2000);
+    }
 
-    // #[test]
-    // fn test_get_cumulative_bin_crossed() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
-    // }
+    #[test]
+    fn test_get_cumulative_bin_crossed() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_cumulative_bin_crossed(), 3000);
+    }
 
-    // #[test]
-    // fn test_get_sample_lifetime() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_sample_lifetime(), 4);
-    // }
+    #[test]
+    fn test_get_sample_lifetime() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_sample_lifetime(), 4);
+    }
 
-    // #[test]
-    // fn test_get_sample_creation() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_sample_creation(), 123456);
-    // }
+    #[test]
+    fn test_get_sample_creation() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_sample_creation(), 123456);
+    }
 
-    // #[test]
-    // fn test_get_sample_last_update() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     assert_eq!(sample.get_sample_last_update(), 123460); // 123456 + 4
-    // }
+    #[test]
+    fn test_get_sample_last_update() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        assert_eq!(sample.get_sample_last_update(), 123460); // 123456 + 4
+    }
 
-    // #[test]
-    // fn test_get_weighted_average() {
-    //     let sample1 = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     let sample2 = OracleSample::encode(3, 2000, 4000, 6000, 4, 123456);
-    //     let (avg_id, avg_vol, avg_bin) = OracleSample::get_weighted_average(sample1, sample2, 1, 1);
-    //     assert_eq!(avg_id, 1500);
-    //     assert_eq!(avg_vol, 3000);
-    //     assert_eq!(avg_bin, 4500);
-    // }
+    #[test]
+    fn test_get_weighted_average() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
+        let sample1 = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        let sample2 = OracleSample::encode(3, 2000, 4000, 6000, 4, 123456, vol, fee);
+        let (avg_id, avg_vol, avg_bin) = OracleSample::get_weighted_average(sample1, sample2, 1, 1);
+        assert_eq!(avg_id, 1500);
+        assert_eq!(avg_vol, 3000);
+        assert_eq!(avg_bin, 4500);
+    }
 
-    // #[test]
-    // fn test_update() {
-    //     let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456);
-    //     let (new_id, new_vol, new_bin) = sample.update(1, 1000, 2000, 3000);
+    #[test]
+    fn test_update() {
+        let vol = Uint256::from(123u128).to_le_bytes();
+        let fee = Uint256::from(123u128).to_le_bytes();
 
-    //     assert_eq!(new_id, 2000);
-    //     assert_eq!(new_vol, 4000);
-    //     assert_eq!(new_bin, 6000);
-    // }
+        let sample = OracleSample::encode(3, 1000, 2000, 3000, 4, 123456, vol, fee);
+        let (
+            cumulative_txns,
+            cumulative_id,
+            cumulative_volatility,
+            cumulative_bin_crossed,
+            cumm_vol,
+            cumm_fee,
+        ) = sample.update(1, 1000, 2000, 3000, vol, fee);
+
+        assert_eq!(cumulative_txns, 4);
+        assert_eq!(cumulative_id, 2000);
+        assert_eq!(cumulative_volatility, 4000);
+        assert_eq!(cumulative_bin_crossed, 6000);
+        assert_eq!(cumm_vol, vol.add(vol));
+        assert_eq!(cumm_fee, fee.add(fee));
+    }
 }

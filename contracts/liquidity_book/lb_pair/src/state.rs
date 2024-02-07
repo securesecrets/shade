@@ -45,26 +45,29 @@ pub struct RewardStats {
 
 #[cw_serde]
 pub struct FeeLog {
+    pub bin_id: u32,
     pub is_token_x: bool,
     pub fee: Uint128,
-    pub bin_id: u32,
     pub timestamp: Timestamp,
     pub last_rewards_epoch_id: u64,
 }
 
 #[cw_serde]
 pub struct State {
+    // Contract and creator information
     pub creator: Addr,
     pub factory: ContractInfo,
+    pub lb_token: ContractInfo,
+    pub lb_staking: ContractInfo,
+
+    // Token and trading pair information
     pub token_x: TokenType,
     pub token_y: TokenType,
     pub bin_step: u16,
-    pub viewing_key: ViewingKey,
     pub pair_parameters: PairParameters,
-    pub reserves: Bytes32,
-    pub protocol_fees: Bytes32,
-    pub lb_token: ContractInfo,
-    pub staking_contract: ContractInfo,
+    pub viewing_key: ViewingKey,
+
+    // Administrative and operational fields
     pub protocol_fees_recipient: Addr,
     pub admin_auth: Contract,
     pub last_swap_timestamp: Timestamp,
@@ -72,15 +75,24 @@ pub struct State {
     pub base_rewards_bins: Option<u32>,
     pub toggle_distributions_algorithm: bool,
     pub max_bins_per_swap: u32,
+
+    // Financial fields
+    pub reserves: Bytes32,
+    pub protocol_fees: Bytes32,
 }
 
 #[cw_serde]
 pub struct EphemeralStruct {
+    // Contract information
     pub lb_token_code_hash: String,
-    pub query_auth: RawContract,
     pub staking_contract: ContractInstantiationInfo,
+    pub query_auth: RawContract,
+
+    // Token symbols
     pub token_x_symbol: String,
     pub token_y_symbol: String,
+
+    // Epoch and administrative settings
     pub epoch_index: u64,
     pub epoch_duration: u64,
     pub expiry_duration: Option<u64>,

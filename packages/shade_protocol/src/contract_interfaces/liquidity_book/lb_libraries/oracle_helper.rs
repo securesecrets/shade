@@ -12,14 +12,11 @@
 //! * 208 - 216: sample lifetime (8 bits)
 //! * 216 - 256: sample creation timestamp (40 bits)
 
-use std::{cmp::Ordering, collections::HashMap};
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
-use ethnum::U256;
 
 use super::{
-    math::{encoded_sample::EncodedSample, sample_math::OracleSample, u256x256_math::addmod},
+    math::sample_math::OracleSample,
     pair_parameter_helper::PairParameters,
     types::Bytes32,
 };
@@ -45,178 +42,6 @@ pub enum OracleError {
 }
 
 impl Oracle {
-    // /// Modifier to check that the oracle id is valid.
-    // fn check_oracle_id(oracle_id: u16) -> Result<(), OracleError> {
-    //     if oracle_id == 0 {
-    //         return Err(OracleError::InvalidOracleId);
-    //     }
-    //     Ok(())
-    // }
-
-    // /// Returns the sample at the given oracleId.
-    // pub fn get_sample(&self, oracle_id: u16) -> Result<OracleSample, OracleError> {
-    //     Self::check_oracle_id(oracle_id)?;
-
-    //     // TODO - Should this return a default sample if there is None? or an Error?
-    //     match self.samples.get(&(oracle_id - 1)) {
-    //         Some(sample) => Ok(*sample),
-    //         None => Ok(OracleSample::default()),
-    //     }
-    // }
-
-    // /// Returns the active sample (Bytes32) and the active size (u16) of the oracle.
-    // pub fn get_active_sample_and_size(
-    //     &self,
-    //     oracle_id: u16,
-    // ) -> Result<(OracleSample, u16), OracleError> {
-    //     let active_sample = self.get_sample(oracle_id)?;
-    //     let mut active_size = OracleSample::get_oracle_length(&active_sample);
-
-    //     if oracle_id != active_size {
-    //         active_size = OracleSample::get_oracle_length(&self.get_sample(active_size)?);
-    //         active_size = if oracle_id > active_size {
-    //             oracle_id
-    //         } else {
-    //             active_size
-    //         };
-    //     }
-
-    //     Ok((active_sample, active_size))
-    // }
-
-    // /// Returns the sample at the given timestamp. If the timestamp is not in the oracle, it returns the closest sample.
-    // ///
-    // /// # Arguments
-    // ///
-    // /// * `oracle_id` - The oracle id
-    // /// * `look_up_timestamp` - The timestamp to look up
-    // ///
-    // /// # Returns
-    // ///
-    // /// * `last_update` - The last update timestamp
-    // /// * `cumulative_id` - The cumulative id
-    // /// * `cumulative_volatility` - The cumulative volatility
-    // /// * `cumulative_bin_crossed` - The cumulative bin crossed
-    // pub fn get_sample_at(
-    //     &self,
-    //     oracle_id: u16,
-    //     look_up_timestamp: u64,
-    // ) -> Result<(u64, u64, u64, u64), OracleError> {
-    //     let (active_sample, active_size) = self.get_active_sample_and_size(oracle_id)?;
-
-    //     if OracleSample::get_sample_last_update(&self.samples[&(oracle_id % active_size)])
-    //         > look_up_timestamp
-    //     {
-    //         return Err(OracleError::LookUpTimestampTooOld);
-    //     }
-
-    //     let mut last_update = OracleSample::get_sample_last_update(&active_sample);
-    //     if last_update <= look_up_timestamp {
-    //         return Ok((
-    //             last_update,
-    //             OracleSample::get_cumulative_id(&active_sample),
-    //             OracleSample::get_cumulative_volatility(&active_sample),
-    //             OracleSample::get_cumulative_bin_crossed(&active_sample),
-    //         ));
-    //     } else {
-    //         last_update = look_up_timestamp;
-    //     }
-    //     let (prev_sample, next_sample) =
-    //         self.binary_search(oracle_id, look_up_timestamp, active_size)?;
-    //     let weight_prev = next_sample.get_sample_last_update() - look_up_timestamp;
-    //     let weight_next = look_up_timestamp - prev_sample.get_sample_last_update();
-
-    //     let (cumulative_id, cumulative_volatility, cumulative_bin_crossed) =
-    //         OracleSample::get_weighted_average(prev_sample, next_sample, weight_prev, weight_next);
-
-    //     Ok((
-    //         last_update,
-    //         cumulative_id,
-    //         cumulative_volatility,
-    //         cumulative_bin_crossed,
-    //     ))
-    // }
-
-    /// Binary search to find the 2 samples surrounding the given timestamp.
-    ///
-    /// # Arguments
-    ///
-    /// * `oracle` - The oracle
-    /// * `oracleId` - The oracle id
-    /// * `look_up_timestamp` - The timestamp to look up
-    /// * `length` - The oracle length
-    ///
-    /// # Returns
-    ///
-    /// * `prev_sample` - The previous sample
-    /// * `next_sample` - The next sample
-    // pub fn binary_search(
-    //     &self,
-    //     oracle_id: u16,
-    //     look_up_timestamp: u64,
-    //     length: u16,
-    // ) -> Result<(OracleSample, OracleSample), OracleError> {
-    //     let mut oracle_id = oracle_id;
-    //     let mut low = 0;
-    //     let mut high = length - 1;
-
-    //     // TODO: not sure if it's ok to initialize these at 0
-    //     let mut sample = OracleSample::default();
-    //     let mut sample_last_update = 0u64;
-
-    //     let start_id = oracle_id; // oracleId is 1-based
-
-    //     while low <= high {
-    //         let mid = ((low as u32 + high as u32) >> 1) as u16;
-
-    //         oracle_id = ((start_id as u32 + mid as u32) % (length as u32)) as u16;
-
-    //         sample = *self
-    //             .samples
-    //             .get(&oracle_id)
-    //             .unwrap_or(&OracleSample::default());
-
-    //         sample_last_update = sample.get_sample_last_update();
-
-    //         match sample_last_update.cmp(&look_up_timestamp) {
-    //             Ordering::Greater => high = mid - 1,
-    //             Ordering::Less => low = mid + 1,
-    //             Ordering::Equal => return Ok((sample, sample)),
-    //         }
-    //     }
-
-    //     if look_up_timestamp < sample_last_update {
-    //         if oracle_id == 0 {
-    //             oracle_id = length;
-    //         }
-
-    //         let prev_sample = *self
-    //             .samples
-    //             .get(&(oracle_id - 1))
-    //             .unwrap_or(&OracleSample::default());
-
-    //         Ok((prev_sample, sample))
-    //     } else {
-    //         oracle_id = addmod(oracle_id.into(), U256::ONE, length.into()).as_u16();
-
-    //         let next_sample = *self
-    //             .samples
-    //             .get(&oracle_id)
-    //             .unwrap_or(&OracleSample::default());
-
-    //         Ok((sample, next_sample))
-    //     }
-    // }
-
-    // /// Sets the sample at the given oracle_id.
-    // pub fn set_sample(&mut self, oracle_id: u16, sample: OracleSample) -> Result<(), OracleError> {
-    //     Self::check_oracle_id(oracle_id)?;
-
-    //     self.samples.insert(oracle_id - 1, sample);
-
-    //     Ok(())
-    // }
-
     /// Updates the oracle and returns the updated pair parameters.
     pub fn update(
         &mut self,
@@ -282,57 +107,6 @@ impl Oracle {
 
         return Ok((parameters, None));
     }
-
-    // /// Increases the oracle length.
-    // pub fn increase_length(
-    //     &mut self,
-    //     oracle_id: u16,
-    //     new_length: u16,
-    // ) -> Result<&mut Self, OracleError> {
-    //     let sample = self.0;
-    //     let length = sample.get_oracle_length();
-
-    //     if length >= new_length {
-    //         return Err(OracleError::NewLengthTooSmall);
-    //     }
-
-    //     let last_sample = if length == oracle_id {
-    //         sample
-    //     } else if length == 0 {
-    //         OracleSample(EncodedSample([0u8; 32]))
-    //     } else {
-    //         self.get_sample(length)?
-    //     };
-
-    //     let mut active_size = last_sample.get_oracle_length();
-    //     active_size = if oracle_id > active_size {
-    //         oracle_id
-    //     } else {
-    //         active_size
-    //     };
-
-    //     for i in length..new_length {
-    //         // NOTE: I think what this does is encode the active_size as the oracle_length (16 bits)
-    //         // in each of the newly added samples... the rest of the sample values are empty.
-    //         self.samples.insert(
-    //             i,
-    //             OracleSample(EncodedSample(U256::from(active_size).to_le_bytes())),
-    //         );
-    //     }
-
-    //     // I think this is a fancy way of changing the length of the current sample.
-    //     // It's confusing looking because we don't have methods for pow or bitOR for bytes32,
-    //     // so we have to convert to U256 and back.
-    //     let new_sample =
-    //         (U256::from_le_bytes(sample.0.0) ^ U256::from(length)) | U256::from(new_length);
-
-    //     self.set_sample(
-    //         oracle_id,
-    //         OracleSample(EncodedSample(new_sample.to_le_bytes())),
-    //     )?;
-
-    //     Ok(self)
-    // }
 }
 
 // #[cfg(test)]

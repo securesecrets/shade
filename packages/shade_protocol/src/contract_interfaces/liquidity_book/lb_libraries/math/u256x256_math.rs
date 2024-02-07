@@ -108,10 +108,7 @@ impl U256x256Math {
 
         let (prod0, prod1) = Self::_get_mul_prods(x, y)?;
 
-        // println!("prod0: {:?}\n prod1 {:?}", prod0, prod1);
-
         let result = Self::_get_end_of_div_round_down(x, y, denominator, prod0, prod1)?;
-        // println!("result: {:?}", result);
 
         Ok(result)
     }

@@ -60,9 +60,6 @@ pub enum ExecuteMsg {
     },
 
     CollectProtocolFees {},
-    IncreaseOracleLength {
-        new_length: u16,
-    },
     SetStaticFeeParameters {
         base_factor: u16,
         filter_period: u16,
@@ -224,7 +221,6 @@ pub enum QueryMsg {
     #[returns(OracleSamplesAfterResponse)]
     GetOracleSamplesAfter {
         oracle_id: u16,
-        page: Option<u16>,
         page_size: Option<u16>,
     },
     #[returns(PriceFromIdResponse)]
