@@ -42,7 +42,6 @@
             - ephemeral_storage_w
             - ephemeral_storage_r
         - types.rs
-
   - lb_pair
     - src
         - contract.rs
@@ -120,7 +119,6 @@
             - query_total_supply
             - query_rewards_distribution
         - state.rs
-
   - lb_staking
     - src
         - contract.rs
@@ -173,7 +171,6 @@
             - append_stake_tx_for_addr
             - append_unstake_tx_for_addr
             - append_claim_rewards_tx_for_addr
-
   - lb_token
     - src
         - contract.rs
@@ -292,7 +289,6 @@
             - registered_tokens_list_r
             - epheral_storage_w
             - epheral_storage_r
-
   - tests
     - src
         - lib.rs

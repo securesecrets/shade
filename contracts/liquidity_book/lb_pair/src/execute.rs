@@ -952,10 +952,8 @@ fn burn(
         if amounts_out_from_bin.iter().all(|&x| x == 0) {
             return Err(Error::ZeroAmountsOut {
                 id,
-                // bin_reserves,
-                amount_to_burn: amount_to_burn_u256,
-                total_supply,
-                // amounts_out_from_bin,
+                amount_to_burn: amount_to_burn_u256.u256_to_uint256(),
+                total_supply: total_supply.u256_to_uint256(),
             });
         }
 
