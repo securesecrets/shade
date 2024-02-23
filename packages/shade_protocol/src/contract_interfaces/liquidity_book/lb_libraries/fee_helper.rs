@@ -52,8 +52,11 @@ impl FeeHelper {
     pub fn get_fee_amount(amount: u128, total_fee: u128) -> Result<u128, FeeError> {
         Self::verify_fee(total_fee)?;
 
-        let denominator = PRECISION - total_fee;
+        let denominator = PRECISION - total_fee; // This line essentially calculates the portion of the transaction not taken by the fee.
+
         // Can't overflow, max(result) = (u128::MAX * 0.1e18 + (0.9e18 - 1)) / 0.9e18 < 2^128
+
+        // The addition of denominator - 1 before dividing is a mathematical trick to ensure that the result is rounded up. This is because when you divide integers, any remainder is discarded (effectively rounding down). By adding denominator - 1, you ensure that any non-zero remainder will push the division result up by 1, achieving a round-up effect.
         let fee_amount = (U256::from(amount) * total_fee + denominator - 1) / denominator;
 
         Ok(fee_amount.as_u128())
@@ -65,6 +68,7 @@ impl FeeHelper {
 
         let denominator = SQUARED_PRECISION;
         // Can't overflow, max(result) = type(uint128).max * 0.1e18 * 1.1e18 / 1e36 <= 2^128 * 0.11e36 / 1e36 < 2^128
+        // adding with precision to calculate the fee on the amount after the fee compounding on real amount
         let composition_fee =
             U256::from(amount_with_fees) * total_fee * (U256::from(total_fee) + PRECISION)
                 / denominator;
@@ -232,7 +236,7 @@ mod tests {
         assert!(fee_amount_max_fee > 0); // fee should be greater than zero
 
         // Test error scenario: Fee too large
-        let result = FeeHelper::get_fee_amount(amount, MAX_FEE + 1);
+        let _result = FeeHelper::get_fee_amount(amount, MAX_FEE + 1);
         // assert!(matches!(result, Err(FeeError::FeeTooLarge)));
 
         Ok(())
@@ -259,7 +263,7 @@ mod tests {
         assert!(comp_fee_max_fee > 0); // fee should be greater than zero
 
         // Test error scenario: Fee too large
-        let result = FeeHelper::get_composition_fee(amount_with_fees, MAX_FEE + 1);
+        let _result = FeeHelper::get_composition_fee(amount_with_fees, MAX_FEE + 1);
         // assert!(matches!(result, Err(FeeError::FeeTooLarge)));
 
         Ok(())

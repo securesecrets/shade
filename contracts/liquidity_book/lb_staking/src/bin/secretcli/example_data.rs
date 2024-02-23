@@ -121,7 +121,6 @@ impl ExampleData for ContractInfo {
     }
 }
 
-// TODO - why are we using this instead of ContractInfo?
 impl ExampleData for RawContract {
     fn example() -> Self {
         RawContract {

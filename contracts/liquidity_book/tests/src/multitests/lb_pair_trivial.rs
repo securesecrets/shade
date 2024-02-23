@@ -1,4 +1,3 @@
-use ::lb_pair::state::ORACLE;
 use anyhow::Ok;
 use cosmwasm_std::Coin;
 use serial_test::serial;

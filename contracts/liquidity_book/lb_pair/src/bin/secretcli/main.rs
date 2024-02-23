@@ -277,7 +277,7 @@ fn main() -> io::Result<()> {
         fee_info: FeeInfo {
             shade_dao_address: Addr::recipient(),
             lp_fee: Fee {
-                nom: 100_00000, //TODO: fix these
+                nom: 100_00000,
                 denom: 1000,
             },
             shade_dao_fee: Fee {

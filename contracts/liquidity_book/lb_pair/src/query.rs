@@ -885,7 +885,7 @@ pub fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -
             }
             .as_u128();
 
-            let total_fee = params.get_total_fee(bin_step);
+            let total_fee = params.get_total_fee(bin_step)?;
             let fee_amount = FeeHelper::get_fee_amount(amount_in_without_fee, total_fee)?;
 
             amount_in += amount_in_without_fee + fee_amount;

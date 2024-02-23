@@ -305,7 +305,7 @@ pub fn query_lb_token(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractIn
     Ok(lb_token)
 }
 
-pub fn query_staking_contract(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+pub fn query_lb_staking(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
     let res = lb_pair::QueryMsg::GetStakingContract {}.test_query(lb_pair, app)?;
     let lb_pair::StakingResponse {
         contract: staking_contract,

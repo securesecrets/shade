@@ -104,7 +104,6 @@ impl ExampleData for ContractInfo {
     }
 }
 
-// TODO - why are we using this instead of ContractInfo?
 impl ExampleData for RawContract {
     fn example() -> Self {
         RawContract {
@@ -178,7 +177,6 @@ impl ExampleData for RemoveLiquidity {
             amount_x_min: Uint128::from(10u128),
             amount_y_min: Uint128::from(10u128),
             ids: vec![ACTIVE_ID],
-            // TODO - understand what "amounts" means. Is that a packed_uint128?
             amounts: vec![Uint256::from_u128(10u128)],
             deadline: 1701283067,
         }

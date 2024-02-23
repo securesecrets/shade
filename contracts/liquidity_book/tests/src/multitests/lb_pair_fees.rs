@@ -2664,7 +2664,7 @@ pub fn test_base_and_variable_fee_only() -> Result<(), anyhow::Error> {
     )?;
     // make a swap with amount_x_in
     let token_x: &ContractInfo = &extract_contract_info(&deployed_contracts, USDC)?;
-    let total_fee = lb_pair::swap_snip_20(
+    let _total_fee = lb_pair::swap_snip_20(
         &mut app,
         addrs.batman().as_str(),
         &lb_pair.info.contract,

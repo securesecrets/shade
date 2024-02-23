@@ -176,11 +176,15 @@ pub fn instantiate(
     CONTRACT_STATUS.save(deps.storage, &ContractStatus::Active)?;
     BIN_TREE.save(deps.storage, &tree)?;
     FEE_MAP_TREE.save(deps.storage, state.rewards_epoch_index, &tree)?;
-    REWARDS_STATS_STORE.save(deps.storage, state.rewards_epoch_index, &RewardStats {
-        cumm_value: Uint256::zero(),
-        cumm_value_mul_bin_id: Uint256::zero(),
-        rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
-    })?;
+    REWARDS_STATS_STORE.save(
+        deps.storage,
+        state.rewards_epoch_index,
+        &RewardDistributionConfig {
+            cumulative_value: Uint256::zero(),
+            cumulative_value_mul_bin_id: Uint256::zero(),
+            rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
+        },
+    )?;
     EPHEMERAL_STORAGE.save(deps.storage, &EphemeralStruct {
         lb_token_code_hash: msg.lb_token_implementation.code_hash,
         staking_contract: msg.staking_contract_implementation,

@@ -22,7 +22,10 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
 use ethnum::U256;
 
-use super::{constants::*, math::encoded_sample::*};
+use super::{
+    constants::*,
+    math::{encoded_sample::*, safe_math::Safe, u24::U24},
+};
 
 const OFFSET_BASE_FACTOR: u8 = 0;
 const OFFSET_FILTER_PERIOD: u8 = 16;
@@ -44,6 +47,10 @@ const MASK_STATIC_PARAMETER: u128 = 0xffffffffffffffffffffffffffffu128;
 pub enum PairParametersError {
     #[error("Pair Parameters Error: Invalid Parameter")]
     InvalidParameter,
+    #[error("Pair Parameters Error: Volatility Reference greater than limit")]
+    InvalidVolatilityReference,
+    #[error("Value greater than u128")]
+    U128Overflow,
 }
 
 #[cw_serde]
@@ -245,8 +252,7 @@ impl PairParameters {
         let variable_fee_control = Self::get_variable_fee_control(self) as u128;
 
         if variable_fee_control != 0 {
-            let vol_accumulator = Self::get_volatility_accumulator(self) as u128;
-            let prod = vol_accumulator * (bin_step as u128);
+            let prod = (Self::get_volatility_accumulator(self) as u128) * (bin_step as u128);
             (prod * prod * variable_fee_control + 99) / 100
         } else {
             0
@@ -259,10 +265,10 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     /// * `bin_step` - The bin step (in basis points)
-    pub fn get_total_fee(&self, bin_step: u16) -> u128 {
+    pub fn get_total_fee(&self, bin_step: u16) -> Result<u128, PairParametersError> {
         let base_fee = Self::get_base_fee(self, bin_step);
         let variable_fee = Self::get_variable_fee(self, bin_step);
-        base_fee + variable_fee
+        u128::safe128(base_fee + variable_fee, PairParametersError::U128Overflow)
     }
 
     /// Set the oracle id in the encoded pair parameters.
@@ -358,7 +364,6 @@ impl PairParameters {
 
         let mut new_parameters = EncodedSample([0u8; 32]);
 
-        // TODO: all of these needing to be turned into U256 seems like a waste
         new_parameters.set(base_factor.into(), MASK_UINT16, OFFSET_BASE_FACTOR);
         new_parameters.set(filter_period.into(), MASK_UINT12, OFFSET_FILTER_PERIOD);
         new_parameters.set(decay_period.into(), MASK_UINT12, OFFSET_DECAY_PERIOD);
@@ -409,14 +414,10 @@ impl PairParameters {
         time: &Timestamp,
     ) -> Result<&mut Self, PairParametersError> {
         let current_time = time.seconds();
-
-        if current_time > MASK_UINT40.as_u64() {
-            Err(PairParametersError::InvalidParameter)
-        } else {
-            self.0
-                .set(current_time.into(), MASK_UINT40, OFFSET_TIME_LAST_UPDATE);
-            Ok(self)
-        }
+        //u40 can contain upto date 2/20/36812
+        self.0
+            .set(current_time.into(), MASK_UINT40, OFFSET_TIME_LAST_UPDATE);
+        Ok(self)
     }
 
     /// Updates the volatility reference in the encoded pair parameters.
@@ -425,9 +426,14 @@ impl PairParameters {
     ///
     /// * `parameters` - The encoded pair parameters
     pub fn update_volatility_reference(&mut self) -> Result<&mut Self, PairParametersError> {
-        let vol_acc = self.get_volatility_accumulator();
-        let reduction_factor = self.get_reduction_factor();
-        let vol_ref = vol_acc * reduction_factor as u32 / BASIS_POINT_MAX as u32;
+        let vol_acc: U256 = self.get_volatility_accumulator().into();
+        let reduction_factor: U256 = self.get_reduction_factor().into();
+        let result: U256 = vol_acc * reduction_factor / U256::from(BASIS_POINT_MAX);
+        let vol_ref = (result).as_u32();
+
+        if vol_ref > U24::MAX {
+            return Err(PairParametersError::InvalidVolatilityReference);
+        }
 
         self.set_volatility_reference(vol_ref)?;
         Ok(self)
@@ -448,7 +454,9 @@ impl PairParameters {
             true => active_id - id_reference,
             false => id_reference - active_id,
         };
+
         let vol_acc = self.get_volatility_reference() + delta_id * BASIS_POINT_MAX as u32;
+
         let max_vol_acc = self.get_max_volatility_accumulator();
         let vol_acc = std::cmp::min(vol_acc, max_vol_acc);
 
@@ -756,7 +764,7 @@ mod tests {
         assert_eq!(variable_fee, expected_variable_fee);
 
         if base_fee + variable_fee < U256::from(u128::MAX) {
-            let total_fee = pair_params.get_total_fee(bin_step);
+            let total_fee = pair_params.get_total_fee(bin_step).unwrap();
             assert_eq!(total_fee, base_fee + variable_fee);
         } else {
             panic!("Exceeds 128 bits");

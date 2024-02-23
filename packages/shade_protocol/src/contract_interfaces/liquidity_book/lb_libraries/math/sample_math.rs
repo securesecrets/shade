@@ -78,19 +78,7 @@ impl OracleSample {
         }
     }
 
-    /// Set the creation_time in the encoded pair parameters.
-    ///
-    /// # Arguments
-    ///
-    /// * `parameters` - The encoded pair parameters
-    /// * `created_at` - Time of the creation
-    pub fn set_created_at(&mut self, created_at: u64) -> &mut Self {
-        self.data
-            .set(created_at.into(), MASK_UINT40, OFFSET_SAMPLE_CREATION);
-        self
-    }
-
-    /// Gets the oracle length from an encoded sample.
+    /// Gets the cumulative txns from encoded sample
     ///
     /// # Arguments
     ///
@@ -157,7 +145,7 @@ impl OracleSample {
     ///     * [0 - 216[: any (216 bits)
     ///     * [216 - 256[: sample creation timestamp (40 bits)
     pub fn get_sample_creation(&self) -> u64 {
-        self.data.decode_uint64(OFFSET_SAMPLE_CREATION)
+        self.data.decode_uint40(OFFSET_SAMPLE_CREATION)
     }
 
     /// Gets the sample last update timestamp from an encoded sample.
@@ -309,6 +297,18 @@ impl OracleSample {
             cumm_vol,
             cumm_fee,
         )
+    }
+
+    /// Set the creation_time in the encoded pair parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `parameters` - The encoded pair parameters
+    /// * `created_at` - Time of the creation
+    pub fn set_created_at(&mut self, created_at: u64) -> &mut Self {
+        self.data
+            .set(created_at.into(), MASK_UINT40, OFFSET_SAMPLE_CREATION);
+        self
     }
 }
 

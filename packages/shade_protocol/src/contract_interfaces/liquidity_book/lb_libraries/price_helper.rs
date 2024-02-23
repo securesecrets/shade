@@ -8,6 +8,7 @@ use ethnum::{I256, U256};
 use super::{
     constants::*,
     math::{
+        safe_math::Safe,
         u128x128_math::{U128x128Math, U128x128MathError},
         u256x256_math::{U256x256Math, U256x256MathError},
     },
@@ -51,7 +52,10 @@ impl PriceHelper {
         let base = Self::get_base(bin_step);
         let real_id = U128x128Math::log2(price)? / U128x128Math::log2(base)?;
 
-        Ok((REAL_ID_SHIFT + real_id).as_u32())
+        u32::safe24(
+            (REAL_ID_SHIFT + real_id).as_u32(),
+            U128x128MathError::IdShiftOverflow,
+        )
     }
 
     /// Calculates the base from the bin step, which is `1 + binStep / BASIS_POINT_MAX`.

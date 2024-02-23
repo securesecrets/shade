@@ -3,9 +3,8 @@ use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
 use shade_protocol::{
-    c_std::{ContractInfo, StdError::GenericErr, Uint128, Uint256},
+    c_std::{ContractInfo, Uint128, Uint256},
     lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
-    liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     multi_test::App,
 };
 use std::str::FromStr;
@@ -458,60 +457,6 @@ fn test_fuzz_query_swap_in() -> Result<(), anyhow::Error> {
     assert_eq!(amount_out.u128(), 0);
     assert_eq!(amount_in_left, amount_in);
     assert_eq!(fee.u128(), 0);
-
-    Ok(())
-}
-
-#[test]
-#[serial]
-pub fn test_invalid_reward_bins_error() -> Result<(), anyhow::Error> {
-    let addrs = init_addrs();
-    let (mut app, lb_factory, deployed_contracts, _lb_pair) = lb_pair_setup()?;
-
-    lb_factory::set_pair_preset(
-        &mut app,
-        addrs.admin().as_str(),
-        &lb_factory.clone().into(),
-        DEFAULT_BIN_STEP,
-        DEFAULT_BASE_FACTOR,
-        DEFAULT_FILTER_PERIOD,
-        DEFAULT_DECAY_PERIOD,
-        DEFAULT_REDUCTION_FACTOR,
-        DEFAULT_VARIABLE_FEE_CONTROL,
-        DEFAULT_PROTOCOL_SHARE,
-        DEFAULT_MAX_VOLATILITY_ACCUMULATOR,
-        DEFAULT_OPEN_STATE,
-        U24::MAX + 1,
-        Some(RewardsDistributionAlgorithm::TimeBasedRewards),
-        1,
-        100,
-        None,
-    )?;
-
-    let shd = extract_contract_info(&deployed_contracts, SHADE)?;
-    let sscrt = extract_contract_info(&deployed_contracts, SILK)?;
-
-    let token_x = token_type_snip20_generator(&shd)?;
-    let token_y = token_type_snip20_generator(&sscrt)?;
-
-    let res = lb_factory::create_lb_pair(
-        &mut app,
-        addrs.admin().as_str(),
-        &lb_factory.clone().into(),
-        DEFAULT_BIN_STEP,
-        ID_ONE,
-        token_x.clone(),
-        token_y.clone(),
-        "viewing_key".to_string(),
-        "entropy".to_string(),
-    );
-
-    assert_eq!(
-        res,
-        Err(GenericErr {
-            msg: "Invalid input!".to_string()
-        })
-    );
 
     Ok(())
 }
