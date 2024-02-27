@@ -43,7 +43,7 @@ pub fn instantiate(
     MARKET_VIEWING_KEY.save(
         deps.storage,
         &ViewingKey {
-            key: "".to_owned(),
+            key: msg.market_viewing_key.to_owned(),
             address: env.contract.address.to_string(),
         },
     )?;
@@ -244,6 +244,8 @@ mod execute {
         if market.address != info.sender {
             return Err(ContractError::Unauthorized {});
         }
+
+        // TODO verify a valid market contract
 
         let mut markets = ENTERED_MARKETS.load(deps.storage)?;
         let mut entered_markets =
