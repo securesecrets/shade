@@ -232,7 +232,7 @@ mod execute {
         Ok(Response::new()
             .add_attribute("action", "create_market")
             .add_attribute("sender", info.sender)
-            .add_submessage(SubMsg::reply_on_success(market_instantiate, reply_id)))
+            .add_submessage(SubMsg::reply_always(market_instantiate, reply_id)))
     }
 
     pub fn enter_market(
