@@ -1,11 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use shade_protocol::{
     c_std::{Addr, Decimal},
+    lending_utils::{token::Token, ViewingKey},
     secret_storage_plus::{Item, Map},
     utils::asset::Contract,
 };
-
-use lending_utils::{token::Token, ViewingKey};
 
 use std::collections::BTreeSet;
 
@@ -63,11 +62,16 @@ impl MarketState {
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
+/*
 /// A map of reply_id -> market_token, used to tell which base asset
 /// a given instantiating contract will handle
 pub const REPLY_IDS: Map<u64, Token> = Map::new("reply_ids");
 /// The next unused reply ID
 pub const NEXT_REPLY_ID: Item<u64> = Item::new("next_reply_id");
+*/
+
+// Market being instantiated, to be cleared on failed init
+pub const INIT_MARKET: Item<Option<Token>> = Item::new("instantiating_market");
 /// A map of market asset -> market contract address
 pub const MARKETS: Item<Vec<(Token, MarketState)>> = Item::new("market");
 /// A set of "entered markets" for each account, as in markets in which the account is

@@ -6,6 +6,10 @@ use shade_protocol::{
         StdResult, Uint128,
     },
     contract_interfaces::snip20::Snip20ReceiveMsg,
+    lending_utils::{
+        amount::{base_to_token, token_to_base},
+        Authentication, ViewingKey,
+    },
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20,
     utils::Query,
@@ -14,8 +18,8 @@ use shade_protocol::{
 use crate::{
     error::ContractError,
     msg::{
-        AuthPermit, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse,
-        InstantiateMsg, MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
+        AuthPermit, BalanceResponse, ControllerQuery, ExecuteMsg, FundsResponse, InstantiateMsg,
+        MultiplierResponse, QueryMsg, TokenInfoResponse, TransferableAmountResp,
     },
     state::{
         Distribution, TokenInfo, WithdrawAdjustment, Withdrawable, BALANCES, CONTROLLER,
@@ -23,7 +27,6 @@ use crate::{
         WITHDRAW_ADJUSTMENT,
     },
 };
-use lending_utils::{amount::{base_to_token, token_to_base}, Authentication, ViewingKey};
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -55,7 +58,13 @@ pub fn instantiate(
     CONTROLLER.save(deps.storage, &msg.controller.into_valid(deps.api)?)?;
     MULTIPLIER.save(deps.storage, &Decimal::from_ratio(1u128, 100_000u128))?;
 
-    VIEWING_KEY.save(deps.storage, &ViewingKey { key: msg.viewing_key, address: env.contract.address.to_string() })?;
+    VIEWING_KEY.save(
+        deps.storage,
+        &ViewingKey {
+            key: msg.viewing_key,
+            address: env.contract.address.to_string(),
+        },
+    )?;
 
     Ok(Response::new())
 }

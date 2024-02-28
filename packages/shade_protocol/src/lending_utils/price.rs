@@ -2,9 +2,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use shade_protocol::c_std::Decimal;
+use crate::c_std::Decimal;
 
-use crate::{coin::Coin, token::Token};
+use crate::lending_utils::{coin::Coin, token::Token};
 
 // Structure containing price ratio for sell market_token / buy common_token
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema, Debug)]

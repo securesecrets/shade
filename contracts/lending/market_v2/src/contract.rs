@@ -10,6 +10,7 @@ use shade_protocol::{
         query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
         snip20::Snip20ReceiveMsg,
     },
+    lending_utils::{token::Token, Authentication, ViewingKey},
     query_authentication::viewing_keys,
     utils::{asset::Contract, Query},
 };
@@ -20,8 +21,6 @@ use crate::{
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
-use lending_utils::{token::Token, Authentication, ViewingKey};
-
 const CTOKEN_INIT_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
@@ -31,6 +30,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    println!("MARKET INIT");
     let ctoken_msg = lend_token::msg::InstantiateMsg {
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,
@@ -62,8 +62,8 @@ pub fn instantiate(
         market_cap: msg.market_cap,
         rates: msg.interest_rate.validate()?,
         interest_charge_period: msg.interest_charge_period,
-        last_charged: env.block.time.seconds()
-            - env.block.time.seconds() % msg.interest_charge_period,
+        last_charged: env.block.time.seconds(),
+        // - env.block.time.seconds() % msg.interest_charge_period,
         common_token: msg.common_token,
         collateral_ratio: msg.collateral_ratio,
         price_oracle: msg.price_oracle,
@@ -84,7 +84,7 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
-        .add_submessage(SubMsg::reply_on_success(
+        .add_submessage(SubMsg::reply_always(
             ctoken_instantiate,
             CTOKEN_INIT_REPLY_ID,
         )))
@@ -101,13 +101,18 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 mod reply {
     use super::*;
 
-    use lending_utils::parse_reply::parse_reply_instantiate_data;
+    use shade_protocol::lending_utils::parse_reply::parse_reply_instantiate_data;
 
     pub fn token_instantiate_reply(
         deps: DepsMut,
         _env: Env,
         msg: Reply,
     ) -> Result<Response, ContractError> {
+        /*
+        return Err(ContractError::Std(StdError::generic_err(
+            "TOKEN INIT REPLY TO MARKET",
+        )));
+        */
         let id = msg.id;
         let res =
             parse_reply_instantiate_data(msg).map_err(|err| ContractError::ReplyParseFailure {
@@ -175,7 +180,7 @@ pub fn receive_snip20_message(
                 deps,
                 env,
                 msg.sender,
-                lending_utils::coin::Coin {
+                shade_protocol::lending_utils::coin::Coin {
                     denom: Token::Cw20(
                         Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
                     ),
@@ -192,7 +197,7 @@ pub fn receive_snip20_message(
             execute::repay(
                 deps,
                 env,
-                lending_utils::coin::Coin {
+                shade_protocol::lending_utils::coin::Coin {
                     denom: Token::Cw20(
                         Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
                     ),
@@ -212,7 +217,7 @@ pub fn receive_snip20_message(
                 deps,
                 env,
                 sender,
-                lending_utils::coin::Coin {
+                shade_protocol::lending_utils::coin::Coin {
                     denom: Token::Cw20(
                         Contract::new(&config.ctoken_contract, &config.ctoken_code_hash).into(),
                     ),
@@ -230,7 +235,7 @@ mod cr_lending_utils {
 
     use shade_protocol::c_std::{Deps, DivideByZeroError, Fraction};
 
-    use lending_utils::{
+    use shade_protocol::lending_utils::{
         amount::base_to_token,
         credit_line::{CreditLineResponse, CreditLineValues},
     };
@@ -324,7 +329,7 @@ mod cr_lending_utils {
 }
 
 mod execute {
-    use lending_utils::{
+    use shade_protocol::lending_utils::{
         amount::{base_to_token, token_to_base},
         coin::Coin,
     };
@@ -457,7 +462,7 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         address: String,
-        received_tokens: lending_utils::coin::Coin,
+        received_tokens: shade_protocol::lending_utils::coin::Coin,
     ) -> Result<Response, ContractError> {
         let address = deps.api.addr_validate(&address)?;
         let cfg = CONFIG.load(deps.storage)?;
@@ -597,7 +602,7 @@ mod execute {
     pub fn repay(
         mut deps: DepsMut,
         env: Env,
-        repay_tokens: lending_utils::coin::Coin,
+        repay_tokens: shade_protocol::lending_utils::coin::Coin,
         sender: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -635,7 +640,7 @@ mod execute {
         mut deps: DepsMut,
         env: Env,
         sender: Addr,
-        repay_tokens: lending_utils::coin::Coin,
+        repay_tokens: shade_protocol::lending_utils::coin::Coin,
         account: Addr,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -839,14 +844,11 @@ mod query {
     use shade_protocol::{
         c_std::{ContractInfo, Decimal, Deps, Uint128},
         contract_interfaces::oracles,
+        lend_token::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse},
         utils::asset::Contract,
     };
 
-    use lend_token::{
-        msg::{BalanceResponse, QueryMsg as TokenQueryMsg, TokenInfoResponse},
-        state::VIEWING_KEY,
-    };
-    use lending_utils::{
+    use shade_protocol::lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
         price::{coin_times_price_rate, PriceRate},
@@ -858,7 +860,7 @@ mod query {
             ApyResponse, InterestResponse, ReserveResponse, TokensBalanceResponse,
             TransferableAmountResponse,
         },
-        state::{debt, SECONDS_IN_YEAR},
+        state::{debt, SECONDS_IN_YEAR, VIEWING_KEY},
     };
 
     fn token_balance(

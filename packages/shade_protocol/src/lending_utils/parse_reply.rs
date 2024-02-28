@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use shade_protocol::c_std::{Binary, Reply};
+use crate::c_std::{Binary, Reply};
 
 // Protobuf wire types (https://developers.google.com/protocol-buffers/docs/encoding)
 const WIRE_TYPE_LENGTH_DELIMITED: u8 = 2;

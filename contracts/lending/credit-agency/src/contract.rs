@@ -1,11 +1,11 @@
 #[cfg(not(feature = "library"))]
-use shade_protocol::c_std::shd_entry_point;
 use shade_protocol::{
     c_std::{
-        from_binary, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
-        StdError, StdResult, Uint128,
+        from_binary, shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult, Uint128,
     },
     contract_interfaces::snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
+    lending_utils::{token::Token, Authentication, ViewingKey},
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20,
     utils::{asset::Contract, Query},
@@ -15,15 +15,16 @@ use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
     state::{
-        find_value, insert_or_update, Config, MarketState, CONFIG, MARKETS, MARKET_VIEWING_KEY,
-        NEXT_REPLY_ID,
+        find_value, insert_or_update, Config, MarketState, CONFIG, INIT_MARKET, MARKETS,
+        MARKET_VIEWING_KEY,
     },
 };
-use lending_utils::{token::Token, Authentication, ViewingKey};
 
 use either::Either;
 
 use std::{collections::BTreeSet, ops::Deref};
+
+const INIT_MARKET_REPLY_ID: u64 = 0;
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -69,7 +70,7 @@ pub fn instantiate(
         default_estimate_multiplier,
     };
     CONFIG.save(deps.storage, &cfg)?;
-    NEXT_REPLY_ID.save(deps.storage, &0)?;
+    INIT_MARKET.save(deps.storage, &None)?;
     MARKETS.save(deps.storage, &vec![])?;
 
     Ok(Response::new()
@@ -102,6 +103,32 @@ pub fn execute(
     }
 }
 
+#[cfg_attr(not(feature = "library"), shd_entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    println!("AGENCY REPLY");
+    match (msg.id, msg.result) {
+        (INIT_MARKET_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
+            Some(x) => {
+                /*
+                let result: UnbondResponse = from_binary(&x)?;
+                // Unbonding stored in try_unbond function
+                // Because of here you can't access the sender of the TX this was stored previously
+                let pending_unbonding = PENDING_UNBONDING.may_load(deps.storage)?;
+
+                if let Some(unbonding_processing) = pending_unbonding {
+                    Ok(Response::default())
+                } else {
+                    Err(StdError::generic_err("No active market instantiate"))
+                }
+                */
+                Ok(Response::default())
+            }
+            None => Err(StdError::generic_err("Init market null response")),
+        },
+        _ => Err(StdError::generic_err("Unknown reply id")),
+    }
+}
+
 pub fn receive_snip20_message(
     deps: DepsMut,
     env: Env,
@@ -121,7 +148,7 @@ pub fn receive_snip20_message(
                 deps,
                 sender,
                 account,
-                lending_utils::coin::Coin {
+                shade_protocol::lending_utils::coin::Coin {
                     denom: Token::Cw20(
                         Contract::new(&info.sender, &config.ctoken_code_hash).into(),
                     ),
@@ -136,16 +163,16 @@ pub fn receive_snip20_message(
 mod execute {
     use super::*;
 
-    use lending_utils::{
+    use shade_protocol::c_std::{ensure_eq, from_binary, StdError, StdResult, SubMsg, WasmMsg};
+    use shade_protocol::lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
         price::{coin_times_price_rate, PriceRate},
     };
-    use shade_protocol::c_std::{ensure_eq, from_binary, StdError, StdResult, SubMsg, WasmMsg};
 
     use crate::{
         msg::{MarketConfig, ReceiveMsg},
-        state::{MarketState, ENTERED_MARKETS, REPLY_IDS},
+        state::{MarketState, ENTERED_MARKETS, INIT_MARKET},
     };
     use lend_market::{
         msg::{ExecuteMsg as MarketExecuteMsg, QueryMsg as MarketQueryMsg},
@@ -193,9 +220,7 @@ mod execute {
         );
         MARKETS.save(deps.storage, &markets)?;
 
-        let reply_id =
-            NEXT_REPLY_ID.update(deps.storage, |id| -> Result<_, StdError> { Ok(id + 1) })?;
-        REPLY_IDS.save(deps.storage, reply_id, &market_token)?;
+        INIT_MARKET.save(deps.storage, &Some(market_token.clone()))?;
 
         let market_msg = lend_market::msg::InstantiateMsg {
             // Fields required for the lend-token instantiation.
@@ -232,7 +257,10 @@ mod execute {
         Ok(Response::new()
             .add_attribute("action", "create_market")
             .add_attribute("sender", info.sender)
-            .add_submessage(SubMsg::reply_always(market_instantiate, reply_id)))
+            .add_submessage(SubMsg::reply_always(
+                market_instantiate,
+                INIT_MARKET_REPLY_ID,
+            )))
     }
 
     pub fn enter_market(
@@ -347,7 +375,7 @@ mod execute {
     }
 
     fn create_repay_to_submessage(
-        coin: lending_utils::coin::Coin,
+        coin: shade_protocol::lending_utils::coin::Coin,
         debt_market: Contract,
         account: Addr,
     ) -> StdResult<SubMsg> {
@@ -383,7 +411,7 @@ mod execute {
         sender: Addr,
         // Account to liquidate.
         account: Addr,
-        coins: lending_utils::coin::Coin,
+        coins: shade_protocol::lending_utils::coin::Coin,
         collateral_denom: Token,
     ) -> Result<Response, ContractError> {
         let cfg = CONFIG.load(deps.storage)?;
@@ -484,7 +512,7 @@ mod query {
     use shade_protocol::c_std::StdResult;
 
     use lend_market::msg::{QueryMsg as MarketQueryMsg, TokensBalanceResponse};
-    use lending_utils::{
+    use shade_protocol::lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
         Authentication,

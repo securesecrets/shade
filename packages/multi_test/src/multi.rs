@@ -113,6 +113,25 @@ pub mod basic_staking {
     multi_derive::implement_multi!(BasicStaking, basic_staking);
 }
 
+#[cfg(feature = "credit_agency")]
+pub mod credit_agency {
+    use credit_agency;
+
+    multi_derive::implement_multi_with_reply!(CreditAgency, credit_agency);
+}
+#[cfg(feature = "lend_market")]
+pub mod lend_market {
+    use lend_market;
+
+    multi_derive::implement_multi_with_reply!(LendMarket, lend_market);
+}
+#[cfg(feature = "lend_token")]
+pub mod lend_token {
+    use lend_token;
+
+    multi_derive::implement_multi!(LendToken, lend_token);
+}
+
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability {
     use peg_stability;

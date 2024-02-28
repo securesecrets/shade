@@ -44,3 +44,12 @@ pub mod basic_staking;
 
 #[cfg(feature = "snip20_migration")]
 pub mod snip20_migration;
+
+#[cfg(feature = "credit_agency")]
+pub mod credit_agency;
+
+#[cfg(feature = "lend_market")]
+pub mod lend_market;
+
+#[cfg(feature = "lend_token")]
+pub mod lend_token;

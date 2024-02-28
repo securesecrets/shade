@@ -1,9 +1,10 @@
-use shade_protocol::c_std::{OverflowError, StdError, Uint128};
-use thiserror::Error;
-
-use lending_utils::{
-    credit_line::InvalidCommonTokenDenom, interest::InterestError, price::PriceError,
+use shade_protocol::{
+    c_std::{OverflowError, StdError, Uint128},
+    lending_utils::{
+        credit_line::InvalidCommonTokenDenom, interest::InterestError, price::PriceError,
+    },
 };
+use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

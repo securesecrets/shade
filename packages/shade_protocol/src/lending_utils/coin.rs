@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
+use crate::c_std::{Coin as StdCoin, ContractInfo, Decimal, OverflowError, Uint128};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use std::{cmp::Ordering, convert::From, ops::Mul};
 
-use crate::token::Token;
+use crate::lending_utils::token::Token;
 
 /// Universal coin type which is either a native coin, or cw20 coin
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

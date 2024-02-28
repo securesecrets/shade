@@ -19,11 +19,11 @@ cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "snip20",
   "storage_plus",
+  "lending_utils",
 ] }
 schemars = "0.8"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = "1"
-lending-utils = { version = "0.1.0", path = "../../../packages/lending_utils" }
 
 [dev-dependencies]
 anyhow = "1"

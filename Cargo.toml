@@ -15,15 +15,11 @@ members = [
   "contracts/snip20",
   "contracts/query_auth",
   "contracts/admin",
-  "contracts/basic_staking",
   "contracts/snip20_migration",
 
   # Staking
   "contracts/basic_staking",
   "contracts/snip20_derivative",
-
-  # Lending
-  "contracts/lending/*",
 
   # DAO
   # - Core
@@ -37,7 +33,6 @@ members = [
 
   # Lending protocol
   "contracts/lending/*",
-  "packages/lending_utils",
 
   # Mock contracts
   # "contracts/mock/mock_band", //TODO: migrate to v1

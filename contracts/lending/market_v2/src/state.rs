@@ -3,11 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use shade_protocol::{
     c_std::{Addr, Decimal, Uint128},
+    lending_utils::{interest::ValidatedInterest, token::Token, ViewingKey},
     secret_storage_plus::Item,
     utils::asset::Contract,
 };
-
-use lending_utils::{interest::ValidatedInterest, token::Token, ViewingKey};
 
 pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 3600;
 
@@ -59,7 +58,7 @@ pub mod debt {
     };
 
     use crate::ContractError;
-    use lending_utils::amount::{base_to_token, token_to_base};
+    use shade_protocol::lending_utils::amount::{base_to_token, token_to_base};
 
     #[cw_serde]
     struct DebtInfo {

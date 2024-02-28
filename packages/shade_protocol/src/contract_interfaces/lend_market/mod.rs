@@ -1,13 +1,9 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::{
+use crate::{
     c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
-    lending_utils::{
-        interest::Interest,
-        Authentication,
-        {coin::Coin, token::Token},
-    },
+    lending_utils::{coin::Coin, interest::Interest, token::Token, Authentication},
     utils::{asset::Contract, Query},
 };
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -82,12 +78,14 @@ pub enum ReceiveMsg {
     RepayTo { account: String },
 }
 
+/*
 #[cw_serde]
 pub enum CreditAgencyExecuteMsg {
     /// Ensures a given account has entered a market. Meant to be called by a specific
     /// market contract - so the sender of the msg would be the market
     EnterMarket { account: String },
 }
+*/
 
 #[cw_serde]
 pub struct AuthPermit {}

@@ -15,5 +15,5 @@ pub struct ViewingKey {
 #[cosmwasm_schema::cw_serde]
 pub enum Authentication {
     ViewingKey(ViewingKey),
-    Permit(shade_protocol::contract_interfaces::query_auth::QueryPermit),
+    Permit(crate::query_auth::QueryPermit),
 }

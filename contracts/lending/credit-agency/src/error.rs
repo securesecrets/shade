@@ -1,12 +1,11 @@
 use shade_protocol::{
     c_std::{Addr, StdError, Uint128},
     contract_interfaces::snip20::Snip20ReceiveMsg,
-};
-
-use lending_utils::{
-    coin::{Coin, CoinError},
-    credit_line::InvalidCommonTokenDenom,
-    price::PriceError,
+    lending_utils::{
+        coin::{Coin, CoinError},
+        credit_line::InvalidCommonTokenDenom,
+        price::PriceError,
+    },
 };
 
 use thiserror::Error;

@@ -4,9 +4,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use shade_protocol::c_std::Uint128;
+use crate::c_std::Uint128;
 
-use crate::{coin::Coin, token::Token};
+use crate::lending_utils::{coin::Coin, token::Token};
 
 /// The Credit Line response with the common token denom included. Used in the API.
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

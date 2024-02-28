@@ -15,12 +15,12 @@ library = []
 [dependencies]
 cosmwasm-schema = "1.4.0"
 either = "1.6"
-lending-utils = { version = "0.1.0", path = "../../../packages/lending_utils" }
 lend-token = { version = "0.1.0", path = "../token", features = ["library"] }
 lend-market = { version = "0.1.0", path = "../market_v2", features = ["library"] }
 shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "snip20",
   "storage_plus",
+  "lending_utils",
 ] }
 schemars = "0.8"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
@@ -29,5 +29,5 @@ query_auth = { path = "../../query_auth" }
 
 [dev-dependencies]
 anyhow = "1"
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["multi-test"] }
-shade-multi-test = { version = "0.1.0", path = "../../../packages/multi_test", features = [ "snip20"] }
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["multi-test", "credit_agency", "lend_market", "lend_token"] }
+shade-multi-test = { version = "0.1.0", path = "../../../packages/multi_test", features = [ "snip20", "credit_agency", "lend_market", "lend_token", "admin", "query_auth"] }

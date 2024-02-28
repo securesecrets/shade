@@ -1,10 +1,9 @@
 use shade_protocol::{
     c_std::{Decimal, Deps, Env, Fraction, StdError, Uint128},
+    lend_token::TokenInfoResponse,
+    lending_utils::amount::token_to_base,
     utils::{asset::Contract, Query},
 };
-
-use lend_token::msg::TokenInfoResponse;
-use lending_utils::amount::token_to_base;
 
 use crate::{
     state::{debt, Config, CONFIG, SECONDS_IN_YEAR, VIEWING_KEY},

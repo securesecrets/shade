@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use shade_protocol::{
     c_std::{Addr, Decimal, Uint128},
+    lending_utils::ViewingKey,
     secret_storage_plus::{Item, Map},
     utils::asset::Contract,
 };
 
-use lending_utils::ViewingKey;
 use crate::i128::Int128;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

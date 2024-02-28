@@ -1,10 +1,12 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::{
+use crate::{
     c_std::{Addr, Decimal, Uint128},
-    contract_interfaces::snip20::Snip20ReceiveMsg,
-    lending_utils::{coin::Coin, interest::Interest, token::Token, Authentication},
+    lend_market,
+    lending_utils::{self, coin::Coin, interest::Interest, token::Token, Authentication},
+    snip20::Snip20ReceiveMsg,
     utils::asset::Contract,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
 };
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -115,21 +117,17 @@ pub struct MarketConfig {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
+// #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Returns current configuration
-    #[returns(crate::state::Config)]
     Configuration {},
     /// Queries a market address by market token
-    #[returns(MarketResponse)]
     Market { market_token: Token },
     /// List all base assets and the addresses of markets handling them.
     /// Pagination by base asset
-    #[returns(ListMarketsResponse)]
     ListMarkets { limit: Option<u32> },
     /// Queries all markets for credit lines for particular account
     /// and returns sum of all of them.
-    #[returns(shade_protocol::lending_utils::credit_line::CreditLineResponse)]
     TotalCreditLine {
         account: String,
         authentication: Authentication,
@@ -137,18 +135,14 @@ pub enum QueryMsg {
     /// Lists all markets which address entered. Pagination by market contract address. Mostly for
     /// verification purposes, but may be useful to verify if there are some obsolete markets to
     /// leave.
-    #[returns(ListEnteredMarketsResponse)]
     ListEnteredMarkets { account: String },
     /// Checks if account is a member of particular market. Useful to ensure if the account is
     /// included in market before leaving it (to not waste tokens on obsolete call).
-    #[returns(IsOnMarketResponse)]
     IsOnMarket { account: String, market: Contract },
     /// Checks if the given account is liquidatable and returns the necessary information to do so.
-    #[returns(LiquidationResponse)]
     Liquidation { account: String },
 
     /// Querie that encapsulates all data for a given user
-    #[returns(UserDataResponse)]
     UserData {
         account: String,
         authentication: Authentication,
@@ -162,13 +156,10 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct UserDataResponse {
-    pub token_balance: Vec<(Contract, lend_market::msg::TokensBalanceResponse)>,
+    pub token_balance: Vec<(Contract, lend_market::TokensBalanceResponse)>,
     pub withdrawable: Vec<(Contract, Coin)>,
     pub borrowable: Vec<(Contract, Coin)>,
-    pub credit_line: Vec<(
-        Contract,
-        shade_protocol::lending_utils::credit_line::CreditLineResponse,
-    )>,
+    pub credit_line: Vec<(Contract, lending_utils::credit_line::CreditLineResponse)>,
 }
 
 #[cw_serde]
@@ -197,4 +188,14 @@ pub struct LiquidationResponse {
     pub can_liquidate: bool,
     pub debt: Vec<(Contract, Coin)>,
     pub collateral: Vec<(Contract, Coin)>,
+}
+
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }

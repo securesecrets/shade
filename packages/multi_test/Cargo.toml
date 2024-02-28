@@ -26,6 +26,9 @@ mock_sienna = ["dep:mock_sienna"]
 # bonds = ["dep:bonds"]
 query_auth = ["dep:query_auth"]
 basic_staking = ["dep:basic_staking"]
+lend_market = ["dep:lend-market"]
+credit_agency = ["dep:credit-agency"]
+lend_token = ["dep:lend-token"]
 scrt_staking = ["dep:scrt_staking"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
@@ -44,6 +47,9 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
 # governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
 basic_staking = { version = "0.1.0", path = "../../contracts/basic_staking", optional = true }
+lend-token = { version = "0.1.0", path = "../../contracts/lending/token", optional = true }
+lend-market = { version = "0.1.0", path = "../../contracts/lending/market_v2", optional = true }
+credit-agency = { version = "0.1.0", path = "../../contracts/lending/credit-agency", optional = true }
 # spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }

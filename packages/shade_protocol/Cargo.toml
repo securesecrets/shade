@@ -63,6 +63,9 @@ sienna     = ["interface", "math"]
 # Protocol contracts NOTE: interfaces that have other interfaces as features already automatically have `interface` as a feature
 airdrop          = ["query_auth", "snip20"]
 basic_staking    = ["snip20"]
+credit_agency    = ["snip20"]
+lend_market      = ["snip20"]
+lend_token       = ["snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
@@ -85,6 +88,7 @@ dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
+lending_utils    = []
 
 chrono = ["dep:chrono"]
 

@@ -41,3 +41,6 @@ pub use utils::asset::Contract;
 
 #[cfg(feature = "chrono")]
 pub use chrono;
+
+#[cfg(feature = "lending_utils")]
+pub mod lending_utils;

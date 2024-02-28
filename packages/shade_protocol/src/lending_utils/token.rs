@@ -1,6 +1,4 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use shade_protocol::{
+use crate::{
     c_std::{
         coin, to_binary, Addr, BankMsg, Coin as StdCoin, ContractInfo, CosmosMsg, CustomQuery,
         Decimal, Deps, StdError, StdResult, Uint128, WasmMsg,
@@ -9,8 +7,10 @@ use shade_protocol::{
     secret_storage_plus::{Key, KeyDeserialize, Prefixer, PrimaryKey},
     utils::{asset::Contract, Query},
 };
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
-use crate::coin::{self, Coin};
+use crate::lending_utils::coin::{self, Coin};
 
 use std::fmt;
 

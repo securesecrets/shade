@@ -1,5 +1,4 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use shade_protocol::{
+use crate::{
     c_std::{Binary, Decimal, Uint128},
     lending_utils::{amount::token_to_base, Authentication},
     utils::{
@@ -7,6 +6,7 @@ use shade_protocol::{
         Query,
     },
 };
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {
