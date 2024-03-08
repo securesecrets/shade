@@ -6,6 +6,7 @@ use shade_protocol::{
         asset::{Contract, RawContract},
         Query,
     },
+    utils::{ExecuteCallback, InstantiateCallback},
 };
 
 #[cw_serde]
@@ -141,10 +142,6 @@ pub enum QueryMsg {
     },
 }
 
-impl Query for QueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-
 #[cw_serde]
 pub struct BalanceResponse {
     pub balance: Uint128,
@@ -181,4 +178,14 @@ pub struct FundsResponse {
 pub struct WithdrawableFundsResponse {
     pub token: Contract,
     pub amount: Uint128,
+}
+
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }

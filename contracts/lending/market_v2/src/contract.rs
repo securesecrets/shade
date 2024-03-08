@@ -12,12 +12,13 @@ use shade_protocol::{
     },
     lending_utils::{token::Token, Authentication, ViewingKey},
     query_authentication::viewing_keys,
-    utils::{asset::Contract, Query},
+    utils::{asset::Contract, InstantiateCallback, Query},
+    lend_market::{InstantiateMsg, ExecuteMsg, QueryMsg},
 };
 
 use crate::{
     error::ContractError,
-    msg::{AuthPermit, ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, TotalDebtResponse},
+    msg::{AuthPermit, ReceiveMsg, TotalDebtResponse},
     state::{debt, Config, CONFIG, VIEWING_KEY},
 };
 
@@ -30,8 +31,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    println!("MARKET INIT");
-    let ctoken_msg = lend_token::msg::InstantiateMsg {
+    let ctoken_init = lend_token::msg::InstantiateMsg {
         name: "Lent ".to_owned() + &msg.name,
         symbol: "L".to_owned() + &msg.symbol,
         decimals: msg.decimals,
@@ -39,15 +39,13 @@ pub fn instantiate(
         distributed_token: msg.distributed_token.as_contract_info().unwrap().into(),
         viewing_key: msg.viewing_key.clone(),
         query_auth: msg.query_auth.clone().into(),
-    };
-    let ctoken_instantiate = WasmMsg::Instantiate {
-        admin: Some(env.contract.address.to_string()),
-        code_id: msg.ctoken_id,
-        msg: to_binary(&ctoken_msg)?,
-        funds: vec![],
-        label: format!("ctoken_contract_{}", env.contract.address),
-        code_hash: msg.ctoken_code_hash.clone(),
-    };
+    }
+    .to_cosmos_msg(
+        format!("ctoken_contract_{}", env.contract.address),
+        msg.ctoken_id,
+        msg.ctoken_code_hash.clone(),
+        vec![],
+    )?;
 
     let cfg = Config {
         // those will be overwritten in a response
@@ -62,8 +60,8 @@ pub fn instantiate(
         market_cap: msg.market_cap,
         rates: msg.interest_rate.validate()?,
         interest_charge_period: msg.interest_charge_period,
-        last_charged: env.block.time.seconds(),
-        // - env.block.time.seconds() % msg.interest_charge_period,
+        last_charged: env.block.time.seconds()
+            - env.block.time.seconds() % msg.interest_charge_period,
         common_token: msg.common_token,
         collateral_ratio: msg.collateral_ratio,
         price_oracle: msg.price_oracle,
@@ -84,10 +82,8 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
-        .add_submessage(SubMsg::reply_always(
-            ctoken_instantiate,
-            CTOKEN_INIT_REPLY_ID,
-        )))
+        .add_message(ctoken_init))
+        // .add_submessage(SubMsg::reply_on_success(ctoken_init, CTOKEN_INIT_REPLY_ID)))
 }
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]

@@ -2,13 +2,11 @@
 use shade_protocol::{
     c_std::{
         from_binary, shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env,
-        MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult, Uint128,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult,
     },
     contract_interfaces::snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
     lending_utils::{token::Token, Authentication, ViewingKey},
-    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
-    snip20,
-    utils::{asset::Contract, Query},
+    utils::{asset::Contract, InstantiateCallback, Query},
 };
 
 use crate::{
@@ -20,11 +18,9 @@ use crate::{
     },
 };
 
-use either::Either;
+use serde_json::json;
 
-use std::{collections::BTreeSet, ops::Deref};
-
-const INIT_MARKET_REPLY_ID: u64 = 0;
+const INIT_MARKET_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn instantiate(
@@ -69,6 +65,7 @@ pub fn instantiate(
         borrow_limit_ratio: msg.borrow_limit_ratio,
         default_estimate_multiplier,
     };
+
     CONFIG.save(deps.storage, &cfg)?;
     INIT_MARKET.save(deps.storage, &None)?;
     MARKETS.save(deps.storage, &vec![])?;
@@ -105,7 +102,6 @@ pub fn execute(
 
 #[cfg_attr(not(feature = "library"), shd_entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
-    println!("AGENCY REPLY");
     match (msg.id, msg.result) {
         (INIT_MARKET_REPLY_ID, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
@@ -175,7 +171,10 @@ mod execute {
         state::{MarketState, ENTERED_MARKETS, INIT_MARKET},
     };
     use lend_market::{
-        msg::{ExecuteMsg as MarketExecuteMsg, QueryMsg as MarketQueryMsg},
+        msg::{
+            ExecuteMsg as MarketExecuteMsg, InstantiateMsg as MarketInstantiateMsg,
+            QueryMsg as MarketQueryMsg,
+        },
         state::Config as MarketConfiguration,
     };
 
@@ -222,45 +221,48 @@ mod execute {
 
         INIT_MARKET.save(deps.storage, &Some(market_token.clone()))?;
 
-        let market_msg = lend_market::msg::InstantiateMsg {
+        let market_init = MarketInstantiateMsg {
             // Fields required for the lend-token instantiation.
             name: market_cfg.name,
             symbol: market_cfg.symbol,
             decimals: market_cfg.decimals,
-            distributed_token: cfg.reward_token,
             ctoken_id: cfg.ctoken_token_id,
-            ctoken_code_hash: cfg.ctoken_code_hash,
-            viewing_key: cfg.market_viewing_key,
-
             market_token: market_token.clone(),
             market_cap: market_cfg.market_cap,
             interest_rate: market_cfg.interest_rate,
+            distributed_token: cfg.reward_token,
             interest_charge_period: market_cfg.interest_charge_period,
             common_token: cfg.common_token,
             collateral_ratio: market_cfg.collateral_ratio,
             price_oracle: market_cfg.price_oracle,
             reserve_factor: market_cfg.reserve_factor,
-            gov_contract: cfg.gov_contract.address.to_string(),
             borrow_limit_ratio: cfg.borrow_limit_ratio,
-            query_auth: cfg.query_auth,
+            gov_contract: cfg.gov_contract.address.to_string(),
+            viewing_key: cfg.market_viewing_key,
+            ctoken_code_hash: cfg.ctoken_code_hash,
             credit_agency_code_hash: env.contract.code_hash.clone(),
+            query_auth: cfg.query_auth,
         };
-        let market_instantiate = WasmMsg::Instantiate {
-            admin: Some(env.contract.address.to_string()),
-            code_id: cfg.lend_market_id,
-            code_hash: cfg.lend_market_code_hash,
-            msg: to_binary(&market_msg)?,
-            funds: vec![],
-            label: format!("market_contract_{}", market_token),
-        };
+
+        /*
+        return Err(ContractError::Std(StdError::generic_err(format!("{:?}",
+            market_init)
+        )));
+        */
+
+        let market_init = market_init.to_cosmos_msg(
+            // TODO needs more complexity
+            format!("market_contract_{}", market_token),
+            cfg.lend_market_id,
+            cfg.lend_market_code_hash,
+            vec![],
+        )?;
 
         Ok(Response::new()
             .add_attribute("action", "create_market")
             .add_attribute("sender", info.sender)
-            .add_submessage(SubMsg::reply_always(
-                market_instantiate,
-                INIT_MARKET_REPLY_ID,
-            )))
+            .add_message(market_init))
+            // .add_submessage(SubMsg::reply_on_success(market_init, INIT_MARKET_REPLY_ID)))
     }
 
     pub fn enter_market(

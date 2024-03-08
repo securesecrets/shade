@@ -7,6 +7,7 @@ use shade_protocol::{
         {coin::Coin, token::Token},
     },
     utils::{asset::Contract, Query},
+    utils::{ExecuteCallback, InstantiateCallback},
 };
 
 #[cw_serde]
@@ -135,10 +136,6 @@ pub enum QueryMsg {
     },
 }
 
-impl Query for QueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-
 #[cw_serde]
 pub enum QueryTotalCreditLine {
     TotalCreditLine { account: String },
@@ -186,4 +183,13 @@ pub struct TotalDebtResponse {
 
     /// The current debt multiplier used to convert debt to base assets
     pub multiplier: Decimal,
+}
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
