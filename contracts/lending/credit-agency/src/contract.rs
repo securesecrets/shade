@@ -4,21 +4,21 @@ use shade_protocol::{
         from_binary, shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env,
         MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult,
     },
-    contract_interfaces::snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
+    contract_interfaces::{
+        credit_agency::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
+        snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
+    },
     lending_utils::{token::Token, Authentication, ViewingKey},
     utils::{asset::Contract, InstantiateCallback, Query},
 };
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
     state::{
         find_value, insert_or_update, Config, MarketState, CONFIG, INIT_MARKET, MARKETS,
         MARKET_VIEWING_KEY,
     },
 };
-
-use serde_json::json;
 
 const INIT_MARKET_REPLY_ID: u64 = 1;
 
@@ -165,18 +165,17 @@ mod execute {
         credit_line::{CreditLineResponse, CreditLineValues},
         price::{coin_times_price_rate, PriceRate},
     };
-
-    use crate::{
-        msg::{MarketConfig, ReceiveMsg},
-        state::{MarketState, ENTERED_MARKETS, INIT_MARKET},
-    };
-    use lend_market::{
-        msg::{
+    use shade_protocol::{
+        credit_agency::{MarketConfig, ReceiveMsg},
+        lend_market::{
             ExecuteMsg as MarketExecuteMsg, InstantiateMsg as MarketInstantiateMsg,
-            QueryMsg as MarketQueryMsg,
+            QueryMsg as MarketQueryMsg, ReceiveMsg as MarketReceiveMsg,
         },
-        state::Config as MarketConfiguration,
+        utils::{InstantiateCallback, Query},
     };
+
+    use crate::state::{MarketState, ENTERED_MARKETS, INIT_MARKET};
+    use lend_market::state::Config as MarketConfiguration;
 
     pub fn create_market(
         deps: DepsMut,
@@ -262,7 +261,7 @@ mod execute {
             .add_attribute("action", "create_market")
             .add_attribute("sender", info.sender)
             .add_message(market_init))
-            // .add_submessage(SubMsg::reply_on_success(market_init, INIT_MARKET_REPLY_ID)))
+        // .add_submessage(SubMsg::reply_on_success(market_init, INIT_MARKET_REPLY_ID)))
     }
 
     pub fn enter_market(
@@ -383,7 +382,7 @@ mod execute {
     ) -> StdResult<SubMsg> {
         match coin.denom {
             Token::Cw20(contract_info) => {
-                let repay_to_msg: Binary = to_binary(&lend_market::msg::ReceiveMsg::RepayTo {
+                let repay_to_msg: Binary = to_binary(&MarketReceiveMsg::RepayTo {
                     account: account.to_string(),
                 })?;
 
@@ -449,7 +448,7 @@ mod execute {
         let collateral_market = query::market(deps.as_ref(), &collateral_denom)?.market;
 
         // transfer claimed amount as reward
-        let msg = to_binary(&lend_market::msg::ExecuteMsg::TransferFrom {
+        let msg = to_binary(&MarketExecuteMsg::TransferFrom {
             source: account.clone(),
             destination: sender.clone(),
             // transfer repaid amount represented as amount of common tokens, which is
@@ -513,20 +512,20 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 mod query {
     use shade_protocol::c_std::StdResult;
 
-    use lend_market::msg::{QueryMsg as MarketQueryMsg, TokensBalanceResponse};
     use shade_protocol::lending_utils::{
         coin::Coin,
         credit_line::{CreditLineResponse, CreditLineValues},
         Authentication,
     };
-
-    use crate::{
-        msg::{
+    use shade_protocol::{
+        credit_agency::{
             IsOnMarketResponse, LiquidationResponse, ListEnteredMarketsResponse,
             ListMarketsResponse, MarketResponse,
         },
-        state::{ENTERED_MARKETS, MARKETS},
+        lend_market::{QueryMsg as MarketQueryMsg, TokensBalanceResponse},
     };
+
+    use crate::state::{ENTERED_MARKETS, MARKETS};
 
     use super::*;
 
@@ -725,18 +724,17 @@ mod query {
                 .iter()
                 .map(|market| {
                     let market = market.clone();
-                    let balance_response: lend_market::msg::TokensBalanceResponse =
-                        deps.querier.query_wasm_smart(
-                            market.code_hash.clone(),
-                            market.address.to_string(),
-                            &MarketQueryMsg::TokensBalance {
-                                account: deps.api.addr_validate(&account)?,
-                                authentication: authentication.clone(),
-                            },
-                        )?;
+                    let balance_response: TokensBalanceResponse = deps.querier.query_wasm_smart(
+                        market.code_hash.clone(),
+                        market.address.to_string(),
+                        &MarketQueryMsg::TokensBalance {
+                            account: deps.api.addr_validate(&account)?,
+                            authentication: authentication.clone(),
+                        },
+                    )?;
                     Ok((market.clone(), balance_response))
                 })
-                .collect::<StdResult<Vec<(Contract, lend_market::msg::TokensBalanceResponse)>>>()?
+                .collect::<StdResult<Vec<(Contract, TokensBalanceResponse)>>>()?
         } else {
             vec![]
         };

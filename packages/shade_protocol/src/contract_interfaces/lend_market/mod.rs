@@ -1,7 +1,7 @@
 use crate::{
     c_std::{Addr, ContractInfo, Decimal, Timestamp, Uint128},
     lending_utils::{coin::Coin, interest::Interest, token::Token, Authentication},
-    utils::{asset::Contract, Query},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
@@ -64,6 +64,13 @@ pub enum ExecuteMsg {
         amount: Uint128,
         liquidation_price: Decimal,
     },
+}
+
+impl InstantiateCallback for InstantiateMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]

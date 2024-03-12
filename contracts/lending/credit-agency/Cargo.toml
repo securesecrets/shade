@@ -21,6 +21,8 @@ shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol",
   "snip20",
   "storage_plus",
   "lending_utils",
+  "credit_agency",
+  "lend_market",
 ] }
 schemars = "0.8"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
