@@ -10,6 +10,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    /*
     /// The address that controls the credit agency and can set up markets
     pub gov_contract: Contract,
     /// Address of query auth contract
@@ -41,11 +42,12 @@ pub struct InstantiateMsg {
     /// How much more of collateral will be used in swap then the estimated amount during
     /// swap_withdraw_from
     pub default_estimate_multiplier: Decimal,
+    */
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    CreateMarket(MarketConfig),
+    CreateMarket(lend_market::InstantiateMsg),
     /// Ensures a given account has entered a market. Meant to be called by a specific
     /// market contract - so the sender of the msg would be the market. The store is treated as a set.
     EnterMarket {
@@ -90,31 +92,7 @@ pub enum ReceiveMsg {
 }
 
 #[cw_serde]
-pub struct MarketConfig {
-    /// Name used to create the cToken name `Lent ${name}`.
-    /// Forwarded to `isotonic-token`.
-    pub name: String,
-    /// Symbol used to create the cToken `C${symbol}`.
-    /// Forwarded to `isotonic-token`.
-    pub symbol: String,
-    /// Decimals for cToken.
-    /// Forwarded to `isotonic-token`.
-    pub decimals: u8,
-    /// Token for the market token
-    pub market_token: Token,
-    /// An optional cap on total number of tokens deposited into the market
-    pub market_cap: Option<Uint128>,
-    /// Interest rate curve
-    pub interest_rate: Interest,
-    /// Define interest's charged period (in seconds)
-    pub interest_charge_period: u64,
-    /// Ratio of how much tokens can be borrowed for one unit, 0 <= x < 1
-    pub collateral_ratio: Decimal,
-    /// Address of contract to query for price
-    pub price_oracle: Contract,
-    /// Defines the portion of borrower interest that is converted into reserves (0 <= x <= 1)
-    pub reserve_factor: Decimal,
-}
+pub struct MarketConfig {}
 
 #[cw_serde]
 // #[derive(QueryResponses)]
