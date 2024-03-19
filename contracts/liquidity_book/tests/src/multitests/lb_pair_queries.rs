@@ -719,7 +719,7 @@ pub fn test_query_update_at_multiple_heights() -> Result<(), anyhow::Error> {
 
     let height = heights[0];
 
-    let mut query_ids: Vec<u32> =
+    let query_ids: Vec<u32> =
         lb_pair::query_updated_bins_at_height(&app, &lb_pair.info.contract, height)?
             .into_iter()
             .map(|x| x.bin_id)

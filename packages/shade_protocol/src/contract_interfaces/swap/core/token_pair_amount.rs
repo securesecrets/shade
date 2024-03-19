@@ -85,8 +85,8 @@ impl<'a> Iterator for TokenPairAmountIterator<'a> {
 }
 
 pub mod tests {
-    use crate::c_std::{Addr, Uint128};
     use super::*;
+    use crate::c_std::Addr;
 
     #[test]
     pub fn test_rearrange() {
@@ -145,8 +145,10 @@ pub mod tests {
             },
             false,
         );
-        assert!(reverse_amount
-            .create_new_pair_amount_to_match_order_of(&broken_pair)
-            .is_err());
+        assert!(
+            reverse_amount
+                .create_new_pair_amount_to_match_order_of(&broken_pair)
+                .is_err()
+        );
     }
 }

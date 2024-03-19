@@ -187,7 +187,6 @@ export async function executeSetPreset(
 ) {
   const msg: LBFactory.ExecuteMsg = {
     set_pair_preset: {
-      // TODO: figure out approprate values to use
       bin_step,
       base_factor,
       filter_period,

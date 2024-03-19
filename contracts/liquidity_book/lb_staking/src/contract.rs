@@ -2,7 +2,6 @@ use shade_protocol::{
     c_std::{
         shd_entry_point,
         Addr,
-        Attribute,
         Binary,
         Deps,
         DepsMut,
@@ -174,7 +173,7 @@ pub fn authenticate(deps: Deps, auth: Auth, query_auth: Contract) -> StdResult<A
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => query_contract_info(deps),
         QueryMsg::EpochInfo { index } => query_epoch_info(deps, index),

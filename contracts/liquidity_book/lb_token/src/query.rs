@@ -1,13 +1,11 @@
 use std::collections::BTreeSet;
 
 use cosmwasm_std::{
-    entry_point,
     to_binary,
     Addr,
     Binary,
     BlockInfo,
     Deps,
-    Env,
     // debug_print,
     StdError,
     StdResult,
@@ -24,7 +22,6 @@ use crate::state::{
     tkn_info_r,
     tkn_tot_supply_r,
     txhistory::{get_txs, may_get_current_owner},
-    PREFIX_REVOKED_PERMITS,
 };
 
 use shade_protocol::{
@@ -32,11 +29,7 @@ use shade_protocol::{
         permissions::{Permission, PermissionKey},
         state_structs::OwnerBalance,
     },
-    liquidity_book::lb_token::{QueryAnswer, QueryMsg, QueryWithPermit},
-    s_toolkit::{
-        permit::{validate, Permit, TokenPermissions},
-        viewing_key::{ViewingKey, ViewingKeyStore},
-    },
+    liquidity_book::lb_token::QueryAnswer,
 };
 /////////////////////////////////////////////////////////////////////////////////
 // Queries

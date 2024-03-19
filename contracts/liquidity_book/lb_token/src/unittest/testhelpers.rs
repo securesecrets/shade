@@ -5,7 +5,7 @@ use shade_protocol::lb_libraries::lb_token::metadata::{Extension, Metadata};
 use std::any::Any;
 
 use crate::{
-    contract::{execute, instantiate, query},
+    contract::{execute, instantiate},
     state::balances_r,
 };
 use cosmwasm_std::{
@@ -56,16 +56,6 @@ pub fn default_token_config_fungible() -> TknConfig {
         public_total_supply: true,
         enable_mint: true,
         enable_burn: true,
-        minter_may_update_metadata: true,
-    }
-}
-pub fn default_token_config_nft() -> TknConfig {
-    TknConfig::Nft {
-        minters: vec![],
-        public_total_supply: true,
-        owner_is_public: true,
-        enable_burn: true,
-        owner_may_update_metadata: true,
         minter_may_update_metadata: true,
     }
 }
@@ -167,7 +157,7 @@ pub fn init_helper_default() -> (
 /// * 1 NFT token_id 2a to addr2
 pub fn mint_addtl_default(
     deps: &mut OwnedDeps<MockStorage, MockApi, MockQuerier>,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
 ) -> StdResult<()> {
     // init addtl addresses

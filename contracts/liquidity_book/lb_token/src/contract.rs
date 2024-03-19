@@ -1,14 +1,9 @@
-use std::collections::BTreeSet;
-
 // use base64::{engine::general_purpose, Engine as _};
 use cosmwasm_std::{
     entry_point,
     // debug_print,
     to_binary,
-    Addr,
     Binary,
-    BlockInfo,
-    CosmosMsg,
     Deps,
     DepsMut,
     Env,
@@ -16,72 +11,18 @@ use cosmwasm_std::{
     Response,
     StdError,
     StdResult,
-    Storage,
-    Timestamp,
-    Uint256,
 };
 
 use crate::{execute::*, query::*};
 
-use crate::state::{
-    balances_r,
-    balances_w,
-    blockinfo_r,
-    blockinfo_w,
-    contr_conf_r,
-    contr_conf_w,
-    get_receiver_hash,
-    permissions::{
-        list_owner_permission_keys,
-        may_load_any_permission,
-        new_permission,
-        update_permission,
-    },
-    set_receiver_hash,
-    tkn_info_r,
-    tkn_info_w,
-    tkn_tot_supply_r,
-    tkn_tot_supply_w,
-    txhistory::{
-        append_new_owner,
-        get_txs,
-        may_get_current_owner,
-        store_burn,
-        store_mint,
-        store_transfer,
-    },
-    PREFIX_REVOKED_PERMITS,
-    RESPONSE_BLOCK_SIZE,
-};
+use crate::state::{blockinfo_w, contr_conf_r, contr_conf_w, PREFIX_REVOKED_PERMITS};
 
 use shade_protocol::{
-    lb_libraries::lb_token::{
-        expiration::Expiration,
-        metadata::Metadata,
-        permissions::{Permission, PermissionKey},
-        state_structs::{
-            ContractConfig,
-            CurateTokenId,
-            OwnerBalance,
-            StoredTokenInfo,
-            TknConfig,
-            TokenAmount,
-            TokenInfoMsg,
-        },
-    },
-    liquidity_book::lb_token::{
-        ExecuteAnswer,
-        ExecuteMsg,
-        InstantiateMsg,
-        ResponseStatus::Success,
-        SendAction,
-        Snip1155ReceiveMsg,
-        TransferAction,
-    },
+    lb_libraries::lb_token::state_structs::ContractConfig,
+    liquidity_book::lb_token::{ExecuteMsg, InstantiateMsg, SendAction},
     s_toolkit::{
         crypto::sha_256,
-        permit::{validate, Permit, RevokedPermits, TokenPermissions},
-        utils::space_pad,
+        permit::{validate, Permit, TokenPermissions},
         viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };

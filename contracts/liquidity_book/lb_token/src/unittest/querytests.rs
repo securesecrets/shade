@@ -3,7 +3,7 @@ use std::ops::Add;
 
 use super::testhelpers::*;
 
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, query};
 
 use shade_protocol::{
     lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*, txhistory::*},

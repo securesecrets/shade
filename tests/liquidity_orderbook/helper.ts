@@ -36,6 +36,8 @@ const build_direct_to_target = "./wasm/";
 
 // This helps when deploying to Pulsar. It can be shortened to test on secretdev.
 export const sleep = () => new Promise((resolve) => setTimeout(resolve, 10));
+export const sleeplonger = () =>
+  new Promise((resolve) => setTimeout(resolve, 10000));
 
 var mnemonic: string;
 var endpoint: string = "http://localhost:1317";
@@ -649,10 +651,10 @@ export async function test_configure_factory(clientInfo: clientInfo) {
   let contractAddressLbToken;
   let contractAddressLbStaking;
 
-  const base_factor: number = 5000;
-  const filter_period = 0;
-  const decay_period = 1;
-  const reduction_factor = 0;
+  const base_factor: number = 0;
+  const filter_period = 3;
+  const decay_period = 60;
+  const reduction_factor = 500;
   const variable_fee_control = 0;
   const protocol_share = 1000;
   const max_volatility_accumulator = 350000;
@@ -737,8 +739,7 @@ export async function test_configure_factory(clientInfo: clientInfo) {
     );
 
     clientInfo.contractAddressPair =
-      lb_pair_info.lb_pair_information.lb_pair.contract.address;
-
+      lb_pair_info.lb_pair_information.info.contract.address;
     let lb_token_info = await queryLbToken(
       clientInfo.client,
       clientInfo.contractHashPair,

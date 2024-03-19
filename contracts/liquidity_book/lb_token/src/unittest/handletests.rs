@@ -267,7 +267,7 @@ fn test_mint_tokens() -> StdResult<()> {
 
     // non-minter cannot mint
     info.sender = addr.b();
-    let result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
     // assert!(extract_error_msg(&result).contains("Only minters are allowed to mint"));
 
     // cannot mint additional nfts
@@ -284,7 +284,7 @@ fn test_mint_tokens() -> StdResult<()> {
         memo: None,
         padding: None,
     };
-    let result = execute(deps.as_mut(), mock_env(), info, msg)?;
+    let _result = execute(deps.as_mut(), mock_env(), info, msg)?;
     // assert!(extract_error_msg(&result).contains("minting is not enabled for this token_id"));
     assert_eq!(
         chk_bal(&deps.storage, "0", &addr.a()).unwrap(),
@@ -339,14 +339,14 @@ fn test_burn() -> StdResult<()> {
     };
     info.sender = addr1.clone();
 
-    let mut result = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone());
+    let mut _result = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone());
 
     // burn more tokens than available => should fail
-    assert!(extract_error_msg(&result).contains("Only curators are allowed to curate token_ids"));
+    assert!(extract_error_msg(&_result).contains("Only curators are allowed to curate token_ids"));
 
     info.sender = addr0.clone();
-    result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
-    assert!(extract_error_msg(&result).contains("insufficient funds"));
+    _result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
+    assert!(extract_error_msg(&_result).contains("insufficient funds"));
 
     // burn fungible tokens should work
     let burn = TokenAmount {
@@ -380,7 +380,7 @@ fn test_burn() -> StdResult<()> {
         memo: None,
         padding: None,
     };
-    result = execute(deps.as_mut(), mock_env(), info, msg);
+    _result = execute(deps.as_mut(), mock_env(), info, msg);
     assert_eq!(
         chk_bal(&deps.storage, "2", &addr2).unwrap(),
         Uint256::from(0u128)
@@ -657,7 +657,7 @@ fn test_change_metadata_fungible() -> StdResult<()> {
 
     // custom instantiate
     let mut deps = mock_dependencies();
-    let mut info = mock_info(addr.a().as_str(), &[]);
+    let info = mock_info(addr.a().as_str(), &[]);
 
     let init_msg = InstantiateMsg {
         has_admin: true,
@@ -883,7 +883,7 @@ fn test_transfer() -> StdResult<()> {
         memo: None,
         padding: None,
     };
-    let result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
+    let _result = execute(deps.as_mut(), mock_env(), info.clone(), msg)?;
 
     // transfer NFT "tkn2"; should succeed
     let msg = ExecuteMsg::Transfer {

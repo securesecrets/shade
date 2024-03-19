@@ -78,7 +78,7 @@ pub fn lb_pair_setup() -> Result<
 #[serial]
 pub fn test_simple_mint_repeat() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
     // 340282366920938463463374607431768211455
     let amount_x = Uint128::from(340282366920938463340u128); //10^8
     let amount_y = Uint128::from(340282366920938463345u128);
@@ -112,7 +112,7 @@ pub fn test_simple_mint_repeat() -> Result<(), anyhow::Error> {
     //Adding liquidity
     let total = get_total_bins(nb_bins_x, nb_bins_y);
 
-    for mut i in (0..100).into_iter() {
+    for _ in (0..100).into_iter() {
         let liquidity_parameters = liquidity_parameters_generator(
             &deployed_contracts,
             ACTIVE_ID + total,
@@ -129,7 +129,6 @@ pub fn test_simple_mint_repeat() -> Result<(), anyhow::Error> {
             &lb_pair.info.contract,
             liquidity_parameters.clone(),
         )?;
-        i += 1;
     }
 
     Ok(())

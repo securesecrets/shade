@@ -243,7 +243,7 @@ pub mod tests {
         );
 
         match result {
-            Ok(info) => {}
+            Ok(_info) => {}
             Err(err) => {
                 let _test = err.to_string();
                 assert_eq!(StdError::generic_err("No matching token in pair"), err);

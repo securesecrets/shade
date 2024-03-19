@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use cosmwasm_std::to_binary;
 use rand::Rng;
 use shade_multi_test::{
@@ -126,7 +124,9 @@ pub fn init_addrs() -> Addrs {
     Addrs { addrs, hashes }
 }
 
+/// input delta anything between 0 to 10000. 1 == 0.01%
 pub fn assert_approx_eq_rel(a: Uint256, b: Uint256, delta: Uint256, error_message: &str) {
+    //accurate upto 10000
     let delta = delta.multiply_ratio(Uint256::from(10_u128.pow(14)), Uint256::from(1u128));
 
     let abs_delta = (a).abs_diff(b);

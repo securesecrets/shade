@@ -164,10 +164,82 @@ pub fn staking_contract_init() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     assert!(lb_token.address.as_str().len() > 0);
     assert!(lb_staking.address.as_str().len() > 0);
+
+    Ok(())
+}
+
+#[test]
+pub fn stake_simple() -> Result<(), anyhow::Error> {
+    let x_bins = NB_BINS_X;
+    let y_bins = NB_BINS_Y;
+    // should be init with the lb-pair
+    //then query it about the contract info
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let all_pairs = lb_factory::query_all_lb_pairs(
+        &mut app,
+        &lb_factory.clone().into(),
+        token_x.into(),
+        token_y.into(),
+    )?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        println!("id {:?}, balance: {:?}", id, balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    let owner_balance = lb_token::query_all_balances(
+        &mut app,
+        &lb_token,
+        addrs.batman(),
+        String::from("viewing_key"),
+    )?;
+
+    assert_eq!(owner_balance.len(), 0);
 
     Ok(())
 }
@@ -195,7 +267,7 @@ pub fn fuzz_stake_simple() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -243,6 +315,198 @@ pub fn fuzz_stake_simple() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+pub fn stake_liquidity_with_time() -> Result<(), anyhow::Error> {
+    let x_bins = 5;
+    let y_bins = 5;
+
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let all_pairs = lb_factory::query_all_lb_pairs(
+        &mut app,
+        &lb_factory.clone().into(),
+        token_x.into(),
+        token_y.into(),
+    )?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+    let mut ids = vec![];
+    let mut liqs = vec![];
+
+    let mut actions = vec![];
+    let mut balances = vec![];
+
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+        balances.push(balance);
+
+        liqs.push(balance / Uint256::from_u128(2));
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance / Uint256::from_u128(2),
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 50);
+
+    app.set_time(timestamp);
+
+    let query_auth = generate_auth(addrs.batman().to_string());
+
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
+
+    for (liq, bal) in liquidity.into_iter().zip(liqs.clone()).into_iter() {
+        assert_eq!(liq.user_liquidity, bal);
+    }
+
+    // add liquduty after 50s or half duration:
+    let mut actions = vec![];
+
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        liqs[i as usize] = liqs[i as usize]
+            + balance.multiply_ratio(Uint256::from(50u128), Uint256::from(100u128));
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
+
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
+
+    for (liq, bal) in liquidity.into_iter().zip(liqs.clone()).into_iter() {
+        assert_eq!(liq.user_liquidity, bal);
+    }
+    let mut liqs = vec![];
+
+    //trying to add liquidity after the end_time:
+    let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 51);
+    app.set_time(timestamp);
+
+    mint_and_add_liquidity(
+        &mut app,
+        &deployed_contracts,
+        &addrs,
+        &lb_pair,
+        Some(x_bins),
+        Some(y_bins),
+        DEPOSIT_AMOUNT,
+        DEPOSIT_AMOUNT,
+    )?;
+
+    let mut actions = vec![];
+
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances[i as usize] += balance;
+        liqs.push(balance.multiply_ratio(Uint256::from(99u128), Uint256::from(100u128)));
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+    let query_auth = generate_auth(addrs.batman().to_string());
+
+    //Check the liquidity after half the time of duration - duration is 100
+    let liquidity = lb_staking::query_liquidity(&app, query_auth, &lb_staking, ids.clone(), None)?;
+
+    for (liq, bal) in liquidity
+        .clone()
+        .into_iter()
+        .zip(balances.clone())
+        .into_iter()
+    {
+        let half_balance = bal.multiply_ratio(Uint256::from(1u128), Uint256::from(2u128));
+
+        assert_eq!(
+            liq.user_liquidity,
+            half_balance
+                + half_balance.multiply_ratio(Uint256::from(99u128), Uint256::from(100u128)),
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
 pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
     let x_bins = generate_random(0, 50);
     let y_bins = generate_random(0, 50);
@@ -264,7 +528,7 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -434,6 +698,106 @@ pub fn fuzz_stake_liquidity_with_time() -> Result<(), anyhow::Error> {
 }
 
 #[test]
+pub fn unstake() -> Result<(), anyhow::Error> {
+    let x_bins = NB_BINS_X;
+    let y_bins = NB_BINS_Y;
+    // should be init with the lb-pair
+    //then query it about the contract info
+    let addrs = init_addrs();
+    let (mut app, lb_factory, deployed_contracts, _lb_pair, _lb_token) =
+        lb_pair_setup(Some(x_bins), Some(y_bins))?;
+
+    let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
+    let token_y = extract_contract_info(&deployed_contracts, SILK)?;
+
+    let all_pairs = lb_factory::query_all_lb_pairs(
+        &mut app,
+        &lb_factory.clone().into(),
+        token_x.into(),
+        token_y.into(),
+    )?;
+    let lb_pair = all_pairs[0].clone();
+
+    let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
+
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
+
+    //deposit funds here
+
+    let total_bins = get_total_bins(x_bins, y_bins) as u32;
+
+    let mut actions = vec![];
+    let mut balances: Vec<Uint256> = Vec::new();
+    let mut ids: Vec<u32> = Vec::new();
+    //Querying all the bins
+    for i in 0..total_bins {
+        let id = get_id(ACTIVE_ID, i, y_bins);
+        ids.push(id);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            id.to_string(),
+        )?;
+
+        balances.push(balance);
+
+        actions.push(SendAction {
+            token_id: id.to_string(),
+            from: addrs.batman(),
+            recipient: lb_staking.address.clone(),
+            recipient_code_hash: Some(lb_staking.code_hash.clone()),
+            amount: balance,
+            msg: Some(to_binary(&InvokeMsg::Stake {
+                from: Some(addrs.batman().to_string()),
+                padding: None,
+            })?),
+            memo: None,
+        })
+    }
+
+    lb_token::batch_send(&mut app, addrs.batman().as_str(), &lb_token, actions)?;
+
+    let owner_balance = lb_token::query_all_balances(
+        &mut app,
+        &lb_token,
+        addrs.batman(),
+        String::from("viewing_key"),
+    )?;
+
+    assert_eq!(owner_balance.len(), 0);
+
+    // unstaking
+    lb_staking::unstaking(
+        &mut app,
+        addrs.batman().as_str(),
+        &lb_staking,
+        ids.clone(),
+        balances.clone(),
+    )?;
+
+    for i in 0..total_bins as usize {
+        let id = get_id(ACTIVE_ID, i as u32, y_bins);
+
+        let balance = lb_token::query_balance(
+            &app,
+            &lb_token,
+            addrs.batman(),
+            addrs.batman(),
+            String::from("viewing_key"),
+            ids[i].to_string(),
+        )?;
+
+        assert_eq!(balance, balances[i]);
+    }
+
+    Ok(())
+}
+
+#[test]
 pub fn fuzz_unstake() -> Result<(), anyhow::Error> {
     let x_bins = generate_random(0, 50);
     let y_bins = generate_random(0, 50);
@@ -456,7 +820,7 @@ pub fn fuzz_unstake() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
 
@@ -554,7 +918,7 @@ pub fn fuzz_unstake_liquidity_with_time() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
 
@@ -638,7 +1002,7 @@ pub fn register_rewards_token() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //Add the token
     let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -679,7 +1043,7 @@ pub fn add_rewards() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //Add the token
     let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -726,7 +1090,7 @@ pub fn end_epoch() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //Add the token
     let shade_token = extract_contract_info(&deployed_contracts, SHADE)?;
@@ -794,7 +1158,7 @@ pub fn fuzz_claim_rewards() -> Result<(), anyhow::Error> {
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -885,7 +1249,7 @@ pub fn claim_rewards() -> Result<(), anyhow::Error> {
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -1116,7 +1480,7 @@ pub fn end_epoch_by_stakers() -> Result<(), anyhow::Error> {
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -1279,7 +1643,7 @@ pub fn claim_expired_rewards() -> Result<(), anyhow::Error> {
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -1433,7 +1797,7 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -1628,7 +1992,7 @@ pub fn recover_funds() -> Result<(), anyhow::Error> {
         lb_pair_setup(Some(x_bins), Some(y_bins))?;
 
     let lb_token = lb_pair::query_lb_token(&mut app, &lb_pair.info.contract)?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     //deposit funds here
     let total_bins = get_total_bins(x_bins, y_bins) as u32;
@@ -1803,7 +2167,7 @@ pub fn update_config() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, _deployed_contracts, lb_pair, _lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     let config = lb_staking::query_config(&app, &lb_staking)?;
     assert_eq!(config.epoch_durations, (100));
@@ -1827,7 +2191,7 @@ pub fn update_config() -> Result<(), anyhow::Error> {
 fn query_contract_info() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, _deployed_contracts, lb_pair, lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
 
     let config = lb_staking::query_config(&app, &lb_staking)?;
 
@@ -1843,7 +2207,7 @@ fn query_id_balance() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, _deployed_contracts, lb_pair, lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
     let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
 
     //stake:
@@ -1904,7 +2268,7 @@ fn query_balance() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, _deployed_contracts, lb_pair, lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
     let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
 
     //stake:
@@ -1967,7 +2331,7 @@ fn query_all_balance() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, _deployed_contracts, lb_pair, lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
     let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
 
     //stake:
@@ -2029,7 +2393,7 @@ fn query_txn_history() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) =
         lb_pair_setup(Some(NB_BINS_X), Some(NB_BINS_Y))?;
 
-    let lb_staking = lb_pair::query_staking_contract(&mut app, &lb_pair.info.contract)?;
+    let lb_staking = lb_pair::query_lb_staking(&mut app, &lb_pair.info.contract)?;
     let total_bins = get_total_bins(NB_BINS_X, NB_BINS_Y) as u32;
 
     //stake:

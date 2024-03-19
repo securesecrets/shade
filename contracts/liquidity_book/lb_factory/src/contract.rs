@@ -72,6 +72,7 @@ pub fn instantiate(
         staking_contract_implementation: ContractInstantiationInfo::default(),
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
         query_auth: msg.query_auth.into_valid(deps.api)?,
+        max_bins_per_swap: msg.max_bins_per_swap,
     };
 
     STATE.save(deps.storage, &config)?;
@@ -433,6 +434,7 @@ fn try_create_lb_pair(
                 epoch_staking_duration: staking_preset.epoch_staking_duration,
                 expiry_staking_duration: staking_preset.expiry_staking_duration,
                 recover_staking_funds_receiver: config.recover_staking_funds_receiver,
+                max_bins_per_swap: None,
             })?,
             code_hash: config.lb_pair_implementation.code_hash.clone(),
             funds: vec![],
@@ -451,76 +453,6 @@ fn try_create_lb_pair(
 
     Ok(Response::new().add_submessages(messages))
 }
-
-// /// Sets whether the pair is ignored or not for routing, it will make the pair unusable by the router.
-// ///
-// /// # Arguments
-// ///
-// /// * `token_x` - The address of the first token of the pair.
-// /// * `token_y` - The address of the second token of the pair.
-// /// * `bin_step` - The bin step in basis point of the pair.
-// /// * `ignored` - Whether to ignore (true) or not (false) the pair for routing.
-// fn try_set_lb_pair_ignored(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     token_a: TokenType,
-//     token_b: TokenType,
-//     bin_step: u16,
-//     ignored: bool,
-// ) -> Result<Response> {
-//     let config = CONFIG.load(deps.storage)?;
-//     only_owner(&info.sender, &config.owner)?;
-
-//     let (token_a, token_b) = _sort_tokens(token_a, token_b);
-
-//     let mut pair_information = LB_PAIRS_INFO
-//         .load(
-//             deps.storage,
-//             (
-//                 token_a.unique_key().clone(),
-//                 token_b.unique_key().clone(),
-//                 bin_step,
-//             ),
-//         )
-//         .unwrap();
-
-//     if pair_information
-//         .lb_pair
-//         .contract
-//         .address
-//         .as_str()
-//         .is_empty()
-//     {
-//         return Err(Error::LBPairDoesNotExist {
-//             token_x: token_a.unique_key().clone(),
-//             token_y: token_b.unique_key().clone(),
-//             bin_step,
-//         });
-//     }
-
-//     if pair_information.ignored_for_routing == ignored {
-//         return Err(Error::LBPairIgnoredIsAlreadyInTheSameState);
-//     }
-
-//     pair_information.ignored_for_routing = ignored;
-
-//     LB_PAIRS_INFO.save(
-//         deps.storage,
-//         (
-//             token_a.unique_key().clone(),
-//             token_b.unique_key().clone(),
-//             bin_step,
-//         ),
-//         &pair_information,
-//     )?;
-
-//     // emit LBPairIgnoredStateChanged(pairInformation.LBPair, ignored);
-
-//     // TODO: be more specific about which pair changed
-//     Ok(Response::default()
-//         .add_attribute_plaintext("LBPair ignored state changed", format!("{}", ignored)))
-// }
 
 /// Sets the preset parameters of a bin step
 ///
@@ -554,7 +486,7 @@ fn try_set_pair_preset(
     epoch_staking_duration: u64,
     expiry_staking_duration: Option<u64>,
 ) -> Result<Response> {
-    let mut state = STATE.load(deps.storage)?;
+    let state = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::LiquidityBookAdmin,

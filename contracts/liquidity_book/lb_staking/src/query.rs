@@ -1,21 +1,15 @@
 use std::str::FromStr;
 
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint256},
+    c_std::{to_binary, Binary, Deps, StdError, StdResult, Uint256},
     liquidity_book::lb_staking::{
         Auth,
         EpochInfo,
         Liquidity,
         OwnerBalance,
         QueryAnswer,
-        QueryMsg,
         QueryTxnType,
-        QueryWithPermit,
         State,
-    },
-    s_toolkit::{
-        permit::{validate, Permit, TokenPermissions},
-        viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };
 

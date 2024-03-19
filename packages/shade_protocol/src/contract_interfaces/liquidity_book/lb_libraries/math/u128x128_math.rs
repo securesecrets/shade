@@ -16,6 +16,8 @@ pub enum U128x128MathError {
     LogUnderflow,
     #[error("U128x128 Math Error: PowUnderflow {0} {1}")]
     PowUnderflow(U256, I256),
+    #[error("U128x128 Math Error: ID Shift overflow")]
+    IdShiftOverflow,
 }
 
 // This is 127

@@ -30,6 +30,7 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
     pub total_reward_bins: Option<u32>,
+    pub max_bins_per_swap: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,
     pub epoch_staking_duration: u64,
@@ -59,9 +60,6 @@ pub enum ExecuteMsg {
     },
 
     CollectProtocolFees {},
-    IncreaseOracleLength {
-        new_length: u16,
-    },
     SetStaticFeeParameters {
         base_factor: u16,
         filter_period: u16,
@@ -217,7 +215,14 @@ pub enum QueryMsg {
     #[returns(OracleParametersResponse)]
     GetOracleParameters {},
     #[returns(OracleSampleAtResponse)]
-    GetOracleSampleAt { look_up_timestamp: u64 },
+    GetOracleSampleAt { oracle_id: u16 },
+    #[returns(OracleSamplesAtResponse)]
+    GetOracleSamplesAt { oracle_ids: Vec<u16> },
+    #[returns(OracleSamplesAfterResponse)]
+    GetOracleSamplesAfter {
+        oracle_id: u16,
+        page_size: Option<u16>,
+    },
     #[returns(PriceFromIdResponse)]
     GetPriceFromId { id: u32 },
     #[returns(IdFromPriceResponse)]
@@ -373,17 +378,30 @@ pub struct VariableFeeParametersResponse {
 pub struct OracleParametersResponse {
     pub sample_lifetime: u8,
     pub size: u16,
-    pub active_size: u16,
     pub last_updated: u64,
     pub first_timestamp: u64,
 }
 
 #[cw_serde]
 pub struct OracleSampleAtResponse {
+    pub oracle_id: u16,
+    pub cumulative_txns: u16,
     pub cumulative_id: u64,
     pub cumulative_volatility: u64,
     pub cumulative_bin_crossed: u64,
+    pub cumulative_volume_x: u128,
+    pub cumulative_volume_y: u128,
+    pub cumulative_fee_x: u128,
+    pub cumulative_fee_y: u128,
+    pub lifetime: u8,
+    pub created_at: u64,
 }
+
+#[cw_serde]
+pub struct OracleSamplesAtResponse(pub Vec<OracleSampleAtResponse>);
+
+#[cw_serde]
+pub struct OracleSamplesAfterResponse(pub Vec<OracleSampleAtResponse>);
 
 #[cw_serde]
 pub struct PriceFromIdResponse {

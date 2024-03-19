@@ -12,6 +12,8 @@ use crate::contract_interfaces::swap::core::TokenType;
 
 pub type Bytes32 = [u8; 32];
 
+pub type Bytes8 = [u8; 8];
+
 // TODO - This type belongs somewhere else. It's not specific to liquidity_book.
 #[cw_serde]
 #[derive(Default)]

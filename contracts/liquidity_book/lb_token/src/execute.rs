@@ -1,7 +1,5 @@
 // use base64::{engine::general_purpose, Engine as _};
 use cosmwasm_std::{
-    entry_point,
-    // debug_print,
     to_binary,
     Addr,
     Binary,
@@ -19,7 +17,6 @@ use cosmwasm_std::{
 use crate::state::{
     balances_r,
     balances_w,
-    blockinfo_w,
     contr_conf_r,
     contr_conf_w,
     get_receiver_hash,
@@ -50,15 +47,12 @@ use shade_protocol::{
     },
     liquidity_book::lb_token::{
         ExecuteAnswer,
-        ExecuteMsg,
-        InstantiateMsg,
         ResponseStatus::Success,
         SendAction,
         Snip1155ReceiveMsg,
         TransferAction,
     },
     s_toolkit::{
-        crypto::sha_256,
         permit::RevokedPermits,
         utils::space_pad,
         viewing_key::{ViewingKey, ViewingKeyStore},

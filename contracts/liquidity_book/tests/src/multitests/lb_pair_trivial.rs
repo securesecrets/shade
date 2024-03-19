@@ -1,27 +1,17 @@
-use ::lb_pair::state::ORACLE;
 use anyhow::Ok;
 use cosmwasm_std::Coin;
 use serial_test::serial;
-use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
-};
+use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
-    c_std::{ContractInfo, StdError, StdError::GenericErr, Uint128, Uint256},
-    lb_libraries::{math::u24::U24, types::LBPairInformation},
+    c_std::{ContractInfo, StdError::GenericErr, Uint128},
+    lb_libraries::types::LBPairInformation,
     liquidity_book::lb_pair::RemoveLiquidity,
     multi_test::{App, BankSudo, SudoMsg},
-    storage,
     swap::core::{TokenAmount, TokenType},
 };
-use std::{cmp::Ordering, ops::Add};
 
 use crate::multitests::test_helper::*;
 
-pub const PRECISION: u128 = 1_000_000_000_000_000_000;
 pub const ACTIVE_ID: u32 = ID_ONE - 24647;
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000;
 
@@ -79,7 +69,7 @@ pub fn lb_pair_setup() -> Result<
 #[serial]
 pub fn test_contract_status() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
 
     let amount_x = Uint128::from(600 * 100_000_000_u128); //10^8
     let amount_y = Uint128::from(100 * 100_000_000_u128);
@@ -210,7 +200,7 @@ pub fn test_contract_status() -> Result<(), anyhow::Error> {
 #[serial]
 pub fn test_native_tokens_error() -> Result<(), anyhow::Error> {
     let addrs = init_addrs();
-    let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
+    let (mut app, _lb_factory, deployed_contracts, lb_pair, _lb_token) = lb_pair_setup()?;
 
     let token_x = extract_contract_info(&deployed_contracts, SHADE)?;
 
@@ -243,28 +233,6 @@ pub fn test_native_tokens_error() -> Result<(), anyhow::Error> {
             msg: "Use the receive interface".to_string()
         })
     );
-
-    Ok(())
-}
-
-#[test]
-#[serial]
-pub fn test_increase_oracle_lenght() -> Result<(), anyhow::Error> {
-    let addrs = init_addrs();
-    let (mut app, _lb_factory, deployed_contracts, lb_pair, lb_token) = lb_pair_setup()?;
-
-    app.deps(&lb_pair.info.contract.address, |storage| {
-        assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 0);
-    })?;
-
-    // update oracle lenght
-
-    lb_pair::increase_oracle_length(&mut app, addrs.admin().as_str(), &lb_pair.info.contract, 20)?;
-
-    // query_oracle lenght
-    app.deps(&lb_pair.info.contract.address, |storage| {
-        assert_eq!(ORACLE.load(storage).unwrap().samples.len(), 20);
-    })?;
 
     Ok(())
 }

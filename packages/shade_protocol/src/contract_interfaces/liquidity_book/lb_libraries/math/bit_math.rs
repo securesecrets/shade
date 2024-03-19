@@ -8,10 +8,7 @@ use ethnum::U256;
 pub struct BitMath;
 
 impl BitMath {
-    // I don't understand why this returns the U256::MAX value instead of u8::MAX
-    /// Returns the index of the closest bit on the right of x that is non null.
-    /// If there is no closest bit, it returns `U256::MAX`.
-    ///
+    /// Returns the index of the closest bit on the right of x that is non null
     /// # Arguments
     ///
     /// * `x` - The value as a uint256.
@@ -27,7 +24,6 @@ impl BitMath {
         }
     }
 
-    // I don't understand why this returns the U256::MAX value instead of u8::MAX
     /// Returns the index of the closest bit on the left of x that is non null.
     ///
     /// If there is no closest bit, it returns `U256::MAX`.
@@ -139,15 +135,8 @@ mod tests {
         let result = BitMath::least_significant_bit(x);
         assert_eq!(result, 255u8);
     }
-}
-
-#[cfg(test)]
-mod tests2 {
-    use super::BitMath;
-    use ethnum::U256;
-
     #[test]
-    fn test_closest_bit_right() {
+    fn test_closest_bit_right_iter() {
         for i in 0..256u32 {
             assert_eq!(
                 BitMath::closest_bit_right(U256::from(1u32) << i, 255),
@@ -158,7 +147,7 @@ mod tests2 {
     }
 
     #[test]
-    fn test_closest_bit_left() {
+    fn test_closest_bit_left_iter() {
         for i in 0..256u32 {
             assert_eq!(
                 BitMath::closest_bit_left(U256::from(1u32) << i, 0),
@@ -169,7 +158,7 @@ mod tests2 {
     }
 
     #[test]
-    fn test_most_significant_bit() {
+    fn test_most_significant_bit_iter() {
         for i in 0..256u32 {
             assert_eq!(
                 BitMath::most_significant_bit(U256::from(1u32) << i),
@@ -180,7 +169,7 @@ mod tests2 {
     }
 
     #[test]
-    fn test_least_significant_bit() {
+    fn test_least_significant_bit_iter() {
         for i in 0..256u32 {
             assert_eq!(
                 BitMath::least_significant_bit(U256::from(1u32) << i),

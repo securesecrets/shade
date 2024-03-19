@@ -8,6 +8,9 @@ pub mod lb_pair_initial_state;
 pub mod lb_pair_queries;
 
 #[cfg(test)]
+pub mod lb_pair_oracle;
+
+#[cfg(test)]
 mod lb_pair_liquidity;
 
 #[cfg(test)]
@@ -15,6 +18,9 @@ mod lb_pair_trivial;
 
 #[cfg(test)]
 mod lb_pair_fees;
+
+#[cfg(test)]
+mod lb_pair_rewards;
 
 #[cfg(test)]
 mod lb_pair_swap;

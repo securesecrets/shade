@@ -32,6 +32,7 @@ pub fn init(
 
             recover_staking_funds_receiver,
             query_auth,
+            max_bins_per_swap: Some(500),
         }
         .test_init(
             LbFactory::default(),

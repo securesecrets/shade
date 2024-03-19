@@ -26,36 +26,6 @@ pub struct LiquidityConfigurations {
 }
 
 impl LiquidityConfigurations {
-    pub fn new(
-        distribution_x: u64,
-        distribution_y: u64,
-        id: u32,
-    ) -> Result<Self, LiquidityConfigurationsError> {
-        if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
-            Err(LiquidityConfigurationsError::InvalidConfig)
-        } else {
-            Ok(LiquidityConfigurations {
-                distribution_x,
-                distribution_y,
-                id,
-            })
-        }
-    }
-
-    pub fn update_distribution(
-        &mut self,
-        distribution_x: u64,
-        distribution_y: u64,
-    ) -> Result<(), LiquidityConfigurationsError> {
-        if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
-            Err(LiquidityConfigurationsError::InvalidConfig)
-        } else {
-            self.distribution_x = distribution_x;
-            self.distribution_y = distribution_y;
-            Ok(())
-        }
-    }
-
     /// Get the amounts and id from a config and amounts_in.
     ///
     /// # Arguments
@@ -77,6 +47,13 @@ impl LiquidityConfigurations {
     ) -> Result<(Bytes32, u32), LiquidityConfigurationsError> {
         let (x1, x2) = amounts_in.decode();
 
+        // Cannot overflow as
+        // max x1 or x2 = 2^128.
+        // max distribution value= 10^18
+        // PRECISION = 10^18
+
+        // (2^128 * 10^18)/10^18 = 3.4 * 10^38 <  1.157 * 10^77
+
         let x1_distributed =
             (U256::from(x1) * U256::from(self.distribution_x)) / U256::from(PRECISION);
         let x2_distributed =
@@ -92,6 +69,38 @@ impl LiquidityConfigurations {
 mod tests {
     use super::*;
     use ethnum::U256;
+
+    impl LiquidityConfigurations {
+        pub fn new(
+            distribution_x: u64,
+            distribution_y: u64,
+            id: u32,
+        ) -> Result<Self, LiquidityConfigurationsError> {
+            if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
+                Err(LiquidityConfigurationsError::InvalidConfig)
+            } else {
+                Ok(LiquidityConfigurations {
+                    distribution_x,
+                    distribution_y,
+                    id,
+                })
+            }
+        }
+
+        pub fn update_distribution(
+            &mut self,
+            distribution_x: u64,
+            distribution_y: u64,
+        ) -> Result<(), LiquidityConfigurationsError> {
+            if (distribution_x > PRECISION) || (distribution_y > PRECISION) {
+                Err(LiquidityConfigurationsError::InvalidConfig)
+            } else {
+                self.distribution_x = distribution_x;
+                self.distribution_y = distribution_y;
+                Ok(())
+            }
+        }
+    }
 
     #[test]
     fn test_get_amounts_and_id_normal_case() {

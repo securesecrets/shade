@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::multi::lb_pair::LbPair;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
@@ -7,10 +9,10 @@ use shade_protocol::{
         BinResponse,
         ContractStatus,
         LiquidityParameters,
+        OracleSampleAtResponse,
         RemoveLiquidity,
         RewardsDistribution,
         RewardsDistributionAlgorithm,
-        UpdatedBinsAtHeightResponse,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
@@ -35,7 +37,7 @@ pub fn init(
     lb_token_implementation: ContractInstantiationInfo,
     staking_contract_implementation: ContractInstantiationInfo,
     viewing_key: String,
-    pair_name: String,
+    _pair_name: String,
     entropy: String,
     protocol_fee_recipient: Addr,
     admin_auth: RawContract,
@@ -70,6 +72,7 @@ pub fn init(
             epoch_staking_duration,
             expiry_staking_duration,
             recover_staking_funds_receiver,
+            max_bins_per_swap: Some(500),
         }
         .test_init(
             LbPair::default(),
@@ -113,22 +116,6 @@ pub fn add_liquidity(
     }
     .test_exec(lb_pair, app, Addr::unchecked(sender), &[]))
     {
-        Ok(_) => Ok(()),
-        Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
-    }
-}
-pub fn increase_oracle_length(
-    app: &mut App,
-    sender: &str,
-    lb_pair: &ContractInfo,
-    new_length: u16,
-) -> StdResult<()> {
-    match (lb_pair::ExecuteMsg::IncreaseOracleLength { new_length }.test_exec(
-        lb_pair,
-        app,
-        Addr::unchecked(sender),
-        &[],
-    )) {
         Ok(_) => Ok(()),
         Err(e) => return Err(StdError::generic_err(e.root_cause().to_string())),
     }
@@ -194,7 +181,7 @@ pub fn swap_snip_20(
     lb_token: &ContractInfo,
 
     amount: Uint128,
-) -> StdResult<()> {
+) -> StdResult<Uint128> {
     let msg = to_binary(&lb_pair::InvokeMsg::SwapTokens {
         expected_return: None,
         to,
@@ -210,7 +197,28 @@ pub fn swap_snip_20(
     }
     .test_exec(&lb_token, app, Addr::unchecked(sender), &[]))
     {
-        Ok(_) => Ok(()),
+        Ok(res) => {
+            let total_fee = res
+                .events
+                .iter()
+                .flat_map(|event| &event.attributes)
+                .find_map(|attribute| {
+                    if attribute.key == "total_fee_amount" {
+                        Some(attribute.value.clone()) // Clone the value to give it a 'static lifetime
+                    } else {
+                        None
+                    }
+                });
+
+            let mut t_fee = Uint128::zero();
+            match total_fee {
+                Some(fee) => {
+                    t_fee = Uint128::from_str(fee.as_str())?;
+                }
+                None => {}
+            }
+            Ok(t_fee)
+        }
         Err(e) => Err(StdError::generic_err(e.root_cause().to_string())),
     }
 }
@@ -297,7 +305,7 @@ pub fn query_lb_token(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractIn
     Ok(lb_token)
 }
 
-pub fn query_staking_contract(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
+pub fn query_lb_staking(app: &App, lb_pair: &ContractInfo) -> StdResult<ContractInfo> {
     let res = lb_pair::QueryMsg::GetStakingContract {}.test_query(lb_pair, app)?;
     let lb_pair::StakingResponse {
         contract: staking_contract,
@@ -526,7 +534,7 @@ pub fn query_bins_reserves(
     app: &App,
     lb_pair: &ContractInfo,
     ids: Vec<u32>,
-) -> StdResult<(Vec<BinResponse>)> {
+) -> StdResult<Vec<BinResponse>> {
     let res = lb_pair::QueryMsg::GetBinsReserves { ids }.test_query(lb_pair, app)?;
     let lb_pair::BinsResponse(reserves) = res;
     Ok(reserves)
@@ -576,37 +584,63 @@ pub fn query_protocol_fees(app: &App, lb_pair: &ContractInfo) -> StdResult<(u128
 pub fn query_oracle_parameters(
     app: &App,
     lb_pair: &ContractInfo,
-) -> StdResult<(u8, u16, u16, u64, u64)> {
+) -> StdResult<(u8, u16, u64, u64)> {
     let res = lb_pair::QueryMsg::GetOracleParameters {}.test_query(lb_pair, app)?;
     let lb_pair::OracleParametersResponse {
         sample_lifetime,
         size,
-        active_size,
         last_updated,
         first_timestamp,
     } = res;
-    Ok((
-        sample_lifetime,
-        size,
-        active_size,
-        last_updated,
-        first_timestamp,
-    ))
+    Ok((sample_lifetime, size, last_updated, first_timestamp))
 }
 
 pub fn query_oracle_sample_at(
     app: &App,
     lb_pair: &ContractInfo,
-    look_up_timestamp: u64,
-) -> StdResult<(u64, u64, u64)> {
-    let res =
-        lb_pair::QueryMsg::GetOracleSampleAt { look_up_timestamp }.test_query(lb_pair, app)?;
+    oracle_id: u16,
+) -> StdResult<(u64, u64, u64, u128, u128, u128, u128, u16, u16, u8, u64)> {
+    let res = lb_pair::QueryMsg::GetOracleSampleAt { oracle_id }.test_query(lb_pair, app)?;
     let lb_pair::OracleSampleAtResponse {
         cumulative_id,
         cumulative_volatility,
         cumulative_bin_crossed,
+        cumulative_volume_x,
+        cumulative_volume_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
+        cumulative_txns,
+        lifetime,
+        created_at,
     } = res;
-    Ok((cumulative_id, cumulative_volatility, cumulative_bin_crossed))
+    Ok((
+        cumulative_id,
+        cumulative_volatility,
+        cumulative_bin_crossed,
+        cumulative_volume_x,
+        cumulative_volume_y,
+        cumulative_fee_x,
+        cumulative_fee_y,
+        oracle_id,
+        cumulative_txns,
+        lifetime,
+        created_at,
+    ))
+}
+
+pub fn query_oracle_sample_after(
+    app: &App,
+    lb_pair: &ContractInfo,
+    oracle_id: u16,
+) -> StdResult<Vec<OracleSampleAtResponse>> {
+    let res = lb_pair::QueryMsg::GetOracleSamplesAfter {
+        oracle_id,
+        page_size: None,
+    }
+    .test_query(lb_pair, app)?;
+    let lb_pair::OracleSamplesAfterResponse(vec) = res;
+    Ok(vec)
 }
 
 pub fn query_price_from_id(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<Uint256> {

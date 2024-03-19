@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub owner: Option<Addr>,
     pub fee_recipient: Addr,
     pub recover_staking_funds_receiver: Addr,
+    pub max_bins_per_swap: Option<u32>,
 }
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;

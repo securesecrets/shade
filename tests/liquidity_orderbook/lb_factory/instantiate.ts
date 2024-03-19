@@ -63,6 +63,7 @@ export const initializeFactoryContract = async (
     fee_recipient: client.address,
     admin_auth: admin_auth,
     recover_staking_funds_receiver: client.address,
+    query_auth: admin_auth, //fake
   };
 
   const contract = await client.tx.compute.instantiateContract(

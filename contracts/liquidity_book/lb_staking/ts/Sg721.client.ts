@@ -6,10 +6,15 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { ExecuteMsg, Uint256, Addr, Binary, Uint128, RewardsDistribution, Snip1155ReceiveMsg, Snip20ReceiveMsg, ContractInfo, RawContract, InstantiateMsg, QueryAnswer, TxAction, OwnerBalance, Liquidity, Tx, Reward, RewardToken, QueryMsg, QueryTxnType, TokenPermissions, QueryWithPermit, PermitForTokenPermissions, PermitParamsForTokenPermissions, PermitSignature, PubKey } from "./LbStaking.types";
-export interface LbStakingReadOnlyInterface {
+import { ExecuteMsg, Uint256, Addr, Binary, Uint128, TokenType, RewardsDistribution, Snip1155ReceiveMsg, Snip20ReceiveMsg, ContractInfo, RawContract, InstantiateMsg, InvokeMsg, QueryAnswer, TxAction, Contract, RewardTokenInfo, OwnerBalance, Liquidity, Tx, Reward, RewardToken, QueryMsg, Auth, QueryTxnType, PermitForPermitData, PermitData, PermitSignature, PubKey } from "./Sg721.types";
+export interface Sg721ReadOnlyInterface {
   contractAddress: string;
   contractInfo: () => Promise<ContractInfoResponse>;
+  epochInfo: ({
+    index
+  }: {
+    index?: number;
+  }) => Promise<EpochInfoResponse>;
   registeredTokens: () => Promise<RegisteredTokensResponse>;
   idTotalBalance: ({
     id
@@ -17,58 +22,48 @@ export interface LbStakingReadOnlyInterface {
     id: string;
   }) => Promise<IdTotalBalanceResponse>;
   balance: ({
-    key,
-    owner,
+    auth,
     tokenId
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     tokenId: string;
   }) => Promise<BalanceResponse>;
+  stakerInfo: ({
+    auth
+  }: {
+    auth: Auth;
+  }) => Promise<StakerInfoResponse>;
   allBalances: ({
-    key,
-    owner,
+    auth,
     page,
     pageSize
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     page?: number;
     pageSize?: number;
   }) => Promise<AllBalancesResponse>;
   liquidity: ({
-    key,
-    owner,
+    auth,
     roundIndex,
     tokenIds
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     roundIndex?: number;
     tokenIds: number[];
   }) => Promise<LiquidityResponse>;
   transactionHistory: ({
-    key,
-    owner,
+    auth,
     page,
     pageSize,
     txnType
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     page?: number;
     pageSize?: number;
     txnType: QueryTxnType;
   }) => Promise<TransactionHistoryResponse>;
-  withPermit: ({
-    permit,
-    query
-  }: {
-    permit: PermitForTokenPermissions;
-    query: QueryWithPermit;
-  }) => Promise<WithPermitResponse>;
 }
-export class LbStakingQueryClient implements LbStakingReadOnlyInterface {
+export class Sg721QueryClient implements Sg721ReadOnlyInterface {
   client: CosmWasmClient;
   contractAddress: string;
 
@@ -76,18 +71,30 @@ export class LbStakingQueryClient implements LbStakingReadOnlyInterface {
     this.client = client;
     this.contractAddress = contractAddress;
     this.contractInfo = this.contractInfo.bind(this);
+    this.epochInfo = this.epochInfo.bind(this);
     this.registeredTokens = this.registeredTokens.bind(this);
     this.idTotalBalance = this.idTotalBalance.bind(this);
     this.balance = this.balance.bind(this);
+    this.stakerInfo = this.stakerInfo.bind(this);
     this.allBalances = this.allBalances.bind(this);
     this.liquidity = this.liquidity.bind(this);
     this.transactionHistory = this.transactionHistory.bind(this);
-    this.withPermit = this.withPermit.bind(this);
   }
 
   contractInfo = async (): Promise<ContractInfoResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       contract_info: {}
+    });
+  };
+  epochInfo = async ({
+    index
+  }: {
+    index?: number;
+  }): Promise<EpochInfoResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      epoch_info: {
+        index
+      }
     });
   };
   registeredTokens = async (): Promise<RegisteredTokensResponse> => {
@@ -107,107 +114,94 @@ export class LbStakingQueryClient implements LbStakingReadOnlyInterface {
     });
   };
   balance = async ({
-    key,
-    owner,
+    auth,
     tokenId
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     tokenId: string;
   }): Promise<BalanceResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       balance: {
-        key,
-        owner,
+        auth,
         token_id: tokenId
       }
     });
   };
+  stakerInfo = async ({
+    auth
+  }: {
+    auth: Auth;
+  }): Promise<StakerInfoResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      staker_info: {
+        auth
+      }
+    });
+  };
   allBalances = async ({
-    key,
-    owner,
+    auth,
     page,
     pageSize
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     page?: number;
     pageSize?: number;
   }): Promise<AllBalancesResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       all_balances: {
-        key,
-        owner,
+        auth,
         page,
         page_size: pageSize
       }
     });
   };
   liquidity = async ({
-    key,
-    owner,
+    auth,
     roundIndex,
     tokenIds
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     roundIndex?: number;
     tokenIds: number[];
   }): Promise<LiquidityResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       liquidity: {
-        key,
-        owner,
+        auth,
         round_index: roundIndex,
         token_ids: tokenIds
       }
     });
   };
   transactionHistory = async ({
-    key,
-    owner,
+    auth,
     page,
     pageSize,
     txnType
   }: {
-    key: string;
-    owner: Addr;
+    auth: Auth;
     page?: number;
     pageSize?: number;
     txnType: QueryTxnType;
   }): Promise<TransactionHistoryResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       transaction_history: {
-        key,
-        owner,
+        auth,
         page,
         page_size: pageSize,
         txn_type: txnType
       }
     });
   };
-  withPermit = async ({
-    permit,
-    query
-  }: {
-    permit: PermitForTokenPermissions;
-    query: QueryWithPermit;
-  }): Promise<WithPermitResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      with_permit: {
-        permit,
-        query
-      }
-    });
-  };
 }
-export interface LbStakingInterface extends LbStakingReadOnlyInterface {
+export interface Sg721Interface extends Sg721ReadOnlyInterface {
   contractAddress: string;
   sender: string;
   claimRewards: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   endEpoch: ({
+    epochIndex,
     rewardsDistribution
   }: {
+    epochIndex: number;
     rewardsDistribution: RewardsDistribution;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   unstake: ({
@@ -257,24 +251,20 @@ export interface LbStakingInterface extends LbStakingReadOnlyInterface {
     expiryDuration?: number;
     queryAuth?: RawContract;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  recoverFunds: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  createViewingKey: ({
-    entropy
+  recoverFunds: ({
+    amount,
+    msg,
+    to,
+    token
   }: {
-    entropy: string;
+    amount: Uint128;
+    msg?: Binary;
+    to: string;
+    token: TokenType;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  setViewingKey: ({
-    key
-  }: {
-    key: string;
-  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  revokePermit: ({
-    permitName
-  }: {
-    permitName: string;
-  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  recoverExpiredFunds: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
 }
-export class LbStakingClient extends LbStakingQueryClient implements LbStakingInterface {
+export class Sg721Client extends Sg721QueryClient implements Sg721Interface {
   client: SigningCosmWasmClient;
   sender: string;
   contractAddress: string;
@@ -292,9 +282,7 @@ export class LbStakingClient extends LbStakingQueryClient implements LbStakingIn
     this.registerRewardTokens = this.registerRewardTokens.bind(this);
     this.updateConfig = this.updateConfig.bind(this);
     this.recoverFunds = this.recoverFunds.bind(this);
-    this.createViewingKey = this.createViewingKey.bind(this);
-    this.setViewingKey = this.setViewingKey.bind(this);
-    this.revokePermit = this.revokePermit.bind(this);
+    this.recoverExpiredFunds = this.recoverExpiredFunds.bind(this);
   }
 
   claimRewards = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
@@ -303,12 +291,15 @@ export class LbStakingClient extends LbStakingQueryClient implements LbStakingIn
     }, fee, memo, _funds);
   };
   endEpoch = async ({
+    epochIndex,
     rewardsDistribution
   }: {
+    epochIndex: number;
     rewardsDistribution: RewardsDistribution;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       end_epoch: {
+        epoch_index: epochIndex,
         rewards_distribution: rewardsDistribution
       }
     }, fee, memo, _funds);
@@ -401,42 +392,29 @@ export class LbStakingClient extends LbStakingQueryClient implements LbStakingIn
       }
     }, fee, memo, _funds);
   };
-  recoverFunds = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
-    return await this.client.execute(this.sender, this.contractAddress, {
-      recover_funds: {}
-    }, fee, memo, _funds);
-  };
-  createViewingKey = async ({
-    entropy
+  recoverFunds = async ({
+    amount,
+    msg,
+    to,
+    token
   }: {
-    entropy: string;
+    amount: Uint128;
+    msg?: Binary;
+    to: string;
+    token: TokenType;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      create_viewing_key: {
-        entropy
+      recover_funds: {
+        amount,
+        msg,
+        to,
+        token
       }
     }, fee, memo, _funds);
   };
-  setViewingKey = async ({
-    key
-  }: {
-    key: string;
-  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+  recoverExpiredFunds = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      set_viewing_key: {
-        key
-      }
-    }, fee, memo, _funds);
-  };
-  revokePermit = async ({
-    permitName
-  }: {
-    permitName: string;
-  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
-    return await this.client.execute(this.sender, this.contractAddress, {
-      revoke_permit: {
-        permit_name: permitName
-      }
+      recover_expired_funds: {}
     }, fee, memo, _funds);
   };
 }

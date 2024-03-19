@@ -11,19 +11,15 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Uint128,
-    Uint256,
     WasmMsg,
 };
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 // use shade_oracles::querier::{query_price, query_prices};
 use crate::{
     snip20::{
         helpers::{balance_query, token_info},
         ExecuteMsg::{Send, TransferFrom},
     },
-    swap::amm_pair,
     utils::ExecuteCallback,
     Contract,
 };
@@ -293,8 +289,8 @@ impl TokenType {
         if amount.gt(&Uint128::zero()) {
             match &self {
                 TokenType::CustomToken {
-                    contract_addr,
-                    token_code_hash,
+                    contract_addr: _,
+                    token_code_hash: _,
                 } => {
                     let msg = Send {
                         recipient: recipient.to_string(),
@@ -335,8 +331,8 @@ impl TokenType {
         if amount.gt(&Uint128::zero()) {
             match &self {
                 TokenType::CustomToken {
-                    contract_addr,
-                    token_code_hash,
+                    contract_addr: _,
+                    token_code_hash: _,
                 } => {
                     let msg = TransferFrom {
                         owner: owner.to_string(),
