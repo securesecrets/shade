@@ -2,10 +2,11 @@
 use shade_protocol::{
     c_std::{
         from_binary, shd_entry_point, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env,
-        MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsg, SubMsgResult,
     },
     contract_interfaces::{
         credit_agency::{ExecuteMsg, InstantiateMsg, QueryMsg, ReceiveMsg, UserDataResponse},
+        lend_market::{ExecuteMsg as MarketExecuteMsg, InstantiateMsg as MarketInstantiateMsg},
         snip20::{ExecuteMsg as Snip20ExecuteMsg, Snip20ReceiveMsg},
     },
     lending_utils::{token::Token, Authentication, ViewingKey},
@@ -27,10 +28,18 @@ pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: MarketInstantiateMsg,
 ) -> Result<Response, ContractError> {
+    let market_init = msg.to_cosmos_msg(
+        // TODO needs more complexitr
+        format!("market_contract_{}", env.block.time),
+        msg.lend_market_id.clone(),
+        msg.lend_market_code_hash.clone(),
+        vec![],
+    )?;
     Ok(Response::new()
         .add_attribute("method", "instantiate")
+        .add_submessage(SubMsg::reply_on_success(market_init, INIT_MARKET_REPLY_ID))
         .add_attribute("owner", info.sender))
 }
 
