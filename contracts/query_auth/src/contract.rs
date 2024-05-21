@@ -1,24 +1,11 @@
 use crate::{handle, query};
 use shade_protocol::{
     c_std::{
-        shd_entry_point,
-        to_binary,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
+        shd_entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
         StdResult,
     },
     contract_interfaces::query_auth::{
-        Admin,
-        ContractStatus,
-        ExecuteMsg,
-        InstantiateMsg,
-        QueryMsg,
-        RngSeed,
+        Admin, ContractStatus, ExecuteMsg, InstantiateMsg, QueryMsg, RngSeed,
     },
     utils::{pad_handle_result, pad_query_result, storage::plus::ItemStorage},
 };
@@ -33,7 +20,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    Admin(msg.admin_auth).save(deps.storage)?;
+    Admin(msg.admin).save(deps.storage)?;
 
     RngSeed::new(msg.prng_seed).save(deps.storage)?;
 
@@ -74,7 +61,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
     pad_handle_result(
         match msg {
-            ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, info, admin),
+            ExecuteMsg::SetAdmin { admin, .. } => handle::try_set_admin(deps, env, info, admin),
             ExecuteMsg::SetRunState { state, .. } => {
                 handle::try_set_run_state(deps, env, info, state)
             }

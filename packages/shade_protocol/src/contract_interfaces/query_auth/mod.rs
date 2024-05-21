@@ -9,12 +9,8 @@ use crate::utils::storage::plus::ItemStorage;
 use crate::{
     query_authentication::permit::Permit,
     utils::{
-        asset::Contract,
-        crypto::sha_256,
-        generic_response::ResponseStatus,
-        ExecuteCallback,
-        InstantiateCallback,
-        Query,
+        asset::Contract, crypto::sha_256, generic_response::ResponseStatus, ExecuteCallback,
+        InstantiateCallback, Query,
     },
 };
 use cosmwasm_schema::cw_serde;
@@ -23,7 +19,7 @@ use secret_storage_plus::Item;
 
 #[cfg(feature = "query_auth_impl")]
 #[cw_serde]
-pub struct Admin(pub Contract);
+pub struct Admin(pub Addr);
 
 #[cfg(feature = "query_auth_impl")]
 impl ItemStorage for Admin {
@@ -48,7 +44,7 @@ impl RngSeed {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin_auth: Contract,
+    pub admin: Addr,
     pub prng_seed: Binary,
 }
 
@@ -71,15 +67,14 @@ impl ItemStorage for ContractStatus {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    SetAdminAuth {
-        admin: Contract,
+    SetAdmin {
+        admin: String,
         padding: Option<String>,
     },
     SetRunState {
         state: ContractStatus,
         padding: Option<String>,
     },
-
     SetViewingKey {
         key: String,
         padding: Option<String>,
@@ -101,7 +96,7 @@ impl ExecuteCallback for ExecuteMsg {
 
 #[cw_serde]
 pub enum ExecuteAnswer {
-    SetAdminAuth { status: ResponseStatus },
+    SetAdmin { status: ResponseStatus },
     SetRunState { status: ResponseStatus },
     SetViewingKey { status: ResponseStatus },
     CreateViewingKey { key: String },
@@ -131,15 +126,7 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryAnswer {
-    Config {
-        admin: Contract,
-        state: ContractStatus,
-    },
-    ValidateViewingKey {
-        is_valid: bool,
-    },
-    ValidatePermit {
-        user: Addr,
-        is_revoked: bool,
-    },
+    Config { admin: Addr, state: ContractStatus },
+    ValidateViewingKey { is_valid: bool },
+    ValidatePermit { user: Addr, is_revoked: bool },
 }

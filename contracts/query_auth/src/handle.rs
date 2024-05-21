@@ -1,12 +1,9 @@
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
-    c_std::{to_binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult},
+    c_std::{to_binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
-        Admin,
-        ContractStatus,
-        ExecuteAnswer,
-        RngSeed,
+        Admin, ContractStatus, ExecuteAnswer, RngSeed,
     },
     query_authentication::viewing_keys::ViewingKey,
     utils::{
@@ -18,27 +15,26 @@ use shade_protocol::{
 use shade_protocol::utils::asset::Contract;
 
 fn user_authorized(deps: &Deps, _env: Env, info: &MessageInfo) -> StdResult<()> {
-    let contract = Admin::load(deps.storage)?.0;
+    let admin = Admin::load(deps.storage)?.0;
 
-    validate_admin(
-        &deps.querier,
-        AdminPermissions::QueryAuthAdmin,
-        info.sender.clone(),
-        &contract,
-    )
+    if admin == info.sender {
+        Ok(())
+    } else {
+        Err(StdError::generic_err("Unauthorized"))
+    }
 }
 
 pub fn try_set_admin(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    admin: Contract,
+    admin: String,
 ) -> StdResult<Response> {
     user_authorized(&deps.as_ref(), env, &info)?;
 
-    Admin(admin).save(deps.storage)?;
+    Admin(deps.api.addr_validate(&admin)?).save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetAdminAuth { status: Success })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetAdmin { status: Success })?))
 }
 
 pub fn try_set_run_state(
@@ -77,7 +73,11 @@ pub fn try_set_viewing_key(
 ) -> StdResult<Response> {
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey { status: Success })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::SetViewingKey {
+            status: Success,
+        })?),
+    )
 }
 
 pub fn try_block_permit_key(
