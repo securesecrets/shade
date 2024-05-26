@@ -2,11 +2,7 @@
 name = "lb_tests"
 version = "0.1.0"
 edition = "2021"
-exclude = [
-  # Those files are contract-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
-]
+exclude = ["contract.wasm", "hash.txt"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -17,28 +13,31 @@ default = []
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 
+
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = ["liquidity_book_impl","liquidity_book"] }
-schemars = "0.8.16"
-serde = { version = "1.0" }
-serde-json-wasm = { version = "1.0"}
-ethnum = { version = "1.5" }
-thiserror = { version = "1.0" }
+shade-protocol = { path = "../../../packages/shade_protocol", features = ["liquidity-book"] }
+lb-libraries = { path = "../../../packages/lb_libraries" }
+schemars = "0.8.21"
+serde = { version = "1.0.203" }
+serde-json-wasm = { version = "1.0.1" }
+ethnum = { version = "1.5.0" }
+thiserror = { version = "1.0.61" }
+
 
 [dev-dependencies]
-anyhow = "1"
+anyhow = "1.0.86"
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.11" }
-rand = "0.8"
-shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+rand = "0.8.5"
+shade-multi-test = { path = "../../../packages/multi_test", features = [
   "admin",
-  "lb_pair",
-  "lb_token",
-  "lb_staking",
+  "lb-factory",
+  "lb-pair",
+  "lb-router",
+  "lb-staking",
+  "lb-token",
+  "query_auth",
   "snip20",
-  "router",
-  "lb_factory",
-    "query_auth",
-
 ] }
-lb_pair ={ path = "../lb_pair"}
+# TODO: why is this here?
+lb-pair = { path = "../lb_pair" }
 serial_test = "2.0.0"

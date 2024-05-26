@@ -1,11 +1,14 @@
 mod example_data;
 
 use example_data::{ExampleData, VariousAddr, ACTIVE_ID, BIN_STEP};
+use lb_libraries::types::ContractImplementation;
 use shade_protocol::{
     c_std::{Addr, ContractInfo},
     contract_interfaces::liquidity_book::lb_factory::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    liquidity_book::{lb_factory::*, lb_pair::RewardsDistributionAlgorithm},
+    liquidity_book::{
+        lb_factory::*,
+        lb_pair::{LBPair, LBPairInformation, RewardsDistributionAlgorithm},
+    },
     swap::core::TokenType,
     utils::asset::RawContract,
 };
@@ -83,11 +86,11 @@ fn main() -> io::Result<()> {
     // -- Execute Messages
 
     let set_lb_pair_implementation = ExecuteMsg::SetLBPairImplementation {
-        implementation: ContractInstantiationInfo::example(),
+        implementation: ContractImplementation::example(),
     };
 
     let set_lb_token_implementation = ExecuteMsg::SetLBTokenImplementation {
-        implementation: ContractInstantiationInfo::example(),
+        implementation: ContractImplementation::example(),
     };
 
     let create_lb_pair = ExecuteMsg::CreateLBPair {
@@ -208,10 +211,10 @@ fn main() -> io::Result<()> {
         fee_recipient: Addr::recipient(),
     };
     let get_lb_pair_implementation_response = LBPairImplementationResponse {
-        lb_pair_implementation: ContractInstantiationInfo::example(),
+        lb_pair_implementation: ContractImplementation::example(),
     };
     let get_lb_token_implementation_response = LBTokenImplementationResponse {
-        lb_token_implementation: ContractInstantiationInfo::example(),
+        lb_token_implementation: ContractImplementation::example(),
     };
     let get_number_of_lb_pairs_response = NumberOfLBPairsResponse { lb_pair_number: 1 };
 

@@ -5,7 +5,8 @@ use crate::{
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::{ExecuteCallback, InstantiateCallback, Query},
-    Contract, BLOCK_SIZE,
+    Contract,
+    BLOCK_SIZE,
 };
 
 #[cw_serde]

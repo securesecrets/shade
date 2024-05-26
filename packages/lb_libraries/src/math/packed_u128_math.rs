@@ -9,7 +9,8 @@
 
 use ethnum::U256;
 
-use crate::{c_std::StdError, liquidity_book::lb_libraries::types::Bytes32};
+use crate::types::Bytes32;
+use cosmwasm_std::StdError;
 
 pub const BASIS_POINT_MAX: u128 = 10_000;
 

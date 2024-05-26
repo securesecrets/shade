@@ -1,27 +1,19 @@
 use std::str::FromStr;
 
 use crate::multi::lb_pair::LbPair;
+use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::{liquidity_book::lb_pair, snip20},
-    lb_libraries::types::{ContractInstantiationInfo, StaticFeeParameters},
     liquidity_book::lb_pair::{
-        BinResponse,
-        ContractStatus,
-        LiquidityParameters,
-        OracleSampleAtResponse,
-        RemoveLiquidity,
-        RewardsDistribution,
-        RewardsDistributionAlgorithm,
+        BinResponse, ContractStatus, LiquidityParameters, OracleSampleAtResponse, RemoveLiquidity,
+        RewardsDistribution, RewardsDistributionAlgorithm,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
     utils::{
         asset::{Contract, RawContract},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
+        ExecuteCallback, InstantiateCallback, MultiTestable, Query,
     },
 };
 
@@ -34,8 +26,8 @@ pub fn init(
     bin_step: u16,
     pair_parameters: StaticFeeParameters,
     active_id: u32,
-    lb_token_implementation: ContractInstantiationInfo,
-    staking_contract_implementation: ContractInstantiationInfo,
+    lb_token_implementation: ContractImplementation,
+    staking_contract_implementation: ContractImplementation,
     viewing_key: String,
     _pair_name: String,
     entropy: String,

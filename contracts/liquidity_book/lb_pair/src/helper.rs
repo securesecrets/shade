@@ -1,17 +1,15 @@
 use crate::prelude::*;
 use ethnum::U256;
+use lb_libraries::math::{tree_math::TreeUint24, u24::U24, uint256_to_u256::ConvertUint256};
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, CosmosMsg, Deps, Env, StdResult},
-    contract_interfaces::{
-        liquidity_book::{lb_pair::*, lb_token},
-        swap::core::TokenType,
-    },
-    lb_libraries::{
-        math::{tree_math::TreeUint24, u24::U24, uint256_to_u256::ConvertUint256},
-        viewing_keys::{register_receive, set_viewing_key_msg, ViewingKey},
-    },
+    c_std::{Addr, CosmosMsg, Deps, Env, StdResult},
+    contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
+    // TODO: sort out viewing key strategy
+    s_toolkit::snip20::{register_receive_msg, set_viewing_key_msg},
     snip20,
+    swap::core::{TokenType, ViewingKey},
 };
+
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1u64;
 pub const INSTANTIATE_STAKING_CONTRACT_REPLY_ID: u64 = 2u64;
 pub const MINT_REPLY_ID: u64 = 1u64;
@@ -32,20 +30,18 @@ pub fn register_pair_token(
     } = token
     {
         messages.push(set_viewing_key_msg(
-            viewing_key.0.clone(),
+            viewing_key.to_string(),
             None,
-            &ContractInfo {
-                address: contract_addr.clone(),
-                code_hash: token_code_hash.to_string(),
-            },
+            256,
+            contract_addr.clone().to_string(),
+            token_code_hash.to_string(),
         )?);
-        messages.push(register_receive(
+        messages.push(register_receive_msg(
             env.contract.code_hash.clone(),
             None,
-            &ContractInfo {
-                address: contract_addr.clone(),
-                code_hash: token_code_hash.to_string(),
-            },
+            256,
+            contract_addr.to_string(),
+            token_code_hash.to_string(),
         )?);
     }
 

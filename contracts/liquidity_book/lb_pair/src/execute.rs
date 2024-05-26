@@ -1,49 +1,43 @@
+use crate::helper::*;
 use crate::{prelude::*, state::*};
 use ethnum::U256;
+use lb_libraries::{
+    approx_div,
+    bin_helper::BinHelper,
+    constants::{BASIS_POINT_MAX, MAX_FEE, PRECISION, SCALE_OFFSET},
+    lb_token::state_structs::{TokenAmount, TokenIdBalance},
+    math::{
+        liquidity_configurations::LiquidityConfigurations,
+        packed_u128_math::PackedUint128Math,
+        tree_math::TreeUint24,
+        u24::U24,
+        u256x256_math::U256x256Math,
+        uint256_to_u256::{ConvertU256, ConvertUint256},
+    },
+    oracle_helper::Oracle,
+    pair_parameter_helper::PairParameters,
+    price_helper::PriceHelper,
+    types::Bytes32,
+};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        to_binary,
-        Addr,
-        Attribute,
-        CosmosMsg,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Timestamp,
-        Uint128,
-        Uint256,
+        to_binary, Addr, Attribute, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult, Storage, Timestamp, Uint128, Uint256,
     },
     contract_interfaces::{
         liquidity_book::{lb_pair::*, lb_staking, lb_token},
-        swap::{core::TokenType, router::ExecuteMsgResponse},
+        swap::router::ExecuteMsgResponse,
     },
-    lb_libraries::{
-        approx_div,
-        bin_helper::BinHelper,
-        constants::{BASIS_POINT_MAX, MAX_FEE, PRECISION, SCALE_OFFSET},
-        lb_token::state_structs::{TokenAmount, TokenIdBalance},
-        math::{
-            liquidity_configurations::LiquidityConfigurations,
-            packed_u128_math::PackedUint128Math,
-            tree_math::TreeUint24,
-            u24::U24,
-            u256x256_math::U256x256Math,
-            uint256_to_u256::{ConvertU256, ConvertUint256},
-        },
-        oracle_helper::Oracle,
-        pair_parameter_helper::PairParameters,
-        price_helper::PriceHelper,
-        types::{Bytes32, MintArrays},
-    },
+    swap::core::TokenType,
 };
 
-use crate::helper::*;
+#[derive(Clone, Debug)]
+pub struct MintArrays {
+    pub ids: Vec<U256>,
+    pub amounts: Vec<Bytes32>,
+    pub liquidity_minted: Vec<U256>,
+}
 
 /// Swap tokens iterating over the bins until the entire amount is swapped.
 ///
@@ -172,8 +166,8 @@ pub fn try_swap(
                     deps.storage,
                     active_id,
                     &bin_reserves
-                          .add(amounts_in_with_fees) // actually amount in wihtout fees
-                          .sub(amounts_out_of_bin),
+                        .add(amounts_in_with_fees) // actually amount in wihtout fees
+                        .sub(amounts_out_of_bin),
                 )?;
                 ids.push(active_id);
             }
@@ -228,9 +222,11 @@ pub fn try_swap(
         amounts_out.decode_x()
     };
     let msg = if swap_for_y {
-        BinHelper::transfer_y(amounts_out, token_y.clone(), to)
+        // BinHelper::transfer_y(amounts_out, token_y.clone(), to)
+        todo!()
     } else {
-        BinHelper::transfer_x(amounts_out, token_x.clone(), to)
+        // BinHelper::transfer_x(amounts_out, token_x.clone(), to)
+        todo!()
     };
     // Add the message to messages if it exists
     if let Some(message) = msg {
@@ -997,7 +993,8 @@ fn burn(
 
     config.reserves = config.reserves.sub(amounts_out);
 
-    let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender);
+    let raw_msgs: Option<Vec<CosmosMsg>> = todo!();
+    // let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender);
 
     STATE.update(deps.storage, |mut state| -> StdResult<State> {
         state.reserves = state.reserves.sub(amounts_out);
@@ -1051,14 +1048,14 @@ pub fn try_collect_protocol_fees(deps: DepsMut, _env: Env, info: MessageInfo) ->
         })?;
 
         if collected_protocol_fees.iter().any(|&x| x != 0) {
-            if let Some(msgs) = BinHelper::transfer(
-                collected_protocol_fees,
-                token_x.clone(),
-                token_y.clone(),
-                state.protocol_fees_recipient,
-            ) {
-                messages.extend(msgs);
-            };
+            // if let Some(msgs) = BinHelper::transfer(
+            //     collected_protocol_fees,
+            //     token_x.clone(),
+            //     token_y.clone(),
+            //     state.protocol_fees_recipient,
+            // ) {
+            //     messages.extend(msgs);
+            // };
         }
 
         Ok(Response::default()

@@ -1,35 +1,21 @@
-use std::collections::HashMap;
-
-use crate::{
-    liquidity_book::lb_libraries::types::ContractInstantiationInfo,
-    query_auth::QueryPermit,
-    Contract,
-};
-
-use crate::{
-    c_std::{
-        to_binary,
-        Addr,
-        Binary,
-        Coin,
-        ContractInfo,
-        CosmosMsg,
-        StdResult,
-        Uint128,
-        Uint256,
-        WasmMsg,
-    },
-    cosmwasm_schema::cw_serde,
-    snip20::Snip20ReceiveMsg,
-    swap::core::TokenType,
-    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
-    BLOCK_SIZE,
-};
-
 use super::{
     lb_pair::RewardsDistribution,
     lb_token::{space_pad, Snip1155ReceiveMsg},
 };
+use crate::{
+    c_std::{
+        to_binary, Addr, Binary, Coin, ContractInfo, CosmosMsg, StdResult, Uint128, Uint256,
+        WasmMsg,
+    },
+    cosmwasm_schema::cw_serde,
+    query_auth::QueryPermit,
+    snip20::Snip20ReceiveMsg,
+    swap::core::TokenType,
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
+    Contract, BLOCK_SIZE,
+};
+use lb_libraries::types::ContractImplementation;
+use std::collections::HashMap;
 
 impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = BLOCK_SIZE;
@@ -45,7 +31,7 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub struct StakingContractInstantiateInfo {
-    pub staking_contract_info: ContractInstantiationInfo,
+    pub staking_contract_info: ContractImplementation,
     pub custom_label: Option<String>,
     pub first_reward_token: Option<RewardTokenCreate>,
     pub query_auth: Option<RawContract>,

@@ -1,29 +1,17 @@
-use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
-
 use super::test_helper::{
-    increase_allowance_helper,
-    init_addrs,
-    liquidity_parameters_generator,
-    mint_token_helper,
-    setup,
-    ID_ONE,
+    increase_allowance_helper, init_addrs, liquidity_parameters_generator, mint_token_helper,
+    setup, ID_ONE,
 };
+use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
 use anyhow::Ok;
+use lb_libraries::math::{encoded_sample::MASK_UINT20, u24::U24};
 use serial_test::serial;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
+    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError, Uint128, Uint256},
-    lb_libraries::{
-        math::{encoded_sample::MASK_UINT20, u24::U24},
-        types::LBPairInformation,
-    },
-    liquidity_book::lb_pair::RemoveLiquidity,
+    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
     multi_test::App,
 };
 
@@ -2355,7 +2343,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     //generate random number
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     let amount_y_out = Uint128::from(1 * 1000_000u128); //1000 silk
-    // get swap_in for y
+                                                        // get swap_in for y
     let (amount_x_in, amount_y_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
     assert_eq!(amount_y_out_left, Uint128::zero());
@@ -2407,7 +2395,7 @@ pub fn test_fuzz_swap_in_x_and_y_btc_silk() -> Result<(), anyhow::Error> {
     //generate random number
     // let amount_y_out = Uint128::from(generate_random(1u128, DEPOSIT_AMOUNT - 1));
     let amount_x_out = Uint128::from(2 * 1000_000u128); //5_000_000 satoshi
-    // get swap_in for y
+                                                        // get swap_in for y
     let (amount_y_in, amount_x_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_x_out, false)?;
     assert_eq!(amount_x_out_left, Uint128::zero());
@@ -2648,7 +2636,7 @@ pub fn test_base_and_variable_fee_only() -> Result<(), anyhow::Error> {
     //generate random number
     // let amount_y_out = Uint128::from(generate_random(1u128, amount_x.u128() - 1));
     let amount_y_out = Uint128::from(100 * 1000_000u128); //1000 silk
-    // get swap_in for y
+                                                          // get swap_in for y
     let (amount_x_in, amount_y_out_left, _fee) =
         lb_pair::query_swap_in(&app, &lb_pair.info.contract, amount_y_out, true)?;
     assert_eq!(amount_y_out_left, Uint128::zero());

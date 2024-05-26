@@ -1,42 +1,27 @@
-use std::{
-    collections::HashMap,
-    ops::{Add, AddAssign, Sub},
-    str::FromStr,
+use crate::{
+    helper::{
+        assert_lb_pair, check_if_claimable, finding_total_liquidity, finding_user_liquidity,
+        register_reward_tokens, require_lb_token, staker_init_checker, TokenKey,
+    },
+    state::{
+        store_claim_rewards, store_stake, store_unstake, EPOCH_STORE, EXPIRED_AT_LOGGER,
+        EXPIRED_AT_LOGGER_MAP, REWARD_TOKENS, REWARD_TOKEN_INFO, STAKERS, STAKERS_BIN_TREE,
+        STAKERS_LIQUIDITY, STAKERS_LIQUIDITY_SNAPSHOT, STATE, TOTAL_LIQUIDITY,
+        TOTAL_LIQUIDITY_SNAPSHOT,
+    },
 };
-
+use lb_libraries::types::TreeUint24;
 use shade_protocol::{
-    self,
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary,
-        Addr,
-        BankMsg,
-        Binary,
-        Coin,
-        ContractInfo,
-        CosmosMsg,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-        Uint256,
+        from_binary, Addr, BankMsg, Binary, Coin, ContractInfo, CosmosMsg, DepsMut, Env,
+        MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256,
     },
-    lb_libraries::types::TreeUint24,
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            EpochInfo,
-            InvokeMsg,
-            Reward,
-            RewardToken,
-            RewardTokenInfo,
-            StakerLiquidity,
-            StakerLiquiditySnapshot,
-            State,
+            EpochInfo, InvokeMsg, Reward, RewardToken, RewardTokenInfo, StakerLiquidity,
+            StakerLiquiditySnapshot, State,
         },
         lb_token::TransferAction,
     },
@@ -46,38 +31,12 @@ use shade_protocol::{
     },
     swap::core::TokenType,
     utils::{asset::RawContract, pad_handle_result, ExecuteCallback},
-    Contract,
-    BLOCK_SIZE,
+    Contract, BLOCK_SIZE,
 };
-
-use crate::{
-    helper::{
-        assert_lb_pair,
-        check_if_claimable,
-        finding_total_liquidity,
-        finding_user_liquidity,
-        register_reward_tokens,
-        require_lb_token,
-        staker_init_checker,
-        TokenKey,
-    },
-    state::{
-        store_claim_rewards,
-        store_stake,
-        store_unstake,
-        EPOCH_STORE,
-        EXPIRED_AT_LOGGER,
-        EXPIRED_AT_LOGGER_MAP,
-        REWARD_TOKENS,
-        REWARD_TOKEN_INFO,
-        STAKERS,
-        STAKERS_BIN_TREE,
-        STAKERS_LIQUIDITY,
-        STAKERS_LIQUIDITY_SNAPSHOT,
-        STATE,
-        TOTAL_LIQUIDITY,
-        TOTAL_LIQUIDITY_SNAPSHOT,
-    },
+use std::{
+    collections::HashMap,
+    ops::{Add, AddAssign, Sub},
+    str::FromStr,
 };
 
 pub const SHADE_STAKING_VIEWING_KEY: &str = "SHADE_STAKING_VIEWING_KEY";
@@ -549,14 +508,18 @@ pub fn try_end_epoch(
 
     if env.block.time.seconds() >= prev_epoch_obj.end_time {
         if !EPOCH_STORE.has(deps.storage, epoch_index.add(1)) {
-            EPOCH_STORE.save(deps.storage, epoch_index.add(1), &EpochInfo {
-                rewards_distribution: None,
-                start_time: prev_epoch_obj.end_time,
-                end_time: prev_epoch_obj.end_time + state.epoch_durations,
-                duration: state.epoch_durations,
-                reward_tokens: None,
-                expired_at: None,
-            })?;
+            EPOCH_STORE.save(
+                deps.storage,
+                epoch_index.add(1),
+                &EpochInfo {
+                    rewards_distribution: None,
+                    start_time: prev_epoch_obj.end_time,
+                    end_time: prev_epoch_obj.end_time + state.epoch_durations,
+                    duration: state.epoch_durations,
+                    reward_tokens: None,
+                    expired_at: None,
+                },
+            )?;
 
             state.epoch_index.add_assign(1);
 
@@ -881,10 +844,13 @@ pub fn try_add_rewards(
             return Err(StdError::generic_err("Cannot start emitting in the past"));
         }
 
-        let decimals = token_info(&deps.querier, &Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        })?
+        let decimals = token_info(
+            &deps.querier,
+            &Contract {
+                address: token.address.clone(),
+                code_hash: token.code_hash.clone(),
+            },
+        )?
         .decimals;
 
         let total_epoches = end.sub(start) + 1;

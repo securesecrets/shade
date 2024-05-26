@@ -17,7 +17,7 @@ path = "src/schemas.rs"
 required-features = [
   "admin", "airdrop", "bonds", "dao", "dex", "governance-impl", "mint", "mint_router",
   "oracles", "peg_stability", "query_auth", "sky", "snip20", "snip20_migration",
-  "staking", "swap", "liquidity_book",
+  "staking", "swap", "liquidity-book",
 ]
 
 [lib]
@@ -26,7 +26,7 @@ crate-type = ["cdylib", "rlib"]
 
 
 [features]
-default = ["utils", "liquidity_book"]
+default = ["utils"]
 
 
 # Utils
@@ -91,7 +91,7 @@ admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
 snip20_migration = []
 swap             = ["interface", "snip20"]
-liquidity_book   = ["interface", "swap"]
+liquidity-book   = ["interface", "swap"]
 
 chrono = ["dep:chrono"]
 
@@ -108,7 +108,7 @@ snip20-impl         = ["snip20", "query_auth_impl"]
 query_auth_impl     = ["implementation", "query_auth", "dep:base64"]
 sky-utils           = ["implementation", "sky"]
 admin_impl          = ["implementation", "admin"]
-liquidity_book_impl = ["implementation", "liquidity_book", "snip20", "swap"]
+liquidity-book-impl = ["implementation", "liquidity-book", "snip20", "swap"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -131,6 +131,8 @@ serde = { version = "1.0.193", default-features = false, features = ["derive", "
 thiserror = "1.0.50"
 
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", tag = "v0.1.1", optional = true, features = [] }
+
+lb-libraries = { path = "../lb_libraries"}
 
 # Testing
 anyhow = { version = "1", optional = true }

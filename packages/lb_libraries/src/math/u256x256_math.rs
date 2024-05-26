@@ -426,7 +426,7 @@ mod tests {
     use ethnum::U256;
 
     use super::U256x256Math;
-    use crate::liquidity_book::lb_libraries::constants::{PRECISION, SCALE_OFFSET};
+    use crate::constants::{PRECISION, SCALE_OFFSET};
 
     #[test]
     fn test_get_mul_prods() {

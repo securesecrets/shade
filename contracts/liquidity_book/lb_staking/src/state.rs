@@ -1,18 +1,9 @@
+use lb_libraries::types::TreeUint24;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdResult, Storage, Uint256},
-    lb_libraries::types::TreeUint24,
     liquidity_book::lb_staking::{
-        EpochInfo,
-        Reward,
-        RewardTokenInfo,
-        StakerInfo,
-        StakerLiquidity,
-        StakerLiquiditySnapshot,
-        State,
-        TotalLiquidity,
-        TotalLiquiditySnapshot,
-        Tx,
-        TxAction,
+        EpochInfo, Reward, RewardTokenInfo, StakerInfo, StakerLiquidity, StakerLiquiditySnapshot,
+        State, TotalLiquidity, TotalLiquiditySnapshot, Tx, TxAction,
     },
     s_toolkit::storage::AppendStore,
     secret_storage_plus::{Bincode2, Item, Map},

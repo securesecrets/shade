@@ -1,11 +1,9 @@
+use super::lb_pair_fees::DEPOSIT_AMOUNT;
+use crate::multitests::test_helper::*;
 use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    router::{self},
-    snip20,
-    utils::SupportedContracts,
+    lb_factory, lb_pair, lb_router, snip20, utils::SupportedContracts,
 };
 use shade_protocol::{
     c_std::{to_binary, BalanceResponse, BankQuery, Coin, QueryRequest, StdError, Uint128},
@@ -14,9 +12,6 @@ use shade_protocol::{
         router::{Hop, InvokeMsg},
     },
 };
-
-use super::lb_pair_fees::DEPOSIT_AMOUNT;
-use crate::multitests::test_helper::*;
 
 const SWAP_AMOUNT: u128 = 1000;
 
@@ -37,7 +32,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     //        a. Addresses for `staker_a` and `owner`.
     //        b. A default router.
     //     4. CONFIGURE the blockchain and send initial funds to the owner address.
-    router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;
+    lb_router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;
 
     let router = match deployed_contracts.clone().get(&SupportedContracts::Router) {
         Some(router) => router,
@@ -60,14 +55,14 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         None => panic!("Silk not registered"),
     };
 
-    router::register_snip20_token(
+    lb_router::register_snip20_token(
         &mut app,
         addrs.admin().as_str(),
         &router,
         &shd.clone().into(),
     )?;
 
-    router::register_snip20_token(
+    lb_router::register_snip20_token(
         &mut app,
         addrs.admin().as_str(),
         &router,
@@ -159,7 +154,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
 
     // ASSERT SWAPSIMULATION
     let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, result, price) =
-        router::query_swap_simulation(
+        lb_router::query_swap_simulation(
             &app,
             &router,
             offer.to_owned(),
@@ -227,7 +222,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     assert_eq!(scare_crow_balance, Uint128::from(999u128));
 
     //     19. EXECUTE a swap for exact tokens operation and check the resulting balance of a token.
-    let res = router::swap_tokens_for_exact_tokens(
+    let res = lb_router::swap_tokens_for_exact_tokens(
         &mut app,
         addrs.batman().as_str(),
         &router,
@@ -362,10 +357,14 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
     app.init_modules(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &addrs.joker(), vec![Coin {
-                denom: "uscrt".into(),
-                amount: amount_x + Uint128::from(SWAP_AMOUNT),
-            }])
+            .init_balance(
+                storage,
+                &addrs.joker(),
+                vec![Coin {
+                    denom: "uscrt".into(),
+                    amount: amount_x + Uint128::from(SWAP_AMOUNT),
+                }],
+            )
             .unwrap();
     });
 
@@ -388,12 +387,15 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         }))
         .unwrap();
 
-    assert_eq!(res, BalanceResponse {
-        amount: Coin {
-            amount: Uint128::new(SWAP_AMOUNT),
-            denom: "uscrt".to_string(),
-        },
-    });
+    assert_eq!(
+        res,
+        BalanceResponse {
+            amount: Coin {
+                amount: Uint128::new(SWAP_AMOUNT),
+                denom: "uscrt".to_string(),
+            },
+        }
+    );
 
     //     25. SWAP a native token for a SNIP20 token and ASSERT the resulting balance of the SNIP20 token.
     let offer = TokenAmount {
@@ -404,7 +406,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         amount: Uint128::new(SWAP_AMOUNT),
     };
     let (_total_fee_amount, _lp_fee_amount, _shade_dao_fee_amount, _result, price) =
-        router::query_swap_simulation(
+        lb_router::query_swap_simulation(
             &app,
             &router,
             offer,
@@ -469,12 +471,15 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         }))
         .unwrap();
 
-    assert_eq!(res, BalanceResponse {
-        amount: Coin {
-            amount: Uint128::new(SWAP_AMOUNT + 999),
-            denom: "uscrt".to_string(),
-        },
-    });
+    assert_eq!(
+        res,
+        BalanceResponse {
+            amount: Coin {
+                amount: Uint128::new(SWAP_AMOUNT + 999),
+                denom: "uscrt".to_string(),
+            },
+        }
+    );
 
     //Swapping USCRT -> SILK
     let offer = TokenAmount {
@@ -484,7 +489,7 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         amount: Uint128::new(SWAP_AMOUNT),
     };
 
-    router::swap_tokens_for_exact_tokens(
+    lb_router::swap_tokens_for_exact_tokens(
         &mut app,
         addrs.joker().as_str(),
         &router,
@@ -523,12 +528,15 @@ pub fn router_integration() -> Result<(), anyhow::Error> {
         }))
         .unwrap();
 
-    assert_eq!(res, BalanceResponse {
-        amount: Coin {
-            amount: Uint128::from(999u128),
-            denom: "uscrt".to_string(),
-        },
-    });
+    assert_eq!(
+        res,
+        BalanceResponse {
+            amount: Coin {
+                amount: Uint128::from(999u128),
+                denom: "uscrt".to_string(),
+            },
+        }
+    );
 
     //     20. CREATE another AMM pair between a native token(SSCRT) and a SNIP20 token(SILK)
     let shade = extract_contract_info(&deployed_contracts, SHADE)?;

@@ -6,7 +6,7 @@
 
 use ethnum::{I256, U256};
 
-use crate::liquidity_book::lb_libraries::constants::*;
+use crate::constants::*;
 
 use super::bit_math::BitMath;
 
@@ -167,7 +167,6 @@ impl U128x128Math {
 
 #[cfg(test)]
 mod tests {
-    use core::panic;
     use std::str::FromStr;
 
     use super::*;

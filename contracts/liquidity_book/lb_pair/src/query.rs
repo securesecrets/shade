@@ -1,17 +1,22 @@
 use crate::{helper::*, prelude::*, state::*};
 use ethnum::U256;
+use lb_libraries::{
+    bin_helper::BinHelper,
+    constants::SCALE_OFFSET,
+    fee_helper::FeeHelper,
+    math::{
+        packed_u128_math::PackedUint128Math,
+        u24::U24,
+        u256x256_math::U256x256Math,
+        uint256_to_u256::{ConvertU256, ConvertUint256},
+    },
+    oracle_helper::MAX_SAMPLE_LIFETIME,
+    price_helper::PriceHelper,
+    types::Bytes32,
+};
 use shade_protocol::{
     c_std::{
-        from_binary,
-        to_binary,
-        Addr,
-        Binary,
-        Decimal,
-        Deps,
-        Env,
-        StdResult,
-        Uint128,
-        Uint256,
+        from_binary, to_binary, Addr, Binary, Decimal, Deps, Env, StdResult, Uint128, Uint256,
     },
     contract_interfaces::{
         liquidity_book::lb_pair::*,
@@ -20,22 +25,8 @@ use shade_protocol::{
                 FeeInfo,
                 QueryMsgResponse::{GetPairInfo, SwapSimulation},
             },
-            core::{Fee, TokenPair},
+            core::{Fee, TokenAmount, TokenPair, TokenType},
         },
-    },
-    lb_libraries::{
-        bin_helper::BinHelper,
-        constants::SCALE_OFFSET,
-        fee_helper::FeeHelper,
-        math::{
-            packed_u128_math::PackedUint128Math,
-            u24::U24,
-            u256x256_math::U256x256Math,
-            uint256_to_u256::{ConvertU256, ConvertUint256},
-        },
-        oracle_helper::MAX_SAMPLE_LIFETIME,
-        price_helper::PriceHelper,
-        types::Bytes32,
     },
     Contract,
 };
@@ -44,48 +35,50 @@ use std::collections::HashSet;
 // TODO - Revisit if this function is necessary. It seems like something that might belong in the
 //        lb-factory contract. It should at least have it's own interface and not use amm_pair's.
 pub fn query_pair_info(deps: Deps) -> Result<Binary> {
-    let state = STATE.load(deps.storage)?;
+    unimplemented!()
 
-    let (reserve_x, reserve_y) = state.reserves.decode();
-
-    let response = GetPairInfo {
-        liquidity_token: Contract {
-            address: state.lb_token.address,
-            code_hash: state.lb_token.code_hash,
-        },
-        factory: Some(Contract {
-            address: state.factory.address,
-            code_hash: state.factory.code_hash,
-        }),
-        pair: TokenPair(state.token_x, state.token_y, false),
-        amount_0: Uint128::from(reserve_x),
-        amount_1: Uint128::from(reserve_y),
-        total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
-        contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
-        fee_info: FeeInfo {
-            shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
-            lp_fee: Fee {
-                // TODO set this
-                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                denom: 1_000_000_000_000_000_000,
-            },
-            shade_dao_fee: Fee {
-                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                denom: 1_000_000_000_000_000_000,
-            },
-            stable_lp_fee: Fee {
-                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                denom: 1_000_000_000_000_000_000,
-            },
-            stable_shade_dao_fee: Fee {
-                nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
-                denom: 1_000_000_000_000_000_000,
-            },
-        },
-        stable_info: None,
-    };
-
-    to_binary(&response).map_err(Error::CwErr)
+    // let state = STATE.load(deps.storage)?;
+    //
+    // let (reserve_x, reserve_y) = state.reserves.decode();
+    //
+    // let response = GetPairInfo {
+    //     liquidity_token: Contract {
+    //         address: state.lb_token.address,
+    //         code_hash: state.lb_token.code_hash,
+    //     },
+    //     factory: Some(Contract {
+    //         address: state.factory.address,
+    //         code_hash: state.factory.code_hash,
+    //     }),
+    //     pair: TokenPair(state.token_x, state.token_y, false),
+    //     amount_0: Uint128::from(reserve_x),
+    //     amount_1: Uint128::from(reserve_y),
+    //     total_liquidity: Uint128::default(), // no global liquidity, liquidity is calculated on per bin basis
+    //     contract_version: 1, // TODO set this like const AMM_PAIR_CONTRACT_VERSION: u32 = 1;
+    //     fee_info: FeeInfo {
+    //         shade_dao_address: Addr::unchecked(""), // TODO set shade dao address
+    //         lp_fee: Fee {
+    //             // TODO set this
+    //             nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+    //             denom: 1_000_000_000_000_000_000,
+    //         },
+    //         shade_dao_fee: Fee {
+    //             nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+    //             denom: 1_000_000_000_000_000_000,
+    //         },
+    //         stable_lp_fee: Fee {
+    //             nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+    //             denom: 1_000_000_000_000_000_000,
+    //         },
+    //         stable_shade_dao_fee: Fee {
+    //             nom: state.pair_parameters.get_base_fee(state.bin_step) as u64,
+    //             denom: 1_000_000_000_000_000_000,
+    //         },
+    //     },
+    //     stable_info: None,
+    // };
+    //
+    // to_binary(&response).map_err(Error::CwErr)
 }
 
 // TODO - Revisit if this function is necessary. It seems like something that might belong in the
@@ -93,43 +86,45 @@ pub fn query_pair_info(deps: Deps) -> Result<Binary> {
 pub fn query_swap_simulation(
     deps: Deps,
     env: Env,
-    offer: shade_protocol::swap::core::TokenAmount,
+    offer: TokenAmount,
     _exclude_fee: Option<bool>,
 ) -> Result<Binary> {
-    let state = STATE.load(deps.storage)?;
+    unimplemented!()
 
-    let mut swap_for_y = false;
-    match offer.token {
-        token if token == state.token_x => swap_for_y = true,
-        token if token == state.token_y => {}
-        _ => panic!("No such token"),
-    };
-
-    let res = query_swap_out(deps, env, offer.amount.into(), swap_for_y)?;
-
-    let res = from_binary::<SwapOutResponse>(&res)?;
-
-    if res.amount_in_left.u128() > 0u128 {
-        return Err(Error::AmountInLeft {
-            amount_left_in: res.amount_in_left,
-            total_amount: offer.amount,
-            swapped_amount: res.amount_out,
-        });
-    }
-
-    let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
-
-    let response = SwapSimulation {
-        total_fee_amount: res.total_fees,
-        lp_fee_amount: res.lp_fees,               //TODO lpfee
-        shade_dao_fee_amount: res.shade_dao_fees, // dao fee
-        result: SwapResult {
-            return_amount: res.amount_out,
-        },
-        price,
-    };
-
-    to_binary(&response).map_err(Error::CwErr)
+    // let state = STATE.load(deps.storage)?;
+    //
+    // let mut swap_for_y = false;
+    // match offer.token {
+    //     token if token == state.token_x => swap_for_y = true,
+    //     token if token == state.token_y => {}
+    //     _ => panic!("No such token"),
+    // };
+    //
+    // let res = query_swap_out(deps, env, offer.amount.into(), swap_for_y)?;
+    //
+    // let res = from_binary::<SwapOutResponse>(&res)?;
+    //
+    // if res.amount_in_left.u128() > 0u128 {
+    //     return Err(Error::AmountInLeft {
+    //         amount_left_in: res.amount_in_left,
+    //         total_amount: offer.amount,
+    //         swapped_amount: res.amount_out,
+    //     });
+    // }
+    //
+    // let price = Decimal::from_ratio(res.amount_out, offer.amount).to_string();
+    //
+    // let response = SwapSimulation {
+    //     total_fee_amount: res.total_fees,
+    //     lp_fee_amount: res.lp_fees,               //TODO lpfee
+    //     shade_dao_fee_amount: res.shade_dao_fees, // dao fee
+    //     result: SwapResult {
+    //         return_amount: res.amount_out,
+    //     },
+    //     price,
+    // };
+    //
+    // to_binary(&response).map_err(Error::CwErr)
 }
 
 /// Returns the Liquidity Book Factory.

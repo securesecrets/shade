@@ -1,40 +1,21 @@
-use shade_protocol::{
-    c_std::{
-        shd_entry_point,
-        Addr,
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-    },
-    contract_interfaces::liquidity_book::lb_libraries::viewing_keys::{
-        register_receive,
-        set_viewing_key_msg,
-    },
-    liquidity_book::lb_staking::{
-        Auth,
-        AuthPermit,
-        EpochInfo,
-        ExecuteMsg,
-        InstantiateMsg,
-        QueryMsg,
-        State,
-    },
-    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
-    utils::pad_handle_result,
-    Contract,
-    BLOCK_SIZE,
-};
-
 use crate::{
     execute::*,
     helper::store_empty_reward_set,
     query::*,
     state::{EPOCH_STORE, EXPIRED_AT_LOGGER, LAST_CLAIMED_EXPIRED_REWARDS_EPOCH_ID, STATE},
+};
+use shade_protocol::{
+    c_std::{
+        shd_entry_point, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+        StdResult,
+    },
+    liquidity_book::lb_staking::{
+        Auth, AuthPermit, EpochInfo, ExecuteMsg, InstantiateMsg, QueryMsg, State,
+    },
+    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
+    snip20::helpers::{register_receive, set_viewing_key_msg},
+    utils::pad_handle_result,
+    Contract, BLOCK_SIZE,
 };
 
 pub const SHADE_STAKING_VIEWING_KEY: &str = "SHADE_STAKING_VIEWING_KEY";
@@ -60,14 +41,18 @@ pub fn instantiate(
     };
 
     let now = env.block.time.seconds();
-    EPOCH_STORE.save(deps.storage, state.epoch_index, &EpochInfo {
-        rewards_distribution: None,
-        start_time: now,
-        end_time: now + state.epoch_durations,
-        duration: state.epoch_durations,
-        reward_tokens: None,
-        expired_at: None,
-    })?;
+    EPOCH_STORE.save(
+        deps.storage,
+        state.epoch_index,
+        &EpochInfo {
+            rewards_distribution: None,
+            start_time: now,
+            end_time: now + state.epoch_durations,
+            duration: state.epoch_durations,
+            reward_tokens: None,
+            expired_at: None,
+        },
+    )?;
 
     let messages = vec![
         register_receive(

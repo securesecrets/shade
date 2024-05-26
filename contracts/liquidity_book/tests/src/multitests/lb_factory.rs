@@ -1,4 +1,9 @@
+use crate::multitests::test_helper::*;
 use anyhow::Ok;
+use lb_libraries::math::{
+    encoded_sample::{MASK_UINT12, MASK_UINT20},
+    u24::U24,
+};
 use serial_test::serial;
 use shade_multi_test::{
     interfaces::{lb_factory, lb_pair, snip20},
@@ -9,16 +14,10 @@ use shade_protocol::{
         ContractInfo,
         StdError::{self, GenericErr},
     },
-    lb_libraries::math::{
-        encoded_sample::{MASK_UINT12, MASK_UINT20},
-        u24::U24,
-    },
     liquidity_book::{lb_factory::PresetResponse, lb_pair::RewardsDistributionAlgorithm},
     swap::core::TokenType,
     utils::MultiTestable,
 };
-
-use crate::multitests::test_helper::*;
 
 #[test]
 #[serial]

@@ -1,14 +1,25 @@
 use super::lb_pair::{self, RewardsDistributionAlgorithm};
 use crate::{
-    contract_interfaces::swap::core::TokenType,
-    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    utils::asset::RawContract,
+    contract_interfaces::liquidity_book::lb_pair::{LBPair, LBPairInformation},
+    swap::core::TokenType,
+    utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
 };
-
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
+use lb_libraries::types::ContractImplementation;
+
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
+
+#[cw_serde]
+pub struct StaticFeeParameters {
+    pub base_factor: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub variable_fee_control: u32,
+    pub protocol_share: u16,
+    pub max_volatility_accumulator: u32,
+}
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -27,15 +38,15 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum ExecuteMsg {
     #[serde(rename = "set_lb_pair_implementation")]
     SetLBPairImplementation {
-        implementation: ContractInstantiationInfo,
+        implementation: ContractImplementation,
     },
     #[serde(rename = "set_lb_token_implementation")]
     SetLBTokenImplementation {
-        implementation: ContractInstantiationInfo,
+        implementation: ContractImplementation,
     },
     #[serde(rename = "set_staking_contract_implementation")]
     SetStakingContractImplementation {
-        implementation: ContractInstantiationInfo,
+        implementation: ContractImplementation,
     },
     #[serde(rename = "create_lb_pair")]
     CreateLBPair {
@@ -175,12 +186,12 @@ pub struct FeeRecipientResponse {
 
 #[cw_serde]
 pub struct LBPairImplementationResponse {
-    pub lb_pair_implementation: ContractInstantiationInfo,
+    pub lb_pair_implementation: ContractImplementation,
 }
 
 #[cw_serde]
 pub struct LBTokenImplementationResponse {
-    pub lb_token_implementation: ContractInstantiationInfo,
+    pub lb_token_implementation: ContractImplementation,
 }
 
 #[cw_serde]

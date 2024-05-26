@@ -1,9 +1,9 @@
 mod example_data;
 
 use example_data::*;
+use lb_libraries::pair_parameter_helper::PairParameters;
 use shade_protocol::{
     c_std::{Addr, Binary, ContractInfo, Uint128},
-    lb_libraries::pair_parameter_helper::PairParameters,
     liquidity_book::lb_pair::{InvokeMsg, SwapResult},
     swap::{
         core::{TokenAmount, TokenType},

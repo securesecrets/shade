@@ -507,7 +507,7 @@ impl PairParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::liquidity_book::lb_libraries::types::StaticFeeParameters;
+    use crate::types::StaticFeeParameters;
     use cosmwasm_std::testing::mock_env;
 
     static MAX_STATIC_FEE_PARAMETER: StaticFeeParameters = StaticFeeParameters {
@@ -604,7 +604,7 @@ mod tests {
 
         // For the second assertion, we'll mimic the bitwise operations
         let shifted_mask = MASK_UINT16 << OFFSET_ORACLE_ID;
-        let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
         let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
         assert_eq!(
@@ -634,7 +634,7 @@ mod tests {
                     assert_eq!(pair_params.get_volatility_reference(), volatility_reference);
 
                     let shifted_mask = MASK_UINT20 << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -673,7 +673,7 @@ mod tests {
 
                     let mask_not_uint20 = !mask_uint20;
                     let shifted_mask = mask_not_uint20 << OFFSET_VOL_ACC;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -721,7 +721,7 @@ mod tests {
                 // For the final assertion, we'll mimic the bitwise operations
                 let mask_not_uint24 = !MASK_UINT24;
                 let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -786,7 +786,7 @@ mod tests {
         let mask_not_uint24 = !MASK_UINT24;
         let shifted_mask = mask_not_uint24 << OFFSET_ACTIVE_ID;
 
-        let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+        let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
         let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
         assert_eq!(
@@ -812,7 +812,7 @@ mod tests {
 
                 let mask_not_uint40 = !MASK_UINT40;
                 let shifted_mask = mask_not_uint40 << OFFSET_TIME_LAST_UPDATE;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -847,7 +847,7 @@ mod tests {
 
                     let mask_not_uint20 = !MASK_UINT20;
                     let shifted_mask = mask_not_uint20 << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(
@@ -887,7 +887,7 @@ mod tests {
 
                 let mask_not_uint20 = !MASK_UINT20;
                 let shifted_mask = mask_not_uint20 << OFFSET_VOL_ACC;
-                let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                 let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                 assert_eq!(
@@ -957,7 +957,7 @@ mod tests {
                     );
 
                     let mask = !(U256::from(1u128 << 84u128) - 1u128) << OFFSET_VOL_REF;
-                    let new_params_bits = U256::from_le_bytes(pair_params.0.0);
+                    let new_params_bits = U256::from_le_bytes(pair_params.0 .0);
                     let original_params_bits = U256::from_le_bytes(EncodedSample([0u8; 32]).0);
 
                     assert_eq!(new_params_bits & mask, original_params_bits & mask);
@@ -1024,8 +1024,8 @@ mod tests {
             );
 
             let mask = !(U256::from(1u128 << 104u128) - 1u128) << OFFSET_VOL_ACC;
-            let new_params_bits = U256::from_le_bytes(new_params.0.0);
-            let original_params_bits = U256::from_le_bytes(pair_params.0.0);
+            let new_params_bits = U256::from_le_bytes(new_params.0 .0);
+            let original_params_bits = U256::from_le_bytes(pair_params.0 .0);
 
             assert_eq!(new_params_bits & mask, original_params_bits & mask);
         } else {

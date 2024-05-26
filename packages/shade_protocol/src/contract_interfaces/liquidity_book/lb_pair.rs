@@ -1,18 +1,29 @@
-use std::fmt::{Debug, Display};
-
 use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
-    liquidity_book::lb_libraries::types::{
-        Bytes32,
-        ContractInstantiationInfo,
-        StaticFeeParameters,
-    },
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
 };
+use lb_libraries::types::{Bytes32, ContractImplementation, StaticFeeParameters};
+use std::fmt::{Debug, Display};
+
+#[cw_serde]
+pub struct LBPair {
+    pub token_x: TokenType,
+    pub token_y: TokenType,
+    pub bin_step: u16,
+    pub contract: ContractInfo,
+}
+
+#[cw_serde]
+pub struct LBPairInformation {
+    pub bin_step: u16,
+    pub info: LBPair,
+    pub created_by_owner: bool,
+    pub ignored_for_routing: bool,
+}
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -22,8 +33,8 @@ pub struct InstantiateMsg {
     pub bin_step: u16,
     pub pair_parameters: StaticFeeParameters,
     pub active_id: u32,
-    pub lb_token_implementation: ContractInstantiationInfo,
-    pub staking_contract_implementation: ContractInstantiationInfo,
+    pub lb_token_implementation: ContractImplementation,
+    pub staking_contract_implementation: ContractImplementation,
     pub viewing_key: String,
     pub entropy: String,
     pub protocol_fee_recipient: Addr,
@@ -483,7 +494,6 @@ pub struct RemoveLiquidity {
 }
 
 #[cw_serde]
-
 pub struct FeeInfo {
     pub shade_dao_address: Addr,
     pub lp_fee: Fee,
@@ -493,7 +503,6 @@ pub struct FeeInfo {
 }
 
 #[cw_serde]
-
 pub struct StablePairInfoResponse {
     pub stable_params: StableParams,
     pub stable_token0_data: StableTokenData,
@@ -503,7 +512,6 @@ pub struct StablePairInfoResponse {
 }
 
 #[cw_serde]
-
 pub struct CustomIterationControls {
     pub epsilon: Uint256, // assumed to have same decimals as SignedDecimal
     pub max_iter_newton: u16,
@@ -511,7 +519,6 @@ pub struct CustomIterationControls {
 }
 
 #[cw_serde]
-
 pub struct StableParams {
     pub a: Decimal256,
     pub gamma1: Uint256,
@@ -524,14 +531,12 @@ pub struct StableParams {
 }
 
 #[cw_serde]
-
 pub struct StableTokenData {
     pub oracle_key: String,
     pub decimals: u8,
 }
 
 #[cw_serde]
-
 pub struct Fee {
     pub nom: u64,
     pub denom: u64,
@@ -544,7 +549,6 @@ impl Fee {
 }
 
 #[cw_serde]
-
 pub struct CustomFee {
     pub shade_dao_fee: Fee,
     pub lp_fee: Fee,

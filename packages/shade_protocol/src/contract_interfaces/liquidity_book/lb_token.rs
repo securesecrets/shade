@@ -1,18 +1,17 @@
-use secret_toolkit::permit::Permit;
-use serde::{Deserialize, Serialize};
-
 use crate::{
     c_std::{to_binary, Addr, Binary, Coin, CosmosMsg, StdResult, Uint128, Uint256, WasmMsg},
-    liquidity_book::lb_libraries::lb_token::{
-        expiration::Expiration,
-        metadata::Metadata,
-        permissions::{Permission, PermissionKey},
-        state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
-        txhistory::Tx,
-    },
     schemars::JsonSchema,
     utils::{ExecuteCallback, InstantiateCallback, Query},
 };
+use lb_libraries::lb_token::{
+    expiration::Expiration,
+    metadata::Metadata,
+    permissions::{Permission, PermissionKey},
+    state_structs::{CurateTokenId, LbPair, OwnerBalance, StoredTokenInfo, TokenAmount},
+    txhistory::Tx,
+};
+use secret_toolkit::permit::Permit;
+use serde::{Deserialize, Serialize};
 
 /////////////////////////////////////////////////////////////////////////////////
 // Init messages

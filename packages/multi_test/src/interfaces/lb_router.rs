@@ -1,6 +1,6 @@
 use crate::{
     interfaces::utils::{DeployedContracts, SupportedContracts},
-    multi::{admin::init_admin_auth, router::Router},
+    multi::{admin::init_admin_auth, lb_router::Router},
 };
 use anyhow::Error;
 use shade_protocol::{

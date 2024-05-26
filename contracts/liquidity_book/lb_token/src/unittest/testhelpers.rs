@@ -1,30 +1,20 @@
-use cosmwasm_storage::ReadonlyPrefixedStorage;
-use secret_toolkit::viewing_key::{ViewingKey, ViewingKeyStore};
-use serde::de::DeserializeOwned;
-use shade_protocol::lb_libraries::lb_token::metadata::{Extension, Metadata};
-use std::any::Any;
-
 use crate::{
     contract::{execute, instantiate},
     state::balances_r,
 };
 use cosmwasm_std::{
-    from_binary,
-    testing::*,
-    to_binary,
-    Addr,
-    CosmosMsg,
-    Env,
-    MessageInfo,
-    OwnedDeps,
-    Response,
-    StdError,
-    StdResult,
-    Storage,
-    Uint256,
-    WasmMsg,
+    from_binary, testing::*, to_binary, Addr, CosmosMsg, Env, MessageInfo, OwnedDeps, Response,
+    StdError, StdResult, Storage, Uint256, WasmMsg,
 };
-use shade_protocol::{lb_libraries::lb_token::state_structs::*, liquidity_book::lb_token::*};
+use cosmwasm_storage::ReadonlyPrefixedStorage;
+use lb_libraries::lb_token::{
+    metadata::{Extension, Metadata},
+    state_structs::*,
+};
+use secret_toolkit::viewing_key::{ViewingKey, ViewingKeyStore};
+use serde::de::DeserializeOwned;
+use shade_protocol::liquidity_book::lb_token::*;
+use std::any::Any;
 
 pub fn default_curate_value() -> CurateTokenId {
     CurateTokenId {

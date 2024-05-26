@@ -1,24 +1,10 @@
-// use base64::{engine::general_purpose, Engine as _};
-use cosmwasm_std::{
-    entry_point,
-    // debug_print,
-    to_binary,
-    Binary,
-    Deps,
-    DepsMut,
-    Env,
-    MessageInfo,
-    Response,
-    StdError,
-    StdResult,
-};
-
-use crate::{execute::*, query::*};
-
 use crate::state::{blockinfo_w, contr_conf_r, contr_conf_w, PREFIX_REVOKED_PERMITS};
-
+use crate::{execute::*, query::*};
+use cosmwasm_std::{
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
+use lb_libraries::lb_token::state_structs::ContractConfig;
 use shade_protocol::{
-    lb_libraries::lb_token::state_structs::ContractConfig,
     liquidity_book::lb_token::{ExecuteMsg, InstantiateMsg, SendAction},
     s_toolkit::{
         crypto::sha_256,
@@ -26,6 +12,7 @@ use shade_protocol::{
         viewing_key::{ViewingKey, ViewingKeyStore},
     },
 };
+
 /////////////////////////////////////////////////////////////////////////////////
 // Init
 /////////////////////////////////////////////////////////////////////////////////
@@ -147,15 +134,20 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             msg,
             memo,
             padding: _,
-        } => try_send(deps, env, info, SendAction {
-            token_id,
-            from,
-            recipient,
-            recipient_code_hash,
-            amount,
-            msg,
-            memo,
-        }),
+        } => try_send(
+            deps,
+            env,
+            info,
+            SendAction {
+                token_id,
+                from,
+                recipient,
+                recipient_code_hash,
+                amount,
+                msg,
+                memo,
+            },
+        ),
         ExecuteMsg::BatchSend {
             actions,
             padding: _,

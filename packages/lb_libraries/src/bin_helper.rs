@@ -4,12 +4,6 @@
 //! This library contains functions to help interaction with bins.
 
 use crate::{
-    c_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128},
-    swap::core::TokenType,
-};
-use ethnum::U256;
-
-use super::{
     constants::{SCALE, SCALE_OFFSET},
     fee_helper::{FeeError, FeeHelper},
     math::{
@@ -18,9 +12,12 @@ use super::{
         u256x256_math::{U256x256Math, U256x256MathError},
     },
     pair_parameter_helper::{PairParameters, PairParametersError},
-    transfer::HandleMsg,
     types::Bytes32,
 };
+use cosmwasm_std::Uint128;
+use ethnum::U256;
+// use secret_toolkit::snip20::transfer_msg;
+// use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, Uint128};
 
 #[derive(thiserror::Error, Debug)]
 pub enum BinError {
@@ -356,7 +353,8 @@ impl BinHelper {
         Ok((amounts_in_with_fees, amounts_out_of_bin, total_fees))
     }
 
-    // NOTE: Instead of querying the total balance of the contract and substracting the amount with the reserves, we will just calculate the amount received from the send message
+    // NOTE: Instead of querying the total balance of the contract and substracting the amount with the reserves,
+    // we will just calculate the amount received from the send message
 
     /// Returns the encoded amounts that were transferred to the contract for both tokens.
     ///
@@ -409,6 +407,11 @@ impl BinHelper {
     pub fn received_y(amount_received: Uint128) -> Bytes32 {
         Bytes32::encode_second(amount_received.u128())
     }
+
+    // TODO: (maybe) move the transfer helper methods into an impl module inside of
+    // shade_protocol/contract_interfaces/liquidity_book
+
+    /*
 
     /// Transfers the encoded amounts to the recipient for both tokens.
     ///
@@ -464,15 +467,16 @@ impl BinHelper {
                     contract_addr,
                     token_code_hash,
                 } => {
-                    let msg = HandleMsg::Transfer {
-                        recipient: recipient.to_string(),
+                    let cosmos_msg = transfer_msg(
+                        recipient.to_string(),
                         amount,
-                        padding: None,
-                        memo: None,
-                    };
-                    let cosmos_msg = msg
-                        .to_cosmos_msg(token_code_hash, contract_addr.to_string(), None)
-                        .unwrap();
+                        None,
+                        None,
+                        256,
+                        token_code_hash,
+                        contract_addr.to_string(),
+                    )
+                    .unwrap();
 
                     Some(cosmos_msg)
                 }
@@ -505,15 +509,16 @@ impl BinHelper {
                     contract_addr,
                     token_code_hash,
                 } => {
-                    let msg = HandleMsg::Transfer {
-                        recipient: recipient.to_string(),
+                    let cosmos_msg = transfer_msg(
+                        recipient.to_string(),
                         amount,
-                        padding: None,
-                        memo: None,
-                    };
-                    let cosmos_msg = msg
-                        .to_cosmos_msg(token_code_hash, contract_addr.to_string(), None)
-                        .unwrap();
+                        None,
+                        None,
+                        256,
+                        token_code_hash,
+                        contract_addr.to_string(),
+                    )
+                    .unwrap();
 
                     Some(cosmos_msg)
                 }
@@ -527,14 +532,16 @@ impl BinHelper {
             None
         }
     }
+
+    */
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::{math::encoded_sample::EncodedSample, types::StaticFeeParameters};
-    use crate::c_std::StdResult;
+    use crate::{math::encoded_sample::EncodedSample, types::StaticFeeParameters};
+    use cosmwasm_std::StdResult;
     use ethnum::U256;
     use std::str::FromStr;
 

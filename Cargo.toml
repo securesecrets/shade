@@ -7,6 +7,7 @@ members = [
   "packages/multi_test",
   "packages/multi_derive",
   "packages/contract_derive",
+  "packages/lb_libraries",
 
   # Network setups
   #"contracts/airdrop",
@@ -22,7 +23,7 @@ members = [
   "contracts/liquidity_book/lb_factory",
   "contracts/liquidity_book/lb_pair",
   "contracts/liquidity_book/lb_token",
-  "contracts/liquidity_book/router",
+  "contracts/liquidity_book/lb_router",
   "contracts/liquidity_book/lb_staking",
   "contracts/liquidity_book/tests",
 

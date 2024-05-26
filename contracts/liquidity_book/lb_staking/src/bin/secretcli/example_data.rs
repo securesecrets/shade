@@ -1,14 +1,12 @@
+use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use serde_json::from_str;
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
-    lb_libraries::types::{
-        ContractInstantiationInfo,
-        LBPair,
-        LBPairInformation,
-        StaticFeeParameters,
-    },
     liquidity_book::{
-        lb_pair::{LiquidityParameters, RemoveLiquidity, RewardsDistribution, TokenPair},
+        lb_pair::{
+            LBPair, LBPairInformation, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
+            TokenPair,
+        },
         lb_staking::Auth,
         lb_token::Snip1155ReceiveMsg,
     },
@@ -73,9 +71,9 @@ pub trait ExampleData {
     fn example() -> Self;
 }
 
-impl ExampleData for ContractInstantiationInfo {
+impl ExampleData for ContractImplementation {
     fn example() -> Self {
-        ContractInstantiationInfo {
+        ContractImplementation {
             id: 1u64,
             code_hash: "0123456789ABCDEF".to_string(),
         }

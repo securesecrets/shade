@@ -1,6 +1,6 @@
 use ethnum::U256;
 
-use crate::liquidity_book::lb_libraries::pair_parameter_helper::PairParametersError;
+use crate::pair_parameter_helper::PairParametersError;
 
 use super::{u128x128_math::U128x128MathError, u24::U24, u256x256_math::U256x256MathError};
 

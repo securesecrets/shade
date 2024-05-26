@@ -11,9 +11,7 @@ pub mod math;
 pub mod oracle_helper;
 pub mod pair_parameter_helper;
 pub mod price_helper;
-pub mod transfer;
 pub mod types;
-pub mod viewing_keys;
 
 pub fn approx_div(a: Uint256, b: Uint256) -> Uint256 {
     if b == Uint256::zero() {

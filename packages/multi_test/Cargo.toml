@@ -1,9 +1,7 @@
 [package]
 name = "shade-multi-test"
 version = "0.1.0"
-authors = [
-   "hoomp <flammable.shower939@anonaddy.me>"
-]
+authors = ["hoomp <flammable.shower939@anonaddy.me>"]
 edition = "2018"
 
 [lib]
@@ -14,12 +12,12 @@ default = []
 airdrop = ["dep:airdrop"]
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
-lb_factory = ["dep:lb_factory"]
-lb_pair = ["dep:lb_pair"]
-lb_token = ["dep:lb_token"]
-lb_staking = ["dep:lb_staking"]
+lb-factory = ["dep:lb-factory"]
+lb-pair = ["dep:lb-pair"]
+lb-token = ["dep:lb-token"]
+lb-staking = ["dep:lb-staking"]
+lb-router = ["dep:lb-router"]
 
-router = ["dep:router"]
 #liability_mint = ["dep:liability_mint"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
@@ -44,12 +42,11 @@ snip20_migration = ["dep:snip20_migration"]
 [dependencies]
 airdrop = { path = "../../contracts/airdrop", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
-lb_factory = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_factory", optional = true}
-lb_pair = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_pair", optional = true }
-lb_token = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_token", optional = true }
-
-lb_staking = { version = "0.1.0", path = "../../contracts/liquidity_book/lb_staking", optional = true }
-router = { version = "0.1.0", path = "../../contracts/liquidity_book/router", optional = true }
+lb-factory = { path = "../../contracts/liquidity_book/lb_factory", optional = true }
+lb-pair = { path = "../../contracts/liquidity_book/lb_pair", optional = true }
+lb-token = { path = "../../contracts/liquidity_book/lb_token", optional = true }
+lb-staking = { path = "../../contracts/liquidity_book/lb_staking", optional = true }
+lb-router = { path = "../../contracts/liquidity_book/lb_router", optional = true }
 #liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
@@ -69,9 +66,18 @@ admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 mock_stkd = { version = "0.1.0", package = "mock_stkd_derivative", path = "../../contracts/mock/mock_stkd_derivative", optional = true }
 mock_sienna = { version = "0.1.0", package = "mock_sienna_pair", path = "../../contracts/mock/mock_sienna_pair", optional = true }
 snip20_migration = { version = "0.1.0", path = "../../contracts/snip20_migration", optional = true }
-shade-protocol = { path = "../shade_protocol", features = ["multi-test", "swap", "liquidity_book" ] }
+shade-protocol = { path = "../shade_protocol", features = [
+   "multi-test",
+   "swap",
+   "liquidity-book",
+] }
+lb-libraries = { path = "../lb_libraries" }
 anyhow = "1"
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
-shade-protocol = { path = "../shade_protocol", features = ["multi-test", "swap", "liquidity_book" ] }
+shade-protocol = { path = "../shade_protocol", features = [
+   "multi-test",
+   "swap",
+   "liquidity-book",
+] }
 multi-derive = { path = "../multi_derive" }

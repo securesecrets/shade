@@ -1,16 +1,12 @@
 use anyhow::Ok;
+use lb_libraries::math::u24::U24;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
+    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError, Uint128, Uint256},
-    lb_libraries::{math::u24::U24, types::LBPairInformation},
-    liquidity_book::lb_pair::RemoveLiquidity,
+    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
     multi_test::App,
 };
 use std::{

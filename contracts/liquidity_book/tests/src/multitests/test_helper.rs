@@ -1,22 +1,18 @@
 use cosmwasm_std::to_binary;
+use lb_libraries::{constants::PRECISION, math::u24::U24};
 use rand::Rng;
 use shade_multi_test::{
     interfaces::{
-        lb_factory,
-        snip20,
+        lb_factory, snip20,
         utils::{DeployedContracts, SupportedContracts},
     },
     multi::{
-        admin::init_admin_auth,
-        lb_pair::LbPair,
-        lb_staking::LbStaking,
-        lb_token::LbToken,
+        admin::init_admin_auth, lb_pair::LbPair, lb_staking::LbStaking, lb_token::LbToken,
         query_auth::QueryAuth,
     },
 };
 use shade_protocol::{
     c_std::{Addr, BlockInfo, ContractInfo, StdResult, Timestamp, Uint128, Uint256},
-    lb_libraries::{constants::PRECISION, math::u24::U24},
     liquidity_book::{
         lb_pair::{LiquidityParameters, RewardsDistributionAlgorithm},
         lb_staking::Auth,
@@ -25,10 +21,7 @@ use shade_protocol::{
     query_auth,
     swap::core::TokenType,
     utils::{
-        asset::Contract,
-        cycle::parse_utc_datetime,
-        ExecuteCallback,
-        InstantiateCallback,
+        asset::Contract, cycle::parse_utc_datetime, ExecuteCallback, InstantiateCallback,
         MultiTestable,
     },
 };
@@ -831,9 +824,13 @@ pub fn mint_token_helper(
 
     // Adding minters and minting for SSCRT and SHADE
     for (token, amount) in tokens_to_mint {
-        snip20::add_minters_exec(app, admin, deployed_contracts, token, vec![
-            admin.to_string(),
-        ])?;
+        snip20::add_minters_exec(
+            app,
+            admin,
+            deployed_contracts,
+            token,
+            vec![admin.to_string()],
+        )?;
         snip20::mint_exec(
             app,
             admin,

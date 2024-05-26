@@ -1,13 +1,8 @@
-use crate::multitests::test_helper::*;
-
 use super::test_helper::{
-    increase_allowance_helper,
-    init_addrs,
-    liquidity_parameters_generator,
-    mint_token_helper,
-    setup,
-    ID_ONE,
+    increase_allowance_helper, init_addrs, liquidity_parameters_generator, mint_token_helper,
+    setup, ID_ONE,
 };
+use crate::multitests::test_helper::*;
 use anyhow::Ok;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token};
 use shade_protocol::{
@@ -771,12 +766,10 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
 
-    assert!(
-        _distribution
-            .weightages
-            .iter()
-            .all(|&x| x == _distribution.weightages[0])
-    );
+    assert!(_distribution
+        .weightages
+        .iter()
+        .all(|&x| x == _distribution.weightages[0]));
 
     //making a swap for token y hence the bin id moves to the right
     let timestamp = Timestamp::from_seconds(app.block_info().time.seconds() + 7);
@@ -821,12 +814,10 @@ pub fn test_reset_rewards_config() -> Result<(), anyhow::Error> {
     let _distribution = lb_pair::query_rewards_distribution(&app, &lb_pair.info.contract, None)?;
     //Eventhough the distribution was changes mid epoch the effects of change will occur after the epoch.
 
-    assert!(
-        _distribution
-            .weightages
-            .iter()
-            .any(|&x| x != _distribution.weightages[0])
-    );
+    assert!(_distribution
+        .weightages
+        .iter()
+        .any(|&x| x != _distribution.weightages[0]));
 
     // println!("_distribution {:?}", _distribution);
 

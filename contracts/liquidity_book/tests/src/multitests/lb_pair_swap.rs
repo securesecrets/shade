@@ -1,25 +1,17 @@
 use crate::multitests::test_helper::*;
 
 use super::test_helper::{
-    increase_allowance_helper,
-    init_addrs,
-    liquidity_parameters_generator,
-    mint_token_helper,
-    setup,
-    ID_ONE,
+    increase_allowance_helper, init_addrs, liquidity_parameters_generator, mint_token_helper,
+    setup, ID_ONE,
 };
 use anyhow::Ok;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
+    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError, Uint128},
-    lb_libraries::types::LBPairInformation,
+    liquidity_book::lb_pair::LBPairInformation,
     multi_test::App,
 };
 

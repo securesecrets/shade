@@ -1,37 +1,19 @@
-use std::collections::HashSet;
-
 use crate::{
     prelude::*,
     state::*,
     types::{LBPair, LBPairInformation, NextPairKey},
 };
-
+use lb_libraries::{
+    math::encoded_sample::EncodedSample,
+    pair_parameter_helper::PairParameters,
+    price_helper::PriceHelper,
+    types::{Bytes32, ContractImplementation, StaticFeeParameters},
+};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Binary,
-        ContractInfo,
-        CosmosMsg,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Reply,
-        Response,
-        StdError,
-        StdResult,
-        SubMsg,
-        SubMsgResult,
-        WasmMsg,
-    },
-    lb_libraries::{
-        math::encoded_sample::EncodedSample,
-        pair_parameter_helper::PairParameters,
-        price_helper::PriceHelper,
-        types::{Bytes32, ContractInstantiationInfo, StaticFeeParameters},
+        shd_entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps, DepsMut, Env,
+        MessageInfo, Reply, Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
     },
     liquidity_book::{
         lb_factory::*,
@@ -43,6 +25,7 @@ use shade_protocol::{
     swap::core::TokenType,
     utils::callback::ExecuteCallback,
 };
+use std::collections::HashSet;
 
 pub static _OFFSET_IS_PRESET_OPEN: u8 = 255;
 pub static _MIN_BIN_STEP: u8 = 1; // 0.001%
@@ -66,10 +49,10 @@ pub fn instantiate(
         },
         owner: msg.owner.unwrap_or_else(|| info.sender.clone()),
         fee_recipient: msg.fee_recipient,
-        lb_pair_implementation: ContractInstantiationInfo::default(),
-        lb_token_implementation: ContractInstantiationInfo::default(),
+        lb_pair_implementation: ContractImplementation::default(),
+        lb_token_implementation: ContractImplementation::default(),
         admin_auth: msg.admin_auth.into_valid(deps.api)?,
-        staking_contract_implementation: ContractInstantiationInfo::default(),
+        staking_contract_implementation: ContractImplementation::default(),
         recover_staking_funds_receiver: msg.recover_staking_funds_receiver,
         query_auth: msg.query_auth.into_valid(deps.api)?,
         max_bins_per_swap: msg.max_bins_per_swap,
@@ -214,7 +197,7 @@ fn try_set_lb_pair_implementation(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    new_lb_pair_implementation: ContractInstantiationInfo,
+    new_lb_pair_implementation: ContractImplementation,
 ) -> Result<Response> {
     let config = STATE.load(deps.storage)?;
     validate_admin(
@@ -248,7 +231,7 @@ fn try_set_lb_token_implementation(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    new_lb_token_implementation: ContractInstantiationInfo,
+    new_lb_token_implementation: ContractImplementation,
 ) -> Result<Response> {
     let config = STATE.load(deps.storage)?;
     validate_admin(
@@ -282,7 +265,7 @@ fn try_set_staking_contract_implementation(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    new_implementation: ContractInstantiationInfo,
+    new_implementation: ContractImplementation,
 ) -> Result<Response> {
     let config = STATE.load(deps.storage)?;
     validate_admin(
@@ -341,7 +324,7 @@ fn try_create_lb_pair(
         .map_err(|_| Error::BinStepHasNoPreset { bin_step })?;
     let is_owner = info.sender == config.owner;
 
-    if !_is_preset_open(preset.0.0) && !is_owner {
+    if !_is_preset_open(preset.0 .0) && !is_owner {
         return Err(Error::PresetIsLockedForUsers {
             user: info.sender,
             bin_step,
@@ -523,13 +506,17 @@ fn try_set_pair_preset(
 
     PRESETS.save(deps.storage, bin_step, &preset)?;
 
-    STAKING_PRESETS.save(deps.storage, bin_step, &StakingPreset {
-        total_reward_bins,
-        rewards_distribution_algorithm,
-        epoch_staking_index,
-        epoch_staking_duration,
-        expiry_staking_duration,
-    })?;
+    STAKING_PRESETS.save(
+        deps.storage,
+        bin_step,
+        &StakingPreset {
+            total_reward_bins,
+            rewards_distribution_algorithm,
+            epoch_staking_index,
+            epoch_staking_duration,
+            expiry_staking_duration,
+        },
+    )?;
 
     STATE.save(deps.storage, &state)?;
 
@@ -1136,7 +1123,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
     for bin_step in hashset {
         let preset = PRESETS.load(deps.storage, bin_step)?;
 
-        if _is_preset_open(preset.0.0) {
+        if _is_preset_open(preset.0 .0) {
             open_bin_steps.push(bin_step)
         }
     }

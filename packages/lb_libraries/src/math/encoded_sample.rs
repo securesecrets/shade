@@ -3,7 +3,7 @@
 //!
 //! Helper library used for setting and decoding parts of encoded Bytes32.
 
-use crate::liquidity_book::lb_libraries::types::Bytes32;
+use crate::types::Bytes32;
 use cosmwasm_schema::cw_serde;
 use ethnum::U256;
 

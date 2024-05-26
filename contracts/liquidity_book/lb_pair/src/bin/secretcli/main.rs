@@ -2,19 +2,16 @@ mod example_data;
 
 use ethnum::U256;
 use example_data::*;
+use lb_libraries::{
+    math::uint256_to_u256::ConvertU256,
+    pair_parameter_helper::PairParameters,
+    types::{ContractImplementation, StaticFeeParameters},
+};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     contract_interfaces::liquidity_book::lb_pair::*,
-    lb_libraries::{
-        math::uint256_to_u256::ConvertU256,
-        pair_parameter_helper::PairParameters,
-        types::{ContractInstantiationInfo, StaticFeeParameters},
-    },
     liquidity_book::lb_pair::{
-        ContractStatus,
-        InvokeMsg,
-        LiquidityParameters,
-        RemoveLiquidity,
+        ContractStatus, InvokeMsg, LiquidityParameters, RemoveLiquidity,
         RewardsDistributionAlgorithm,
     },
     swap::core::{TokenAmount, TokenType},
@@ -115,8 +112,8 @@ fn main() -> io::Result<()> {
             max_volatility_accumulator: preset.get_max_volatility_accumulator(),
         },
         active_id: ACTIVE_ID,
-        lb_token_implementation: ContractInstantiationInfo::default(),
-        staking_contract_implementation: ContractInstantiationInfo::default(),
+        lb_token_implementation: ContractImplementation::default(),
+        staking_contract_implementation: ContractImplementation::default(),
         viewing_key: String::from("viewing_key"),
         entropy: String::from("entropy"),
         protocol_fee_recipient: Addr::funds_recipient(),

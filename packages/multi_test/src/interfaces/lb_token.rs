@@ -1,7 +1,7 @@
+use lb_libraries::lb_token::state_structs::OwnerBalance;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult, Uint256},
     contract_interfaces::liquidity_book::{lb_token, lb_token::*},
-    lb_libraries::lb_token::state_structs::OwnerBalance,
     multi_test::App,
     utils::{ExecuteCallback, Query},
 };

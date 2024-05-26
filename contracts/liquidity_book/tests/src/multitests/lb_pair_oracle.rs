@@ -1,26 +1,21 @@
-use std::ops::Sub;
-
 use crate::multitests::test_helper::*;
 use anyhow::Ok;
 use cosmwasm_std::{Timestamp, Uint128};
+use lb_libraries::oracle_helper::MAX_SAMPLE_LIFETIME;
 use serial_test::serial;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
+    lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
-    c_std::ContractInfo,
-    lb_libraries::{oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
-    multi_test::App,
+    c_std::ContractInfo, liquidity_book::lb_pair::LBPairInformation, multi_test::App,
 };
+use std::ops::Sub;
+
 pub const DEPOSIT_AMOUNT: u128 = 100_000_000u128;
 pub const ACTIVE_ID: u32 = ID_ONE;
 
-pub fn lb_pair_setup()
--> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
+pub fn lb_pair_setup(
+) -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 

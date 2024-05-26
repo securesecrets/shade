@@ -12,11 +12,9 @@
 //! * 208 - 216: sample lifetime (8 bits)
 //! * 216 - 256: sample creation timestamp (40 bits)
 
-use cosmwasm_schema::cw_serde;
-
-use crate::liquidity_book::lb_libraries::types::Bytes32;
-
 use super::{encoded_sample::*, packed_u128_math::PackedUint128Math};
+use crate::types::Bytes32;
+use cosmwasm_schema::cw_serde;
 
 pub const OFFSET_CUMULATIVE_TXNS: u8 = 0;
 pub const OFFSET_CUMULATIVE_ID: u8 = 16;

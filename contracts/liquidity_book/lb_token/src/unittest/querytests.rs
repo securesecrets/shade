@@ -1,16 +1,10 @@
-use core::panic;
-use std::ops::Add;
-
 use super::testhelpers::*;
-
 use crate::contract::{execute, query};
-
-use shade_protocol::{
-    lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*, txhistory::*},
-    liquidity_book::lb_token::*,
-};
-
+use core::panic;
 use cosmwasm_std::{from_binary, testing::*, Addr, Response, StdResult, Uint256};
+use lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*, txhistory::*};
+use shade_protocol::liquidity_book::lb_token::*;
+use std::ops::Add;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Tests
@@ -87,11 +81,9 @@ fn test_query_tokenid_public_info_sanity() -> StdResult<()> {
             total_supply,
             owner,
         } => {
-            assert!(
-                serde_json::to_string(&token_id_info)
-                    .unwrap()
-                    .contains("\"public_metadata\":{\"token_uri\":\"public uri\"")
-            );
+            assert!(serde_json::to_string(&token_id_info)
+                .unwrap()
+                .contains("\"public_metadata\":{\"token_uri\":\"public uri\""));
             assert_eq!(token_id_info.private_metadata, None);
             assert_eq!(token_id_info.curator, addr.a());
             assert_eq!(total_supply, Some(Uint256::from(1000u128)));
@@ -289,10 +281,12 @@ fn test_query_all_balance() -> StdResult<()> {
 
     let mut info = mock_info("addr0", &[]);
     mint_addtl_default(&mut deps, mock_env(), info.clone())?;
-    let vks = generate_viewing_keys(&mut deps, mock_env(), info.clone(), vec![
-        addr.a(),
-        addr.b(),
-    ])?;
+    let vks = generate_viewing_keys(
+        &mut deps,
+        mock_env(),
+        info.clone(),
+        vec![addr.a(), addr.b()],
+    )?;
 
     // addr.b cannot query addr.a's AllBalance
     let msg = QueryMsg::AllBalances {
@@ -319,16 +313,19 @@ fn test_query_all_balance() -> StdResult<()> {
     let q_answer =
         from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_q_allbal.clone())?)?;
     match q_answer {
-        QueryAnswer::AllBalances(i) => assert_eq!(i, vec![
-            OwnerBalance {
-                token_id: "0".to_string(),
-                amount: Uint256::from(1000u128)
-            },
-            OwnerBalance {
-                token_id: "0a".to_string(),
-                amount: Uint256::from(800u128)
-            },
-        ]),
+        QueryAnswer::AllBalances(i) => assert_eq!(
+            i,
+            vec![
+                OwnerBalance {
+                    token_id: "0".to_string(),
+                    amount: Uint256::from(1000u128)
+                },
+                OwnerBalance {
+                    token_id: "0a".to_string(),
+                    amount: Uint256::from(800u128)
+                },
+            ]
+        ),
         _ => panic!("query error"),
     }
 
@@ -349,16 +346,19 @@ fn test_query_all_balance() -> StdResult<()> {
     let q_answer =
         from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), msg_q_allbal.clone())?)?;
     match q_answer {
-        QueryAnswer::AllBalances(i) => assert_eq!(i, vec![
-            OwnerBalance {
-                token_id: "0".to_string(),
-                amount: Uint256::from(1100u128)
-            },
-            OwnerBalance {
-                token_id: "0a".to_string(),
-                amount: Uint256::from(800u128)
-            },
-        ]),
+        QueryAnswer::AllBalances(i) => assert_eq!(
+            i,
+            vec![
+                OwnerBalance {
+                    token_id: "0".to_string(),
+                    amount: Uint256::from(1100u128)
+                },
+                OwnerBalance {
+                    token_id: "0a".to_string(),
+                    amount: Uint256::from(800u128)
+                },
+            ]
+        ),
         _ => panic!("query error"),
     }
 
@@ -427,10 +427,12 @@ fn test_query_transaction_history() -> StdResult<()> {
 
     // generate vks
     let mut info = mock_info(addr.a().as_str(), &[]);
-    let vks = generate_viewing_keys(&mut deps, mock_env(), info.clone(), vec![
-        addr.a(),
-        addr.b(),
-    ])?;
+    let vks = generate_viewing_keys(
+        &mut deps,
+        mock_env(),
+        info.clone(),
+        vec![addr.a(), addr.b()],
+    )?;
 
     // query tx history
     let msg_tx_hist_a_a = QueryMsg::TransactionHistory {
@@ -647,14 +649,17 @@ fn test_query_permission() -> StdResult<()> {
     let q_result = query(deps.as_ref(), mock_env(), msg_q);
     let q_answer = from_binary::<QueryAnswer>(&q_result?)?;
     match q_answer {
-        QueryAnswer::Permission(perm) => assert_eq!(perm.unwrap_or_default(), Permission {
-            view_balance_perm: true,
-            view_balance_exp: Expiration::default(),
-            view_pr_metadata_perm: false,
-            view_pr_metadata_exp: Expiration::default(),
-            trfer_allowance_perm: Uint256::from(10u128),
-            trfer_allowance_exp: Expiration::default(),
-        }),
+        QueryAnswer::Permission(perm) => assert_eq!(
+            perm.unwrap_or_default(),
+            Permission {
+                view_balance_perm: true,
+                view_balance_exp: Expiration::default(),
+                view_pr_metadata_perm: false,
+                view_pr_metadata_exp: Expiration::default(),
+                trfer_allowance_perm: Uint256::from(10u128),
+                trfer_allowance_exp: Expiration::default(),
+            }
+        ),
         _ => panic!("query error"),
     }
 
@@ -676,14 +681,17 @@ fn test_query_permission() -> StdResult<()> {
     let q_result = query(deps.as_ref(), mock_env(), msg_q2);
     let q_answer = from_binary::<QueryAnswer>(&q_result?)?;
     match q_answer {
-        QueryAnswer::Permission(perm) => assert_eq!(perm.unwrap_or_default(), Permission {
-            view_balance_perm: true,
-            view_balance_exp: Expiration::default(),
-            view_pr_metadata_perm: false,
-            view_pr_metadata_exp: Expiration::default(),
-            trfer_allowance_perm: Uint256::from(10u128),
-            trfer_allowance_exp: Expiration::default(),
-        }),
+        QueryAnswer::Permission(perm) => assert_eq!(
+            perm.unwrap_or_default(),
+            Permission {
+                view_balance_perm: true,
+                view_balance_exp: Expiration::default(),
+                view_pr_metadata_perm: false,
+                view_pr_metadata_exp: Expiration::default(),
+                trfer_allowance_perm: Uint256::from(10u128),
+                trfer_allowance_exp: Expiration::default(),
+            }
+        ),
         _ => panic!("query error"),
     }
 
@@ -876,16 +884,12 @@ fn test_query_tokenid_private_info_sanity() -> StdResult<()> {
             total_supply,
             owner,
         } => {
-            assert!(
-                serde_json::to_string(&token_id_info)
-                    .unwrap()
-                    .contains("\"public_metadata\":{\"token_uri\":\"public uri\"")
-            );
-            assert!(
-                serde_json::to_string(&token_id_info)
-                    .unwrap()
-                    .contains("\"private_metadata\":{\"token_uri\":\"private uri\"")
-            );
+            assert!(serde_json::to_string(&token_id_info)
+                .unwrap()
+                .contains("\"public_metadata\":{\"token_uri\":\"public uri\""));
+            assert!(serde_json::to_string(&token_id_info)
+                .unwrap()
+                .contains("\"private_metadata\":{\"token_uri\":\"private uri\""));
             assert_eq!(token_id_info.curator, addr.a());
             assert_eq!(total_supply, Some(Uint256::from(1000u128)));
             assert!(owner.is_none());

@@ -1,16 +1,17 @@
 use crate::multitests::test_helper::*;
 use anyhow::Ok;
+use lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME};
 use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, Uint128, Uint256},
-    lb_libraries::{math::u24::U24, oracle_helper::MAX_SAMPLE_LIFETIME, types::LBPairInformation},
+    liquidity_book::lb_pair::LBPairInformation,
     multi_test::App,
 };
 use std::str::FromStr;
 
-pub fn lb_pair_setup()
--> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
+pub fn lb_pair_setup(
+) -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 

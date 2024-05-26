@@ -1,0 +1,33 @@
+[package]
+name = "lb-router"
+version = "0.1.0"
+authors = ["Tony <plutonyium@gmail.com>"]
+edition = "2021"
+exclude = ["contract.wasm", "hash.txt"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[example]]
+name = "schema"
+path = "schema/schema.rs"
+
+
+[features]
+default = ["schema"]
+schema = []
+
+
+[dependencies]
+shade-protocol = { path = "../../../packages/shade_protocol" }
+lb-libraries = { path = "../../../packages/lb_libraries" }
+snafu = { version = "0.8.3" }
+schemars = "0.8.21"
+serde = { version = "1.0.203", default-features = false, features = ["derive", "alloc"] }
+cosmwasm-schema = "2.0.3"
+serde_json = "1"
+
+
+[dev-dependencies]
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4" }
+serial_test = "2.0.0"

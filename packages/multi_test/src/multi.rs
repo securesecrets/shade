@@ -20,34 +20,34 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
-#[cfg(feature = "router")]
-pub mod router {
-    use router;
-    multi_derive::implement_multi_with_reply!(Router, router);
-}
-
-#[cfg(feature = "lb_factory")]
+#[cfg(feature = "lb-factory")]
 pub mod lb_factory {
     use lb_factory;
     multi_derive::implement_multi_with_reply!(LbFactory, lb_factory);
 }
 
-#[cfg(feature = "lb_pair")]
+#[cfg(feature = "lb-pair")]
 pub mod lb_pair {
     use lb_pair;
     multi_derive::implement_multi_with_reply!(LbPair, lb_pair);
 }
 
-#[cfg(feature = "lb_token")]
-pub mod lb_token {
-    use lb_token;
-    multi_derive::implement_multi!(LbToken, lb_token);
+#[cfg(feature = "lb-router")]
+pub mod lb_router {
+    use lb_router;
+    multi_derive::implement_multi_with_reply!(Router, lb_router);
 }
 
-#[cfg(feature = "lb_staking")]
+#[cfg(feature = "lb-staking")]
 pub mod lb_staking {
     use lb_staking;
     multi_derive::implement_multi!(LbStaking, lb_staking);
+}
+
+#[cfg(feature = "lb-token")]
+pub mod lb_token {
+    use lb_token;
+    multi_derive::implement_multi!(LbToken, lb_token);
 }
 
 #[cfg(feature = "liability_mint")]

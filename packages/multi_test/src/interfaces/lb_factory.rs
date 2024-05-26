@@ -1,17 +1,14 @@
 use crate::multi::lb_factory::LbFactory;
+use lb_libraries::types::ContractImplementation;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult},
     contract_interfaces::liquidity_book::lb_factory,
-    lb_libraries::types::{ContractInstantiationInfo, LBPair, LBPairInformation},
-    liquidity_book::lb_pair::RewardsDistributionAlgorithm,
+    liquidity_book::lb_pair::{LBPair, LBPairInformation, RewardsDistributionAlgorithm},
     multi_test::App,
     swap::core::TokenType,
     utils::{
         asset::{Contract, RawContract},
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
+        ExecuteCallback, InstantiateCallback, MultiTestable, Query,
     },
 };
 
@@ -56,7 +53,7 @@ pub fn set_lb_pair_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBPairImplementation {
-        implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractImplementation { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -73,7 +70,7 @@ pub fn set_lb_token_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetLBTokenImplementation {
-        implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractImplementation { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -90,7 +87,7 @@ pub fn set_staking_contract_implementation(
     code_hash: String,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::SetStakingContractImplementation {
-        implementation: ContractInstantiationInfo { id, code_hash },
+        implementation: ContractImplementation { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
     {
@@ -320,7 +317,7 @@ pub fn force_decay(
 pub fn query_lb_pair_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
-) -> StdResult<ContractInstantiationInfo> {
+) -> StdResult<ContractImplementation> {
     match (lb_factory::QueryMsg::GetLBPairImplementation {}.test_query(lb_factory, app)) {
         Ok(lb_factory::LBPairImplementationResponse {
             lb_pair_implementation,
@@ -332,7 +329,7 @@ pub fn query_lb_pair_implementation(
 pub fn query_lb_token_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
-) -> StdResult<ContractInstantiationInfo> {
+) -> StdResult<ContractImplementation> {
     match (lb_factory::QueryMsg::GetLBTokenImplementation {}.test_query(lb_factory, app)) {
         Ok(lb_factory::LBTokenImplementationResponse {
             lb_token_implementation,

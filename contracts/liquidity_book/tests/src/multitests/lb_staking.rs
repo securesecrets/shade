@@ -1,27 +1,20 @@
-use std::vec;
-
+use super::{lb_pair_fees::ACTIVE_ID, test_helper::*};
 use anyhow::Ok;
-use cosmwasm_std::{StdError, Timestamp, Uint256};
 use ethnum::U256;
+use lb_libraries::math::uint256_to_u256::ConvertU256;
 use shade_multi_test::interfaces::{
-    lb_factory,
-    lb_pair,
-    lb_staking,
-    lb_token,
-    snip20,
-    utils::DeployedContracts,
+    lb_factory, lb_pair, lb_staking, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
-    c_std::{to_binary, ContractInfo, Uint128},
-    lb_libraries::{math::uint256_to_u256::ConvertU256, types::LBPairInformation},
+    c_std::{to_binary, ContractInfo, StdError, Timestamp, Uint128, Uint256},
     liquidity_book::{
+        lb_pair::LBPairInformation,
         lb_staking::{InvokeMsg, QueryTxnType},
         lb_token::SendAction,
     },
     multi_test::App,
 };
-
-use super::{lb_pair_fees::ACTIVE_ID, test_helper::*};
+use std::vec;
 
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000_000_000_u128;
 pub const NB_BINS_X: u32 = 5;
@@ -1951,7 +1944,7 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
     roll_time(&mut app, Some(200));
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //11 expires at 16 
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //11 expires at 16
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
     roll_time(&mut app, Some(200));
 
@@ -1959,11 +1952,11 @@ pub fn recover_expired_rewards() -> Result<(), anyhow::Error> {
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
     roll_time(&mut app, Some(200));
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //13 expires at 18 
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //13 expires at 18
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
     roll_time(&mut app, Some(200));
 
-    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //14 expires at 19 
+    lb_pair::calculate_rewards(&mut app, addrs.admin().as_str(), &lb_pair.info.contract)?; //14 expires at 19
     lb_staking::claim_rewards(&mut app, addrs.batman().as_str(), &lb_staking)?;
 
     //current round index -> 20

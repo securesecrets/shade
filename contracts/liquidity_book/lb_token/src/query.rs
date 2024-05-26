@@ -1,39 +1,23 @@
-use std::collections::BTreeSet;
-
-use cosmwasm_std::{
-    to_binary,
-    Addr,
-    Binary,
-    BlockInfo,
-    Deps,
-    // debug_print,
-    StdError,
-    StdResult,
-    Timestamp,
-    Uint256,
-};
-
 use crate::state::{
-    balances_r,
-    blockinfo_r,
-    contr_conf_r,
-    get_receiver_hash,
+    balances_r, blockinfo_r, contr_conf_r, get_receiver_hash,
     permissions::{list_owner_permission_keys, may_load_any_permission},
-    tkn_info_r,
-    tkn_tot_supply_r,
+    tkn_info_r, tkn_tot_supply_r,
     txhistory::{get_txs, may_get_current_owner},
 };
-
-use shade_protocol::{
-    lb_libraries::lb_token::{
-        permissions::{Permission, PermissionKey},
-        state_structs::OwnerBalance,
-    },
-    liquidity_book::lb_token::QueryAnswer,
+use cosmwasm_std::{
+    to_binary, Addr, Binary, BlockInfo, Deps, StdError, StdResult, Timestamp, Uint256,
 };
+use lb_libraries::lb_token::{
+    permissions::{Permission, PermissionKey},
+    state_structs::OwnerBalance,
+};
+use shade_protocol::liquidity_book::lb_token::QueryAnswer;
+use std::collections::BTreeSet;
+
 /////////////////////////////////////////////////////////////////////////////////
 // Queries
 /////////////////////////////////////////////////////////////////////////////////
+
 pub fn query_contract_info(deps: Deps) -> StdResult<Binary> {
     let contr_conf = contr_conf_r(deps.storage).load()?;
     let response = QueryAnswer::TokenContractInfo {

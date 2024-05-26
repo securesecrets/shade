@@ -1,16 +1,10 @@
-use crate::contract::{execute, instantiate, query};
-
-use super::testhelpers::*;
-
 use super::super::state::*;
-
-use shade_protocol::{
-    lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*},
-    liquidity_book::lb_token::{ReceiverHandleMsg, Snip1155ReceiveMsg, *},
-};
-
+use super::testhelpers::*;
+use crate::contract::{execute, instantiate, query};
 use cosmwasm_std::{from_binary, testing::*, to_binary, Addr, Response, StdResult, Uint256};
+use lb_libraries::lb_token::{expiration::*, permissions::*, state_structs::*};
 use secret_toolkit::{crypto::sha_256, permit::RevokedPermits};
+use shade_protocol::liquidity_book::lb_token::{ReceiverHandleMsg, Snip1155ReceiveMsg, *};
 
 /////////////////////////////////////////////////////////////////////////////////
 // Tests
@@ -868,10 +862,8 @@ fn test_transfer() -> StdResult<()> {
     // cannot transfer if not owner
     info.sender = addr2.clone();
     let result = execute(deps.as_mut(), mock_env(), info.clone(), msg);
-    assert!(
-        extract_error_msg(&result)
-            .contains("These tokens do not exist or you have no permission to transfer")
-    );
+    assert!(extract_error_msg(&result)
+        .contains("These tokens do not exist or you have no permission to transfer"));
 
     // transfer NFT "tkn2"; amount != 1
     info.sender = addr2.clone();
@@ -1124,10 +1116,8 @@ fn test_batch_transfer_and_send_errors() -> StdResult<()> {
     };
     let info = mock_info("addr0", &[]);
     let result = execute(deps.as_mut(), mock_env(), info, msg_batch_trans);
-    assert!(
-        extract_error_msg(&result)
-            .contains("These tokens do not exist or you have no permission to transfer")
-    );
+    assert!(extract_error_msg(&result)
+        .contains("These tokens do not exist or you have no permission to transfer"));
 
     Ok(())
 }
@@ -1165,10 +1155,8 @@ fn test_transfer_permissions_fungible() -> StdResult<()> {
         padding: None,
     };
     let mut result = execute(deps.as_mut(), mock_env(), info.clone(), msg_trnsf_0.clone());
-    assert!(
-        extract_error_msg(&result)
-            .contains("These tokens do not exist or you have no permission to transfer")
-    );
+    assert!(extract_error_msg(&result)
+        .contains("These tokens do not exist or you have no permission to transfer"));
 
     // cannot transfer with insufficient allowance
     info.sender = addr0.clone();
@@ -1328,10 +1316,8 @@ fn test_transfer_permissions_nft() -> StdResult<()> {
         info.clone(),
         msg1_trnsf_0.clone(),
     );
-    assert!(
-        extract_error_msg(&result)
-            .contains("These tokens do not exist or you have no permission to transfer")
-    );
+    assert!(extract_error_msg(&result)
+        .contains("These tokens do not exist or you have no permission to transfer"));
     assert_eq!(
         chk_bal(&deps.storage, "2", &addr2).unwrap(),
         Uint256::from(1u128)
@@ -1442,10 +1428,8 @@ fn test_transfer_permissions_nft() -> StdResult<()> {
         padding: None,
     };
     result = execute(deps.as_mut(), mock_env(), info, msg);
-    assert!(
-        extract_error_msg(&result)
-            .contains("These tokens do not exist or you have no permission to transfer")
-    );
+    assert!(extract_error_msg(&result)
+        .contains("These tokens do not exist or you have no permission to transfer"));
     assert_eq!(chk_bal(&deps.storage, "2a", &addr1), None);
     assert_eq!(
         chk_bal(&deps.storage, "2a", &addr0).unwrap(),
@@ -1478,18 +1462,23 @@ fn test_revoke_permission_sanity() -> StdResult<()> {
     let mut info = mock_info("addr0", &[]);
     execute(deps.as_mut(), mock_env(), info.clone(), msg0_perm_b)?;
 
-    let vks = generate_viewing_keys(&mut deps, mock_env(), info.clone(), vec![
-        addr.a(),
-        addr.b(),
-    ])?;
+    let vks = generate_viewing_keys(
+        &mut deps,
+        mock_env(),
+        info.clone(),
+        vec![addr.a(), addr.b()],
+    )?;
 
-    let q_answer =
-        from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), QueryMsg::Permission {
+    let q_answer = from_binary::<QueryAnswer>(&query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Permission {
             owner: addr.a(),
             allowed_address: addr.b(),
             key: vks.a(),
             token_id: "0".to_string(),
-        })?)?;
+        },
+    )?)?;
     match q_answer {
         QueryAnswer::Permission(perm) => {
             assert_eq!(perm.unwrap().trfer_allowance_perm, Uint256::from(10u128))
@@ -1506,13 +1495,16 @@ fn test_revoke_permission_sanity() -> StdResult<()> {
     };
     info.sender = addr.b();
     execute(deps.as_mut(), mock_env(), info, msg_revoke)?;
-    let q_answer =
-        from_binary::<QueryAnswer>(&query(deps.as_ref(), mock_env(), QueryMsg::Permission {
+    let q_answer = from_binary::<QueryAnswer>(&query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Permission {
             owner: addr.a(),
             allowed_address: addr.b(),
             key: vks.a(),
             token_id: "0".to_string(),
-        })?)?;
+        },
+    )?)?;
     match q_answer {
         QueryAnswer::Permission(perm) => {
             assert_eq!(perm.unwrap().trfer_allowance_perm, Uint256::from(0u128))

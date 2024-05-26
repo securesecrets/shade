@@ -1,8 +1,7 @@
-use crate::liquidity_book::lb_pair::TokenPair;
 use crate::{
     c_std::{Addr, Binary, Uint128},
+    swap::core::{TokenPair, TokenType},
     utils::{asset::Contract, Query},
-    swap::core::TokenType,
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal256, Uint256};

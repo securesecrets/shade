@@ -4,10 +4,8 @@ use cosmwasm_std::{Addr, Api, BlockInfo, CanonicalAddr, StdResult, Storage, Uint
 
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
-use shade_protocol::{
-    lb_libraries::lb_token::txhistory::{StoredTx, StoredTxAction, Tx},
-    s_toolkit::storage::AppendStore,
-};
+use lb_libraries::lb_token::txhistory::{StoredTx, StoredTxAction, Tx};
+use shade_protocol::s_toolkit::storage::AppendStore;
 
 use crate::state::save_load_functions::{json_load, json_save};
 

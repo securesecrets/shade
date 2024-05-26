@@ -1,16 +1,15 @@
 use crate::types::{LBPair, LBPairInformation, NextPairKey};
-use std::collections::HashSet;
-
+use lb_libraries::{pair_parameter_helper::PairParameters, types::ContractImplementation};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Storage},
     cosmwasm_schema::cw_serde,
-    lb_libraries::{pair_parameter_helper::PairParameters, types::ContractInstantiationInfo},
     liquidity_book::lb_pair::RewardsDistributionAlgorithm,
     secret_storage_plus::{AppendStore, Item, Map},
     storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
     swap::core::TokenType,
     Contract,
 };
+use std::collections::HashSet;
 
 pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const STATE: Item<State> = Item::new("state");
@@ -56,9 +55,9 @@ pub struct State {
     pub contract_info: ContractInfo,
     pub owner: Addr,
     pub fee_recipient: Addr,
-    pub lb_pair_implementation: ContractInstantiationInfo,
-    pub lb_token_implementation: ContractInstantiationInfo,
-    pub staking_contract_implementation: ContractInstantiationInfo,
+    pub lb_pair_implementation: ContractImplementation,
+    pub lb_token_implementation: ContractImplementation,
+    pub staking_contract_implementation: ContractImplementation,
     pub admin_auth: Contract,
     pub query_auth: Contract,
     pub recover_staking_funds_receiver: Addr,

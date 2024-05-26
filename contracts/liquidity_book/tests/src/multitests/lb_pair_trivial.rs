@@ -1,16 +1,14 @@
+use crate::multitests::test_helper::*;
 use anyhow::Ok;
 use cosmwasm_std::Coin;
 use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, StdError::GenericErr, Uint128},
-    lb_libraries::types::LBPairInformation,
-    liquidity_book::lb_pair::RemoveLiquidity,
+    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
     multi_test::{App, BankSudo, SudoMsg},
     swap::core::{TokenAmount, TokenType},
 };
-
-use crate::multitests::test_helper::*;
 
 pub const ACTIVE_ID: u32 = ID_ONE - 24647;
 pub const DEPOSIT_AMOUNT: u128 = 1_000_000_000_000;

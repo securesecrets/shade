@@ -1,39 +1,19 @@
 use crate::{execute::*, helper::*, prelude::*, query::*, state::*};
+use lb_libraries::{
+    lb_token::state_structs::LbPair,
+    math::{sample_math::OracleSample, tree_math::TreeUint24, u24::U24},
+    oracle_helper::Oracle,
+    pair_parameter_helper::PairParameters,
+};
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        from_binary,
-        shd_entry_point,
-        to_binary,
-        Addr,
-        Binary,
-        ContractInfo,
-        CosmosMsg,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Reply,
-        Response,
-        StdError,
-        StdResult,
-        SubMsg,
-        SubMsgResult,
-        Uint128,
-        Uint256,
-        WasmMsg,
+        from_binary, shd_entry_point, to_binary, Addr, Binary, ContractInfo, CosmosMsg, Deps,
+        DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, SubMsgResult,
+        Uint128, Uint256, WasmMsg,
     },
-    contract_interfaces::{
-        liquidity_book::{lb_pair::*, lb_staking, lb_token},
-        swap::core::TokenType,
-    },
-    lb_libraries::{
-        lb_token::state_structs::LbPair,
-        math::{sample_math::OracleSample, tree_math::TreeUint24, u24::U24},
-        oracle_helper::Oracle,
-        pair_parameter_helper::PairParameters,
-        viewing_keys::ViewingKey,
-    },
+    contract_interfaces::liquidity_book::{lb_pair::*, lb_staking, lb_token},
+    swap::core::{TokenAmount, TokenType, ViewingKey},
 };
 use std::vec;
 
@@ -185,17 +165,20 @@ pub fn instantiate(
             rewards_distribution_algorithm: msg.rewards_distribution_algorithm,
         },
     )?;
-    EPHEMERAL_STORAGE.save(deps.storage, &EphemeralStruct {
-        lb_token_code_hash: msg.lb_token_implementation.code_hash,
-        staking_contract: msg.staking_contract_implementation,
-        token_x_symbol,
-        token_y_symbol,
-        epoch_index: state.rewards_epoch_index,
-        epoch_duration: msg.epoch_staking_duration,
-        expiry_duration: msg.expiry_staking_duration,
-        recover_funds_receiver: msg.recover_staking_funds_receiver,
-        query_auth: msg.query_auth,
-    })?;
+    EPHEMERAL_STORAGE.save(
+        deps.storage,
+        &EphemeralStruct {
+            lb_token_code_hash: msg.lb_token_implementation.code_hash,
+            staking_contract: msg.staking_contract_implementation,
+            token_x_symbol,
+            token_y_symbol,
+            epoch_index: state.rewards_epoch_index,
+            epoch_duration: msg.epoch_staking_duration,
+            expiry_duration: msg.expiry_staking_duration,
+            recover_funds_receiver: msg.recover_staking_funds_receiver,
+            query_auth: msg.query_auth,
+        },
+    )?;
 
     response = response.add_messages(messages);
 

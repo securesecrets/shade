@@ -4,8 +4,7 @@ use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, Uint128, Uint256},
-    lb_libraries::types::LBPairInformation,
-    liquidity_book::lb_pair::RemoveLiquidity,
+    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
     multi_test::App,
     utils::cycle::parse_utc_datetime,
 };

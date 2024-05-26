@@ -1,14 +1,8 @@
+use super::test_helper::{init_addrs, setup, SHADE, SILK};
 use anyhow::Ok;
 use serial_test::serial;
+use shade_multi_test::interfaces::{lb_router, utils::SupportedContracts};
 use shade_protocol::c_std::Addr;
-
-use crate::multitests::test_helper::{SHADE, SILK};
-
-use super::test_helper::{init_addrs, setup};
-use shade_multi_test::interfaces::{
-    router::{self, query_router_registered_tokens},
-    utils::SupportedContracts,
-};
 
 #[test]
 #[serial]
@@ -17,7 +11,7 @@ pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
     let (mut app, _lb_factory, mut deployed_contracts, _, _) = setup(None, None)?;
 
     //intro app
-    router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;
+    lb_router::init(&mut app, addrs.admin().as_str(), &mut deployed_contracts)?;
 
     let router = match deployed_contracts.clone().get(&SupportedContracts::Router) {
         Some(router) => router,
@@ -34,7 +28,7 @@ pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
 
     // query registered tokens
 
-    let reg_tokens = query_router_registered_tokens(&app, &router)?;
+    let reg_tokens = lb_router::query_router_registered_tokens(&app, &router)?;
     assert_eq!(
         reg_tokens,
         Vec::<Addr>::new(),
@@ -53,14 +47,14 @@ pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
         None => panic!("Silk not registered"),
     };
 
-    router::register_snip20_token(
+    lb_router::register_snip20_token(
         &mut app,
         addrs.admin().as_str(),
         &router,
         &shd.clone().into(),
     )?;
 
-    router::register_snip20_token(
+    lb_router::register_snip20_token(
         &mut app,
         addrs.admin().as_str(),
         &router,
@@ -68,7 +62,7 @@ pub fn router_registered_tokens() -> Result<(), anyhow::Error> {
     )?;
     //test the registered tokens
 
-    let reg_tokens = query_router_registered_tokens(&app, &router)?;
+    let reg_tokens = lb_router::query_router_registered_tokens(&app, &router)?;
     assert_eq!(reg_tokens.len(), 2, "2 tokens not registered");
     assert_eq!(reg_tokens[0], shd.address, "Shade tokens not registered ");
     assert_eq!(

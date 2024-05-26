@@ -1,13 +1,14 @@
+use lb_libraries::{
+    math::tree_math::TreeUint24,
+    oracle_helper::Oracle,
+    pair_parameter_helper::PairParameters,
+    types::{Bytes32, ContractImplementation},
+};
+// TODO: sort out viewing key strategy
+use shade_protocol::swap::core::ViewingKey;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Timestamp, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
-    lb_libraries::{
-        math::tree_math::TreeUint24,
-        oracle_helper::Oracle,
-        pair_parameter_helper::PairParameters,
-        types::{Bytes32, ContractInstantiationInfo},
-        viewing_keys::ViewingKey,
-    },
     liquidity_book::lb_pair::{ContractStatus, RewardsDistribution, RewardsDistributionAlgorithm},
     secret_storage_plus::{AppendStore, Bincode2, Item, Map},
     swap::core::TokenType,
@@ -27,8 +28,7 @@ pub const REWARDS_STATS_STORE: Map<u64, RewardDistributionConfig> = Map::new("re
 pub const REWARDS_DISTRIBUTION: Map<u64, RewardsDistribution> = Map::new("rewards_distribution");
 pub const FEE_MAP_TREE: Map<u64, TreeUint24, Bincode2> = Map::new("fee_tree");
 pub const FEE_MAP: Map<u32, Uint256> = Map::new("fee_map");
-pub const STAKING_CONTRACT_IMPL: Item<ContractInstantiationInfo> =
-    Item::new("staking_contract_impl");
+pub const STAKING_CONTRACT_IMPL: Item<ContractImplementation> = Item::new("staking_contract_impl");
 pub const BIN_RESERVES_UPDATED: Map<u64, Vec<u32>> = Map::new("bins_reserves_updated");
 pub const BIN_RESERVES_UPDATED_LOG: AppendStore<u64> =
     AppendStore::new("bins_reserves_updated_log");
@@ -85,7 +85,7 @@ pub struct State {
 pub struct EphemeralStruct {
     // Contract information
     pub lb_token_code_hash: String,
-    pub staking_contract: ContractInstantiationInfo,
+    pub staking_contract: ContractImplementation,
     pub query_auth: RawContract,
 
     // Token symbols
