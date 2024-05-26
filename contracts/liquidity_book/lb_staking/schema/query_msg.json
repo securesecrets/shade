@@ -1,0 +1,403 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "description": "Query messages to SNIP1155 contract. See [QueryAnswer](crate::msg::QueryAnswer) for the response messages for each variant, which has more detail.",
+  "oneOf": [
+    {
+      "description": "returns public information of the SNIP1155 contract",
+      "type": "object",
+      "required": [
+        "contract_info"
+      ],
+      "properties": {
+        "contract_info": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "epoch_info"
+      ],
+      "properties": {
+        "epoch_info": {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "registered_tokens"
+      ],
+      "properties": {
+        "registered_tokens": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "id_total_balance"
+      ],
+      "properties": {
+        "id_total_balance": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "balance"
+      ],
+      "properties": {
+        "balance": {
+          "type": "object",
+          "required": [
+            "auth",
+            "token_id"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/Auth"
+            },
+            "token_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "staker_info"
+      ],
+      "properties": {
+        "staker_info": {
+          "type": "object",
+          "required": [
+            "auth"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/Auth"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "all_balances"
+      ],
+      "properties": {
+        "all_balances": {
+          "type": "object",
+          "required": [
+            "auth"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/Auth"
+            },
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "liquidity"
+      ],
+      "properties": {
+        "liquidity": {
+          "type": "object",
+          "required": [
+            "auth",
+            "token_ids"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/Auth"
+            },
+            "round_index": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "token_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "transaction_history"
+      ],
+      "properties": {
+        "transaction_history": {
+          "type": "object",
+          "required": [
+            "auth",
+            "txn_type"
+          ],
+          "properties": {
+            "auth": {
+              "$ref": "#/definitions/Auth"
+            },
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "txn_type": {
+              "$ref": "#/definitions/QueryTxnType"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Auth": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "viewing_key"
+          ],
+          "properties": {
+            "viewing_key": {
+              "type": "object",
+              "required": [
+                "address",
+                "key"
+              ],
+              "properties": {
+                "address": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "permit"
+          ],
+          "properties": {
+            "permit": {
+              "$ref": "#/definitions/Permit_for_PermitData"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
+    },
+    "PermitData": {
+      "type": "object",
+      "required": [
+        "data",
+        "key"
+      ],
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/Binary"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PermitSignature": {
+      "type": "object",
+      "required": [
+        "pub_key",
+        "signature"
+      ],
+      "properties": {
+        "pub_key": {
+          "$ref": "#/definitions/PubKey"
+        },
+        "signature": {
+          "$ref": "#/definitions/Binary"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Permit_for_PermitData": {
+      "description": "Where the information will be stored",
+      "type": "object",
+      "required": [
+        "params",
+        "signature"
+      ],
+      "properties": {
+        "account_number": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chain_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "$ref": "#/definitions/PermitData"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature": {
+          "$ref": "#/definitions/PermitSignature"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PubKey": {
+      "type": "object",
+      "required": [
+        "type",
+        "value"
+      ],
+      "properties": {
+        "type": {
+          "description": "ignored, but must be \"tendermint/PubKeySecp256k1\" otherwise the verification will fail",
+          "type": "string"
+        },
+        "value": {
+          "description": "Secp256k1 PubKey",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "QueryTxnType": {
+      "type": "string",
+      "enum": [
+        "all",
+        "stake",
+        "un_stake",
+        "claim_rewards"
+      ]
+    },
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use secret_cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IsQuoteAssetResponse",
+  "type": "object",
+  "required": [
+    "is_quote"
+  ],
+  "properties": {
+    "is_quote": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

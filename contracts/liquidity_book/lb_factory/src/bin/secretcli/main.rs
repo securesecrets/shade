@@ -182,16 +182,16 @@ fn main() -> io::Result<()> {
 
     let get_min_bin_step = QueryMsg::GetMinBinStep {};
     let get_fee_recipient = QueryMsg::GetFeeRecipient {};
-    let get_lb_pair_implementation = QueryMsg::GetLBPairImplementation {};
-    let get_lb_token_implementation = QueryMsg::GetLBTokenImplementation {};
-    let get_number_of_lb_pairs = QueryMsg::GetNumberOfLBPairs {};
-    let get_lb_pair_at_index = QueryMsg::GetLBPairAtIndex { index: 0 };
+    let get_lb_pair_implementation = QueryMsg::GetLbPairImplementation {};
+    let get_lb_token_implementation = QueryMsg::GetLbTokenImplementation {};
+    let get_number_of_lb_pairs = QueryMsg::GetNumberOfLbPairs {};
+    let get_lb_pair_at_index = QueryMsg::GetLbPairAtIndex { index: 0 };
     let get_number_of_quote_assets = QueryMsg::GetNumberOfQuoteAssets {};
     let get_quote_asset_at_index = QueryMsg::GetQuoteAssetAtIndex { index: 0 };
     let is_quote_asset = QueryMsg::IsQuoteAsset {
         token: TokenType::example(),
     };
-    let get_lb_pair_information = QueryMsg::GetLBPairInformation {
+    let get_lb_pair_information = QueryMsg::GetLbPairInformation {
         token_x: TokenType::example(),
         token_y: TokenType::example(),
         bin_step: BIN_STEP,
@@ -199,7 +199,7 @@ fn main() -> io::Result<()> {
     let get_preset = QueryMsg::GetPreset { bin_step: BIN_STEP };
     let get_all_bin_steps = QueryMsg::GetAllBinSteps {};
     let get_open_bin_steps = QueryMsg::GetOpenBinSteps {};
-    let get_all_lb_pairs = QueryMsg::GetAllLBPairs {
+    let get_all_lb_pairs = QueryMsg::GetAllLbPairs {
         token_x: TokenType::example(),
         token_y: TokenType::example(),
     };
@@ -210,15 +210,15 @@ fn main() -> io::Result<()> {
     let get_fee_recipient_response = FeeRecipientResponse {
         fee_recipient: Addr::recipient(),
     };
-    let get_lb_pair_implementation_response = LBPairImplementationResponse {
+    let get_lb_pair_implementation_response = LbPairImplementationResponse {
         lb_pair_implementation: ContractImplementation::example(),
     };
-    let get_lb_token_implementation_response = LBTokenImplementationResponse {
+    let get_lb_token_implementation_response = LbTokenImplementationResponse {
         lb_token_implementation: ContractImplementation::example(),
     };
-    let get_number_of_lb_pairs_response = NumberOfLBPairsResponse { lb_pair_number: 1 };
+    let get_number_of_lb_pairs_response = NumberOfLbPairsResponse { lb_pair_number: 1 };
 
-    let get_lb_pair_at_index_response = LBPairAtIndexResponse {
+    let get_lb_pair_at_index_response = LbPairAtIndexResponse {
         lb_pair: LBPair {
             token_x: TokenType::example(),
             token_y: TokenType::example(),
@@ -237,7 +237,7 @@ fn main() -> io::Result<()> {
 
     let is_quote_asset_response = IsQuoteAssetResponse { is_quote: true };
 
-    let get_lb_pair_information_response = LBPairInformationResponse {
+    let get_lb_pair_information_response = LbPairInformationResponse {
         lb_pair_information: LBPairInformation::example(),
     };
 
@@ -260,7 +260,7 @@ fn main() -> io::Result<()> {
         open_bin_steps: vec![20, 50, 100],
     };
 
-    let get_all_lb_pairs_response = AllLBPairsResponse {
+    let get_all_lb_pairs_response = AllLbPairsResponse {
         lb_pairs_available: vec![LBPairInformation::example(), LBPairInformation::example()],
     };
 

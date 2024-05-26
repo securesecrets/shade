@@ -813,14 +813,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::GetMinBinStep {} => query_min_bin_step(deps),
         QueryMsg::GetFeeRecipient {} => query_fee_recipient(deps),
-        QueryMsg::GetLBPairImplementation {} => query_lb_pair_implementation(deps),
-        QueryMsg::GetLBTokenImplementation {} => query_lb_token_implementation(deps),
-        QueryMsg::GetNumberOfLBPairs {} => query_number_of_lb_pairs(deps),
-        QueryMsg::GetLBPairAtIndex { index } => query_lb_pair_at_index(deps, index),
+        QueryMsg::GetLbPairImplementation {} => query_lb_pair_implementation(deps),
+        QueryMsg::GetLbTokenImplementation {} => query_lb_token_implementation(deps),
+        QueryMsg::GetNumberOfLbPairs {} => query_number_of_lb_pairs(deps),
+        QueryMsg::GetLbPairAtIndex { index } => query_lb_pair_at_index(deps, index),
         QueryMsg::GetNumberOfQuoteAssets {} => query_number_of_quote_assets(deps),
         QueryMsg::GetQuoteAssetAtIndex { index } => query_quote_asset_at_index(deps, index),
         QueryMsg::IsQuoteAsset { token } => query_is_quote_asset(deps, token),
-        QueryMsg::GetLBPairInformation {
+        QueryMsg::GetLbPairInformation {
             token_x,
             token_y,
             bin_step,
@@ -828,7 +828,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetPreset { bin_step } => query_preset(deps, bin_step),
         QueryMsg::GetAllBinSteps {} => query_all_bin_steps(deps),
         QueryMsg::GetOpenBinSteps {} => query_open_bin_steps(deps),
-        QueryMsg::GetAllLBPairs { token_x, token_y } => query_all_lb_pairs(deps, token_x, token_y),
+        QueryMsg::GetAllLbPairs { token_x, token_y } => query_all_lb_pairs(deps, token_x, token_y),
     }
 }
 
@@ -864,7 +864,7 @@ fn query_fee_recipient(deps: Deps) -> Result<Binary> {
 /// * `lb_pair_implementation` - The code ID and hash of the LBPair implementation.
 fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
     let config = STATE.load(deps.storage)?;
-    let response = LBPairImplementationResponse {
+    let response = LbPairImplementationResponse {
         lb_pair_implementation: config.lb_pair_implementation,
     };
     to_binary(&response).map_err(Error::CwErr)
@@ -877,7 +877,7 @@ fn query_lb_pair_implementation(deps: Deps) -> Result<Binary> {
 /// * `lb_token_implementation` - The code ID and hash of the LBToken implementation.
 fn query_lb_token_implementation(deps: Deps) -> Result<Binary> {
     let config = STATE.load(deps.storage)?;
-    let response = LBTokenImplementationResponse {
+    let response = LbTokenImplementationResponse {
         lb_token_implementation: config.lb_token_implementation,
     };
     to_binary(&response).map_err(Error::CwErr)
@@ -891,7 +891,7 @@ fn query_lb_token_implementation(deps: Deps) -> Result<Binary> {
 fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
     let lb_pair_number = ALL_LB_PAIRS.get_len(deps.storage)?;
 
-    let response = NumberOfLBPairsResponse { lb_pair_number };
+    let response = NumberOfLbPairsResponse { lb_pair_number };
     to_binary(&response).map_err(Error::CwErr)
 }
 
@@ -908,7 +908,7 @@ fn query_number_of_lb_pairs(deps: Deps) -> Result<Binary> {
 fn query_lb_pair_at_index(_deps: Deps, _index: u32) -> Result<Binary> {
     let lb_pair = todo!();
 
-    let response = LBPairAtIndexResponse { lb_pair };
+    let response = LbPairAtIndexResponse { lb_pair };
     to_binary(&response).map_err(Error::CwErr)
 }
 
@@ -980,7 +980,7 @@ fn query_lb_pair_information(
     let lb_pair_information: LBPairInformation =
         _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
 
-    let response = LBPairInformationResponse {
+    let response = LbPairInformationResponse {
         lb_pair_information,
     };
     to_binary(&response).map_err(Error::CwErr)
@@ -1172,7 +1172,7 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
         })
         .collect();
 
-    let response = AllLBPairsResponse {
+    let response = AllLbPairsResponse {
         lb_pairs_available: lb_pairs_available?,
     };
     to_binary(&response).map_err(Error::CwErr)

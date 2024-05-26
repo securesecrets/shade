@@ -130,27 +130,22 @@ pub enum QueryMsg {
     GetMinBinStep {},
     #[returns(FeeRecipientResponse)]
     GetFeeRecipient {},
-    #[returns(LBPairImplementationResponse)]
-    #[serde(rename = "get_lb_pair_implementation")]
-    GetLBPairImplementation {},
-    #[returns(LBTokenImplementationResponse)]
-    #[serde(rename = "get_lb_token_implementation")]
-    GetLBTokenImplementation {},
-    #[returns(NumberOfLBPairsResponse)]
-    #[serde(rename = "get_number_of_lb_pairs")]
-    GetNumberOfLBPairs {},
-    #[returns(LBPairAtIndexResponse)]
-    #[serde(rename = "get_lb_pair_at_index")]
-    GetLBPairAtIndex { index: u32 },
+    #[returns(LbPairImplementationResponse)]
+    GetLbPairImplementation {},
+    #[returns(LbTokenImplementationResponse)]
+    GetLbTokenImplementation {},
+    #[returns(NumberOfLbPairsResponse)]
+    GetNumberOfLbPairs {},
+    #[returns(LbPairAtIndexResponse)]
+    GetLbPairAtIndex { index: u32 },
     #[returns(NumberOfQuoteAssetsResponse)]
     GetNumberOfQuoteAssets {},
     #[returns(QuoteAssetAtIndexResponse)]
     GetQuoteAssetAtIndex { index: u32 },
     #[returns(IsQuoteAssetResponse)]
     IsQuoteAsset { token: TokenType },
-    #[returns(LBPairInformationResponse)]
-    #[serde(rename = "get_lb_pair_information")]
-    GetLBPairInformation {
+    #[returns(LbPairInformationResponse)]
+    GetLbPairInformation {
         token_x: TokenType,
         token_y: TokenType,
         bin_step: u16,
@@ -161,9 +156,8 @@ pub enum QueryMsg {
     GetAllBinSteps {},
     #[returns(OpenBinStepsResponse)]
     GetOpenBinSteps {},
-    #[returns(AllLBPairsResponse)]
-    #[serde(rename = "get_all_lb_pairs")]
-    GetAllLBPairs {
+    #[returns(AllLbPairsResponse)]
+    GetAllLbPairs {
         token_x: TokenType,
         token_y: TokenType,
     },
@@ -185,22 +179,22 @@ pub struct FeeRecipientResponse {
 }
 
 #[cw_serde]
-pub struct LBPairImplementationResponse {
+pub struct LbPairImplementationResponse {
     pub lb_pair_implementation: ContractImplementation,
 }
 
 #[cw_serde]
-pub struct LBTokenImplementationResponse {
+pub struct LbTokenImplementationResponse {
     pub lb_token_implementation: ContractImplementation,
 }
 
 #[cw_serde]
-pub struct NumberOfLBPairsResponse {
+pub struct NumberOfLbPairsResponse {
     pub lb_pair_number: u32,
 }
 
 #[cw_serde]
-pub struct LBPairAtIndexResponse {
+pub struct LbPairAtIndexResponse {
     pub lb_pair: LBPair,
 }
 
@@ -220,7 +214,7 @@ pub struct IsQuoteAssetResponse {
 }
 
 #[cw_serde]
-pub struct LBPairInformationResponse {
+pub struct LbPairInformationResponse {
     pub lb_pair_information: LBPairInformation,
 }
 
@@ -249,6 +243,6 @@ pub struct OpenBinStepsResponse {
 }
 
 #[cw_serde]
-pub struct AllLBPairsResponse {
+pub struct AllLbPairsResponse {
     pub lb_pairs_available: Vec<LBPairInformation>,
 }

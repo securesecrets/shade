@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AllBinStepsResponse",
+  "type": "object",
+  "required": [
+    "bin_step_with_preset"
+  ],
+  "properties": {
+    "bin_step_with_preset": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint16",
+        "minimum": 0.0
+      }
+    }
+  },
+  "additionalProperties": false
+}

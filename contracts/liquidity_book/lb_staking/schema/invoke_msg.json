@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InvokeMsg",
+  "oneOf": [
+    {
+      "description": "From is used to determine the staker since this can be called by the AMMPair when auto staking.",
+      "type": "object",
+      "required": [
+        "stake"
+      ],
+      "properties": {
+        "stake": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "add_rewards"
+      ],
+      "properties": {
+        "add_rewards": {
+          "type": "object",
+          "required": [
+            "end"
+          ],
+          "properties": {
+            "end": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "start": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

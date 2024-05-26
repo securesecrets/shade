@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LbPairImplementationResponse",
+  "type": "object",
+  "required": [
+    "lb_pair_implementation"
+  ],
+  "properties": {
+    "lb_pair_implementation": {
+      "$ref": "#/definitions/ContractImplementation"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "ContractImplementation": {
+      "type": "object",
+      "required": [
+        "code_hash",
+        "id"
+      ],
+      "properties": {
+        "code_hash": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

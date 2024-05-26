@@ -8,18 +8,16 @@ exclude = ["contract.wasm", "hash.txt"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[[example]]
+[[bin]]
 name = "schema"
-path = "schema/schema.rs"
+path = "src/bin/schema.rs"
 
 
 [features]
-default = ["schema"]
-schema = []
 
 
 [dependencies]
-shade-protocol = { path = "../../../packages/shade_protocol" }
+shade-protocol = { path = "../../../packages/shade_protocol", features = ["liquidity-book"] }
 lb-libraries = { path = "../../../packages/lb_libraries" }
 snafu = { version = "0.8.3" }
 schemars = "0.8.21"

@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PresetResponse",
+  "type": "object",
+  "required": [
+    "base_factor",
+    "decay_period",
+    "filter_period",
+    "is_open",
+    "max_volatility_accumulator",
+    "protocol_share",
+    "reduction_factor",
+    "variable_fee_control"
+  ],
+  "properties": {
+    "base_factor": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "decay_period": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "filter_period": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "is_open": {
+      "type": "boolean"
+    },
+    "max_volatility_accumulator": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "protocol_share": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "reduction_factor": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "variable_fee_control": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

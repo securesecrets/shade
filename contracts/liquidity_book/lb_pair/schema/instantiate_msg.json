@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "active_id",
+    "admin_auth",
+    "bin_step",
+    "entropy",
+    "epoch_staking_duration",
+    "epoch_staking_index",
+    "factory",
+    "lb_token_implementation",
+    "pair_parameters",
+    "protocol_fee_recipient",
+    "query_auth",
+    "recover_staking_funds_receiver",
+    "rewards_distribution_algorithm",
+    "staking_contract_implementation",
+    "token_x",
+    "token_y",
+    "viewing_key"
+  ],
+  "properties": {
+    "active_id": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "admin_auth": {
+      "$ref": "#/definitions/RawContract"
+    },
+    "bin_step": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "entropy": {
+      "type": "string"
+    },
+    "epoch_staking_duration": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "epoch_staking_index": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "expiry_staking_duration": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "factory": {
+      "$ref": "#/definitions/ContractInfo"
+    },
+    "lb_token_implementation": {
+      "$ref": "#/definitions/ContractImplementation"
+    },
+    "max_bins_per_swap": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "pair_parameters": {
+      "$ref": "#/definitions/StaticFeeParameters"
+    },
+    "protocol_fee_recipient": {
+      "$ref": "#/definitions/Addr"
+    },
+    "query_auth": {
+      "$ref": "#/definitions/RawContract"
+    },
+    "recover_staking_funds_receiver": {
+      "$ref": "#/definitions/Addr"
+    },
+    "rewards_distribution_algorithm": {
+      "$ref": "#/definitions/RewardsDistributionAlgorithm"
+    },
+    "staking_contract_implementation": {
+      "$ref": "#/definitions/ContractImplementation"
+    },
+    "token_x": {
+      "$ref": "#/definitions/TokenType"
+    },
+    "token_y": {
+      "$ref": "#/definitions/TokenType"
+    },
+    "total_reward_bins": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "viewing_key": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "Addr": {
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "ContractImplementation": {
+      "type": "object",
+      "required": [
+        "code_hash",
+        "id"
+      ],
+      "properties": {
+        "code_hash": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContractInfo": {
+      "type": "object",
+      "required": [
+        "address"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Addr"
+        },
+        "code_hash": {
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "RawContract": {
+      "description": "A contract that does not contain a validated address. Should be accepted as user input because we shouldn't assume addresses are verified Addrs. https://docs.rs/cosmwasm-std/latest/cosmwasm_std/struct.Addr.html",
+      "type": "object",
+      "required": [
+        "address",
+        "code_hash"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "code_hash": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RewardsDistributionAlgorithm": {
+      "type": "string",
+      "enum": [
+        "time_based_rewards",
+        "volume_based_rewards"
+      ]
+    },
+    "StaticFeeParameters": {
+      "type": "object",
+      "required": [
+        "base_factor",
+        "decay_period",
+        "filter_period",
+        "max_volatility_accumulator",
+        "protocol_share",
+        "reduction_factor",
+        "variable_fee_control"
+      ],
+      "properties": {
+        "base_factor": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "decay_period": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "filter_period": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "max_volatility_accumulator": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "protocol_share": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "reduction_factor": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "variable_fee_control": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "TokenType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "custom_token"
+          ],
+          "properties": {
+            "custom_token": {
+              "type": "object",
+              "required": [
+                "contract_addr",
+                "token_code_hash"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "$ref": "#/definitions/Addr"
+                },
+                "token_code_hash": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

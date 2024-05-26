@@ -318,8 +318,8 @@ pub fn query_lb_pair_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
 ) -> StdResult<ContractImplementation> {
-    match (lb_factory::QueryMsg::GetLBPairImplementation {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::LBPairImplementationResponse {
+    match (lb_factory::QueryMsg::GetLbPairImplementation {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::LbPairImplementationResponse {
             lb_pair_implementation,
         }) => Ok(lb_pair_implementation),
         Err(e) => Err(StdError::generic_err(e.to_string())),
@@ -330,8 +330,8 @@ pub fn query_lb_token_implementation(
     app: &mut App,
     lb_factory: &ContractInfo,
 ) -> StdResult<ContractImplementation> {
-    match (lb_factory::QueryMsg::GetLBTokenImplementation {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::LBTokenImplementationResponse {
+    match (lb_factory::QueryMsg::GetLbTokenImplementation {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::LbTokenImplementationResponse {
             lb_token_implementation,
         }) => Ok(lb_token_implementation),
         Err(e) => Err(StdError::generic_err(e.to_string())),
@@ -353,8 +353,8 @@ pub fn query_fee_recipient(app: &mut App, lb_factory: &ContractInfo) -> StdResul
 }
 
 pub fn query_number_of_lb_pairs(app: &mut App, lb_factory: &ContractInfo) -> StdResult<u32> {
-    match (lb_factory::QueryMsg::GetNumberOfLBPairs {}.test_query(lb_factory, app)) {
-        Ok(lb_factory::NumberOfLBPairsResponse { lb_pair_number }) => Ok(lb_pair_number),
+    match (lb_factory::QueryMsg::GetNumberOfLbPairs {}.test_query(lb_factory, app)) {
+        Ok(lb_factory::NumberOfLbPairsResponse { lb_pair_number }) => Ok(lb_pair_number),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }
@@ -365,8 +365,8 @@ pub fn query_all_lb_pairs(
     token_x: TokenType,
     token_y: TokenType,
 ) -> StdResult<Vec<LBPairInformation>> {
-    match (lb_factory::QueryMsg::GetAllLBPairs { token_x, token_y }.test_query(lb_factory, app)) {
-        Ok(lb_factory::AllLBPairsResponse { lb_pairs_available }) => Ok(lb_pairs_available),
+    match (lb_factory::QueryMsg::GetAllLbPairs { token_x, token_y }.test_query(lb_factory, app)) {
+        Ok(lb_factory::AllLbPairsResponse { lb_pairs_available }) => Ok(lb_pairs_available),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }
@@ -378,14 +378,14 @@ pub fn query_lb_pair_information(
     token_y: TokenType,
     bin_step: u16,
 ) -> StdResult<LBPairInformation> {
-    match (lb_factory::QueryMsg::GetLBPairInformation {
+    match (lb_factory::QueryMsg::GetLbPairInformation {
         token_x,
         token_y,
         bin_step,
     }
     .test_query(lb_factory, app))
     {
-        Ok(lb_factory::LBPairInformationResponse {
+        Ok(lb_factory::LbPairInformationResponse {
             lb_pair_information,
         }) => Ok(lb_pair_information),
         Err(e) => Err(StdError::generic_err(e.to_string())),

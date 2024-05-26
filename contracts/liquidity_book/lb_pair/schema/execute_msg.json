@@ -1,0 +1,523 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "swap_tokens"
+      ],
+      "properties": {
+        "swap_tokens": {
+          "type": "object",
+          "required": [
+            "offer"
+          ],
+          "properties": {
+            "expected_return": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "offer": {
+              "$ref": "#/definitions/TokenAmount"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "receive"
+      ],
+      "properties": {
+        "receive": {
+          "$ref": "#/definitions/Snip20ReceiveMsg"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "add_liquidity"
+      ],
+      "properties": {
+        "add_liquidity": {
+          "type": "object",
+          "required": [
+            "liquidity_parameters"
+          ],
+          "properties": {
+            "liquidity_parameters": {
+              "$ref": "#/definitions/LiquidityParameters"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "remove_liquidity"
+      ],
+      "properties": {
+        "remove_liquidity": {
+          "type": "object",
+          "required": [
+            "remove_liquidity_params"
+          ],
+          "properties": {
+            "remove_liquidity_params": {
+              "$ref": "#/definitions/RemoveLiquidity"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "collect_protocol_fees"
+      ],
+      "properties": {
+        "collect_protocol_fees": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "set_static_fee_parameters"
+      ],
+      "properties": {
+        "set_static_fee_parameters": {
+          "type": "object",
+          "required": [
+            "base_factor",
+            "decay_period",
+            "filter_period",
+            "max_volatility_accumulator",
+            "protocol_share",
+            "reduction_factor",
+            "variable_fee_control"
+          ],
+          "properties": {
+            "base_factor": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "decay_period": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "filter_period": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "max_volatility_accumulator": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "protocol_share": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "reduction_factor": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "variable_fee_control": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "force_decay"
+      ],
+      "properties": {
+        "force_decay": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "calculate_rewards_distribution"
+      ],
+      "properties": {
+        "calculate_rewards_distribution": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "reset_rewards_config"
+      ],
+      "properties": {
+        "reset_rewards_config": {
+          "type": "object",
+          "properties": {
+            "base_rewards_bins": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "distribution": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/RewardsDistributionAlgorithm"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "set_contract_status"
+      ],
+      "properties": {
+        "set_contract_status": {
+          "type": "object",
+          "required": [
+            "contract_status"
+          ],
+          "properties": {
+            "contract_status": {
+              "$ref": "#/definitions/ContractStatus"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Addr": {
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
+    },
+    "ContractStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "freeze_all",
+        "lp_withdraw_only"
+      ]
+    },
+    "LiquidityParameters": {
+      "type": "object",
+      "required": [
+        "active_id_desired",
+        "amount_x",
+        "amount_x_min",
+        "amount_y",
+        "amount_y_min",
+        "bin_step",
+        "deadline",
+        "delta_ids",
+        "distribution_x",
+        "distribution_y",
+        "id_slippage",
+        "token_x",
+        "token_y"
+      ],
+      "properties": {
+        "active_id_desired": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "amount_x": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "amount_x_min": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "amount_y": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "amount_y_min": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "bin_step": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "deadline": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "delta_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "distribution_x": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "distribution_y": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "id_slippage": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "token_x": {
+          "$ref": "#/definitions/TokenType"
+        },
+        "token_y": {
+          "$ref": "#/definitions/TokenType"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RemoveLiquidity": {
+      "type": "object",
+      "required": [
+        "amount_x_min",
+        "amount_y_min",
+        "amounts",
+        "bin_step",
+        "deadline",
+        "ids",
+        "token_x",
+        "token_y"
+      ],
+      "properties": {
+        "amount_x_min": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "amount_y_min": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "amounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Uint256"
+          }
+        },
+        "bin_step": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "deadline": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "token_x": {
+          "$ref": "#/definitions/TokenType"
+        },
+        "token_y": {
+          "$ref": "#/definitions/TokenType"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RewardsDistributionAlgorithm": {
+      "type": "string",
+      "enum": [
+        "time_based_rewards",
+        "volume_based_rewards"
+      ]
+    },
+    "Snip20ReceiveMsg": {
+      "type": "object",
+      "required": [
+        "amount",
+        "from",
+        "sender"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "from": {
+          "type": "string"
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "msg": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sender": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TokenAmount": {
+      "type": "object",
+      "required": [
+        "amount",
+        "token"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "token": {
+          "$ref": "#/definitions/TokenType"
+        }
+      }
+    },
+    "TokenType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "custom_token"
+          ],
+          "properties": {
+            "custom_token": {
+              "type": "object",
+              "required": [
+                "contract_addr",
+                "token_code_hash"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "$ref": "#/definitions/Addr"
+                },
+                "token_code_hash": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use secret_cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    },
+    "Uint256": {
+      "description": "An implementation of u256 that is using strings for JSON encoding/decoding, such that the full u256 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances out of primitive uint types or `new` to provide big endian bytes:\n\n``` # use secret_cosmwasm_std::Uint256; let a = Uint256::from(258u128); let b = Uint256::new([ 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8, 2u8, ]); assert_eq!(a, b); ```",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UpdatedBinsAfterHeightResponse",
+  "type": "object",
+  "required": [
+    "bins",
+    "current_block_height"
+  ],
+  "properties": {
+    "bins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/BinResponse"
+      }
+    },
+    "current_block_height": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "BinResponse": {
+      "type": "object",
+      "required": [
+        "bin_id",
+        "bin_reserve_x",
+        "bin_reserve_y"
+      ],
+      "properties": {
+        "bin_id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "bin_reserve_x": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        },
+        "bin_reserve_y": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

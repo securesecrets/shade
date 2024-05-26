@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MinBinStepResponse",
+  "type": "object",
+  "required": [
+    "min_bin_step"
+  ],
+  "properties": {
+    "min_bin_step": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

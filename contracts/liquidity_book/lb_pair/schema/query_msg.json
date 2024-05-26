@@ -1,0 +1,748 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "get_staking_contract"
+      ],
+      "properties": {
+        "get_staking_contract": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_lb_token"
+      ],
+      "properties": {
+        "get_lb_token": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_pair_info"
+      ],
+      "properties": {
+        "get_pair_info": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "swap_simulation"
+      ],
+      "properties": {
+        "swap_simulation": {
+          "type": "object",
+          "required": [
+            "offer"
+          ],
+          "properties": {
+            "exclude_fee": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "offer": {
+              "$ref": "#/definitions/TokenAmount"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_factory"
+      ],
+      "properties": {
+        "get_factory": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_tokens"
+      ],
+      "properties": {
+        "get_tokens": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_token_x"
+      ],
+      "properties": {
+        "get_token_x": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_token_y"
+      ],
+      "properties": {
+        "get_token_y": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_bin_step"
+      ],
+      "properties": {
+        "get_bin_step": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_reserves"
+      ],
+      "properties": {
+        "get_reserves": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_active_id"
+      ],
+      "properties": {
+        "get_active_id": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_bin_reserves"
+      ],
+      "properties": {
+        "get_bin_reserves": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_bins_reserves"
+      ],
+      "properties": {
+        "get_bins_reserves": {
+          "type": "object",
+          "required": [
+            "ids"
+          ],
+          "properties": {
+            "ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_all_bins_reserves"
+      ],
+      "properties": {
+        "get_all_bins_reserves": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_updated_bin_at_height"
+      ],
+      "properties": {
+        "get_updated_bin_at_height": {
+          "type": "object",
+          "required": [
+            "height"
+          ],
+          "properties": {
+            "height": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_updated_bin_at_multiple_heights"
+      ],
+      "properties": {
+        "get_updated_bin_at_multiple_heights": {
+          "type": "object",
+          "required": [
+            "heights"
+          ],
+          "properties": {
+            "heights": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_updated_bin_after_height"
+      ],
+      "properties": {
+        "get_updated_bin_after_height": {
+          "type": "object",
+          "required": [
+            "height"
+          ],
+          "properties": {
+            "height": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_bin_updating_heights"
+      ],
+      "properties": {
+        "get_bin_updating_heights": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_next_non_empty_bin"
+      ],
+      "properties": {
+        "get_next_non_empty_bin": {
+          "type": "object",
+          "required": [
+            "id",
+            "swap_for_y"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "swap_for_y": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_protocol_fees"
+      ],
+      "properties": {
+        "get_protocol_fees": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_static_fee_parameters"
+      ],
+      "properties": {
+        "get_static_fee_parameters": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_variable_fee_parameters"
+      ],
+      "properties": {
+        "get_variable_fee_parameters": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_oracle_parameters"
+      ],
+      "properties": {
+        "get_oracle_parameters": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_oracle_sample_at"
+      ],
+      "properties": {
+        "get_oracle_sample_at": {
+          "type": "object",
+          "required": [
+            "oracle_id"
+          ],
+          "properties": {
+            "oracle_id": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_oracle_samples_at"
+      ],
+      "properties": {
+        "get_oracle_samples_at": {
+          "type": "object",
+          "required": [
+            "oracle_ids"
+          ],
+          "properties": {
+            "oracle_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_oracle_samples_after"
+      ],
+      "properties": {
+        "get_oracle_samples_after": {
+          "type": "object",
+          "required": [
+            "oracle_id"
+          ],
+          "properties": {
+            "oracle_id": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_price_from_id"
+      ],
+      "properties": {
+        "get_price_from_id": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_id_from_price"
+      ],
+      "properties": {
+        "get_id_from_price": {
+          "type": "object",
+          "required": [
+            "price"
+          ],
+          "properties": {
+            "price": {
+              "$ref": "#/definitions/Uint256"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_swap_in"
+      ],
+      "properties": {
+        "get_swap_in": {
+          "type": "object",
+          "required": [
+            "amount_out",
+            "swap_for_y"
+          ],
+          "properties": {
+            "amount_out": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "swap_for_y": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_swap_out"
+      ],
+      "properties": {
+        "get_swap_out": {
+          "type": "object",
+          "required": [
+            "amount_in",
+            "swap_for_y"
+          ],
+          "properties": {
+            "amount_in": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "swap_for_y": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "total_supply"
+      ],
+      "properties": {
+        "total_supply": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_rewards_distribution"
+      ],
+      "properties": {
+        "get_rewards_distribution": {
+          "type": "object",
+          "properties": {
+            "epoch_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Addr": {
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "TokenAmount": {
+      "type": "object",
+      "required": [
+        "amount",
+        "token"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "token": {
+          "$ref": "#/definitions/TokenType"
+        }
+      }
+    },
+    "TokenType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "custom_token"
+          ],
+          "properties": {
+            "custom_token": {
+              "type": "object",
+              "required": [
+                "contract_addr",
+                "token_code_hash"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "$ref": "#/definitions/Addr"
+                },
+                "token_code_hash": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use secret_cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    },
+    "Uint256": {
+      "description": "An implementation of u256 that is using strings for JSON encoding/decoding, such that the full u256 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances out of primitive uint types or `new` to provide big endian bytes:\n\n``` # use secret_cosmwasm_std::Uint256; let a = Uint256::from(258u128); let b = Uint256::new([ 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8, 2u8, ]); assert_eq!(a, b); ```",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BinsResponse",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/BinResponse"
+  },
+  "definitions": {
+    "BinResponse": {
+      "type": "object",
+      "required": [
+        "bin_id",
+        "bin_reserve_x",
+        "bin_reserve_y"
+      ],
+      "properties": {
+        "bin_id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "bin_reserve_x": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        },
+        "bin_reserve_y": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

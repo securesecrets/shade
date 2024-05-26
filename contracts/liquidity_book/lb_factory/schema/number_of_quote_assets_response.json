@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NumberOfQuoteAssetsResponse",
+  "type": "object",
+  "required": [
+    "number_of_quote_assets"
+  ],
+  "properties": {
+    "number_of_quote_assets": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

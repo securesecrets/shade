@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NumberOfLbPairsResponse",
+  "type": "object",
+  "required": [
+    "lb_pair_number"
+  ],
+  "properties": {
+    "lb_pair_number": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

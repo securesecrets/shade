@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AllBinsResponse",
+  "type": "object",
+  "required": [
+    "current_block_height",
+    "last_id",
+    "reserves"
+  ],
+  "properties": {
+    "current_block_height": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "last_id": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "reserves": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/BinResponse"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "BinResponse": {
+      "type": "object",
+      "required": [
+        "bin_id",
+        "bin_reserve_x",
+        "bin_reserve_y"
+      ],
+      "properties": {
+        "bin_id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "bin_reserve_x": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        },
+        "bin_reserve_y": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

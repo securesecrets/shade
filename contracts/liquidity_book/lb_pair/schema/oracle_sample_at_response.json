@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OracleSampleAtResponse",
+  "type": "object",
+  "required": [
+    "created_at",
+    "cumulative_bin_crossed",
+    "cumulative_fee_x",
+    "cumulative_fee_y",
+    "cumulative_id",
+    "cumulative_txns",
+    "cumulative_volatility",
+    "cumulative_volume_x",
+    "cumulative_volume_y",
+    "lifetime",
+    "oracle_id"
+  ],
+  "properties": {
+    "created_at": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "cumulative_bin_crossed": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "cumulative_fee_x": {
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 0.0
+    },
+    "cumulative_fee_y": {
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 0.0
+    },
+    "cumulative_id": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "cumulative_txns": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    },
+    "cumulative_volatility": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "cumulative_volume_x": {
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 0.0
+    },
+    "cumulative_volume_y": {
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 0.0
+    },
+    "lifetime": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0.0
+    },
+    "oracle_id": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,11 +1,15 @@
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-use std::{env::current_dir, fs::create_dir_all};
+use std::{env, fs::create_dir_all, path::PathBuf};
 
-use shade_protocol::swap::router::{ExecuteMsg, InitMsg, InvokeMsg, QueryMsg, QueryMsgResponse};
+use shade_protocol::liquidity_book::lb_router::{
+    ExecuteMsg, InitMsg, InvokeMsg, QueryMsg, QueryMsgResponse,
+};
 
 fn main() {
-    let mut out_dir = current_dir().unwrap();
+    // Get the directory of the current crate
+    let mut out_dir = env::var("CARGO_MANIFEST_DIR").map(PathBuf::from).unwrap();
     out_dir.push("schema");
+
     create_dir_all(&out_dir).unwrap();
     remove_schemas(&out_dir).unwrap();
 

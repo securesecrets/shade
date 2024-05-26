@@ -1,0 +1,973 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "description": "Handle messages to SNIP1155 contract.\n\nMostly responds with `HandleAnswer { <variant_name>: { status: success }}` if successful. See [HandleAnswer](crate::msg::HandleAnswer) for the response messages for each variant.",
+  "oneOf": [
+    {
+      "description": "mints additional tokens of existing fungible token_ids, if configuration allows this, ie `enable_mint == true`. Only minters can access this function",
+      "type": "object",
+      "required": [
+        "mint_tokens"
+      ],
+      "properties": {
+        "mint_tokens": {
+          "type": "object",
+          "required": [
+            "mint_tokens"
+          ],
+          "properties": {
+            "memo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mint_tokens": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TokenAmount"
+              }
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "burns existing tokens, if configuration allows this, ie `enable_burn == true`. Only owners can burn their own tokens in the base specifications. Flexibility is built into the contract functions to allow other addresses to burn tokens, allowed in additional specifications.",
+      "type": "object",
+      "required": [
+        "burn_tokens"
+      ],
+      "properties": {
+        "burn_tokens": {
+          "type": "object",
+          "required": [
+            "burn_tokens"
+          ],
+          "properties": {
+            "burn_tokens": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TokenAmount"
+              }
+            },
+            "memo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "allows owner or minter to change metadata if allowed by token_id configuration.",
+      "type": "object",
+      "required": [
+        "change_metadata"
+      ],
+      "properties": {
+        "change_metadata": {
+          "type": "object",
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "private_metadata": {
+              "description": "does not attempt to change if left blank. Can effectively remove metadata by setting metadata to `Some(Metadata {token_uri: None, extension: None})` used Box<T> to reduce the total size of the enum variant, to decrease size difference between variants. Not strictly necessary.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Metadata"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "public_metadata": {
+              "description": "does not attempt to change if left blank. Can effectively remove metadata by setting metadata to `Some(Metadata {token_uri: None, extension: None})` used Box<T> to reduce the total size of the enum variant, to decrease size difference between variants. Not strictly necessary.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Metadata"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "transfers one or more tokens of a single token_id. Other third address can perform this function if it has permission to transfer. ie: if addr3 can call this function to transfer tokens from addr0 to addr2, if addr0 gives addr3 enough transfer allowance.",
+      "type": "object",
+      "required": [
+        "transfer"
+      ],
+      "properties": {
+        "transfer": {
+          "type": "object",
+          "required": [
+            "amount",
+            "from",
+            "recipient",
+            "token_id"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "from": {
+              "$ref": "#/definitions/Addr"
+            },
+            "memo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "recipient": {
+              "$ref": "#/definitions/Addr"
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "performs `transfer`s of multiple token_ids in a single transaction",
+      "type": "object",
+      "required": [
+        "batch_transfer"
+      ],
+      "properties": {
+        "batch_transfer": {
+          "type": "object",
+          "required": [
+            "actions"
+          ],
+          "properties": {
+            "actions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TransferAction"
+              }
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "similar to transfer, but also sends a cosmos message. The recipient needs to be a contract that has a SNIP1155Receive handle function. See [receiver](crate::receiver) for more information.",
+      "type": "object",
+      "required": [
+        "send"
+      ],
+      "properties": {
+        "send": {
+          "type": "object",
+          "required": [
+            "amount",
+            "from",
+            "recipient",
+            "token_id"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "from": {
+              "$ref": "#/definitions/Addr"
+            },
+            "memo": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "msg": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "recipient": {
+              "$ref": "#/definitions/Addr"
+            },
+            "recipient_code_hash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "performs `send` of multiple token_ids in a single transaction",
+      "type": "object",
+      "required": [
+        "batch_send"
+      ],
+      "properties": {
+        "batch_send": {
+          "type": "object",
+          "required": [
+            "actions"
+          ],
+          "properties": {
+            "actions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SendAction"
+              }
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "allows an owner of token_ids to change transfer or viewership permissions to other addresses.\n\nThe base specification has three types of permissions: * view balance permission: owner can allow another address to view owner's balance of specific token_ids * view private metadata: owner can allow another address to view private metadata of specific token_ids * transfer allowance: owner can give permission to another address to transfer tokens up to a certain limit (cumulatively) Owners can set an [expiry](crate::state::expiration) for each of these permissions.\n\nSNIP1155 gives flexibility for permissions to have any combination of * type of permission granted * on which token_ids",
+      "type": "object",
+      "required": [
+        "give_permission"
+      ],
+      "properties": {
+        "give_permission": {
+          "type": "object",
+          "required": [
+            "allowed_address",
+            "token_id"
+          ],
+          "properties": {
+            "allowed_address": {
+              "description": "address being granted/revoked permission",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
+            },
+            "padding": {
+              "description": "optional message length padding",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "token_id": {
+              "description": "token id to apply approval/revocation to. Additional Spec feature: if == None, perform action for all owner's `token_id`s",
+              "type": "string"
+            },
+            "transfer": {
+              "description": "set allowance by for transfer approvals. If ignored, leaves current permission settings",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint256"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "transfer_expiry": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Expiration"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "view_balance": {
+              "description": "optional permission level for viewing balance. If ignored, leaves current permission settings",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "view_balance_expiry": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Expiration"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "view_private_metadata": {
+              "description": "optional permission level for viewing private metadata. If ignored, leaves current permission settings",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "view_private_metadata_expiry": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Expiration"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Removes all permissions that a specific owner has granted to a specific address, for a specific token_id. A permission grantee can use this function to renounce a permission it has been given. For owners, the `GivePermission` message can be used instead to have the same effect as `RevokePermission`.",
+      "type": "object",
+      "required": [
+        "revoke_permission"
+      ],
+      "properties": {
+        "revoke_permission": {
+          "type": "object",
+          "required": [
+            "allowed_address",
+            "owner",
+            "token_id"
+          ],
+          "properties": {
+            "allowed_address": {
+              "description": "address which has permission",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
+            },
+            "owner": {
+              "description": "token owner",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "create_viewing_key"
+      ],
+      "properties": {
+        "create_viewing_key": {
+          "type": "object",
+          "required": [
+            "entropy"
+          ],
+          "properties": {
+            "entropy": {
+              "type": "string"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "set_viewing_key"
+      ],
+      "properties": {
+        "set_viewing_key": {
+          "type": "object",
+          "required": [
+            "key"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "disallow the use of a query permit",
+      "type": "object",
+      "required": [
+        "revoke_permit"
+      ],
+      "properties": {
+        "revoke_permit": {
+          "type": "object",
+          "required": [
+            "permit_name"
+          ],
+          "properties": {
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "permit_name": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_admin"
+      ],
+      "properties": {
+        "change_admin": {
+          "type": "object",
+          "required": [
+            "new_admin"
+          ],
+          "properties": {
+            "new_admin": {
+              "$ref": "#/definitions/Addr"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Permanently breaks admin keys for this contract. No admin function can be called after this action. Any existing curators or minters will remain as curators or minters; no new curators can be added and no current curator can be removed.\n\nRequires caller to input current admin address and contract address. These inputs are not strictly necessary, but as a safety precaution to reduce the chances of accidentally calling this function.",
+      "type": "object",
+      "required": [
+        "remove_admin"
+      ],
+      "properties": {
+        "remove_admin": {
+          "type": "object",
+          "required": [
+            "contract_address",
+            "current_admin"
+          ],
+          "properties": {
+            "contract_address": {
+              "$ref": "#/definitions/Addr"
+            },
+            "current_admin": {
+              "$ref": "#/definitions/Addr"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "register_receive"
+      ],
+      "properties": {
+        "register_receive": {
+          "type": "object",
+          "required": [
+            "code_hash"
+          ],
+          "properties": {
+            "code_hash": {
+              "type": "string"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Addr": {
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "Authentication": {
+      "description": "media file authentication",
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "either a decryption key for encrypted files or a password for basic authentication",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user": {
+          "description": "username used in basic authentication",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
+    },
+    "Expiration": {
+      "description": "at the given point in time and after, Expiration will be considered expired",
+      "oneOf": [
+        {
+          "description": "expires at this block height",
+          "type": "object",
+          "required": [
+            "at_height"
+          ],
+          "properties": {
+            "at_height": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "expires at the time in seconds since 01/01/1970",
+          "type": "object",
+          "required": [
+            "at_time"
+          ],
+          "properties": {
+            "at_time": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "never expires",
+          "type": "string",
+          "enum": [
+            "never"
+          ]
+        }
+      ]
+    },
+    "Extension": {
+      "description": "metadata extension You can add any metadata fields you need here.  These fields are based on <https://docs.opensea.io/docs/metadata-standards> and are the metadata fields that Stashh uses for robust NFT display.  Urls should be prefixed with `http://`, `https://`, `ipfs://`, or `ar://`",
+      "type": "object",
+      "properties": {
+        "animation_url": {
+          "description": "url to a multimedia attachment",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attributes": {
+          "description": "item attributes",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/Trait"
+          }
+        },
+        "background_color": {
+          "description": "background color represented as a six-character hexadecimal without a pre-pended #",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "item description",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_url": {
+          "description": "url to allow users to view the item on your site",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image": {
+          "description": "url to the image",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_data": {
+          "description": "raw SVG image data (not recommended). Only use this if you're not including the image parameter",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "media": {
+          "description": "media files as specified on Stashh that allows for basic authenticatiion and decryption keys. Most of the above is used for bridging public eth NFT metadata easily, whereas `media` will be used when minting NFTs on Stashh",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/MediaFile"
+          }
+        },
+        "name": {
+          "description": "name of the item",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "protected_attributes": {
+          "description": "a select list of trait_types that are in the private metadata.  This will only ever be used in public metadata",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "token_subtype": {
+          "description": "token subtypes used by Stashh for display groupings (primarily used for badges)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "youtube_url": {
+          "description": "url to a YouTube video",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "MediaFile": {
+      "description": "media file",
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "authentication": {
+          "description": "authentication information",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Authentication"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extension": {
+          "description": "file extension",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_type": {
+          "description": "file type Stashh currently uses: \"image\", \"video\", \"audio\", \"text\", \"font\", \"application\"",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "description": "url to the file.  Urls should be prefixed with `http://`, `https://`, `ipfs://`, or `ar://`",
+          "type": "string"
+        }
+      }
+    },
+    "Metadata": {
+      "description": "token metadata",
+      "type": "object",
+      "properties": {
+        "extension": {
+          "description": "optional on-chain metadata.  Only use this if you are not using `token_uri`",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Extension"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "token_uri": {
+          "description": "optional uri for off-chain metadata.  This should be prefixed with `http://`, `https://`, `ipfs://`, or `ar://`.  Only use this if you are not using `extension`",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "SendAction": {
+      "type": "object",
+      "required": [
+        "amount",
+        "from",
+        "recipient",
+        "token_id"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint256"
+        },
+        "from": {
+          "$ref": "#/definitions/Addr"
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "msg": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recipient": {
+          "$ref": "#/definitions/Addr"
+        },
+        "recipient_code_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token_id": {
+          "type": "string"
+        }
+      }
+    },
+    "TokenAmount": {
+      "description": "used for MintToken and BurnToken in the base specifications",
+      "type": "object",
+      "required": [
+        "balances",
+        "token_id"
+      ],
+      "properties": {
+        "balances": {
+          "description": "For BurnToken, only `Balance.amount` is relevant. `Balance.address` need to be the owner's address. This design decision is to allow `BurnToken` to apply to other addresses, possible in the additional specifications",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TokenIdBalance"
+          }
+        },
+        "token_id": {
+          "type": "string"
+        }
+      }
+    },
+    "TokenIdBalance": {
+      "type": "object",
+      "required": [
+        "address",
+        "amount"
+      ],
+      "properties": {
+        "address": {
+          "description": "For BurnToken, `address` needs to be the owner's address. This design decision is to allow `BurnToken` to apply to other addresses, possible in the additional specifications",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
+        "amount": {
+          "$ref": "#/definitions/Uint256"
+        }
+      }
+    },
+    "Trait": {
+      "description": "attribute trait",
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "display_type": {
+          "description": "indicates how a trait should be displayed",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_value": {
+          "description": "optional max value for numerical traits",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trait_type": {
+          "description": "name of the trait",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "description": "trait value",
+          "type": "string"
+        }
+      }
+    },
+    "TransferAction": {
+      "type": "object",
+      "required": [
+        "amount",
+        "from",
+        "recipient",
+        "token_id"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint256"
+        },
+        "from": {
+          "$ref": "#/definitions/Addr"
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recipient": {
+          "$ref": "#/definitions/Addr"
+        },
+        "token_id": {
+          "type": "string"
+        }
+      }
+    },
+    "Uint256": {
+      "description": "An implementation of u256 that is using strings for JSON encoding/decoding, such that the full u256 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances out of primitive uint types or `new` to provide big endian bytes:\n\n``` # use secret_cosmwasm_std::Uint256; let a = Uint256::from(258u128); let b = Uint256::new([ 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8, 2u8, ]); assert_eq!(a, b); ```",
+      "type": "string"
+    }
+  }
+}

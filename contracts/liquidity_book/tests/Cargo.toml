@@ -8,10 +8,6 @@ exclude = ["contract.wasm", "hash.txt"]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
 
 
 [dependencies]
@@ -38,6 +34,4 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
   "query_auth",
   "snip20",
 ] }
-# TODO: why is this here?
-lb-pair = { path = "../lb_pair" }
 serial_test = "2.0.0"
