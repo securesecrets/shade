@@ -7,17 +7,8 @@ use crate::multi_test::{App, AppResponse, Contract as MultiContract, Executor};
 use crate::AnyResult;
 use crate::{
     c_std::{
-        to_binary,
-        Addr,
-        Coin,
-        ContractInfo,
-        CosmosMsg,
-        Empty,
-        QuerierWrapper,
-        QueryRequest,
-        StdResult,
-        WasmMsg,
-        WasmQuery,
+        to_binary, Addr, Coin, ContractInfo, CosmosMsg, Empty, QuerierWrapper, QueryRequest,
+        StdResult, WasmMsg, WasmQuery,
     },
     serde::{de::DeserializeOwned, Serialize},
     Contract,

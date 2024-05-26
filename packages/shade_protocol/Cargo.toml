@@ -130,7 +130,7 @@ schemars = "0.8.16"
 serde = { version = "1.0.193", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0.50"
 
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", tag = "v0.1.1", optional = true, features = [] }
 
 # Testing
 anyhow = { version = "1", optional = true }

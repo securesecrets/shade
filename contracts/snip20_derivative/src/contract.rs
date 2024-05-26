@@ -39,7 +39,7 @@ use secret_toolkit::{
     utils::{pad_handle_result, pad_query_result},
 };
 
-use secret_toolkit_crypto::{sha_256, Prng};
+use secret_toolkit_crypto::{sha_256, ContractPrng};
 use serde::de::DeserializeOwned;
 use shade_protocol::query_auth::QueryPermit;
 
@@ -1172,13 +1172,15 @@ fn query_rewards<C: CustomQuery>(
 fn query_rewards<C: CustomQuery>(_: QuerierWrapper<C>, _: &Addr, _: &Config) -> StdResult<Rewards> {
     use crate::staking_interface::RewardToken;
 
-    Ok(Rewards { rewards: vec![Reward{
-        token: RewardToken {
-            address: Addr::unchecked("shade_contract_info_address"),
-            code_hash: String::from("shade_contract_info_code_hash"),
-        },
-        amount: Uint128::from(100000000_u128)
-    }] })
+    Ok(Rewards {
+        rewards: vec![Reward {
+            token: RewardToken {
+                address: Addr::unchecked("shade_contract_info_address"),
+                code_hash: String::from("shade_contract_info_code_hash"),
+            },
+            amount: Uint128::from(100000000_u128),
+        }],
+    })
 }
 
 #[cfg(test)]
@@ -1477,7 +1479,7 @@ pub fn new_viewing_key(
     rng_entropy.extend_from_slice(sender.as_bytes());
     rng_entropy.extend_from_slice(entropy);
 
-    let mut rng = Prng::new(seed, &rng_entropy);
+    let mut rng = ContractPrng::new(seed, &rng_entropy);
 
     let rand_slice = rng.rand_bytes();
 
