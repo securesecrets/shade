@@ -7,9 +7,6 @@
 # Build results
 target/
 
-# Testing configs
-*.json
-
 # Code coverage stuff
 *.profraw
 
@@ -28,5 +25,4 @@ node_modules/
 __pycache__/
 compiled
 logs
-Cargo.lock
 tests/liquidity_orderbook/contract_address_log.json
