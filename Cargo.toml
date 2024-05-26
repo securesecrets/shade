@@ -2,22 +2,22 @@
 resolver = "2"
 members = [
   # Packages
-  "packages/shade_protocol",
-  # "packages/secretcli",
-  "packages/multi_test",
-  "packages/multi_derive",
   "packages/contract_derive",
   "packages/lb_libraries",
+  "packages/multi_derive",
+  "packages/multi_test",
+  "packages/secretcli",
+  "packages/shade_protocol",
 
   # Network setups
-  #"contracts/airdrop",
+  "contracts/airdrop",
 
   # Protocol contracts
-  #"contracts/snip20",
-  #"contracts/query_auth",
-  #"contracts/admin",
-  #"contracts/basic_staking",
-  #"contracts/snip20_migration",
+  "contracts/snip20",
+  "contracts/query_auth",
+  "contracts/admin",
+  "contracts/basic_staking",
+  "contracts/snip20_migration",
 
   # Liquidity Orderbook Contracts
   "contracts/liquidity_book/lb_factory",
@@ -28,27 +28,27 @@ members = [
   "contracts/liquidity_book/tests",
 
   # Staking
-  #"contracts/basic_staking",
-  #"contracts/snip20_derivative",
+  "contracts/basic_staking",
+  "contracts/snip20_derivative",
 
   # DAO
   # - Core
-  #"contracts/dao/treasury",
-  #"contracts/dao/treasury_manager",
+  "contracts/dao/treasury",
+  "contracts/dao/treasury_manager",
   # - Adapters
-  #"contracts/dao/scrt_staking",
-  #"contracts/dao/stkd_scrt",
+  "contracts/dao/scrt_staking",
+  "contracts/dao/stkd_scrt",
 
   # Mock contracts
-  # "contracts/mock/mock_band", //TODO: migrate to v1
-  # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
-  #"contracts/mock/mock_sienna_pair",
-  # "contracts/mock/mock_adapter", //TODO: migrate to v1
-  #"contracts/mock/mock_stkd_derivative",
+  # "contracts/mock/mock_band",            # TODO: migrate to v1
+  # "contracts/mock/mock_secretswap_pair", # TODO: migrate to v1
+  "contracts/mock/mock_sienna_pair",
+  "contracts/mock/mock_adapter",         # TODO: migrate to v1
+  "contracts/mock/mock_stkd_derivative",
 
   # Tools
-  # "tools/doc2book",
-  # "launch"
+  "tools/doc2book",
+  # "launch",
 ]
 
 exclude = ["packages/network_integration"]
