@@ -1,0 +1,4 @@
+[alias]
+check-lb = "check -p lb-factory -p lb-pair -p lb-router -p lb-token -p lb-staking -p lb-libraries"
+build-lb = "build -p lb-factory -p lb-pair -p lb-router -p lb-token -p lb-staking -p lb-libraries"
+clippy-lb = "clippy -p lb-factory -p lb-pair -p lb-router -p lb-token -p lb-staking -p lb-libraries"
