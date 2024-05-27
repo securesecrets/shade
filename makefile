@@ -21,9 +21,9 @@ CONTRACTS = \
 
 
 LIQUIDITY_BOOK_CONTRACTS = \
-		lb_factory lb_pair lb_token router  lb_staking\
+		lb_factory lb_pair lb_router lb_staking lb_token
 
-LB_PAIR =  lb_pair \
+LB_PAIR = lb_pair \
 
 PACKAGES = shade_protocol contract_harness cosmwasm_math_compat 
 
