@@ -23,6 +23,8 @@ required-features = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[lints.rust]
+unused = "allow"
 
 
 [features]
