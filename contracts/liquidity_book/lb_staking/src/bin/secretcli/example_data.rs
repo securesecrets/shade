@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use serde_json::from_str;
 use shade_protocol::{

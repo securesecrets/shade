@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},

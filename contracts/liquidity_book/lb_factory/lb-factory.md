@@ -1,4 +1,4 @@
-# lb_factory
+# lb-factory
 
 ## Instantiate Message
 
@@ -8,14 +8,14 @@ secretcli tx compute instantiate 1 '{
     "address": "secret1...foobar",
     "code_hash": "0123456789ABCDEF"
   },
+  "query_auth": {
+    "address": "secret1...foobar",
+    "code_hash": "0123456789ABCDEF"
+  },
   "owner": "secret1...owner",
   "fee_recipient": "secret1...recipient",
-  "total_reward_bins": 10,
-  "rewards_distribution_algorithm": "time_based_rewards",
-  "epoch_staking_index": 1,
-  "epoch_staking_duration": 100,
-  "expiry_staking_duration": null,
-  "recover_staking_funds_receiver": "secret1...fundsrecipient"
+  "recover_staking_funds_receiver": "secret1...fundsrecipient",
+  "max_bins_per_swap": 500
 }'
 ```
 
@@ -85,7 +85,11 @@ secretcli tx compute execute secret1foobar '{
     "variable_fee_control": 100,
     "protocol_share": 100,
     "max_volatility_accumulator": 100,
-    "total_reward_bins": 0,
+    "total_reward_bins": 10,
+    "rewards_distribution_algorithm": "time_based_rewards",
+    "epoch_staking_index": 1,
+    "epoch_staking_duration": 100,
+    "expiry_staking_duration": null,
     "is_open": true
   }
 }'
@@ -423,7 +427,7 @@ secretcli query compute query secret1foobar '{
 {
   "lb_pair_information": {
     "bin_step": 100,
-    "lb_pair": {
+    "info": {
       "token_x": {
         "custom_token": {
           "contract_addr": "secret1...foobar",
@@ -541,7 +545,7 @@ secretcli query compute query secret1foobar '{
   "lb_pairs_available": [
     {
       "bin_step": 100,
-      "lb_pair": {
+      "info": {
         "token_x": {
           "custom_token": {
             "contract_addr": "secret1...foobar",
@@ -565,7 +569,7 @@ secretcli query compute query secret1foobar '{
     },
     {
       "bin_step": 100,
-      "lb_pair": {
+      "info": {
         "token_x": {
           "custom_token": {
             "contract_addr": "secret1...foobar",

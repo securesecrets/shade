@@ -6,13 +6,7 @@ use shade_protocol::{
     liquidity_book::{
         lb_pair::RewardsDistribution,
         lb_staking::{
-            Auth,
-            ExecuteMsg,
-            InstantiateMsg,
-            InvokeMsg,
-            QueryAnswer,
-            QueryMsg,
-            QueryTxnType,
+            Auth, ExecuteMsg, InstantiateMsg, InvokeMsg, QueryAnswer, QueryMsg, QueryTxnType,
         },
         lb_token::Snip1155ReceiveMsg,
     },
@@ -72,7 +66,7 @@ fn main() -> io::Result<()> {
     let crate_root = &env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let package_name = &env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
     let file_path = Path::new(crate_root).join(format!("{package_name}.md"));
-    let mut file = File::create(file_path)?;
+    let mut file = File::create(file_path.clone())?;
 
     writeln!(file, "# {package_name}\n")?;
 
@@ -240,6 +234,8 @@ fn main() -> io::Result<()> {
         (liquidity_query, liquidity_response),
         (transaction_history_query, transaction_history_response),
     );
+
+    println!("Created {}", file_path.display());
 
     Ok(())
 }

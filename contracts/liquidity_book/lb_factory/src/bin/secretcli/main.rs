@@ -64,7 +64,7 @@ fn main() -> io::Result<()> {
     let crate_root = &env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let package_name = &env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
     let file_path = Path::new(crate_root).join(format!("{package_name}.md"));
-    let mut file = File::create(file_path)?;
+    let mut file = File::create(file_path.clone())?;
 
     writeln!(file, "# {package_name}\n")?;
 
@@ -310,6 +310,8 @@ fn main() -> io::Result<()> {
         (get_open_bin_steps, get_open_bin_steps_response),
         (get_all_lb_pairs, get_all_lb_pairs_response),
     );
+
+    println!("Created {}", file_path.display());
 
     Ok(())
 }
