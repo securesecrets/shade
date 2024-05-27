@@ -180,7 +180,7 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        let item = self.iter_map.get(self.storage.clone(), self.index.clone());
+        let item = self.iter_map.get(self.storage, self.index.clone());
 
         self.next_index();
 
@@ -196,17 +196,11 @@ mod tests {
     use crate::utils::storage::plus::iter_item::IterItem;
     use cosmwasm_std::{
         testing::{MockApi, MockQuerier, MockStorage},
-        Addr,
-        CustomQuery,
-        OwnedDeps,
-        Storage,
-        Uint64,
+        Addr, CustomQuery, OwnedDeps, Storage, Uint64,
     };
     use serde::{
         de::{self, DeserializeOwned},
-        ser,
-        Deserialize,
-        Serialize,
+        ser, Deserialize, Serialize,
     };
     use std::marker::PhantomData;
 
