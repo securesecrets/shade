@@ -17,9 +17,101 @@ pub const MASK_UINT24: U256 = U256::new(0xffffffu128);
 pub const MASK_UINT40: U256 = U256::new(0xffffffffffu128);
 pub const MASK_UINT64: U256 = U256::new(0xffffffffffffffffu128);
 pub const MASK_UINT128: U256 = U256::new(0xffffffffffffffffffffffffffffffffu128);
+
 #[cw_serde]
 #[derive(Copy, Default)]
 pub struct EncodedSample(pub Bytes32);
+
+pub trait Encodable {
+    fn set(&mut self, value: U256, mask: U256, offset: u8) -> &mut Self;
+    fn set_bool(&mut self, boolean: bool, offset: u8) -> &mut Self;
+    fn decode(&self, mask: U256, offset: u8) -> U256;
+    fn decode_bool(&self, offset: u8) -> bool;
+    fn decode_uint8(&self, offset: u8) -> u8;
+    fn decode_uint12(&self, offset: u8) -> u16;
+    fn decode_uint14(&self, offset: u8) -> u16;
+    fn decode_uint16(&self, offset: u8) -> u16;
+    fn decode_uint20(&self, offset: u8) -> u32;
+    fn decode_uint24(&self, offset: u8) -> u32;
+    fn decode_uint40(&self, offset: u8) -> u64;
+    fn decode_uint64(&self, offset: u8) -> u64;
+    fn decode_uint128(&self, offset: u8) -> u128;
+}
+
+impl Encodable for Bytes32 {
+    /// Internal function to set a value in an encoded bytes32 using a mask and offset
+    fn set(&mut self, value: U256, mask: U256, offset: u8) -> &mut Self {
+        let mask_shifted = mask << offset;
+        let value_shifted = (value & mask) << offset;
+        *self = ((U256::from_le_bytes(*self) & !mask_shifted) | value_shifted).to_le_bytes();
+        self
+    }
+
+    /// Internal function to set a bool in an encoded bytes32 using an offset
+    fn set_bool(&mut self, boolean: bool, offset: u8) -> &mut Self {
+        Self::set(self, U256::from(boolean as u8), MASK_UINT1, offset)
+    }
+
+    /// Internal function to decode a bytes32 sample using a mask and offset
+    fn decode(&self, mask: U256, offset: u8) -> U256 {
+        (U256::from_le_bytes(*self) >> offset) & mask
+    }
+
+    /// Internal function to decode a bytes32 sample into a bool using an offset
+    fn decode_bool(&self, offset: u8) -> bool {
+        Self::decode(self, MASK_UINT1, offset).as_u64() != 0
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint8 using an offset
+    fn decode_uint8(&self, offset: u8) -> u8 {
+        Self::decode(self, MASK_UINT8, offset).as_u8()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint12 using an offset
+    /// The decoded value as a uint16, since uint12 is not supported
+    fn decode_uint12(&self, offset: u8) -> u16 {
+        Self::decode(self, MASK_UINT12, offset).as_u16()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint14 using an offset
+    /// The decoded value as a uint16, since uint14 is not supported
+    fn decode_uint14(&self, offset: u8) -> u16 {
+        Self::decode(self, MASK_UINT14, offset).as_u16()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint16 using an offset
+    fn decode_uint16(&self, offset: u8) -> u16 {
+        Self::decode(self, MASK_UINT16, offset).as_u16()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint20 using an offset
+    /// The decoded value as a uint32, since uint20 is not supported
+    fn decode_uint20(&self, offset: u8) -> u32 {
+        Self::decode(self, MASK_UINT20, offset).as_u32()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint24 using an offset
+    /// The decoded value as a uint32, since uint24 is not supported
+    fn decode_uint24(&self, offset: u8) -> u32 {
+        Self::decode(self, MASK_UINT24, offset).as_u32()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint40 using an offset
+    /// The decoded value as a uint64, since uint40 is not supported
+    fn decode_uint40(&self, offset: u8) -> u64 {
+        Self::decode(self, MASK_UINT40, offset).as_u64()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint64 using an offset
+    fn decode_uint64(&self, offset: u8) -> u64 {
+        Self::decode(self, MASK_UINT64, offset).as_u64()
+    }
+
+    /// Internal function to decode a bytes32 sample into a uint128 using an offset
+    fn decode_uint128(&self, offset: u8) -> u128 {
+        Self::decode(self, MASK_UINT128, offset).as_u128()
+    }
+}
 
 impl EncodedSample {
     /// Internal function to set a value in an encoded bytes32 using a mask and offset

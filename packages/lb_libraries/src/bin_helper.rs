@@ -922,7 +922,7 @@ mod tests {
         };
 
         // Set the parameters (assuming PairParameters and DEFAULT_* constants are defined)
-        let mut pair_parameters = PairParameters(EncodedSample([0u8; 32]));
+        let mut pair_parameters = PairParameters(Bytes32::default());
         pair_parameters
             .set_static_fee_parameters(
                 msg.base_factor,
