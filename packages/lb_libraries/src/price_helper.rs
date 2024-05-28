@@ -30,11 +30,6 @@ pub struct PriceHelper;
 
 impl PriceHelper {
     /// Calculates the price as a 128.128-binary fixed-point number
-    ///
-    /// # Arguments
-    ///
-    /// * `id` - Bin id
-    /// * `bin_step` - The bin step
     pub fn get_price_from_id(id: u32, bin_step: u16) -> Result<U256, U128x128MathError> {
         let base = Self::get_base(bin_step);
         let exponent = Self::get_exponent(id);
@@ -43,11 +38,6 @@ impl PriceHelper {
     }
 
     /// Calculates the id from the price and the bin step.
-    ///
-    /// # Arguments
-    ///
-    /// * `price` - The price as a 128.128-binary fixed-point number
-    /// * `bin_step` - The bin step
     pub fn get_id_from_price(price: U256, bin_step: u16) -> Result<u32, U128x128MathError> {
         let base = Self::get_base(bin_step);
         let real_id = U128x128Math::log2(price)? / U128x128Math::log2(base)?;
@@ -60,9 +50,6 @@ impl PriceHelper {
 
     /// Calculates the base from the bin step, which is `1 + binStep / BASIS_POINT_MAX`.
     pub fn get_base(bin_step: u16) -> U256 {
-        //SCALE = 1 << 128
-        //SCALE_OFFSET =  128
-        //just scaling
         SCALE + (U256::from(bin_step) << SCALE_OFFSET) / BASIS_POINT_MAX as u128
     }
 
