@@ -540,7 +540,7 @@ impl BinHelper {
 mod tests {
     use super::*;
 
-    use crate::{math::encoded_sample::EncodedSample, types::StaticFeeParameters};
+    use crate::types::StaticFeeParameters;
     use cosmwasm_std::StdResult;
     use ethnum::U256;
     use std::str::FromStr;

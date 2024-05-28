@@ -4,7 +4,7 @@ use super::test_helper::{
 };
 use crate::multitests::{lb_pair_liquidity::PRECISION, test_helper::*};
 use anyhow::Ok;
-use lb_libraries::math::{encoded_sample::MASK_UINT20, u24::U24};
+use lb_libraries::math::{encoded::MASK_UINT20, u24::U24};
 use serial_test::serial;
 use shade_multi_test::interfaces::{
     lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,

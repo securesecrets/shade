@@ -4,7 +4,7 @@ use crate::{
     types::{LBPair, LBPairInformation, NextPairKey},
 };
 use lb_libraries::{
-    math::encoded_sample::EncodedSample,
+    math::encoded::Encoded,
     pair_parameter_helper::PairParameters,
     price_helper::PriceHelper,
     types::{Bytes32, ContractImplementation, StaticFeeParameters},
@@ -324,7 +324,7 @@ fn try_create_lb_pair(
         .map_err(|_| Error::BinStepHasNoPreset { bin_step })?;
     let is_owner = info.sender == config.owner;
 
-    if !_is_preset_open(preset.0 .0) && !is_owner {
+    if !_is_preset_open(preset.0) && !is_owner {
         return Err(Error::PresetIsLockedForUsers {
             user: info.sender,
             bin_step,
@@ -1055,7 +1055,6 @@ fn query_preset(deps: Deps, bin_step: u16) -> Result<Binary> {
     }
 
     // NOTE: each preset is an encoded Bytes32.
-    // The EncodedSample wrapper provides methods to decode.
     // The PairParameters wrapper provides methods to decode specific values.
     let preset = PRESETS.load(deps.storage, bin_step).unwrap();
 
@@ -1123,7 +1122,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
     for bin_step in hashset {
         let preset = PRESETS.load(deps.storage, bin_step)?;
 
-        if _is_preset_open(preset.0 .0) {
+        if _is_preset_open(preset.0) {
             open_bin_steps.push(bin_step)
         }
     }
@@ -1133,7 +1132,7 @@ fn query_open_bin_steps(deps: Deps) -> Result<Binary> {
 }
 
 fn _is_preset_open(preset: Bytes32) -> bool {
-    EncodedSample(preset).decode_bool(_OFFSET_IS_PRESET_OPEN)
+    preset.decode_bool(_OFFSET_IS_PRESET_OPEN)
 }
 
 /// Returns all the LBPair of a pair of tokens.

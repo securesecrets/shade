@@ -1,7 +1,7 @@
 use crate::multitests::test_helper::*;
 use anyhow::Ok;
 use lb_libraries::math::{
-    encoded_sample::{MASK_UINT12, MASK_UINT20},
+    encoded::{MASK_UINT12, MASK_UINT20},
     u24::U24,
 };
 use serial_test::serial;

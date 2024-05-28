@@ -12,7 +12,7 @@
 //! * 208 - 216: sample lifetime (8 bits)
 //! * 216 - 256: sample creation timestamp (40 bits)
 
-use super::{encoded_sample::*, packed_u128_math::PackedUint128Math};
+use super::{encoded::*, packed_u128_math::PackedUint128Math};
 use crate::types::Bytes32;
 use cosmwasm_schema::cw_serde;
 
@@ -26,9 +26,9 @@ pub const OFFSET_SAMPLE_CREATION: u8 = 216;
 #[cw_serde]
 #[derive(Copy, Default)]
 pub struct OracleSample {
-    pub data: EncodedSample,
-    pub volume: EncodedSample,
-    pub fee: EncodedSample,
+    pub data: Bytes32,
+    pub volume: Bytes32,
+    pub fee: Bytes32,
 }
 
 impl OracleSample {
@@ -52,7 +52,7 @@ impl OracleSample {
         cumulative_vol: Bytes32,
         cumulative_fee: Bytes32,
     ) -> OracleSample {
-        let mut sample = EncodedSample::default();
+        let mut sample = Bytes32::default();
 
         sample.set(cumulative_txns.into(), MASK_UINT16, OFFSET_CUMULATIVE_TXNS);
         sample.set(cumulative_id.into(), MASK_UINT64, OFFSET_CUMULATIVE_ID);
@@ -71,8 +71,8 @@ impl OracleSample {
 
         OracleSample {
             data: sample,
-            volume: EncodedSample(cumulative_vol),
-            fee: EncodedSample(cumulative_fee),
+            volume: cumulative_vol,
+            fee: cumulative_fee,
         }
     }
 
@@ -285,8 +285,8 @@ impl OracleSample {
             cumulative_txns += 1;
         }
 
-        let cumm_vol = vol.add(self.volume.0);
-        let cumm_fee = fee.add(self.fee.0);
+        let cumm_vol = vol.add(self.volume);
+        let cumm_fee = fee.add(self.fee);
         (
             cumulative_txns,
             cumulative_id,

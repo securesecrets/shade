@@ -2,7 +2,7 @@
 //! Author: Kent
 
 pub mod bit_math;
-pub mod encoded_sample;
+pub mod encoded;
 pub mod liquidity_configurations;
 pub mod packed_u128_math;
 pub mod safe_math;
