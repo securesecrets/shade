@@ -602,7 +602,9 @@ pub fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
 /// * `active_size` - The active size of the oracle
 /// * `last_updated` - The last updated timestamp of the oracle
 /// * `first_timestamp` - The first timestamp of the oracle, i.e. the timestamp of the oldest sample
-pub fn query_oracle_params(deps: Deps) -> Result<Binary> {
+// TODO: make the other queries return their unique response type instead of Binary, so it's easier
+// to know what the response type looks like
+pub fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
     let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -623,7 +625,8 @@ pub fn query_oracle_params(deps: Deps) -> Result<Binary> {
             last_updated,
             first_timestamp,
         };
-        to_binary(&response).map_err(Error::CwErr)
+        Ok(response)
+        // to_binary(&response).map_err(Error::CwErr)
     } else {
         // This happens if the oracle hasn't been used yet.
         let response = OracleParametersResponse {
@@ -632,7 +635,8 @@ pub fn query_oracle_params(deps: Deps) -> Result<Binary> {
             last_updated: 0,
             first_timestamp: 0,
         };
-        to_binary(&response).map_err(Error::CwErr)
+        Ok(response)
+        // to_binary(&response).map_err(Error::CwErr)
     }
 }
 

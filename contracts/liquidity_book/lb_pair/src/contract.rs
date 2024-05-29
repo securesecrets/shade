@@ -379,7 +379,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary> {
         QueryMsg::GetProtocolFees {} => query_protocol_fees(deps),
         QueryMsg::GetStaticFeeParameters {} => query_static_fee_params(deps),
         QueryMsg::GetVariableFeeParameters {} => query_variable_fee_params(deps),
-        QueryMsg::GetOracleParameters {} => query_oracle_params(deps),
+        // TODO: do this for all the other query types
+        QueryMsg::GetOracleParameters {} => Ok(to_binary(&query_oracle_params(deps)?)?),
         QueryMsg::GetOracleSampleAt { oracle_id } => query_oracle_sample(deps, env, oracle_id),
         QueryMsg::GetOracleSamplesAt { oracle_ids } => query_oracle_samples(deps, env, oracle_ids),
         QueryMsg::GetOracleSamplesAfter {
