@@ -41,6 +41,7 @@ pub struct InstantiateMsg {
     pub admin_auth: RawContract,
     pub query_auth: RawContract,
     pub total_reward_bins: Option<u32>,
+    // TODO: why should this be necessary? it's already limited by the max gas per block anyway
     pub max_bins_per_swap: Option<u32>,
     pub rewards_distribution_algorithm: RewardsDistributionAlgorithm,
     pub epoch_staking_index: u64,
@@ -298,11 +299,13 @@ pub struct TokensResponse {
     pub token_y: TokenType,
 }
 
+// TODO: is it worth it to have queries for the individual tokens?
 #[cw_serde]
 pub struct TokenXResponse {
     pub token_x: TokenType,
 }
 
+// TODO: is it worth it to have queries for the individual tokens?
 #[cw_serde]
 pub struct TokenYResponse {
     pub token_y: TokenType,
@@ -331,9 +334,11 @@ pub struct BinResponse {
     pub bin_reserve_y: u128,
 }
 
+// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct UpdatedBinsAtHeightResponse(pub Vec<BinResponse>);
 
+// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<BinResponse>);
 
@@ -345,6 +350,7 @@ pub struct UpdatedBinsAfterHeightResponse {
 #[cw_serde]
 pub struct BinUpdatingHeightsResponse(pub Vec<u64>);
 
+// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct BinsResponse(pub Vec<BinResponse>);
 
@@ -408,9 +414,11 @@ pub struct OracleSampleAtResponse {
     pub created_at: u64,
 }
 
+// TODO: this should probably have a named field
 #[cw_serde]
 pub struct OracleSamplesAtResponse(pub Vec<OracleSampleAtResponse>);
 
+// TODO: this should probably have a named field
 #[cw_serde]
 pub struct OracleSamplesAfterResponse(pub Vec<OracleSampleAtResponse>);
 
@@ -424,6 +432,7 @@ pub struct IdFromPriceResponse {
     pub id: u32,
 }
 
+// TODO: shouldn't this also have dao fees and lp fees?
 #[cw_serde]
 pub struct SwapInResponse {
     pub amount_in: Uint128,
@@ -440,6 +449,7 @@ pub struct SwapOutResponse {
     pub lp_fees: Uint128,
 }
 
+// TODO: huh?
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum LbTokenQueryMsg {
