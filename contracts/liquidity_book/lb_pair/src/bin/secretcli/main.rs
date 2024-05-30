@@ -414,7 +414,7 @@ fn main() -> io::Result<()> {
         first_timestamp: 1703403383,
     };
 
-    let get_oracle_sample_at_response = OracleSampleAtResponse {
+    let get_oracle_sample_at_response = OracleSampleResponse {
         cumulative_id: 100,
         cumulative_volatility: 200,
         cumulative_bin_crossed: 50,

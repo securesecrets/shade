@@ -6,8 +6,9 @@ use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128, Uint256},
     contract_interfaces::{liquidity_book::lb_pair, snip20},
     liquidity_book::lb_pair::{
-        BinResponse, ContractStatus, LiquidityParameters, OracleSampleAtResponse, RemoveLiquidity,
-        RewardsDistribution, RewardsDistributionAlgorithm,
+        BinResponse, ContractStatus, LiquidityParameters, OracleSampleResponse,
+        OracleSamplesAtResponse, RemoveLiquidity, RewardsDistribution,
+        RewardsDistributionAlgorithm,
     },
     multi_test::App,
     swap::core::{TokenAmount, TokenType},
@@ -591,48 +592,24 @@ pub fn query_oracle_sample_at(
     app: &App,
     lb_pair: &ContractInfo,
     oracle_id: u16,
-) -> StdResult<(u64, u64, u64, u128, u128, u128, u128, u16, u16, u8, u64)> {
+) -> StdResult<OracleSampleResponse> {
     let res = lb_pair::QueryMsg::GetOracleSampleAt { oracle_id }.test_query(lb_pair, app)?;
-    let lb_pair::OracleSampleAtResponse {
-        cumulative_id,
-        cumulative_volatility,
-        cumulative_bin_crossed,
-        cumulative_volume_x,
-        cumulative_volume_y,
-        cumulative_fee_x,
-        cumulative_fee_y,
-        oracle_id,
-        cumulative_txns,
-        lifetime,
-        created_at,
-    } = res;
-    Ok((
-        cumulative_id,
-        cumulative_volatility,
-        cumulative_bin_crossed,
-        cumulative_volume_x,
-        cumulative_volume_y,
-        cumulative_fee_x,
-        cumulative_fee_y,
-        oracle_id,
-        cumulative_txns,
-        lifetime,
-        created_at,
-    ))
+    let lb_pair::OracleSampleAtResponse { sample } = res;
+    Ok(sample)
 }
 
 pub fn query_oracle_sample_after(
     app: &App,
     lb_pair: &ContractInfo,
     oracle_id: u16,
-) -> StdResult<Vec<OracleSampleAtResponse>> {
+) -> StdResult<Vec<OracleSampleResponse>> {
     let res = lb_pair::QueryMsg::GetOracleSamplesAfter {
         oracle_id,
         page_size: None,
     }
     .test_query(lb_pair, app)?;
-    let lb_pair::OracleSamplesAfterResponse(vec) = res;
-    Ok(vec)
+    let lb_pair::OracleSamplesAtResponse { samples } = res;
+    Ok(samples)
 }
 
 pub fn query_price_from_id(app: &App, lb_pair: &ContractInfo, id: u32) -> StdResult<Uint256> {

@@ -52,7 +52,7 @@ pub fn set_lb_pair_implementation(
     id: u64,
     code_hash: String,
 ) -> StdResult<()> {
-    match (lb_factory::ExecuteMsg::SetLBPairImplementation {
+    match (lb_factory::ExecuteMsg::SetLbPairImplementation {
         implementation: ContractImplementation { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
@@ -69,7 +69,7 @@ pub fn set_lb_token_implementation(
     id: u64,
     code_hash: String,
 ) -> StdResult<()> {
-    match (lb_factory::ExecuteMsg::SetLBTokenImplementation {
+    match (lb_factory::ExecuteMsg::SetLbTokenImplementation {
         implementation: ContractImplementation { id, code_hash },
     }
     .test_exec(lb_factory, app, Addr::unchecked(sender), &[]))
@@ -205,7 +205,7 @@ pub fn create_lb_pair(
     viewing_key: String,
     entropy: String,
 ) -> StdResult<()> {
-    match (lb_factory::ExecuteMsg::CreateLBPair {
+    match (lb_factory::ExecuteMsg::CreateLbPair {
         token_x,
         token_y,
         active_id,

@@ -5,7 +5,7 @@ use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, Uint128, Uint256},
-    liquidity_book::lb_pair::LBPairInformation,
+    liquidity_book::lb_pair::{LBPairInformation, OracleSampleResponse},
     multi_test::App,
 };
 use std::str::FromStr;
@@ -228,7 +228,7 @@ pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
 pub fn test_query_oracle_sample_at() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let (
+    let OracleSampleResponse {
         cumulative_id,
         cumulative_volatility,
         cumulative_bin_crossed,
@@ -240,8 +240,9 @@ pub fn test_query_oracle_sample_at() -> Result<(), anyhow::Error> {
         cumulative_txns,
         lifetime,
         created_at,
-    ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+    } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
+    // TODO: what use is it to test the case where all the sample values are zero?
     assert_eq!(cumulative_id, 0);
     assert_eq!(cumulative_volatility, 0);
     assert_eq!(cumulative_bin_crossed, 0);

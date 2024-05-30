@@ -85,15 +85,15 @@ fn main() -> io::Result<()> {
 
     // -- Execute Messages
 
-    let set_lb_pair_implementation = ExecuteMsg::SetLBPairImplementation {
+    let set_lb_pair_implementation = ExecuteMsg::SetLbPairImplementation {
         implementation: ContractImplementation::example(),
     };
 
-    let set_lb_token_implementation = ExecuteMsg::SetLBTokenImplementation {
+    let set_lb_token_implementation = ExecuteMsg::SetLbTokenImplementation {
         implementation: ContractImplementation::example(),
     };
 
-    let create_lb_pair = ExecuteMsg::CreateLBPair {
+    let create_lb_pair = ExecuteMsg::CreateLbPair {
         token_x: TokenType::example(),
         token_y: TokenType::example(),
         // note: active id is a function of price

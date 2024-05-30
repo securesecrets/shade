@@ -36,20 +36,16 @@ impl InstantiateCallback for InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    #[serde(rename = "set_lb_pair_implementation")]
-    SetLBPairImplementation {
+    SetLbPairImplementation {
         implementation: ContractImplementation,
     },
-    #[serde(rename = "set_lb_token_implementation")]
-    SetLBTokenImplementation {
+    SetLbTokenImplementation {
         implementation: ContractImplementation,
     },
-    #[serde(rename = "set_staking_contract_implementation")]
     SetStakingContractImplementation {
         implementation: ContractImplementation,
     },
-    #[serde(rename = "create_lb_pair")]
-    CreateLBPair {
+    CreateLbPair {
         token_x: TokenType,
         token_y: TokenType,
         // u24
@@ -58,8 +54,7 @@ pub enum ExecuteMsg {
         viewing_key: String,
         entropy: String,
     },
-    // #[serde(rename = "set_lb_pair_ignored")]
-    // SetLBPairIgnored {
+    // SetLbPairIgnored {
     //     token_x: TokenType,
     //     token_y: TokenType,
     //     bin_step: u16,

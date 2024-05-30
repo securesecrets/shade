@@ -760,22 +760,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lb-token"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema 2.0.3",
- "lb-libraries",
- "schemars 0.8.21",
- "secret-cosmwasm-std",
- "secret-cosmwasm-storage",
- "secret-toolkit",
- "serde",
- "serde_json",
- "shade-protocol",
-]
-
-[[package]]
-name = "lb_tests"
+name = "lb-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -790,6 +775,21 @@ dependencies = [
  "shade-multi-test",
  "shade-protocol",
  "thiserror",
+]
+
+[[package]]
+name = "lb-token"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema 2.0.3",
+ "lb-libraries",
+ "schemars 0.8.21",
+ "secret-cosmwasm-std",
+ "secret-cosmwasm-storage",
+ "secret-toolkit",
+ "serde",
+ "serde_json",
+ "shade-protocol",
 ]
 
 [[package]]

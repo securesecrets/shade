@@ -5,11 +5,11 @@ use shade_protocol::liquidity_book::lb_pair::{
     ActiveIdResponse, AllBinsResponse, BinResponse, BinStepResponse, BinUpdatingHeightsResponse,
     BinsResponse, ExecuteMsg, FactoryResponse, GetPairInfoResponse, IdFromPriceResponse,
     InstantiateMsg, InvokeMsg, LbTokenResponse, MintResponse, NextNonEmptyBinResponse,
-    OracleParametersResponse, OracleSampleAtResponse, PriceFromIdResponse, ProtocolFeesResponse,
-    QueryMsg, ReservesResponse, RewardsDistributionResponse, StakingResponse,
-    StaticFeeParametersResponse, SwapInResponse, SwapOutResponse, SwapSimulationResponse,
-    TokenXResponse, TokenYResponse, TokensResponse, TotalSupplyResponse,
-    UpdatedBinsAfterHeightResponse, UpdatedBinsAtHeightResponse,
+    OracleParametersResponse, OracleSampleAtResponse, OracleSamplesAfterResponse,
+    OracleSamplesAtResponse, PriceFromIdResponse, ProtocolFeesResponse, QueryMsg, ReservesResponse,
+    RewardsDistributionResponse, StakingResponse, StaticFeeParametersResponse, SwapInResponse,
+    SwapOutResponse, SwapSimulationResponse, TokenXResponse, TokenYResponse, TokensResponse,
+    TotalSupplyResponse, UpdatedBinsAfterHeightResponse, UpdatedBinsAtHeightResponse,
     UpdatedBinsAtMultipleHeightResponse, VariableFeeParametersResponse,
 };
 
@@ -50,6 +50,8 @@ fn main() {
     export_schema(&schema_for!(VariableFeeParametersResponse), &out_dir);
     export_schema(&schema_for!(OracleParametersResponse), &out_dir);
     export_schema(&schema_for!(OracleSampleAtResponse), &out_dir);
+    export_schema(&schema_for!(OracleSamplesAtResponse), &out_dir);
+    export_schema(&schema_for!(OracleSamplesAfterResponse), &out_dir);
     export_schema(&schema_for!(PriceFromIdResponse), &out_dir);
     export_schema(&schema_for!(IdFromPriceResponse), &out_dir);
     export_schema(&schema_for!(SwapInResponse), &out_dir);

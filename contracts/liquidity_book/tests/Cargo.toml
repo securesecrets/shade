@@ -1,5 +1,5 @@
 [package]
-name = "lb_tests"
+name = "lb-tests"
 version = "0.1.0"
 edition = "2021"
 exclude = ["contract.wasm", "hash.txt"]

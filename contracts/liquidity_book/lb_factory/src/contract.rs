@@ -72,8 +72,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
     let contract_status = CONTRACT_STATUS.load(deps.storage)?;
     match contract_status {
         ContractStatus::FreezeAll => match msg {
-            ExecuteMsg::SetLBPairImplementation { .. }
-            | ExecuteMsg::SetLBTokenImplementation { .. } => {
+            ExecuteMsg::SetLbPairImplementation { .. }
+            | ExecuteMsg::SetLbTokenImplementation { .. } => {
                 return Err(Error::TransactionBlock());
             }
             _ => {}
@@ -81,16 +81,16 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ContractStatus::Active => {}
     }
     match msg {
-        ExecuteMsg::SetLBPairImplementation { implementation } => {
+        ExecuteMsg::SetLbPairImplementation { implementation } => {
             try_set_lb_pair_implementation(deps, env, info, implementation)
         }
-        ExecuteMsg::SetLBTokenImplementation { implementation } => {
+        ExecuteMsg::SetLbTokenImplementation { implementation } => {
             try_set_lb_token_implementation(deps, env, info, implementation)
         }
         ExecuteMsg::SetStakingContractImplementation { implementation } => {
             try_set_staking_contract_implementation(deps, env, info, implementation)
         }
-        ExecuteMsg::CreateLBPair {
+        ExecuteMsg::CreateLbPair {
             token_x,
             token_y,
             active_id,

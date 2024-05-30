@@ -334,23 +334,22 @@ pub struct BinResponse {
     pub bin_reserve_y: u128,
 }
 
-// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct UpdatedBinsAtHeightResponse(pub Vec<BinResponse>);
 
-// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct UpdatedBinsAtMultipleHeightResponse(pub Vec<BinResponse>);
 
+// TODO: better naming
 #[cw_serde]
 pub struct UpdatedBinsAfterHeightResponse {
     pub bins: Vec<BinResponse>,
     pub current_block_height: u64,
 }
+
 #[cw_serde]
 pub struct BinUpdatingHeightsResponse(pub Vec<u64>);
 
-// TODO: no need to have unique response types like this (they return the same thing):
 #[cw_serde]
 pub struct BinsResponse(pub Vec<BinResponse>);
 
@@ -400,7 +399,7 @@ pub struct OracleParametersResponse {
 }
 
 #[cw_serde]
-pub struct OracleSampleAtResponse {
+pub struct OracleSampleResponse {
     pub oracle_id: u16,
     pub cumulative_txns: u16,
     pub cumulative_id: u64,
@@ -414,13 +413,21 @@ pub struct OracleSampleAtResponse {
     pub created_at: u64,
 }
 
-// TODO: this should probably have a named field
 #[cw_serde]
-pub struct OracleSamplesAtResponse(pub Vec<OracleSampleAtResponse>);
+pub struct OracleSampleAtResponse {
+    pub sample: OracleSampleResponse,
+}
 
-// TODO: this should probably have a named field
+// TODO: shouldn't this be Vec<OracleSample> instead?
 #[cw_serde]
-pub struct OracleSamplesAfterResponse(pub Vec<OracleSampleAtResponse>);
+pub struct OracleSamplesAtResponse {
+    pub samples: Vec<OracleSampleResponse>,
+}
+
+#[cw_serde]
+pub struct OracleSamplesAfterResponse {
+    pub samples: Vec<OracleSampleResponse>,
+}
 
 #[cw_serde]
 pub struct PriceFromIdResponse {

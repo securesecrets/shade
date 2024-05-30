@@ -34,7 +34,7 @@ use std::collections::HashSet;
 
 // TODO - Revisit if this function is necessary. It seems like something that might belong in the
 //        lb-factory contract. It should at least have it's own interface and not use amm_pair's.
-pub fn query_pair_info(deps: Deps) -> Result<Binary> {
+pub fn query_pair_info(deps: Deps) -> Result<GetPairInfoResponse> {
     unimplemented!()
 
     // let state = STATE.load(deps.storage)?;
@@ -88,7 +88,7 @@ pub fn query_swap_simulation(
     env: Env,
     offer: TokenAmount,
     _exclude_fee: Option<bool>,
-) -> Result<Binary> {
+) -> Result<SwapOutResponse> {
     unimplemented!()
 
     // let state = STATE.load(deps.storage)?;
@@ -132,12 +132,12 @@ pub fn query_swap_simulation(
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-pub fn query_factory(deps: Deps) -> Result<Binary> {
+pub fn query_factory(deps: Deps) -> Result<FactoryResponse> {
     let state = STATE.load(deps.storage)?;
     let factory = state.factory.address;
 
     let response = FactoryResponse { factory };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the Liquidity Book Factory.
@@ -145,12 +145,12 @@ pub fn query_factory(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-pub fn query_lb_token(deps: Deps) -> Result<Binary> {
+pub fn query_lb_token(deps: Deps) -> Result<LbTokenResponse> {
     let state = STATE.load(deps.storage)?;
     let lb_token = state.lb_token;
 
     let response = LbTokenResponse { contract: lb_token };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the Liquidity Book Factory.
@@ -158,14 +158,14 @@ pub fn query_lb_token(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-pub fn query_staking(deps: Deps) -> Result<Binary> {
+pub fn query_staking(deps: Deps) -> Result<StakingResponse> {
     let state = STATE.load(deps.storage)?;
     let staking_contract = state.lb_staking;
 
     let response = StakingResponse {
         contract: staking_contract,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the token X and Y of the Liquidity Book Pair.
@@ -173,14 +173,14 @@ pub fn query_staking(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `token_x` - The address of the token X
-pub fn query_tokens(deps: Deps) -> Result<Binary> {
+pub fn query_tokens(deps: Deps) -> Result<TokensResponse> {
     let state = STATE.load(deps.storage)?;
 
     let response = TokensResponse {
         token_x: state.token_x,
         token_y: state.token_y,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the token X of the Liquidity Book Pair.
@@ -188,12 +188,12 @@ pub fn query_tokens(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `token_x` - The address of the token X
-pub fn query_token_x(deps: Deps) -> Result<Binary> {
+pub fn query_token_x(deps: Deps) -> Result<TokenXResponse> {
     let state = STATE.load(deps.storage)?;
     let token_x = state.token_x;
 
     let response = TokenXResponse { token_x };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the token Y of the Liquidity Book Pair.
@@ -201,12 +201,12 @@ pub fn query_token_x(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `token_y` - The address of the token Y
-pub fn query_token_y(deps: Deps) -> Result<Binary> {
+pub fn query_token_y(deps: Deps) -> Result<TokenYResponse> {
     let state = STATE.load(deps.storage)?;
     let token_y = state.token_y;
 
     let response = TokenYResponse { token_y };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the bin_step of the Liquidity Book Pair.
@@ -217,12 +217,12 @@ pub fn query_token_y(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `bin_step` - The bin step of the Liquidity Book Pair, in 10_000th
-pub fn query_bin_step(deps: Deps) -> Result<Binary> {
+pub fn query_bin_step(deps: Deps) -> Result<BinStepResponse> {
     let state = STATE.load(deps.storage)?;
     let bin_step = state.bin_step;
 
     let response = BinStepResponse { bin_step };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the reserves of the Liquidity Book Pair.
@@ -233,7 +233,7 @@ pub fn query_bin_step(deps: Deps) -> Result<Binary> {
 ///
 /// * `reserve_x` - The reserve of token X
 /// * `reserve_y` - The reserve of token Y
-pub fn query_reserves(deps: Deps) -> Result<Binary> {
+pub fn query_reserves(deps: Deps) -> Result<ReservesResponse> {
     let state = STATE.load(deps.storage)?;
     let (mut reserve_x, mut reserve_y) = state.reserves.decode();
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
@@ -245,7 +245,7 @@ pub fn query_reserves(deps: Deps) -> Result<Binary> {
         reserve_x,
         reserve_y,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the active id of the Liquidity Book Pair.
@@ -257,12 +257,12 @@ pub fn query_reserves(deps: Deps) -> Result<Binary> {
 /// # Returns
 ///
 /// * `active_id` - The active id of the Liquidity Book Pair
-pub fn query_active_id(deps: Deps) -> Result<Binary> {
+pub fn query_active_id(deps: Deps) -> Result<ActiveIdResponse> {
     let state = STATE.load(deps.storage)?;
     let active_id = state.pair_parameters.get_active_id();
 
     let response = ActiveIdResponse { active_id };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the reserves of a bin.
@@ -281,7 +281,7 @@ pub fn query_all_bins_reserves(
     page: Option<u32>,
     page_size: Option<u32>,
     id: Option<u32>,
-) -> Result<Binary> {
+) -> Result<AllBinsResponse> {
     let page = page.unwrap_or(0);
     let page_size = page_size.unwrap_or(10);
 
@@ -323,7 +323,7 @@ pub fn query_all_bins_reserves(
         last_id: id,
         current_block_height: env.block.height,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the reserves of many bins.
@@ -336,7 +336,8 @@ pub fn query_all_bins_reserves(
 ///
 /// * `bin_reserve_x` - The reserve of token X in the bin
 /// * `bin_reserve_y` - The reserve of token Y in the bin
-pub fn query_bins_reserves(deps: Deps, ids: Vec<u32>) -> Result<Binary> {
+// TODO: Check type names for consistency. This one, for example, should be BinsReservesResponse.
+pub fn query_bins_reserves(deps: Deps, ids: Vec<u32>) -> Result<BinsResponse> {
     let mut bin_responses = Vec::new();
     for id in ids {
         let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
@@ -348,10 +349,14 @@ pub fn query_bins_reserves(deps: Deps, ids: Vec<u32>) -> Result<Binary> {
         });
     }
 
-    to_binary(&bin_responses).map_err(Error::CwErr)
+    let response: BinsResponse = BinsResponse(bin_responses);
+    Ok(response)
 }
 
-pub fn query_updated_bins_at_height(deps: Deps, height: u64) -> Result<Binary> {
+pub fn query_updated_bins_at_height(
+    deps: Deps,
+    height: u64,
+) -> Result<UpdatedBinsAtHeightResponse> {
     let ids = BIN_RESERVES_UPDATED.load(deps.storage, height)?;
 
     let mut bin_responses = Vec::new();
@@ -368,10 +373,13 @@ pub fn query_updated_bins_at_height(deps: Deps, height: u64) -> Result<Binary> {
 
     let response: UpdatedBinsAtHeightResponse = UpdatedBinsAtHeightResponse(bin_responses);
 
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
-pub fn query_updated_bins_at_multiple_heights(deps: Deps, heights: Vec<u64>) -> Result<Binary> {
+pub fn query_updated_bins_at_multiple_heights(
+    deps: Deps,
+    heights: Vec<u64>,
+) -> Result<UpdatedBinsAtMultipleHeightResponse> {
     let mut bin_responses = Vec::new();
     let mut processed_ids = HashSet::new();
 
@@ -395,7 +403,7 @@ pub fn query_updated_bins_at_multiple_heights(deps: Deps, heights: Vec<u64>) -> 
     let response: UpdatedBinsAtMultipleHeightResponse =
         UpdatedBinsAtMultipleHeightResponse(bin_responses);
 
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 pub fn query_updated_bins_after_height(
@@ -404,7 +412,7 @@ pub fn query_updated_bins_after_height(
     height: u64,
     page: Option<u32>,
     page_size: Option<u32>,
-) -> Result<Binary> {
+) -> Result<UpdatedBinsAfterHeightResponse> {
     let page = page.unwrap_or(0);
     let page_size = page_size.unwrap_or(10);
     let mut processed_ids = HashSet::new();
@@ -449,14 +457,14 @@ pub fn query_updated_bins_after_height(
         current_block_height: env.block.height,
     };
 
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 pub fn query_bins_updating_heights(
     deps: Deps,
     page: Option<u32>,
     page_size: Option<u32>,
-) -> Result<Binary> {
+) -> Result<BinUpdatingHeightsResponse> {
     let page = page.unwrap_or(0);
     let page_size = page_size.unwrap_or(10);
     let txs: StdResult<Vec<u64>> = BIN_RESERVES_UPDATED_LOG
@@ -468,7 +476,7 @@ pub fn query_bins_updating_heights(
 
     let response = BinUpdatingHeightsResponse(txs?);
 
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the bins changed after that block height
@@ -482,7 +490,7 @@ pub fn query_bins_updating_heights(
 /// * `bin_reserve_x` - The reserve of token X in the bin
 /// * `bin_reserve_y` - The reserve of token Y in the bin
 
-pub fn query_bin_reserves(deps: Deps, id: u32) -> Result<Binary> {
+pub fn query_bin_reserves(deps: Deps, id: u32) -> Result<BinResponse> {
     let bin: Bytes32 = BIN_MAP.load(deps.storage, id).unwrap_or([0u8; 32]);
     let (bin_reserve_x, bin_reserve_y) = bin.decode();
 
@@ -491,7 +499,7 @@ pub fn query_bin_reserves(deps: Deps, id: u32) -> Result<Binary> {
         bin_reserve_y,
         bin_id: id,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the next non-empty bin.
@@ -507,12 +515,16 @@ pub fn query_bin_reserves(deps: Deps, id: u32) -> Result<Binary> {
 /// # Returns
 ///
 /// * `next_id` - The id of the next non-empty bin
-pub fn query_next_non_empty_bin(deps: Deps, swap_for_y: bool, id: u32) -> Result<Binary> {
+pub fn query_next_non_empty_bin(
+    deps: Deps,
+    swap_for_y: bool,
+    id: u32,
+) -> Result<NextNonEmptyBinResponse> {
     let tree = BIN_TREE.load(deps.storage)?;
     let next_id = _get_next_non_empty_bin(&tree, swap_for_y, id);
 
     let response = NextNonEmptyBinResponse { next_id };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the protocol fees of the Liquidity Book Pair.
@@ -521,7 +533,7 @@ pub fn query_next_non_empty_bin(deps: Deps, swap_for_y: bool, id: u32) -> Result
 ///
 /// * `protocol_fee_x` - The protocol fees of token X
 /// * `protocol_fee_y` - The protocol fees of token Y
-pub fn query_protocol_fees(deps: Deps) -> Result<Binary> {
+pub fn query_protocol_fees(deps: Deps) -> Result<ProtocolFeesResponse> {
     let state = STATE.load(deps.storage)?;
     let (protocol_fee_x, protocol_fee_y) = state.protocol_fees.decode();
 
@@ -529,7 +541,7 @@ pub fn query_protocol_fees(deps: Deps) -> Result<Binary> {
         protocol_fee_x,
         protocol_fee_y,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the static fee parameters of the Liquidity Book Pair.
@@ -543,7 +555,7 @@ pub fn query_protocol_fees(deps: Deps) -> Result<Binary> {
 /// * `variable_fee_control` - The variable fee control for the static fee
 /// * `protocol_share` - The protocol share for the static fee
 /// * `max_volatility_accumulator` - The maximum volatility accumulator for the static fee
-pub fn query_static_fee_params(deps: Deps) -> Result<Binary> {
+pub fn query_static_fee_params(deps: Deps) -> Result<StaticFeeParametersResponse> {
     let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -564,7 +576,7 @@ pub fn query_static_fee_params(deps: Deps) -> Result<Binary> {
         protocol_share,
         max_volatility_accumulator,
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the variable fee parameters of the Liquidity Book Pair.
@@ -575,7 +587,7 @@ pub fn query_static_fee_params(deps: Deps) -> Result<Binary> {
 /// * `volatility_reference` - The volatility reference for the variable fee
 /// * `id_reference` - The id reference for the variable fee
 /// * `time_of_last_update` - The time of last update for the variable fee
-pub fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
+pub fn query_variable_fee_params(deps: Deps) -> Result<VariableFeeParametersResponse> {
     let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
 
@@ -590,7 +602,8 @@ pub fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
         id_reference,
         time_of_last_update,
     };
-    to_binary(&response).map_err(Error::CwErr)
+
+    Ok(response)
 }
 
 /// Returns the oracle parameters of the Liquidity Book Pair.
@@ -602,8 +615,6 @@ pub fn query_variable_fee_params(deps: Deps) -> Result<Binary> {
 /// * `active_size` - The active size of the oracle
 /// * `last_updated` - The last updated timestamp of the oracle
 /// * `first_timestamp` - The first timestamp of the oracle, i.e. the timestamp of the oldest sample
-// TODO: make the other queries return their unique response type instead of Binary, so it's easier
-// to know what the response type looks like
 pub fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
     let state = STATE.load(deps.storage)?;
     let params = state.pair_parameters;
@@ -625,8 +636,8 @@ pub fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
             last_updated,
             first_timestamp,
         };
+
         Ok(response)
-        // to_binary(&response).map_err(Error::CwErr)
     } else {
         // This happens if the oracle hasn't been used yet.
         let response = OracleParametersResponse {
@@ -635,8 +646,8 @@ pub fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
             last_updated: 0,
             first_timestamp: 0,
         };
+
         Ok(response)
-        // to_binary(&response).map_err(Error::CwErr)
     }
 }
 
@@ -651,33 +662,42 @@ pub fn query_oracle_params(deps: Deps) -> Result<OracleParametersResponse> {
 /// * `cumulative_id` - The cumulative id of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_volatility` - The cumulative volatility of the Liquidity Book Pair at the given timestamp
 /// * `cumulative_bin_crossed` - The cumulative bin crossed of the Liquidity Book Pair at the given timestamp
-pub fn query_oracle_sample(deps: Deps, _env: Env, oracle_id: u16) -> Result<Binary> {
+pub fn query_oracle_sample(
+    deps: Deps,
+    _env: Env,
+    oracle_id: u16,
+) -> Result<OracleSampleAtResponse> {
     if oracle_id == 0 {
         return Err(Error::OracleNotActive);
     }
 
     let oracle = ORACLE.load(deps.storage, oracle_id)?;
 
-    // Use Rust's field init shorthand
     let response = OracleSampleAtResponse {
-        cumulative_id: oracle.0.get_cumulative_id(),
-        cumulative_txns: oracle.0.get_cumulative_txns(),
-        cumulative_volatility: oracle.0.get_cumulative_volatility(),
-        cumulative_bin_crossed: oracle.0.get_cumulative_bin_crossed(),
-        cumulative_volume_x: oracle.0.get_vol_token_x(),
-        cumulative_volume_y: oracle.0.get_vol_token_y(),
-        cumulative_fee_x: oracle.0.get_fee_token_x(),
-        cumulative_fee_y: oracle.0.get_fee_token_y(),
-        oracle_id,
-        lifetime: oracle.0.get_sample_lifetime(),
-        created_at: oracle.0.get_sample_creation(),
+        sample: OracleSampleResponse {
+            cumulative_id: oracle.0.get_cumulative_id(),
+            cumulative_txns: oracle.0.get_cumulative_txns(),
+            cumulative_volatility: oracle.0.get_cumulative_volatility(),
+            cumulative_bin_crossed: oracle.0.get_cumulative_bin_crossed(),
+            cumulative_volume_x: oracle.0.get_vol_token_x(),
+            cumulative_volume_y: oracle.0.get_vol_token_y(),
+            cumulative_fee_x: oracle.0.get_fee_token_x(),
+            cumulative_fee_y: oracle.0.get_fee_token_y(),
+            oracle_id,
+            lifetime: oracle.0.get_sample_lifetime(),
+            created_at: oracle.0.get_sample_creation(),
+        },
     };
 
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
-pub fn query_oracle_samples(deps: Deps, _env: Env, oracle_ids: Vec<u16>) -> Result<Binary> {
-    let mut responses = Vec::new();
+pub fn query_oracle_samples(
+    deps: Deps,
+    _env: Env,
+    oracle_ids: Vec<u16>,
+) -> Result<OracleSamplesAtResponse> {
+    let mut samples = Vec::new();
 
     for oracle_id in oracle_ids {
         if oracle_id == 0 {
@@ -685,7 +705,7 @@ pub fn query_oracle_samples(deps: Deps, _env: Env, oracle_ids: Vec<u16>) -> Resu
         }
 
         // Initialize response with default values
-        let mut response = OracleSampleAtResponse {
+        let mut sample = OracleSampleResponse {
             cumulative_id: 0,
             cumulative_txns: 0,
             cumulative_volatility: 0,
@@ -701,22 +721,24 @@ pub fn query_oracle_samples(deps: Deps, _env: Env, oracle_ids: Vec<u16>) -> Resu
 
         // Update response if oracle data is successfully loaded
         if let Ok(oracle) = ORACLE.load(deps.storage, oracle_id) {
-            response.cumulative_id = oracle.0.get_cumulative_id();
-            response.cumulative_txns = oracle.0.get_cumulative_txns();
-            response.cumulative_volatility = oracle.0.get_cumulative_volatility();
-            response.cumulative_bin_crossed = oracle.0.get_cumulative_bin_crossed();
-            response.cumulative_volume_x = oracle.0.get_vol_token_x();
-            response.cumulative_volume_y = oracle.0.get_vol_token_y();
-            response.cumulative_fee_x = oracle.0.get_fee_token_x();
-            response.cumulative_fee_y = oracle.0.get_fee_token_y();
-            response.lifetime = oracle.0.get_sample_lifetime();
-            response.created_at = oracle.0.get_sample_creation();
+            sample.cumulative_id = oracle.0.get_cumulative_id();
+            sample.cumulative_txns = oracle.0.get_cumulative_txns();
+            sample.cumulative_volatility = oracle.0.get_cumulative_volatility();
+            sample.cumulative_bin_crossed = oracle.0.get_cumulative_bin_crossed();
+            sample.cumulative_volume_x = oracle.0.get_vol_token_x();
+            sample.cumulative_volume_y = oracle.0.get_vol_token_y();
+            sample.cumulative_fee_x = oracle.0.get_fee_token_x();
+            sample.cumulative_fee_y = oracle.0.get_fee_token_y();
+            sample.lifetime = oracle.0.get_sample_lifetime();
+            sample.created_at = oracle.0.get_sample_creation();
         }
 
-        responses.push(response);
+        samples.push(sample);
     }
 
-    to_binary(&responses).map_err(Error::CwErr)
+    let response = OracleSamplesAtResponse { samples };
+
+    Ok(response)
 }
 
 pub fn query_oracle_samples_after(
@@ -724,8 +746,8 @@ pub fn query_oracle_samples_after(
     _env: Env,
     start_oracle_id: u16,
     page_size: Option<u16>,
-) -> Result<Binary> {
-    let mut responses = Vec::new();
+) -> Result<OracleSamplesAfterResponse> {
+    let mut samples = Vec::new();
 
     let state = STATE.load(deps.storage)?;
     let active_oracle_id = state.pair_parameters.get_oracle_id();
@@ -756,8 +778,8 @@ pub fn query_oracle_samples_after(
             continue;
         }
 
-        let response = match ORACLE.load(deps.storage, current_oracle_id) {
-            Ok(oracle) => OracleSampleAtResponse {
+        let sample = match ORACLE.load(deps.storage, current_oracle_id) {
+            Ok(oracle) => OracleSampleResponse {
                 cumulative_id: oracle.0.get_cumulative_id(),
                 cumulative_txns: oracle.0.get_cumulative_txns(),
                 cumulative_volatility: oracle.0.get_cumulative_volatility(),
@@ -770,7 +792,8 @@ pub fn query_oracle_samples_after(
                 lifetime: oracle.0.get_sample_lifetime(),
                 created_at: oracle.0.get_sample_creation(),
             },
-            Err(_) => OracleSampleAtResponse {
+            // TODO: should this return an Error instead of all zeroes?
+            Err(_) => OracleSampleResponse {
                 cumulative_id: 0,
                 cumulative_txns: 0,
                 cumulative_volatility: 0,
@@ -784,10 +807,12 @@ pub fn query_oracle_samples_after(
                 created_at: 0,
             },
         };
-        responses.push(response);
+        samples.push(sample);
     }
 
-    to_binary(&responses).map_err(Error::CwErr)
+    let response = OracleSamplesAfterResponse { samples };
+
+    Ok(response)
 }
 
 /// Returns the price corresponding to the given id, as a 128.128-binary fixed-point number.
@@ -801,12 +826,12 @@ pub fn query_oracle_samples_after(
 /// # Returns
 ///
 /// * `price` - The price corresponding to this id
-pub fn query_price_from_id(deps: Deps, id: u32) -> Result<Binary> {
+pub fn query_price_from_id(deps: Deps, id: u32) -> Result<PriceFromIdResponse> {
     let state = STATE.load(deps.storage)?;
     let price = PriceHelper::get_price_from_id(id, state.bin_step)?.u256_to_uint256();
 
     let response = PriceFromIdResponse { price };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the id corresponding to the given price.
@@ -820,13 +845,13 @@ pub fn query_price_from_id(deps: Deps, id: u32) -> Result<Binary> {
 /// # Returns
 ///
 /// * `id` - The id of the bin corresponding to this price
-pub fn query_id_from_price(deps: Deps, price: Uint256) -> Result<Binary> {
+pub fn query_id_from_price(deps: Deps, price: Uint256) -> Result<IdFromPriceResponse> {
     let state = STATE.load(deps.storage)?;
     let price = price.uint256_to_u256();
     let id = PriceHelper::get_id_from_price(price, state.bin_step)?;
 
     let response = IdFromPriceResponse { id };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Simulates a swap in.
@@ -845,7 +870,12 @@ pub fn query_id_from_price(deps: Deps, price: Uint256) -> Result<Binary> {
 /// * `amount_in` - The amount of token X or Y that can be swapped in, including the fee
 /// * `amount_out_left` - The amount of token Y or X that cannot be swapped out
 /// * `fee` - The fee of the swap
-pub fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -> Result<Binary> {
+pub fn query_swap_in(
+    deps: Deps,
+    env: Env,
+    amount_out: u128,
+    swap_for_y: bool,
+) -> Result<SwapInResponse> {
     let state = STATE.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
@@ -910,7 +940,7 @@ pub fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -
         amount_out_left: Uint128::from(amount_out_left),
         fee: Uint128::from(fee),
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Simulates a swap out.
@@ -929,7 +959,12 @@ pub fn query_swap_in(deps: Deps, env: Env, amount_out: u128, swap_for_y: bool) -
 /// * `amount_in_left` - The amount of token X or Y that cannot be swapped in
 /// * `amount_out` - The amount of token Y or X that can be swapped out
 /// * `fee` - The fee of the swap
-pub fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -> Result<Binary> {
+pub fn query_swap_out(
+    deps: Deps,
+    env: Env,
+    amount_in: u128,
+    swap_for_y: bool,
+) -> Result<SwapOutResponse> {
     let state = STATE.load(deps.storage)?;
     let tree = BIN_TREE.load(deps.storage)?;
 
@@ -998,7 +1033,7 @@ pub fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -
         shade_dao_fees: Uint128::from(shade_dao_fees.decode_alt(swap_for_y)),
         lp_fees: Uint128::from(lp_fees.decode_alt(swap_for_y)),
     };
-    to_binary(&response).map_err(Error::CwErr)
+    Ok(response)
 }
 
 /// Returns the Liquidity Book Factory.
@@ -1006,24 +1041,31 @@ pub fn query_swap_out(deps: Deps, env: Env, amount_in: u128, swap_for_y: bool) -
 /// # Returns
 ///
 /// * `factory` - The Liquidity Book Factory
-pub fn query_total_supply(deps: Deps, id: u32) -> Result<Binary> {
+pub fn query_total_supply(deps: Deps, id: u32) -> Result<TotalSupplyResponse> {
     let state = STATE.load(deps.storage)?;
     let _factory = state.factory.address;
 
     let total_supply =
         _query_total_supply(deps, id, state.lb_token.code_hash, state.lb_token.address)?
             .u256_to_uint256();
-    to_binary(&TotalSupplyResponse { total_supply }).map_err(Error::CwErr)
+
+    let response = TotalSupplyResponse { total_supply };
+
+    Ok(response)
 }
 
-pub fn query_rewards_distribution(deps: Deps, epoch_id: Option<u64>) -> Result<Binary> {
+pub fn query_rewards_distribution(
+    deps: Deps,
+    epoch_id: Option<u64>,
+) -> Result<RewardsDistributionResponse> {
     let epoch_id = match epoch_id {
         Some(id) => id,
         None => STATE.load(deps.storage)?.rewards_epoch_index - 1,
     };
 
-    to_binary(&RewardsDistributionResponse {
+    let response = RewardsDistributionResponse {
         distribution: REWARDS_DISTRIBUTION.load(deps.storage, epoch_id)?,
-    })
-    .map_err(Error::CwErr)
+    };
+
+    Ok(response)
 }

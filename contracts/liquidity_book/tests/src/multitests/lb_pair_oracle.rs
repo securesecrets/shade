@@ -7,7 +7,9 @@ use shade_multi_test::interfaces::{
     lb_factory, lb_pair, lb_token, snip20, utils::DeployedContracts,
 };
 use shade_protocol::{
-    c_std::ContractInfo, liquidity_book::lb_pair::LBPairInformation, multi_test::App,
+    c_std::ContractInfo,
+    liquidity_book::lb_pair::{LBPairInformation, OracleSampleResponse},
+    multi_test::App,
 };
 use std::ops::Sub;
 
@@ -118,7 +120,7 @@ pub fn test_query_oracle_parameters() -> Result<(), anyhow::Error> {
 pub fn test_query_oracle_sample_at_init() -> Result<(), anyhow::Error> {
     let (app, _lb_factory, _deployed_contracts, lb_pair) = lb_pair_setup()?;
 
-    let (
+    let OracleSampleResponse {
         cumulative_id,
         cumulative_volatility,
         cumulative_bin_crossed,
@@ -130,7 +132,7 @@ pub fn test_query_oracle_sample_at_init() -> Result<(), anyhow::Error> {
         cumulative_txns,
         lifetime,
         created_at,
-    ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+    } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
     assert_eq!(cumulative_id, 0);
     assert_eq!(cumulative_volatility, 0);
@@ -205,8 +207,7 @@ pub fn test_query_oracle_sample_at_one_swap() -> Result<(), anyhow::Error> {
     assert_eq!(silk_balance, Uint128::zero());
 
     //Check the sample 1 then
-    let (
-        _cumulative_id,
+    let OracleSampleResponse {
         cumulative_volatility,
         cumulative_bin_crossed,
         cumulative_volume_x,
@@ -217,7 +218,8 @@ pub fn test_query_oracle_sample_at_one_swap() -> Result<(), anyhow::Error> {
         cumulative_txns,
         lifetime,
         created_at,
-    ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+        ..
+    } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
     //     assert_eq!(cumulative_id as u32, ACTIVE_ID); // only one bin
     assert_eq!(cumulative_volatility, 0); // no movment in bins
@@ -274,19 +276,15 @@ pub fn test_fuzz_query_oracle_sample_at_one_swap() -> Result<(), anyhow::Error> 
     )?;
 
     //Check the sample 1 then
-    let (
-        _cumulative_id,
-        _cumulative_volatility,
-        _cumulative_bin_crossed,
+    let OracleSampleResponse {
         cumulative_volume_x,
         cumulative_volume_y,
         cumulative_fee_x,
         cumulative_fee_y,
         oracle_id,
         cumulative_txns,
-        _lifetime,
-        _created_at,
-    ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+        ..
+    } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
     assert_eq!(cumulative_volume_x, swap_amount);
     assert_eq!(cumulative_volume_y, amount_in.u128());
@@ -342,19 +340,13 @@ pub fn test_fuzz_update_oracle_id() -> Result<(), anyhow::Error> {
         )?;
 
         //Check the sample 1 then
-        let (
-            _cumulative_id,
-            _cumulative_volatility,
-            _cumulative_bin_crossed,
-            _cumulative_volume_x,
-            _cumulative_volume_y,
+        let OracleSampleResponse {
             cumulative_fee_x,
             cumulative_fee_y,
             oracle_id,
             cumulative_txns,
-            _lifetime,
-            _created_at,
-        ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, i)?;
+            ..
+        } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, i)?;
 
         //   assert_eq!(cumulative_id as u32, ACTIVE_ID); // only one bin
         //   assert!(cumulative_bin_crossed > 0);
@@ -416,19 +408,11 @@ pub fn test_fuzz_update_cumm_txns() -> Result<(), anyhow::Error> {
         )?;
 
         //Check the sample 1 then
-        let (
-            _cumulative_id,
-            _cumulative_volatility,
-            _cumulative_bin_crossed,
-            _cumulative_volume_x,
-            _cumulative_volume_y,
-            _cumulative_fee_x,
-            _cumulative_fee_y,
+        let OracleSampleResponse {
             oracle_id,
             cumulative_txns,
-            _lifetime,
-            _created_at,
-        ) = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
+            ..
+        } = lb_pair::query_oracle_sample_at(&app, &lb_pair.info.contract, 1)?;
 
         assert_eq!(oracle_id, 1);
         assert_eq!(cumulative_txns, i);
