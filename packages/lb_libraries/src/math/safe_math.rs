@@ -32,6 +32,8 @@ pub trait Safe {
     }
 
     fn safe128<T: Into<u128> + Copy, F>(x: T, err: F) -> Result<T, F> {
+        // TODO: this is always false
+        #[allow(clippy::absurd_extreme_comparisons)]
         if x.into() > u128::MAX {
             return Err(err);
         }

@@ -16,9 +16,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
 
 use super::{
-    math::sample_math::OracleSample,
-    pair_parameter_helper::PairParameters,
-    types::Bytes32,
+    math::sample_math::OracleSample, pair_parameter_helper::PairParameters, types::Bytes32,
 };
 
 #[cw_serde]
@@ -105,6 +103,6 @@ impl Oracle {
             return Ok((parameters, Some(new_sample)));
         }
 
-        return Ok((parameters, None));
+        Ok((parameters, None))
     }
 }
