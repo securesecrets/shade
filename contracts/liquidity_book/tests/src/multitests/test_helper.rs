@@ -153,7 +153,16 @@ pub fn generate_auth(addr: String) -> Auth {
 pub fn setup(
     bin_step: Option<u16>,
     rewards_distribution_algorithm: Option<RewardsDistributionAlgorithm>,
-) -> Result<(App, Contract, DeployedContracts, ContractInfo, ContractInfo), anyhow::Error> {
+) -> Result<
+    (
+        App,
+        ContractInfo,
+        DeployedContracts,
+        ContractInfo,
+        ContractInfo,
+    ),
+    anyhow::Error,
+> {
     // init snip-20's
     let mut app = App::default();
     let addrs = init_addrs();

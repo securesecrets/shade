@@ -20,8 +20,8 @@ pub fn init(
     query_auth: RawContract,
 
     recover_staking_funds_receiver: Addr,
-) -> StdResult<Contract> {
-    let lb_factory = Contract::from(
+) -> StdResult<ContractInfo> {
+    let lb_factory = ContractInfo::from(
         match (lb_factory::InstantiateMsg {
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
