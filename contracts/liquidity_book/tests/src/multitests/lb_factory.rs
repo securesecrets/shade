@@ -1242,6 +1242,12 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         None,
     )?;
 
+    println!("HELLO");
+
+    // ---- multitests::lb_factory::test_create_lb_pair stdout ----
+    // Error: Generic error: Invalid reply from sub-message: failed to decode Protobuf message: invalid field #4 for field #1
+
+    // This function seems to be the origin of the errors in multitest...
     lb_factory::create_lb_pair(
         &mut app,
         addrs.admin().as_str(),
@@ -1253,6 +1259,8 @@ pub fn test_get_all_lb_pair() -> Result<(), anyhow::Error> {
         "viewing_key".to_string(),
         "entropy".to_string(),
     )?;
+
+    println!("HELLO");
 
     lb_factory::create_lb_pair(
         &mut app,
