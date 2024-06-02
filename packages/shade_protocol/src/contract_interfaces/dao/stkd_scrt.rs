@@ -91,7 +91,7 @@ pub mod staking_derivatives {
         utils::asset::Contract,
     };
 
-    use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
+    use crate::utils::{ExecuteCallback, Query};
 
     #[cw_serde]
     pub enum ExecuteMsg {
