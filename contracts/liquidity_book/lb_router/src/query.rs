@@ -2,22 +2,14 @@ use std::str::FromStr;
 
 use shade_protocol::{
     c_std::{
-        to_binary,
-        Binary,
-        Deps,
-        QuerierWrapper,
-        QueryRequest,
-        StdError,
-        StdResult,
-        Uint128,
-        Uint256,
-        WasmQuery,
+        to_binary, Binary, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
+        Uint256, WasmQuery,
     },
     liquidity_book::lb_pair::SwapResult,
+    liquidity_book::lb_router::{Hop, QueryMsgResponse},
     swap::{
         amm_pair::{QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse},
         core::TokenAmount,
-        router::{Hop, QueryMsgResponse},
     },
     Contract,
 };

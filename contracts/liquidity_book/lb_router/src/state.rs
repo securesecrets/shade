@@ -1,14 +1,12 @@
 use shade_protocol::{
     c_std::{Addr, Storage, Uint128},
     cosmwasm_schema::cw_serde,
+    liquidity_book::lb_router::Hop,
     storage::{
         bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
         Singleton,
     },
-    swap::{
-        core::{TokenAmount, TokenType},
-        router::Hop,
-    },
+    swap::core::{TokenAmount, TokenType},
     Contract,
 };
 

@@ -11,37 +11,19 @@ pub mod tests {
         c_std::{
             from_slice,
             testing::{mock_env, mock_info, MockApi, MockStorage},
-            to_binary,
-            Addr,
-            Api,
-            Coin,
-            ContractResult,
-            Empty,
-            Env,
-            OwnedDeps,
-            Querier,
-            QuerierResult,
-            QueryRequest,
-            Response,
-            StdError,
-            StdResult,
-            Storage,
-            SubMsg,
-            Uint128,
-            WasmMsg,
-            WasmQuery,
+            to_binary, Addr, Api, Coin, ContractResult, Empty, Env, OwnedDeps, Querier,
+            QuerierResult, QueryRequest, Response, StdError, StdResult, Storage, SubMsg, Uint128,
+            WasmMsg, WasmQuery,
         },
+        liquidity_book::lb_router::{ExecuteMsg, Hop, InitMsg, InvokeMsg},
         snip20::{manager::Balance, Snip20ReceiveMsg},
         swap::{
             amm_pair::{
-                AMMSettings,
-                ExecuteMsg as AMMPairExecuteMsg,
-                FeeInfo,
+                AMMSettings, ExecuteMsg as AMMPairExecuteMsg, FeeInfo,
                 QueryMsgResponse as AMMPairQueryMsgResponse,
             },
             core::{ContractInstantiationInfo, Fee, TokenAmount, TokenPair, TokenType},
             factory::QueryResponse as FactoryQueryResponse,
-            router::{ExecuteMsg, Hop, InitMsg, InvokeMsg},
         },
         Contract,
     };
@@ -76,10 +58,13 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("admin", &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(10u128),
-            }]),
+            mock_info(
+                "admin",
+                &[Coin {
+                    denom: "uscrt".to_string(),
+                    amount: Uint128::new(10u128),
+                }],
+            ),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
@@ -102,17 +87,23 @@ pub mod tests {
         let result = epheral_storage_r(&deps.storage).load();
         match result {
             Ok(info) => {
-                assert_eq!(info.amount, TokenAmount {
-                    token: TokenType::NativeToken {
-                        denom: "uscrt".to_string(),
-                    },
-                    amount: Uint128::new(10u128),
-                });
+                assert_eq!(
+                    info.amount,
+                    TokenAmount {
+                        token: TokenType::NativeToken {
+                            denom: "uscrt".to_string(),
+                        },
+                        amount: Uint128::new(10u128),
+                    }
+                );
 
-                assert_eq!(info.path, vec![Hop {
-                    addr: PAIR_CONTRACT_1.to_string(),
-                    code_hash: "".to_string()
-                }]);
+                assert_eq!(
+                    info.path,
+                    vec![Hop {
+                        addr: PAIR_CONTRACT_1.to_string(),
+                        code_hash: "".to_string()
+                    }]
+                );
             }
             Err(_) => panic!("Ephemeral storage should not be empty!"),
         }
@@ -125,10 +116,13 @@ pub mod tests {
     fn swap_snip20_native_for_tokens_ok() -> StdResult<()> {
         let (init_result, mut deps) = init_helper();
         let env = mock_env();
-        let mock_info = mock_info("admin", &[Coin {
-            denom: "uscrt".to_string(),
-            amount: Uint128::new(10u128),
-        }]);
+        let mock_info = mock_info(
+            "admin",
+            &[Coin {
+                denom: "uscrt".to_string(),
+                amount: Uint128::new(10u128),
+            }],
+        );
 
         assert!(
             init_result.is_ok(),
@@ -162,16 +156,22 @@ pub mod tests {
         let result = epheral_storage_r(&deps.storage).load();
         match result {
             Ok(info) => {
-                assert_eq!(info.amount, TokenAmount {
-                    token: TokenType::NativeToken {
-                        denom: "uscrt".to_string(),
-                    },
-                    amount: Uint128::new(10u128),
-                });
-                assert_eq!(info.path, vec![Hop {
-                    addr: PAIR_CONTRACT_1.to_string(),
-                    code_hash: "".to_string()
-                }]);
+                assert_eq!(
+                    info.amount,
+                    TokenAmount {
+                        token: TokenType::NativeToken {
+                            denom: "uscrt".to_string(),
+                        },
+                        amount: Uint128::new(10u128),
+                    }
+                );
+                assert_eq!(
+                    info.path,
+                    vec![Hop {
+                        addr: PAIR_CONTRACT_1.to_string(),
+                        code_hash: "".to_string()
+                    }]
+                );
             }
             Err(_) => panic!("Ephemeral storage should not be empty!"),
         }
@@ -182,10 +182,13 @@ pub mod tests {
     #[test]
     #[serial]
     fn snip20_swap() -> StdResult<()> {
-        let mock_info = mock_info("admin", &[Coin {
-            denom: "uscrt".to_string(),
-            amount: Uint128::new(1000000000000000u128),
-        }]);
+        let mock_info = mock_info(
+            "admin",
+            &[Coin {
+                denom: "uscrt".to_string(),
+                amount: Uint128::new(1000000000000000u128),
+            }],
+        );
         let (init_result, mut deps) = init_helper();
         assert!(
             init_result.is_ok(),
@@ -293,10 +296,13 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             env,
-            mock_info("admin", &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(10u128),
-            }]),
+            mock_info(
+                "admin",
+                &[Coin {
+                    denom: "uscrt".to_string(),
+                    amount: Uint128::new(10u128),
+                }],
+            ),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
@@ -380,10 +386,13 @@ pub mod tests {
         let result = execute(
             deps.as_mut(),
             env.clone(),
-            mock_info("admin", &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(10u128),
-            }]),
+            mock_info(
+                "admin",
+                &[Coin {
+                    denom: "uscrt".to_string(),
+                    amount: Uint128::new(10u128),
+                }],
+            ),
             ExecuteMsg::SwapTokensForExact {
                 offer: TokenAmount {
                     token: TokenType::NativeToken {
