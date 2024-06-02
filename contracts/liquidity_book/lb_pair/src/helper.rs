@@ -1,11 +1,15 @@
 use crate::prelude::*;
 use ethnum::U256;
-use lb_libraries::math::{tree_math::TreeUint24, u24::U24, uint256_to_u256::ConvertUint256};
+use lb_libraries::math::{
+    packed_u128_math::PackedUint128Math, tree_math::TreeUint24, u24::U24,
+    uint256_to_u256::ConvertUint256,
+};
+use lb_libraries::types::Bytes32;
 use shade_protocol::{
-    c_std::{Addr, CosmosMsg, Deps, Env, StdResult},
+    c_std::{Addr, BankMsg, Coin, CosmosMsg, Deps, Env, StdResult, Uint128},
     contract_interfaces::liquidity_book::{lb_pair::*, lb_token},
     // TODO: sort out viewing key strategy
-    s_toolkit::snip20::{register_receive_msg, set_viewing_key_msg},
+    s_toolkit::snip20::{register_receive_msg, set_viewing_key_msg, transfer_msg},
     snip20,
     swap::core::{TokenType, ViewingKey},
 };
@@ -16,6 +20,128 @@ pub const MINT_REPLY_ID: u64 = 1u64;
 pub const DEFAULT_REWARDS_BINS: u32 = 100;
 pub const DEFAULT_MAX_BINS_PER_SWAP: u32 = 100;
 pub const DEFAULT_ORACLE_LENGTH: u16 = u16::MAX;
+
+// TODO: make a 'bin' type with these methods?
+
+/// Transfers the encoded amounts to the recipient for both tokens.
+///
+/// # Arguments
+///
+/// * `amounts` - The amounts, encoded as follows:
+///     * [0 - 128[: amount_x
+///     * [128 - 256[: amount_y
+/// * `token_x` - The token X
+/// * `token_y` - The token Y
+/// * `recipient` - The recipient
+pub fn bin_transfer(
+    amounts: Bytes32,
+    token_x: TokenType,
+    token_y: TokenType,
+    recipient: Addr,
+) -> Option<Vec<CosmosMsg>> {
+    let mut messages: Vec<CosmosMsg> = Vec::new();
+
+    let msgs_x = bin_transfer_x(amounts, token_x, recipient.clone());
+
+    if let Some(msgs) = msgs_x {
+        messages.push(msgs);
+    }
+    let msgs_y = bin_transfer_y(amounts, token_y, recipient);
+
+    if let Some(msgs) = msgs_y {
+        messages.push(msgs);
+    }
+
+    if !messages.is_empty() {
+        Some(messages)
+    } else {
+        None
+    }
+}
+
+/// Transfers the encoded amounts to the recipient, only for token X.
+///
+/// # Arguments
+///
+/// * `amounts` - The amounts, encoded as follows:
+///     * [0 - 128[: amount_x
+///     * [128 - 256[: empty
+/// * `token_x` - The token X
+/// * `recipient` - The recipient
+pub fn bin_transfer_x(amounts: Bytes32, token_x: TokenType, recipient: Addr) -> Option<CosmosMsg> {
+    let amount = Uint128::from(amounts.decode_x());
+
+    if amount.gt(&Uint128::zero()) {
+        match token_x {
+            TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+            } => {
+                let cosmos_msg = transfer_msg(
+                    recipient.to_string(),
+                    amount,
+                    None,
+                    None,
+                    256,
+                    token_code_hash,
+                    contract_addr.to_string(),
+                )
+                .unwrap();
+
+                Some(cosmos_msg)
+            }
+
+            TokenType::NativeToken { denom } => Some(CosmosMsg::Bank(BankMsg::Send {
+                to_address: recipient.to_string(),
+                amount: vec![Coin { denom, amount }],
+            })),
+        }
+    } else {
+        None
+    }
+}
+
+/// Transfers the encoded amounts to the recipient, only for token Y.
+///
+/// # Arguments
+///
+/// * `amounts` - The amounts, encoded as follows:
+///     * [0 - 128[: empty
+///     * [128 - 256[: amount_y
+/// * `token_y` - The token Y
+/// * `recipient` - The recipient
+pub fn bin_transfer_y(amounts: Bytes32, token_y: TokenType, recipient: Addr) -> Option<CosmosMsg> {
+    let amount = Uint128::from(amounts.decode_y());
+
+    if amount.gt(&Uint128::zero()) {
+        match token_y {
+            TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+            } => {
+                let cosmos_msg = transfer_msg(
+                    recipient.to_string(),
+                    amount,
+                    None,
+                    None,
+                    256,
+                    token_code_hash,
+                    contract_addr.to_string(),
+                )
+                .unwrap();
+
+                Some(cosmos_msg)
+            }
+
+            TokenType::NativeToken { denom } => Some(CosmosMsg::Bank(BankMsg::Send {
+                to_address: recipient.to_string(),
+                amount: vec![Coin { denom, amount }],
+            })),
+        }
+    } else {
+        None
+    }
+}
 
 pub fn register_pair_token(
     env: &Env,
@@ -33,15 +159,15 @@ pub fn register_pair_token(
             viewing_key.to_string(),
             None,
             256,
-            contract_addr.clone().to_string(),
             token_code_hash.to_string(),
+            contract_addr.clone().to_string(),
         )?);
         messages.push(register_receive_msg(
             env.contract.code_hash.clone(),
             None,
             256,
-            contract_addr.to_string(),
             token_code_hash.to_string(),
+            contract_addr.to_string(),
         )?);
     }
 

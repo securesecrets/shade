@@ -18,7 +18,6 @@ pub fn init(
     fee_recipient: Addr,
     admin_auth: RawContract,
     query_auth: RawContract,
-
     recover_staking_funds_receiver: Addr,
 ) -> StdResult<ContractInfo> {
     let lb_factory = ContractInfo::from(
@@ -26,7 +25,6 @@ pub fn init(
             owner: Some(Addr::unchecked(sender)),
             fee_recipient,
             admin_auth,
-
             recover_staking_funds_receiver,
             query_auth,
             max_bins_per_swap: Some(500),

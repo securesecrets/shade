@@ -635,6 +635,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -736,7 +742,6 @@ dependencies = [
  "cosmwasm-schema 2.0.3",
  "lb-libraries",
  "schemars 0.8.21",
- "secret-multi-test",
  "serde",
  "serde_json",
  "serial_test",
@@ -751,10 +756,8 @@ dependencies = [
  "cosmwasm-schema 2.0.3",
  "lb-libraries",
  "schemars 0.8.21",
- "secret-multi-test",
  "serde",
  "serde_json",
- "serial_test",
  "shade-protocol",
  "snafu",
 ]
@@ -1321,7 +1324,7 @@ dependencies = [
 [[package]]
 name = "secret-multi-test"
 version = "0.13.4"
-source = "git+https://github.com/securesecrets/secret-plus-utils#ca5c1704375c622398811b6339711b52b8dd3ad1"
+source = "git+https://github.com/securesecrets/secret-plus-utils?rev=96438a5bf7f1fb0acc540fe3a43e934f01e6711f#96438a5bf7f1fb0acc540fe3a43e934f01e6711f"
 dependencies = [
  "anyhow",
  "derivative",
@@ -1330,7 +1333,7 @@ dependencies = [
  "prost",
  "schemars 0.8.21",
  "secret-cosmwasm-std",
- "secret-storage-plus 0.13.4 (git+https://github.com/securesecrets/secret-plus-utils)",
+ "secret-storage-plus 0.13.4 (git+https://github.com/securesecrets/secret-plus-utils?rev=96438a5bf7f1fb0acc540fe3a43e934f01e6711f)",
  "secret-utils",
  "serde",
  "thiserror",
@@ -1339,7 +1342,7 @@ dependencies = [
 [[package]]
 name = "secret-storage-plus"
 version = "0.13.4"
-source = "git+https://github.com/securesecrets/secret-plus-utils?tag=v0.1.1#96438a5bf7f1fb0acc540fe3a43e934f01e6711f"
+source = "git+https://github.com/securesecrets/secret-plus-utils?rev=96438a5bf7f1fb0acc540fe3a43e934f01e6711f#96438a5bf7f1fb0acc540fe3a43e934f01e6711f"
 dependencies = [
  "bincode2",
  "schemars 0.8.21",
@@ -1481,7 +1484,7 @@ dependencies = [
 [[package]]
 name = "secret-utils"
 version = "0.13.4"
-source = "git+https://github.com/securesecrets/secret-plus-utils#ca5c1704375c622398811b6339711b52b8dd3ad1"
+source = "git+https://github.com/securesecrets/secret-plus-utils?rev=96438a5bf7f1fb0acc540fe3a43e934f01e6711f#96438a5bf7f1fb0acc540fe3a43e934f01e6711f"
 dependencies = [
  "schemars 0.8.21",
  "secret-cosmwasm-std",
@@ -1672,7 +1675,7 @@ dependencies = [
  "secret-cosmwasm-std",
  "secret-cosmwasm-storage",
  "secret-multi-test",
- "secret-storage-plus 0.13.4 (git+https://github.com/securesecrets/secret-plus-utils?tag=v0.1.1)",
+ "secret-storage-plus 0.13.4 (git+https://github.com/securesecrets/secret-plus-utils)",
  "secret-toolkit",
  "serde",
  "sha2 0.9.9",
@@ -1722,7 +1725,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a4812a669da00d17d8266a0439eddcacbc88b17f732f927e52eeb9d196f7fb5"
 dependencies = [
- "heck",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.66",
@@ -1800,7 +1803,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "rustversion",

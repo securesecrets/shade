@@ -27,5 +27,4 @@ serde_json = "1.0.117"
 
 
 [dev-dependencies]
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4" }
 serial_test = "2.0.0"

@@ -222,11 +222,9 @@ pub fn try_swap(
         amounts_out.decode_x()
     };
     let msg = if swap_for_y {
-        // BinHelper::transfer_y(amounts_out, token_y.clone(), to)
-        todo!()
+        bin_transfer_y(amounts_out, token_y.clone(), to)
     } else {
-        // BinHelper::transfer_x(amounts_out, token_x.clone(), to)
-        todo!()
+        bin_transfer_x(amounts_out, token_x.clone(), to)
     };
     // Add the message to messages if it exists
     if let Some(message) = msg {
@@ -993,8 +991,7 @@ fn burn(
 
     config.reserves = config.reserves.sub(amounts_out);
 
-    let raw_msgs: Option<Vec<CosmosMsg>> = todo!();
-    // let raw_msgs = BinHelper::transfer(amounts_out, token_x, token_y, info.sender);
+    let raw_msgs = bin_transfer(amounts_out, token_x, token_y, info.sender);
 
     STATE.update(deps.storage, |mut state| -> StdResult<State> {
         state.reserves = state.reserves.sub(amounts_out);
@@ -1048,14 +1045,14 @@ pub fn try_collect_protocol_fees(deps: DepsMut, _env: Env, info: MessageInfo) ->
         })?;
 
         if collected_protocol_fees.iter().any(|&x| x != 0) {
-            // if let Some(msgs) = BinHelper::transfer(
-            //     collected_protocol_fees,
-            //     token_x.clone(),
-            //     token_y.clone(),
-            //     state.protocol_fees_recipient,
-            // ) {
-            //     messages.extend(msgs);
-            // };
+            if let Some(msgs) = bin_transfer(
+                collected_protocol_fees,
+                token_x.clone(),
+                token_y.clone(),
+                state.protocol_fees_recipient,
+            ) {
+                messages.extend(msgs);
+            };
         }
 
         Ok(Response::default()
