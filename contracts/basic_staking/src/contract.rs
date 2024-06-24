@@ -220,6 +220,8 @@ pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> StdResult<Response>
 
     let mut msgs = vec![];
     let mut stake_is_reward = false;
+
+    // Register receive on all reward tokens
     for token in reward_tokens {
         if token.address == stake_token.address {
             stake_is_reward = true;
@@ -231,6 +233,7 @@ pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> StdResult<Response>
         )?);
     }
 
+    // Register if not done with rewards
     if !stake_is_reward {
         msgs.push(register_receive(
             env.contract.code_hash.clone(),
