@@ -297,3 +297,6 @@ pub enum QueryAnswer {
         whitelist: Vec<Addr>,
     },
 }
+
+#[cw_serde]
+pub struct MigrateMsg {}
