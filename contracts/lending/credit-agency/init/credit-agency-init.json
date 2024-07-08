@@ -1,0 +1,31 @@
+{
+  "gov_contract": {
+    "address": "",
+    "code_hash": ""
+  },
+  "query_auth": {
+    "address": "secret1e0k5jza9jqctc5dt7mltnxmwpu3a3kqe0a6hf3",
+    "code_hash": "b6ec3cc640d26b6658d52e0cfb5f79abc3afd1643ec5112cfc6a9fb51d848e69"
+  },
+  "lend_market_id": 8702,
+  "lend_market_code_hash": "cffedf317ea76d945d9596737e5136acfe6d799fb08ad89859724e4f641058d3",
+  "market_viewing_key": "key",
+  "ctoken_token_id": 8701,
+  "ctoken_code_hash": "22fdfc0cbe8d9f904d2e343bb55094db56736486aa0056a862c990a7eda9f9a2",
+  "reward_token": {
+      "Cw20": {
+      "address": "secret13w6n5u3kpvqdunkavgfy40d7ma85xuhxrcxd0a",
+      "code_hash": "31cbe386f9b8f04994a7f3fa097ce52b713527da235f22658aa2ba413138dc5f"
+    }
+  },
+  "common_token": {
+    "Cw20": {
+    "address": "secret10wz305lmdjt7kvph44c8vvpnq6pqny6q5jlhtn",
+    "code_hash": "1691e4e24714e324a8d2345183027a918bba5c737bb2cbdbedda3cf8e7672faf"
+   }
+  },
+  "liquidation_price": "0.05",
+  "liquidation_threshold": "0.01",
+  "borrow_limit_ratio": "0.5",
+  "default_estimate_multiplier": "1.0"
+}
