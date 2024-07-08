@@ -1,0 +1,26 @@
+{
+  "create_market": {
+    "name": "market0",
+    "symbol": "m0",
+    "decimals": 6,
+    "market_token": {
+      "Cw20": {
+        "address": "secret13w6n5u3kpvqdunkavgfy40d7ma85xuhxrcxd0a",
+        "code_hash": "31cbe386f9b8f04994a7f3fa097ce52b713527da235f22658aa2ba413138dc5f"
+      }
+    },
+    "interest_rate": {
+      "linear": {
+        "base": "0.02",
+        "slope": "0.01"
+      }
+    },
+    "interest_charge_period": 3600,
+    "collateral_ratio": "0.8",
+    "price_oracle": {
+      "address": "secret17z47r9u4nqytpdgvewxq4jqd965sfj2wpsnlak",
+      "code_hash": "113c47c016667817b315dde03b4ee9774edf1fb293a7ea3f02d983c6b1fa1cf1"
+    },
+    "reserve_factor": "0.1"
+  }
+}
