@@ -26,6 +26,9 @@ members = [
   "contracts/liquidity_book/lb_staking",
   "contracts/liquidity_book/tests",
 
+  "contracts/galactic_pools/pools/native",
+
+
   # Staking
   #"contracts/basic_staking",
   #"contracts/snip20_derivative",

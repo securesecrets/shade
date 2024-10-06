@@ -1,0 +1,55 @@
+[package]
+name = "experience_contract"
+version = "1.0.0"
+authors = ["Lumi - Trivium","Haseeb Saeed"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+#backtraces = ["cosmwasm-std/backtraces"]
+#debug-print = ["cosmwasm-std/debug-print"]
+
+[dependencies]
+snafu = { version = "0.6.3" }
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+schemars = "0.8.8"
+shade-protocol = { version = "0.1.0", path = "./../../../packages/shade_protocol" }
+
+thiserror = { version = "1.0.31" }
+
+rand_chacha = { version = "0.2.2", default-features = false }
+#rand_core = { version =  "0.5.1", default-features = false }
+rand = { version = "0.7.3" }
+sha2 = { version = "0.9.1", default-features = false }
+[dev-dependencies]
+cosmwasm-schema = { git = "https://github.com/scrtlabs/cosmwasm/", branch = "secret" }
+shade-multi-test = { path = "./../../../packages/multi_test", features = [ 
+  "admin",
+  "lb_pair",
+  "lb_token",
+  "snip20",
+] }
