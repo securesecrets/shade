@@ -7,7 +7,7 @@ build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-u
 # args (no extensions): wasm_name, contract_dir_name
 define opt_and_compress = 
 wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$(2).wasm -o ./$(1).wasm
-echo $(md5sum $(1).wasm | cut -f 1 -d " ") >> ${checksum_dir}/$(1).txt
+md5sum $(1).wasm | cut -f 1 -d " " >> ${checksum_dir}/$(1).txt
 cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
