@@ -10,7 +10,7 @@ use lb_libraries::types::{Bytes32, ContractImplementation, StaticFeeParameters};
 use std::fmt::{Debug, Display};
 
 #[cw_serde]
-pub struct LBPair {
+pub struct LbPair {
     pub token_x: TokenType,
     pub token_y: TokenType,
     pub bin_step: u16,
@@ -18,9 +18,9 @@ pub struct LBPair {
 }
 
 #[cw_serde]
-pub struct LBPairInformation {
+pub struct LbPairInformation {
     pub bin_step: u16,
-    pub info: LBPair,
+    pub lb_pair: LbPair,
     pub created_by_owner: bool,
     pub ignored_for_routing: bool,
 }

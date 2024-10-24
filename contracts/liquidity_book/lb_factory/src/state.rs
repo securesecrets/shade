@@ -1,4 +1,4 @@
-use crate::types::{LBPair, LBPairInformation, NextPairKey};
+use crate::types::{LbPair, LbPairInformation, NextPairKey};
 use lb_libraries::{pair_parameter_helper::PairParameters, types::ContractImplementation};
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Storage},
@@ -15,12 +15,12 @@ pub const CONTRACT_STATUS: Item<ContractStatus> = Item::new("contract_status");
 pub const STATE: Item<State> = Item::new("state");
 pub static EPHEMERAL_STORAGE_KEY: &[u8] = b"ephemeral_storage";
 
-// pub static ALL_LB_PAIRS: Item<Vec<LBPair>> = Item::new(b"all_lb_pairs");
-pub static ALL_LB_PAIRS: AppendStore<LBPair> = AppendStore::new("all_lb_pairs");
+// pub static ALL_LB_PAIRS: Item<Vec<LbPair>> = Item::new(b"all_lb_pairs");
+pub static ALL_LB_PAIRS: AppendStore<LbPair> = AppendStore::new("all_lb_pairs");
 
 /// Mapping from a (tokenA, tokenB, binStep) to a LBPair.
 /// The tokens are ordered to save gas, but they can be in the reverse order in the actual pair.
-pub const LB_PAIRS_INFO: Map<(String, String, u16), LBPairInformation> = Map::new("lb_pairs_info");
+pub const LB_PAIRS_INFO: Map<(String, String, u16), LbPairInformation> = Map::new("lb_pairs_info");
 
 pub const PRESET_HASHSET: Item<HashSet<u16>> = Item::new("preset_hashset");
 

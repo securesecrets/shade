@@ -8,7 +8,7 @@ use shade_multi_test::interfaces::{
 };
 use shade_protocol::{
     c_std::ContractInfo,
-    liquidity_book::lb_pair::{LBPairInformation, OracleSampleResponse},
+    liquidity_book::lb_pair::{LbPairInformation, OracleSampleResponse},
     multi_test::App,
 };
 use std::ops::Sub;
@@ -17,7 +17,7 @@ pub const DEPOSIT_AMOUNT: u128 = 100_000_000u128;
 pub const ACTIVE_ID: u32 = ID_ONE;
 
 pub fn lb_pair_setup(
-) -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
+) -> Result<(App, ContractInfo, DeployedContracts, LbPairInformation), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 

@@ -4,7 +4,7 @@ use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, Uint128, Uint256},
-    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
+    liquidity_book::lb_pair::{LbPairInformation, RemoveLiquidity},
     multi_test::App,
     utils::cycle::parse_utc_datetime,
 };
@@ -24,7 +24,7 @@ pub fn lb_pair_setup() -> Result<
         App,
         ContractInfo,
         DeployedContracts,
-        LBPairInformation,
+        LbPairInformation,
         ContractInfo,
     ),
     anyhow::Error,
@@ -116,7 +116,7 @@ fn mint_and_add_liquidity(
     app: &mut App,
     deployed_contracts: &DeployedContracts,
     addrs: &Addrs,
-    lb_pair: &LBPairInformation,
+    lb_pair: &LbPairInformation,
     nb_bins_x: Option<u32>,
     nb_bins_y: Option<u32>,
     deposit_amount_x: u128, // New argument for deposit amount

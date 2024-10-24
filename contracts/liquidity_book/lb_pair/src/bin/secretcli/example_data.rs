@@ -4,7 +4,7 @@ use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
     liquidity_book::lb_pair::{
-        LBPair, LBPairInformation, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
+        LbPair, LbPairInformation, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
         TokenPair,
     },
     snip20::Snip20ReceiveMsg,
@@ -147,11 +147,11 @@ impl ExampleData for LiquidityParameters {
     }
 }
 
-impl ExampleData for LBPairInformation {
+impl ExampleData for LbPairInformation {
     fn example() -> Self {
-        LBPairInformation {
+        LbPairInformation {
             bin_step: 100,
-            info: LBPair {
+            lb_pair: LbPair {
                 token_x: TokenType::example(),
                 token_y: TokenType::example(),
                 bin_step: 100,

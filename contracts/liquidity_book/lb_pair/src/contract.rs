@@ -182,7 +182,7 @@ pub fn instantiate(
 
     response = response.add_messages(messages);
 
-    response = response.set_data(to_binary(&env.contract.address)?);
+    response = response.set_data(env.contract.address.as_bytes());
 
     Ok(response)
 }

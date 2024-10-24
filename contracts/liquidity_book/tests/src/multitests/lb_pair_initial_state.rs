@@ -5,13 +5,13 @@ use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, Uint128, Uint256},
-    liquidity_book::lb_pair::{LBPairInformation, OracleSampleResponse},
+    liquidity_book::lb_pair::{LbPairInformation, OracleSampleResponse},
     multi_test::App,
 };
 use std::str::FromStr;
 
 pub fn lb_pair_setup(
-) -> Result<(App, ContractInfo, DeployedContracts, LBPairInformation), anyhow::Error> {
+) -> Result<(App, ContractInfo, DeployedContracts, LbPairInformation), anyhow::Error> {
     let addrs = init_addrs();
     let (mut app, lb_factory, deployed_contracts, _, _) = setup(None, None)?;
 

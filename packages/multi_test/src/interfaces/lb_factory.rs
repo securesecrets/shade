@@ -3,7 +3,7 @@ use lb_libraries::types::ContractImplementation;
 use shade_protocol::{
     c_std::{Addr, ContractInfo, StdError, StdResult},
     contract_interfaces::liquidity_book::lb_factory,
-    liquidity_book::lb_pair::{LBPair, LBPairInformation, RewardsDistributionAlgorithm},
+    liquidity_book::lb_pair::{LbPair, LbPairInformation, RewardsDistributionAlgorithm},
     multi_test::App,
     swap::core::TokenType,
     utils::{
@@ -297,7 +297,7 @@ pub fn force_decay(
     app: &mut App,
     sender: &str,
     lb_factory: &ContractInfo,
-    pair: LBPair,
+    pair: LbPair,
 ) -> StdResult<()> {
     match (lb_factory::ExecuteMsg::ForceDecay { pair }.test_exec(
         lb_factory,
@@ -362,7 +362,7 @@ pub fn query_all_lb_pairs(
     lb_factory: &ContractInfo,
     token_x: TokenType,
     token_y: TokenType,
-) -> StdResult<Vec<LBPairInformation>> {
+) -> StdResult<Vec<LbPairInformation>> {
     match (lb_factory::QueryMsg::GetAllLbPairs { token_x, token_y }.test_query(lb_factory, app)) {
         Ok(lb_factory::AllLbPairsResponse { lb_pairs_available }) => Ok(lb_pairs_available),
         Err(e) => Err(StdError::generic_err(e.to_string())),
@@ -375,7 +375,7 @@ pub fn query_lb_pair_information(
     token_x: TokenType,
     token_y: TokenType,
     bin_step: u16,
-) -> StdResult<LBPairInformation> {
+) -> StdResult<LbPairInformation> {
     match (lb_factory::QueryMsg::GetLbPairInformation {
         token_x,
         token_y,

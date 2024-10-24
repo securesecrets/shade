@@ -1,12 +1,12 @@
 use super::lb_pair::{self, RewardsDistributionAlgorithm};
 use crate::{
-    contract_interfaces::liquidity_book::lb_pair::{LBPair, LBPairInformation},
+    contract_interfaces::liquidity_book::lb_pair::{LbPair, LbPairInformation},
     swap::core::TokenType,
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use lb_libraries::types::ContractImplementation;
+pub use lb_libraries::types::ContractImplementation;
 
 pub use lb_pair::InstantiateMsg as LBPairInstantiateMsg;
 
@@ -110,7 +110,7 @@ pub enum ExecuteMsg {
         asset: TokenType,
     },
     ForceDecay {
-        pair: LBPair,
+        pair: LbPair,
     },
 }
 
@@ -190,7 +190,7 @@ pub struct NumberOfLbPairsResponse {
 
 #[cw_serde]
 pub struct LbPairAtIndexResponse {
-    pub lb_pair: LBPair,
+    pub lb_pair: LbPair,
 }
 
 #[cw_serde]
@@ -210,7 +210,7 @@ pub struct IsQuoteAssetResponse {
 
 #[cw_serde]
 pub struct LbPairInformationResponse {
-    pub lb_pair_information: LBPairInformation,
+    pub lb_pair_information: LbPairInformation,
 }
 
 #[cw_serde]
@@ -239,5 +239,5 @@ pub struct OpenBinStepsResponse {
 
 #[cw_serde]
 pub struct AllLbPairsResponse {
-    pub lb_pairs_available: Vec<LBPairInformation>,
+    pub lb_pairs_available: Vec<LbPairInformation>,
 }

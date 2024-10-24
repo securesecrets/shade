@@ -6,7 +6,7 @@ use shade_multi_test::interfaces::{
 };
 use shade_protocol::{
     c_std::{ContractInfo, StdError, Uint128, Uint256},
-    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
+    liquidity_book::lb_pair::{LbPairInformation, RemoveLiquidity},
     multi_test::App,
 };
 use std::{
@@ -25,7 +25,7 @@ pub fn lb_pair_setup() -> Result<
         App,
         ContractInfo,
         DeployedContracts,
-        LBPairInformation,
+        LbPairInformation,
         ContractInfo,
     ),
     anyhow::Error,

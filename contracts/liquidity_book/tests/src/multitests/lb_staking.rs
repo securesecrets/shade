@@ -8,7 +8,7 @@ use shade_multi_test::interfaces::{
 use shade_protocol::{
     c_std::{to_binary, ContractInfo, StdError, Timestamp, Uint128, Uint256},
     liquidity_book::{
-        lb_pair::LBPairInformation,
+        lb_pair::LbPairInformation,
         lb_staking::{InvokeMsg, QueryTxnType},
         lb_token::SendAction,
     },
@@ -28,7 +28,7 @@ pub fn lb_pair_setup(
         App,
         ContractInfo,
         DeployedContracts,
-        LBPairInformation,
+        LbPairInformation,
         ContractInfo,
     ),
     anyhow::Error,
@@ -89,7 +89,7 @@ fn mint_and_add_liquidity(
     app: &mut App,
     deployed_contracts: &DeployedContracts,
     addrs: &Addrs,
-    lb_pair: &LBPairInformation,
+    lb_pair: &LbPairInformation,
     nb_bins_x: Option<u32>,
     nb_bins_y: Option<u32>,
     deposit_amount_x: u128, // New argument for deposit amount

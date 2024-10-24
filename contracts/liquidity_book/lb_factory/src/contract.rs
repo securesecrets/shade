@@ -1,7 +1,7 @@
 use crate::{
     prelude::*,
     state::*,
-    types::{LBPair, LBPairInformation, NextPairKey},
+    types::{LbPair, LbPairInformation, NextPairKey},
 };
 use lb_libraries::{
     math::encoded::Encoded,
@@ -641,7 +641,7 @@ fn try_set_fee_parameters_on_pair(
             token_y: token_b.unique_key(),
             bin_step,
         })?
-        .info;
+        .lb_pair;
 
     let msg: CosmosMsg = SetStaticFeeParameters {
         base_factor,
@@ -774,7 +774,7 @@ fn try_remove_quote_asset(
         .add_attribute_plaintext("quote asset removed", asset.unique_key().as_str()))
 }
 
-fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LBPair) -> Result<Response> {
+fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LbPair) -> Result<Response> {
     let config = STATE.load(deps.storage)?;
     validate_admin(
         &deps.querier,
@@ -977,7 +977,7 @@ fn query_lb_pair_information(
     token_b: TokenType,
     bin_step: u16,
 ) -> Result<Binary> {
-    let lb_pair_information: LBPairInformation =
+    let lb_pair_information: LbPairInformation =
         _get_lb_pair_information(deps, token_a, token_b, bin_step)?;
 
     let response = LbPairInformationResponse {
@@ -1002,7 +1002,7 @@ fn _get_lb_pair_information(
     token_a: TokenType,
     token_b: TokenType,
     bin_step: u16,
-) -> Result<LBPairInformation> {
+) -> Result<LbPairInformation> {
     let (token_a, token_b) = _sort_tokens(token_a, token_b);
     let info = LB_PAIRS_INFO
         .load(
@@ -1159,7 +1159,7 @@ fn query_all_lb_pairs(deps: Deps, token_x: TokenType, token_y: TokenType) -> Res
     }
 
     // Collect LBPairInformation values into a vector
-    let lb_pairs_available: Result<Vec<LBPairInformation>> = bin_steps
+    let lb_pairs_available: Result<Vec<LbPairInformation>> = bin_steps
         .into_iter()
         .map(|bin_step| {
             LB_PAIRS_INFO
@@ -1190,7 +1190,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 let bin_step = lb_pair_key.bin_step;
                 let code_hash = lb_pair_key.code_hash;
 
-                let lb_pair = LBPair {
+                let lb_pair = LbPair {
                     token_x: token_a.clone(),
                     token_y: token_b.clone(),
                     bin_step,
@@ -1202,9 +1202,9 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
                 LB_PAIRS_INFO.save(
                     deps.storage,
                     (token_a.unique_key(), token_b.unique_key(), bin_step),
-                    &LBPairInformation {
+                    &LbPairInformation {
                         bin_step: lb_pair_key.bin_step,
-                        info: lb_pair.clone(),
+                        lb_pair: lb_pair.clone(),
                         created_by_owner: lb_pair_key.is_open,
                         ignored_for_routing: false,
                     },

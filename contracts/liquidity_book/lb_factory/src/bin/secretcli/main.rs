@@ -7,7 +7,7 @@ use shade_protocol::{
     contract_interfaces::liquidity_book::lb_factory::{ExecuteMsg, InstantiateMsg, QueryMsg},
     liquidity_book::{
         lb_factory::*,
-        lb_pair::{LBPair, LBPairInformation, RewardsDistributionAlgorithm},
+        lb_pair::{LbPair, LbPairInformation, RewardsDistributionAlgorithm},
     },
     swap::core::TokenType,
     utils::asset::RawContract,
@@ -154,7 +154,7 @@ fn main() -> io::Result<()> {
     };
 
     let force_decay = ExecuteMsg::ForceDecay {
-        pair: LBPair {
+        pair: LbPair {
             token_x: TokenType::example(),
             token_y: TokenType::example(),
             bin_step: BIN_STEP,
@@ -219,7 +219,7 @@ fn main() -> io::Result<()> {
     let get_number_of_lb_pairs_response = NumberOfLbPairsResponse { lb_pair_number: 1 };
 
     let get_lb_pair_at_index_response = LbPairAtIndexResponse {
-        lb_pair: LBPair {
+        lb_pair: LbPair {
             token_x: TokenType::example(),
             token_y: TokenType::example(),
             bin_step: 100,
@@ -238,7 +238,7 @@ fn main() -> io::Result<()> {
     let is_quote_asset_response = IsQuoteAssetResponse { is_quote: true };
 
     let get_lb_pair_information_response = LbPairInformationResponse {
-        lb_pair_information: LBPairInformation::example(),
+        lb_pair_information: LbPairInformation::example(),
     };
 
     let get_preset_response = PresetResponse {
@@ -261,7 +261,7 @@ fn main() -> io::Result<()> {
     };
 
     let get_all_lb_pairs_response = AllLbPairsResponse {
-        lb_pairs_available: vec![LBPairInformation::example(), LBPairInformation::example()],
+        lb_pairs_available: vec![LbPairInformation::example(), LbPairInformation::example()],
     };
 
     // writeln!(file, "## Query Messages\n")?;

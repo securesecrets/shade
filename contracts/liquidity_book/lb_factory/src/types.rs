@@ -1,6 +1,6 @@
 use shade_protocol::{cosmwasm_schema::cw_serde, swap::core::TokenType};
 
-pub use shade_protocol::liquidity_book::lb_pair::{LBPair, LBPairInformation};
+pub use shade_protocol::liquidity_book::lb_pair::{LbPair, LbPairInformation};
 
 #[cw_serde]
 pub struct NextPairKey {

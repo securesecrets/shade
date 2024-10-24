@@ -6,7 +6,7 @@ use serial_test::serial;
 use shade_multi_test::interfaces::{lb_factory, lb_pair, lb_token, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{ContractInfo, StdError, Uint128, Uint256},
-    liquidity_book::lb_pair::{LBPairInformation, RemoveLiquidity},
+    liquidity_book::lb_pair::{LbPairInformation, RemoveLiquidity},
     multi_test::App,
 };
 use std::ops::{Add, Mul};
@@ -19,7 +19,7 @@ pub fn init_setup() -> Result<
         App,
         ContractInfo,
         DeployedContracts,
-        LBPairInformation,
+        LbPairInformation,
         ContractInfo,
     ),
     anyhow::Error,
