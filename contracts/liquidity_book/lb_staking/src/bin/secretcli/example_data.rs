@@ -3,7 +3,7 @@
 use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use serde_json::from_str;
 use shade_protocol::{
-    c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
+    c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256, Uint64},
     liquidity_book::{
         lb_pair::{
             LbPair, LbPairInformation, LiquidityParameters, RemoveLiquidity, RewardsDistribution,
@@ -172,9 +172,9 @@ impl ExampleData for LiquidityParameters {
             // TODO - I think these need to be much larger to hit the proper bin ids corresponding
             // to the next bin_step price.
             delta_ids: vec![-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-            distribution_x: vec![10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-            distribution_y: vec![10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-            deadline: 1701283067,
+            distribution_x: vec![Uint64::new(10u64); 11],
+            distribution_y: vec![Uint64::new(10u64); 11],
+            deadline: Uint64::new(1701283067u64),
         }
     }
 }
@@ -183,7 +183,7 @@ impl ExampleData for LbPairInformation {
     fn example() -> Self {
         LbPairInformation {
             bin_step: 100,
-            info: LbPair {
+            lb_pair: LbPair {
                 token_x: TokenType::example(),
                 token_y: TokenType::example(),
                 bin_step: 100,

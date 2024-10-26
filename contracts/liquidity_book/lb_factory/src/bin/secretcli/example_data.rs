@@ -2,7 +2,7 @@
 
 use lb_libraries::types::{ContractImplementation, StaticFeeParameters};
 use shade_protocol::{
-    c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256},
+    c_std::{to_binary, Addr, ContractInfo, Uint128, Uint256, Uint64},
     liquidity_book::lb_pair::{LbPair, LbPairInformation, LiquidityParameters, RemoveLiquidity},
     snip20::Snip20ReceiveMsg,
     swap::core::{TokenAmount, TokenType},
@@ -129,12 +129,10 @@ impl ExampleData for LiquidityParameters {
             // TODO - write some function that converts a price slippage % to an id_slippage (would
             // depend on bin_step)
             id_slippage: 1000u32,
-            // TODO - I think these need to be much larger to hit the proper bin ids corresponding
-            // to the next bin_step price.
             delta_ids: vec![-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-            distribution_x: vec![10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-            distribution_y: vec![10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-            deadline: 1701283067,
+            distribution_x: vec![Uint64::new(10u64); 11],
+            distribution_y: vec![Uint64::new(10u64); 11],
+            deadline: Uint64::new(1701283067u64),
         }
     }
 }

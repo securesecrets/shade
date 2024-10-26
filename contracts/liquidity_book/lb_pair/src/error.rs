@@ -81,7 +81,7 @@ pub enum LBPairError {
     #[error("Zero Shares for bin id: {id}")]
     ZeroShares { id: u32 },
     #[error("Distribution exceeded the max value")]
-    DistrubtionError,
+    DistributionError,
     #[error("Max total fee exceeded!")]
     MaxTotalFeeExceeded,
     #[error("Wrong Pair")]

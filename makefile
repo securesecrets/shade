@@ -23,6 +23,8 @@ CONTRACTS = \
 LIQUIDITY_BOOK_CONTRACTS = \
 		lb_factory lb_pair lb_router lb_staking lb_token
 
+LB_FACTORY = lb_factory \
+
 LB_PAIR = lb_pair \
 
 PACKAGES = shade_protocol contract_harness cosmwasm_math_compat 
@@ -36,6 +38,10 @@ release_liquidity_book: setup
 	${build-release}
 	@$(MAKE) compress_all_lb
 
+release_lb_factory: setup
+	${build-release}
+	@$(MAKE) compress_lb_factory
+
 release_lb_pair: setup
 	${build-release}
 	@$(MAKE) compress_lb_pair
@@ -48,6 +54,9 @@ compress_all: setup
 
 compress_all_lb: setup
 	@$(MAKE) $(addprefix compress-,$(LIQUIDITY_BOOK_CONTRACTS))
+
+compress_lb_factory: setup
+	@$(MAKE) $(addprefix compress-,$(LB_FACTORY))	
 
 compress_lb_pair: setup
 	@$(MAKE) $(addprefix compress-,$(LB_PAIR))	

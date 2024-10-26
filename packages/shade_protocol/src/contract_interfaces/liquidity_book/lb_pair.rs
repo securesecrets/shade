@@ -6,6 +6,7 @@ use crate::{
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
 };
+use cosmwasm_std::Uint64;
 use lb_libraries::types::{Bytes32, ContractImplementation, StaticFeeParameters};
 use std::fmt::{Debug, Display};
 
@@ -493,9 +494,9 @@ pub struct LiquidityParameters {
     pub active_id_desired: u32,
     pub id_slippage: u32,
     pub delta_ids: Vec<i64>,
-    pub distribution_x: Vec<u64>,
-    pub distribution_y: Vec<u64>,
-    pub deadline: u64,
+    pub distribution_x: Vec<Uint64>,
+    pub distribution_y: Vec<Uint64>,
+    pub deadline: Uint64,
 }
 
 #[cw_serde]

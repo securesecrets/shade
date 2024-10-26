@@ -794,7 +794,7 @@ fn try_force_decay(deps: DepsMut, _env: Env, info: MessageInfo, pair: LbPair) ->
             token_y: token_b.unique_key(),
             bin_step: pair.bin_step,
         })?
-        .info;
+        .lb_pair;
 
     let mut response = Response::new();
 
@@ -1225,6 +1225,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
                 ephemeral_storage_w(deps.storage).remove();
                 Ok(Response::default()
+                    .set_data(to_binary(&lb_pair)?)
                     .add_attribute("lb_pair_address", lb_pair.contract.address)
                     .add_attribute("lb_pair_hash", lb_pair.contract.code_hash))
             }

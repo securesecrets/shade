@@ -365,11 +365,13 @@ pub fn try_add_liquidity(
     // Main function -> add_liquidity_internal
     // Preparing txn output
 
+    // TODO: Check for token allowance first, to return early without wasting gas.
+
     // 1- Add liquidity while performing safety checks
     // 1.1- Proceed only if deadline has not exceeded
-    if env.block.time.seconds() > liquidity_parameters.deadline {
+    if env.block.time.seconds() > liquidity_parameters.deadline.u64() {
         return Err(Error::DeadlineExceeded {
-            deadline: liquidity_parameters.deadline,
+            deadline: liquidity_parameters.deadline.u64(),
             current_timestamp: env.block.time.seconds(),
         });
     }
@@ -426,20 +428,20 @@ fn add_liquidity_internal(
         let id = calculate_id(liquidity_parameters, active_id, i)?;
         deposit_ids.push(id);
 
-        distribution_sum_x += liquidity_parameters.distribution_x[i];
-        distribution_sum_y += liquidity_parameters.distribution_y[i];
+        distribution_sum_x += liquidity_parameters.distribution_x[i].u64();
+        distribution_sum_y += liquidity_parameters.distribution_y[i].u64();
 
-        if liquidity_parameters.distribution_x[i] > precison
-            || liquidity_parameters.distribution_y[i] > precison
+        if liquidity_parameters.distribution_x[i].u64() > precison
+            || liquidity_parameters.distribution_y[i].u64() > precison
             || distribution_sum_x > precison
             || distribution_sum_y > precison
         {
-            return Err(Error::DistrubtionError);
+            return Err(Error::DistributionError);
         }
 
         liquidity_configs[i] = LiquidityConfigurations {
-            distribution_x: liquidity_parameters.distribution_x[i],
-            distribution_y: liquidity_parameters.distribution_y[i],
+            distribution_x: liquidity_parameters.distribution_x[i].u64(),
+            distribution_y: liquidity_parameters.distribution_y[i].u64(),
             id,
         };
     }
