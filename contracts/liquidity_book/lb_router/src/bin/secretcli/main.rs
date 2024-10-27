@@ -4,8 +4,9 @@ use example_data::*;
 use lb_libraries::pair_parameter_helper::PairParameters;
 use shade_protocol::{
     c_std::{Addr, Binary, ContractInfo, Uint128},
-    liquidity_book::lb_pair::{InvokeMsg, SwapResult},
+    liquidity_book::lb_pair::InvokeMsg,
     swap::{
+        amm_pair::SwapResult,
         core::{TokenAmount, TokenType},
         router::*,
     },

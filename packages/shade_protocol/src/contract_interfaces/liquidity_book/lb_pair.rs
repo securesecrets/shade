@@ -2,7 +2,10 @@ use crate::{
     c_std::{Addr, ContractInfo, Decimal256, Uint128, Uint256},
     cosmwasm_schema::{cw_serde, QueryResponses},
     snip20::Snip20ReceiveMsg,
-    swap::core::{TokenAmount, TokenType},
+    swap::{
+        amm_pair::SwapResult,
+        core::{TokenAmount, TokenType},
+    },
     utils::{asset::RawContract, ExecuteCallback, InstantiateCallback, Query},
     Contract,
 };
@@ -578,7 +581,9 @@ pub struct TokenPair {
     pub token_1: TokenType,
 }
 
-#[cw_serde]
-pub struct SwapResult {
-    pub return_amount: Uint128,
-}
+// TODO: find out why this was here
+
+// #[cw_serde]
+// pub struct SwapResult {
+//     pub return_amount: Uint128,
+// }

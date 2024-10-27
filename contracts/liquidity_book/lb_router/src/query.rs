@@ -5,10 +5,11 @@ use shade_protocol::{
         to_binary, Binary, Deps, QuerierWrapper, QueryRequest, StdError, StdResult, Uint128,
         Uint256, WasmQuery,
     },
-    liquidity_book::lb_pair::SwapResult,
     liquidity_book::lb_router::{Hop, QueryMsgResponse},
     swap::{
-        amm_pair::{QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse},
+        amm_pair::{
+            QueryMsg as AMMPairQueryMsg, QueryMsgResponse as AMMPairQueryReponse, SwapResult,
+        },
         core::TokenAmount,
     },
     Contract,

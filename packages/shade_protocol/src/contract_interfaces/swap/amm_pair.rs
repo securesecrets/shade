@@ -1,4 +1,3 @@
-use crate::liquidity_book::lb_pair::SwapResult;
 use crate::{
     c_std::{Addr, Binary, Decimal256, Uint128, Uint256},
     cosmwasm_schema::cw_serde,
@@ -109,6 +108,11 @@ pub struct SwapInfo {
 pub struct VirtualSwapResponse {
     pub output: TokenPairAmount,
     pub swap_info: Option<SwapInfo>,
+}
+
+#[cw_serde]
+pub struct SwapResult {
+    pub return_amount: Uint128,
 }
 
 #[cw_serde]

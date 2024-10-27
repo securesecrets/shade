@@ -5,9 +5,9 @@ use crate::{
 use anyhow::Error;
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, ContractInfo, StdError, StdResult, Uint128},
-    liquidity_book::lb_pair::SwapResult,
     multi_test::App,
     swap::{
+        amm_pair::SwapResult,
         core::TokenAmount,
         router::{self, Hop},
     },
