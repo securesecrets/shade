@@ -1,6 +1,5 @@
 use crate::{
     c_std::{Addr, Binary, Uint128},
-    contract_interfaces::snip20::helpers::Snip20Asset,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
