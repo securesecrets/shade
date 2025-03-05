@@ -7,7 +7,7 @@ use shade_protocol::{
         StdError, StdResult, Uint128,
     },
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
-    snip20::helpers::{register_receive, set_viewing_key_msg},
+    snip20::helpers::{balance_query, register_receive, set_viewing_key_msg},
     utils::{asset::Contract, pad_handle_result},
 };
 
@@ -241,5 +241,37 @@ pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> StdResult<Response>
             &stake_token,
         )?);
     }
-    Ok(Response::default().add_messages(msgs))
+
+    // Rectify Total Staked
+    // (only referencing stake token amounts)
+    // total_staked = total balance - unclaimed rewards
+    let viewing_key = VIEWING_KEY.load(deps.storage)?;
+    let stake_token_balance = balance_query(
+        &deps.querier,
+        env.contract.address,
+        viewing_key,
+        &stake_token,
+    )?;
+    let reward_pools = REWARD_POOLS.load(deps.storage)?;
+    let mut unclaimed_stake_token_rewards = Uint128::zero();
+
+    for reward_pool in reward_pools {
+        if reward_pool.token.address == stake_token.address {
+            unclaimed_stake_token_rewards += reward_pool.amount - reward_pool.claimed;
+        }
+    }
+
+    let prev_total_staked = TOTAL_STAKED.load(deps.storage)?;
+    let total_staked = stake_token_balance - unclaimed_stake_token_rewards;
+    TOTAL_STAKED.save(deps.storage, &total_staked)?;
+
+    Ok(Response::default()
+        .add_messages(msgs)
+        .add_attribute("total_staked", total_staked)
+        .add_attribute("prev_total_staked", prev_total_staked)
+        .add_attribute("stake_token_balance", stake_token_balance)
+        .add_attribute(
+            "unclaimed_stake_token_rewards",
+            unclaimed_stake_token_rewards,
+        ))
 }

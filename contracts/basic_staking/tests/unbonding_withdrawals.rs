@@ -247,6 +247,26 @@ fn unbonding_withdrawals(
         };
     }
 
+    let unbonded = unbonding_amounts.iter().sum::<Uint128>();
+    // check total staked
+    match (basic_staking::QueryMsg::TotalStaked {}
+        .test_query(&basic_staking, &app)
+        .unwrap())
+    {
+        basic_staking::QueryAnswer::TotalStaked { amount } => {
+            assert_eq!(
+                amount,
+                stake_amount - unbonded,
+                "Total staked {} != {} expected",
+                amount,
+                stake_amount - unbonded
+            );
+        }
+        _ => {
+            panic!("Total staked query failed");
+        }
+    };
+
     // Check snip20 received by user
     match (snip20::QueryMsg::Balance {
         key: viewing_key.clone(),
