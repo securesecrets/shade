@@ -538,6 +538,7 @@ pub fn unbond(
 
         // Reduce by unbonding
         user_staked -= amount;
+        total_staked -= amount;
 
         TOTAL_STAKED.save(deps.storage, &total_staked)?;
         USER_STAKED.save(deps.storage, info.sender.clone(), &user_staked)?;
